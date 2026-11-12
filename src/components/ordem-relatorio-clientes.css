@@ -1,0 +1,35 @@
+/* Resultados por cliente: ordenar pelo título da coluna (12/11/2026).
+   O botão é o mesmo de Clientes (`adm-cab-ordem`, em ux-refinements.css);
+   aqui só o que esta tabela pede a mais: o título continua em caixa alta e
+   do mesmo tamanho, e a seta ▲/▼ fica pequena para não roubar a cena. */
+.rc-tabela > .cab.rc-cab-ordem button { font-size: inherit; font-weight: inherit; letter-spacing: inherit; text-transform: inherit; min-height: 24px; }
+.rc-tabela > .cab.rc-cab-ordem button.on { font-weight: 800; }
+.rc-tabela > .cab.rc-cab-ordem button > i { font-size: 8px; }
+
+/* O seletor só existe no celular, onde o cabeçalho some (a tabela vira cartões). */
+.rc-ordem-cel { display: none; }
+
+@media (max-width: 760px) {
+  /* 44px: a altura mínima de um alvo de toque. */
+  .rc-ordem-cel {
+    display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 12px 14px 4px; padding: 0 10px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+    color: var(--muted); font-size: 11px; font-weight: 650;
+  }
+  .rc-ordem-cel select {
+    flex: 1; min-width: 0; min-height: 44px; border: 0; outline: 0; background: transparent;
+    color: var(--text); font: inherit; font-size: 16px; font-weight: 600;
+  }
+  .rc-ordem-cel:focus-within { border-color: var(--primary); }
+  /* Período e tipo de conta mediam 31px de altura no celular (auditor, 12/11/2026):
+     cada grupo ocupa a linha e cada botão ganha os 44px. Só nesta tela —
+     Movimentações usa as mesmas classes com o `.dps-topo`, e tem o arranjo dela. */
+  .rc-filtros:not(.dps-topo) > :is(.rc-periodo, .rc-conta) { display: flex; width: 100%; }
+  .rc-filtros:not(.dps-topo) > :is(.rc-periodo, .rc-conta) > button { flex: 1; min-height: 44px; padding-inline: 6px; font-size: 12px; }
+}
+
+/* Tela de toque com o cabeçalho à vista (iPad, celular deitado): o título que
+   ordena também pede 44px. No computador com mouse nada muda. */
+@media (max-width: 760px), (pointer: coarse) {
+  .rc-tabela > .cab.rc-cab-ordem button { min-height: 44px; }
+}

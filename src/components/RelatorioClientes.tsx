@@ -7,6 +7,7 @@ import {
 import { MARCA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { NomeDoRobo } from './NomeDoRobo'
+import './ordem-relatorio-clientes.css'
 
 /**
  * Resultados por cliente — a tela que responde três perguntas do admin:
@@ -61,6 +62,55 @@ const MAX_LINHAS_EXTRATO = 400
 /** O PostgREST devolve no maximo 1000 linhas por chamada — o extrato e "as ultimas 1000", nao "todas". */
 const TETO_CONSULTA = 1000
 
+/*
+  ORDENAR PELO TÍTULO DA COLUNA (12/11/2026, Tiago).
+
+  Clicar num título ordena por ele; clicar de novo inverte. Número começa do
+  maior, o nome do cliente começa de A a Z. Antes do primeiro clique a lista
+  fica na ordem que o banco devolve, a de sempre.
+
+  A comparação usa os números de verdade (`MedidasDaConta`), nunca o texto
+  formatado: "US$ 4.332,20" comparado como texto põe 9 antes de 10.000. Em
+  "Lado a lado" ordena pela conta real, o mesmo lado que manda nos totais.
+  Quem não tem o valor (último dia vazio) fica sempre no fim, nos dois sentidos.
+*/
+type ColCliente = 'nome' | 'contas' | 'operacoes' | 'entradas' | 'pagamentos' | 'resultado' | 'comissao' | 'robos' | 'ultimoDia'
+type Direcao = 'asc' | 'desc'
+interface Ordem { col: ColCliente; dir: Direcao }
+const COLUNAS: Array<[ColCliente, string]> = [
+  ['nome', 'Cliente'], ['contas', 'Contas'], ['operacoes', 'Operações'], ['entradas', 'Entradas'], ['pagamentos', 'Pagamentos'],
+  ['resultado', 'Resultado'], ['comissao', 'Comissão'], ['robos', MARCA.vocabularioIA ? 'I.A.' : 'Robôs'], ['ultimoDia', 'Último dia'],
+]
+const TEXTOS: ColCliente[] = ['nome']
+function valorDaColuna(l: LinhaClientePorConta, col: ColCliente, conta: Conta): string | number | null {
+  const m = principal(l, conta === 'ambas' ? 'real' : conta)
+  switch (col) {
+    case 'nome': return (l.nome || l.email || '').trim() || null
+    case 'contas': return m.contas
+    case 'operacoes': return m.operacoes
+    case 'entradas': return m.entradas
+    case 'pagamentos': return m.pagamentos
+    case 'resultado': return m.resultado
+    case 'comissao': return m.comissao
+    case 'robos': return m.operacoesRobos
+    case 'ultimoDia': { const d = conta === 'demo' ? l.demo.ultimoDia : m.ultimoDia; return d ? Date.parse(`${d}T12:00:00Z`) : null }
+  }
+}
+function ordenarClientes(lista: LinhaClientePorConta[], ordem: Ordem | null, conta: Conta): LinhaClientePorConta[] {
+  if (!ordem) return lista
+  const s = ordem.dir === 'asc' ? 1 : -1
+  return [...lista].sort((a, b) => {
+    const x = valorDaColuna(a, ordem.col, conta), y = valorDaColuna(b, ordem.col, conta)
+    if (x === y) return 0
+    if (x === null) return 1
+    if (y === null) return -1
+    return s * (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pt-BR', { sensitivity: 'base' }))
+  })
+}
+/** Clicar na mesma coluna inverte; numa nova, número começa do maior e texto de A a Z. */
+const alternar = (atual: Ordem | null, col: ColCliente): Ordem =>
+  atual?.col === col ? { col, dir: atual.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: TEXTOS.includes(col) ? 'asc' : 'desc' }
+
 export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
   const [dias, setDias] = useState<number>(30)
   /* Começa em conta real: é o dinheiro que existe. */
@@ -69,6 +119,8 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
   const [conferencia, setConferencia] = useState<DiaConferencia[]>([])
   const [carregando, setCarregando] = useState(false)
   const [aberto, setAberto] = useState<LinhaClientePorConta | null>(null)
+  /* null = a ordem de sempre, a do banco, até alguém clicar num título. */
+  const [ordem, setOrdem] = useState<Ordem | null>(null)
 
   /* O período muda a consulta; a conta NÃO. Os dois lados vêm sempre do banco,
      separados, e trocar de conta só muda o que a tela mostra — sem ida à rede
@@ -97,8 +149,8 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
   }, [linhas, conta])
 
   const visiveis = useMemo(() =>
-    linhas.filter((l) => conta === 'ambas' ? (operou(l.real) || operou(l.demo)) : operou(principal(l, conta))),
-    [linhas, conta])
+    ordenarClientes(linhas.filter((l) => conta === 'ambas' ? (operou(l.real) || operou(l.demo)) : operou(principal(l, conta))), ordem, conta),
+    [linhas, conta, ordem])
 
   const oficialTotal = conferencia.reduce((s, d) => s + d.oficial, 0)
   const calculadaTotal = conferencia.reduce((s, d) => s + d.calculada, 0)
@@ -137,8 +189,24 @@ export function RelatorioClientes({ sessao }: { sessao: SessaoTeeds }) {
 
     <section className="admin-card full">
       <header><div><span className="rot">Por cliente · {dias} dias · {conta === 'real' ? 'conta real' : conta === 'demo' ? 'demonstração' : 'real e demonstração, lado a lado'}</span><h3>Quem operou, quanto sobrou, quanto rendeu</h3></div><small>{visiveis.length} {visiveis.length === 1 ? 'cliente' : 'clientes'}{linhas.length >= TETO_CONSULTA ? ` · lista cortada nos ${inteiro(TETO_CONSULTA)} primeiros` : ''}</small></header>
+      {/* No celular a tabela vira cartões e o cabeçalho some: a ordem vai para um seletor. */}
+      <label className="rc-ordem-cel"><span>Ordenar</span>
+        <select value={ordem ? `${ordem.col}:${ordem.dir}` : ''} onChange={(e) => { const [col, dir] = e.target.value.split(':'); setOrdem(col ? { col: col as ColCliente, dir: dir as Direcao } : null) }}>
+          <option value="">Ordem padrão</option>
+          {COLUNAS.flatMap(([c, r]) => TEXTOS.includes(c)
+            ? [<option key={`${c}a`} value={`${c}:asc`}>{r} · de A a Z</option>, <option key={`${c}d`} value={`${c}:desc`}>{r} · de Z a A</option>]
+            : [<option key={`${c}d`} value={`${c}:desc`}>{r} · maior primeiro</option>, <option key={`${c}a`} value={`${c}:asc`}>{r} · menor primeiro</option>])}
+        </select>
+      </label>
       <div className={`rc-tabela ${conta === 'ambas' ? 'lado-a-lado' : ''}`}>
-        <div className="cab"><span>Cliente</span><span>Contas</span><span>Operações</span><span>Entradas</span><span>Pagamentos</span><span>Resultado</span><span>Comissão</span><span>Robôs</span><span>Último dia</span></div>
+        <div className="cab adm-cab-ordem rc-cab-ordem" role="row">
+          {COLUNAS.map(([col, rotulo]) => {
+            const ativa = ordem?.col === col
+            return <span key={col} role="columnheader" aria-sort={ativa ? (ordem!.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+              <button type="button" className={ativa ? 'on' : ''} onClick={() => setOrdem((o) => alternar(o, col))} title={`Ordenar por ${rotulo}`}>
+                {rotulo}<i aria-hidden="true">{ativa ? (ordem!.dir === 'asc' ? '▲' : '▼') : '⇅'}</i></button></span>
+          })}
+        </div>
         {visiveis.map((l) => {
           const m = principal(l, conta === 'ambas' ? 'real' : conta)
           const d = l.demo
