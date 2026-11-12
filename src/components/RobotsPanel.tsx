@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { IconeFechar } from './IconeFechar'
 import type { TeedsSocket } from '../core/deriv/client'
@@ -30,6 +30,11 @@ import './robot-workspace.css'
 import { NomeDoRobo } from './NomeDoRobo'
 import { modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
+import type { Roteiro } from '../core/teeds/sessaoSimulada'
+// Sessão simulada (12/11/2026): só administradores da GF; o código só desce quando abre
+const EditorDaSessao = lazy(() => import('./sessaoSimulada/EditorDaSessao').then((m) => ({ default: m.EditorDaSessao })))
+const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/EditorDaSessao').then((m) => ({ default: m.BotaoSessaoSimulada })))
+const PalcoDaSessao = lazy(() => import('./sessaoSimulada/PalcoDaSessao').then((m) => ({ default: m.PalcoDaSessao })))
 
 interface Props {
   socket: TeedsSocket | null
@@ -153,6 +158,16 @@ export function RobotsPanel({
   const [digitosDe, setDigitosDe] = useState<string | null>(null)
   // sem a Deriv: a janela que pede a conexão, aberta pelo "Iniciar" de uma I.A.
   const [pedindoDeriv, setPedindoDeriv] = useState(false)
+  /*
+    Sessão simulada (12/11/2026, Tiago: "preciso de um motor de operações simulado, assim como o
+    relatório"). Só o admin da GF. Enquanto está aberta, as sessões de verdade ficam escondidas
+    (continuam montadas e operando) e a tela mostra a simulada no lugar delas.
+  */
+  const podeSimular = admin === true && !!MARCA.vocabularioIA
+  const [simulada, setSimulada] = useState<Roteiro | null>(null)
+  const [editandoSimulada, setEditandoSimulada] = useState(false)
+  const [roteiroEmEdicao, setRoteiroEmEdicao] = useState<Roteiro | null>(null)
+  useEffect(() => { if (!podeSimular) { setSimulada(null); setEditandoSimulada(false) } }, [podeSimular])
   useEffect(() => { if (logado) { setPedindoDeriv(false); retomarEscolhaDepoisDaDeriv() } }, [logado])
   const alternarDigitos = (chave: string) =>
     setDigitosDe((atual) => (atual === chave ? null : chave))
@@ -413,19 +428,20 @@ export function RobotsPanel({
   }
 
   return (
-    <div className={`ger rob robot-workspace ${temAcompanhamento ? 'tem-acompanhamento' : ''}`}>
+    <div className={`ger rob robot-workspace ${temAcompanhamento || simulada ? 'tem-acompanhamento' : ''}`}>
       <div className="ger-topo rob-workspace-header">
         <div>
           <span className="rob-eyebrow">CENTRAL DE ROBÔS</span>
           {/* GlobalFly sem sessão: a vitrine logo abaixo já tem o título e a frase; aqui não repete. */}
-          {(temAcompanhamento || !MARCA.vitrineDosRobos) && <>
-            <h2>{temAcompanhamento ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
+          {(temAcompanhamento || simulada || !MARCA.vitrineDosRobos) && <>
+            <h2>{temAcompanhamento || simulada ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
             <p className="ger-sub">
-              {temAcompanhamento ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
+              {temAcompanhamento || simulada ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
             </p>
           </>}
         </div>
         <div className="rob-workspace-actions">
+          {podeSimular && <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => { setRoteiroEmEdicao(simulada); setEditandoSimulada(true) }} /></Suspense>}
           {/* a cabine numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
           <BotaoJanelaSolta qual="cabine" />
           {/* 10/11/2026 (pedido do Victor): ver os dígitos ANTES de ligar uma I.A.; com I.A. ligada
@@ -442,6 +458,22 @@ export function RobotsPanel({
         </div>
       </div>
 
+      {simulada && (
+        <Suspense fallback={<div className="robot-session-loading" role="status"><b>Sessão simulada</b><span>Abrindo…</span></div>}>
+          <PalcoDaSessao roteiro={simulada} mostrarMarkup={admin && mostrarMarkup}
+            aoEditar={() => { setRoteiroEmEdicao(simulada); setEditandoSimulada(true) }} aoSair={() => setSimulada(null)} />
+        </Suspense>
+      )}
+      {editandoSimulada && (
+        <Suspense fallback={null}>
+          <EditorDaSessao inicial={roteiroEmEdicao ?? undefined}
+            aoRodar={(r) => { setSimulada(r); setEditandoSimulada(false) }}
+            aoFechar={() => setEditandoSimulada(false)}
+            aoSair={simulada ? () => { setSimulada(null); setEditandoSimulada(false) } : undefined} />
+        </Suspense>
+      )}
+      {/* com a simulada na tela, o resto some sem desmontar: as sessões de verdade seguem acompanhadas */}
+      <div style={{ display: simulada ? 'none' : 'contents' }}>
       {/* só os cartões à mostra (uma linha por sessão): bloco escondido não conta duas vezes */}
       <RobotOverview sessoes={vivasNoServidor} rotulosTrocados={rotulosTrocados}
         paineis={chaves.map((k) => estudo.get(k)).filter((d): d is DadosEstudo => !!d)} moeda={moeda} demoDaTela={isDemo} />
@@ -786,6 +818,7 @@ export function RobotsPanel({
         </div>
       </section>
       </>}
+      </div>
 
       {digitosDe && (
         <DigitosFlutuante nomeAtivo={nomeAtivoDosRobos}

@@ -6,6 +6,7 @@ import { DerivLogo } from './DerivMarca'
 import { MARCA } from '../marca'
 import { AccountDemonstration } from './AccountDemonstration'
 import { MASCARA, useValoresOcultos } from '../core/privacidade'
+import { useSaldoSimulado } from '../core/teeds/saldoSimulado'
 
 interface Props {
   admin?: boolean | null
@@ -40,6 +41,8 @@ interface Props {
 export function AccountSwitcher(props: Props) {
   const { contas, selecionada, isDemo, saldo, moeda, conectando, onTrocar, onRecarregar, onSair } = props
   const ocultos = useValoresOcultos()
+  // sessão simulada rodando (só admin, 12/11/2026): o topo mostra o saldo dela, com a etiqueta da conta escolhida no roteiro
+  const simulado = useSaldoSimulado()
   /*
     Como a etiqueta aparece. No acesso somente-demo (o de demonstracao da
     casa), a conta demo veste a etiqueta da real — verde, "Real" — a pedido
@@ -80,13 +83,15 @@ export function AccountSwitcher(props: Props) {
   return (
     <div className="conta" ref={caixa}>
       <button
-        className={`conta-chip ${cara(isDemo)} ${aberto ? 'aberto' : ''}`}
+        className={`conta-chip ${simulado ? (simulado.demo ? 'demo' : 'real') : cara(isDemo)} ${aberto ? 'aberto' : ''}`}
         onClick={() => setAberto((a) => { if (!a) props.onAbrir?.(); return !a })}
         aria-expanded={aberto}
         aria-haspopup="menu"
       >
-        {selecionada ? <><span className={`selo ${cara(isDemo)}`}>{rotulo(isDemo)}</span>
-        <BalanceLive valor={saldo} moeda={moeda} conectando={conectando} /></> : <span>Selecionar conta</span>}
+        {simulado ? <><span className={`selo ${simulado.demo ? 'demo' : 'real'}`}>{simulado.demo ? 'Demo' : 'Real'}</span>
+        <BalanceLive key="simulado" valor={simulado.valor} moeda="USD" conectando={false} /></>
+        : selecionada ? <><span className={`selo ${cara(isDemo)}`}>{rotulo(isDemo)}</span>
+        <BalanceLive key="real" valor={saldo} moeda={moeda} conectando={conectando} /></> : <span>Selecionar conta</span>}
         <svg className="conta-seta" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
           <path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor"
             strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />

@@ -1,0 +1,81 @@
+/* Sessão simulada (12/11/2026). Prefixo ssim-. O editor usa as peças do relatório simulado (rsim-, rel-). */
+
+.ssim-raiz { --rel-dados: var(--fonte-dados, ui-monospace, Menlo, monospace); --rel-ouro: var(--gf-ouro, var(--primary)); }
+.ssim-painel { width: min(560px, 100%); }
+
+/* o ícone do topo: o laranja do relatório simulado */
+.ssim-abrir svg path:last-child { fill: #FB923C; stroke: none; }
+
+/* passo 1: as I.A. e os cenários prontos */
+.ssim-ias { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ssim-ias button, .ssim-pronto { display: grid; gap: 4px; min-height: 64px; padding: 11px 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.ssim-ias button b { font-size: 15px; min-width: 0; }
+.ssim-ias button small, .ssim-pronto small { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.ssim-ias button.on, .ssim-pronto.on { border-color: var(--rel-ouro); background: color-mix(in srgb, var(--rel-ouro) 13%, var(--bg)); box-shadow: inset 0 0 0 1px var(--rel-ouro); }
+.ssim-ias button:focus-visible, .ssim-pronto:focus-visible { outline: 2px solid var(--rel-ouro); outline-offset: 2px; }
+.ssim-prontos { display: grid; gap: 8px; }
+.ssim-pronto { grid-template-columns: 10px minmax(0, 1fr); column-gap: 10px; align-items: center; min-height: 56px; }
+.ssim-pronto i { grid-row: span 2; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+.ssim-pronto.bom i { background: var(--up); } .ssim-pronto.ruim i { background: var(--down); } .ssim-pronto.neutro i { background: #FB923C; }
+.ssim-pronto b { font-size: 14px; }
+
+/* revisão: a fita de operações */
+.ssim-fita { display: flex; flex-wrap: wrap; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); max-height: 220px; overflow: auto; }
+.ssim-fita-item { display: inline-flex; align-items: center; gap: 4px; }
+.ssim-fita button { width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; transition: transform .12s; }
+.ssim-fita button.g { background: var(--up); }
+.ssim-fita button.p { background: var(--down); }
+.ssim-fita button.rec { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px #FB923C; }
+.ssim-fita button:hover { transform: scale(1.25); }
+.ssim-fita button:focus-visible { outline: 2px solid var(--rel-ouro); outline-offset: 2px; }
+.ssim-fita-religou { font-style: normal; font-size: 11px; color: #FB923C; padding: 0 4px; }
+.ssim-fita-legenda { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: -8px; font-size: 12px; color: var(--muted); }
+.ssim-fita-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.ssim-fita-legenda i { width: 10px; height: 10px; border-radius: 50%; }
+.ssim-fita-legenda i.g { background: var(--up); } .ssim-fita-legenda i.p { background: var(--down); }
+.ssim-fita-legenda i.rec { box-shadow: inset 0 0 0 2px #FB923C; }
+.ssim-pequeno { min-height: 36px !important; padding: 0 12px !important; font-size: 12.5px; }
+.ssim-fita-legenda .ssim-pequeno { margin-left: auto; }
+.ssim-dif { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* o palco: a tag no canto da cabine */
+.ssim-cabine { position: relative; }
+/* o quadro rola (overflow auto): a folga em cima deixa a tag do canto inteira */
+.ssim-quadro { padding-top: 14px; }
+.ssim-tag { top: -12px; }
+
+/* a pílula de controle */
+.ssim-pilula { position: fixed; z-index: 170; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px); padding: 6px 8px 6px 6px; border: 1px solid color-mix(in srgb, #FB923C 45%, var(--border));
+  border-radius: 999px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); box-shadow: 0 14px 40px -12px #000a;
+  color: var(--text); font-size: 12.5px; transition: opacity .35s, transform .35s; flex-wrap: nowrap; width: max-content; box-sizing: border-box; }
+.ssim-pilula.escondida { opacity: 0; transform: translate(-50%, 12px); pointer-events: none; }
+/* a aba das I.A. estica todo filho direto (.workspace-app .ger.robot-workspace > *): a pílula não */
+.workspace-app .ger.robot-workspace > .ssim-pilula { width: max-content; max-width: calc(100vw - 32px); }
+.ssim-play { display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: #FB923C; color: #2A1F10; cursor: pointer; }
+.ssim-play svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.ssim-play svg path[d^="M8 5l"] { fill: currentColor; }
+.ssim-play:focus-visible, .ssim-pilula button:focus-visible, .ssim-marcas:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
+.ssim-rotulo { flex: none; min-width: 128px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ssim-barra { flex: none; width: 90px; height: 4px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.ssim-barra i { display: block; height: 100%; background: #FB923C; transition: width .2s; }
+.ssim-vel { display: inline-flex; flex: none; gap: 2px; padding: 2px; border-radius: 999px; background: var(--bg); }
+.ssim-vel button { min-width: 34px; height: 30px; padding: 0 6px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
+.ssim-vel button.on { background: color-mix(in srgb, #FB923C 22%, var(--surface)); color: var(--text); }
+.ssim-marcas { flex: none; width: auto; min-width: 0; height: 32px; max-width: 150px; padding: 0 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); font: inherit; cursor: pointer; }
+.ssim-texto { flex: none; height: 32px; padding: 0 11px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font: inherit; font-weight: 650; cursor: pointer; white-space: nowrap; }
+.ssim-texto:disabled { opacity: .45; cursor: default; }
+.ssim-texto.sair { color: var(--down); }
+.ssim-aviso { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px); padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--down); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .ssim-pilula, .workspace-app .ger.robot-workspace > .ssim-pilula { left: 16px; right: 16px; width: auto; transform: none; max-width: none; flex-wrap: wrap; justify-content: center; border-radius: 18px; padding: 8px; }
+  .ssim-pilula.escondida { transform: translateY(12px); }
+  .ssim-rotulo { min-width: 0; }
+  .ssim-barra { width: 60px; }
+}
+@media (max-width: 560px) {
+  .ssim-ias { grid-template-columns: minmax(0, 1fr); }
+  .ssim-marcas { max-width: 120px; }
+}
+@media (prefers-reduced-motion: reduce) { .ssim-pilula, .ssim-fita button, .ssim-barra i { transition: none; } }

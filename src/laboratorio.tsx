@@ -41,6 +41,7 @@ import type { ConfigEstrategia, EstadoMotor, OperacaoMotor, Registro } from './c
 import type { ActiveSymbol } from './core/deriv/types'
 import { RobotLive } from './components/RobotLive'
 import { RobotsPanel } from './components/RobotsPanel'
+import { AccountSwitcher } from './components/AccountSwitcher'
 import { Bandeira, Moeda } from './components/ferramentas/Bandeira'
 const MOEDAS_LAB = ['USD', 'BRL', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'CNY', 'ARS', 'MXN', 'CLP', 'BTC']
 import { gradeDoCatalogo, normalizarGrade, type GradeAulas } from './core/teeds/gradeAulas'
@@ -662,6 +663,15 @@ function Laboratorio() {
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'boasvindas') return <LabBoasVindas />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
+  // ?tela=sessao-simulada: a aba das I.A. como o admin da GF vê, com o ícone da sessão simulada e o saldo do topo
+  if (qual === 'sessao-simulada') return (
+    <div className="app workspace-app" data-laboratorio={qual} style={{ minHeight: '100dvh' }}>
+      <header style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px' }}>
+        <AccountSwitcher contas={[]} selecionada="CR1234567" isDemo={false} saldo={1234.56} moeda="USD" conectando={false} onTrocar={nada} onRecarregar={nada} onSair={nada} />
+      </header>
+      <RobotsPanel socket={null} logado isDemo={false} moeda="USD" symbols={symbols} symbolPadrao="R_75" sessaoTeeds={null} admin onConectarDeriv={nada} />
+    </div>
+  )
   return (
     <div className="app workspace-app" data-laboratorio={qual}>
       <main className="ger rob robot-workspace tem-acompanhamento">
