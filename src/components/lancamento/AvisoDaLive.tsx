@@ -14,9 +14,10 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { MARCA } from '../../marca'
 import {
-  assinarQuemVeAvisoDaLive, AVISO_DA_LIVE_DESDE, callNoAr, EVENTO_ABRIR_AVISO_DA_LIVE, FIM_DA_CALL, faltaCurto, FIM_DA_LIVE, INICIO_DA_LIVE, linkDaLive, liveAberta,
+  assinarQuemVeAvisoDaLive, AVISO_DA_LIVE_DESDE, EVENTO_ABRIR_AVISO_DA_LIVE, faltaCurto, FIM_DA_LIVE, INICIO_DA_LIVE, linkDaLive, liveAberta,
   liveLidaPeloApp, quemVeAvisoDaLive, type LiveAberta,
 } from '../../core/teeds/lancamento'
+import { acompanharTransmissao, assinarTransmissao, ondeEhATransmissao, transmissaoAtual } from '../../core/teeds/transmissao'
 import './lancamento.css'
 
 const CHAVE_EQUIPE = 'gf.aviso-da-live.equipe'
@@ -30,7 +31,10 @@ export default function AvisoDaLive() {
   const [agora, setAgora] = useState(Date.now())
   const [dados, setDados] = useState<LiveAberta | null>(null)
   const [equipe, setEquipe] = useState(() => { try { return !!sessionStorage.getItem(CHAVE_EQUIPE) } catch { return false } })
-  // call de 10/11: "Agora não" fecha; o Ao vivo do menu reabre (também para administradores)
+  // a transmissão ao vivo (12/11/2026): ligada pelos administradores em Administração › Transmissão ao vivo.
+  // "Agora não" fecha; o Ao vivo do menu reabre (também para administradores)
+  const tr = useSyncExternalStore(assinarTransmissao, transmissaoAtual)
+  useEffect(() => acompanharTransmissao(), [])
   const [fechado, setFechado] = useState(false)
   const [pedido, setPedido] = useState(false)
   useEffect(() => {
@@ -50,17 +54,18 @@ export default function AvisoDaLive() {
   const fim = terminou ? Date.parse(terminou) : FIM_DA_LIVE
   const naJanela = agora >= AVISO_DA_LIVE_DESDE && agora < fim
   const link = linkDaLive(dados?.link) ?? linkDaLive(doApp?.link)
-  // lê o link a partir de 5 min antes do aviso, enquanto a live não terminou: de 20 em 20 s
-  // até o link chegar, depois de 60 em 60 s (só para saber se ela terminou)
-  const emCall = callNoAr(terminou, agora)
-  // link novo (trocado no meio da call): o popup volta na tela de todo mundo, inclusive de quem fechou
-  const linkVisto = useRef<string | null>(null)
+  const linkDaTransmissao = tr.noAr ? linkDaLive(tr.link) : null
+  const emCall = !!linkDaTransmissao
+  // transmissão nova ou link trocado no meio dela: o popup volta na tela de todo mundo, inclusive de quem fechou
+  const vez = emCall ? `${tr.iniciadaEm}|${linkDaTransmissao}` : null
+  const vezVista = useRef<string | null>(null)
   useEffect(() => {
-    if (!emCall || !link) return
-    if (linkVisto.current && linkVisto.current !== link) { setFechado(false); setPedido(true) }
-    linkVisto.current = link
-  }, [emCall, link])
-  const ler = ver || emCall || (agora >= AVISO_DA_LIVE_DESDE - 5 * 6e4 && agora < fim)
+    if (!vez) return
+    if (vezVista.current && vezVista.current !== vez) { setFechado(false); setPedido(true) }
+    vezVista.current = vez
+  }, [vez])
+  // a live de lançamento: lê o link a partir de 5 min antes do aviso, enquanto a live não terminou
+  const ler = ver || (agora >= AVISO_DA_LIVE_DESDE - 5 * 6e4 && agora < fim)
   useEffect(() => {
     if (!ler) return
     let vivo = true
@@ -68,28 +73,29 @@ export default function AvisoDaLive() {
     const uma = () => {
       window.clearTimeout(t)
       void liveAberta().then((d) => { if (vivo) setDados(d) }).catch(() => undefined).finally(() => {
-        if (vivo) t = window.setTimeout(uma, emCall ? 15_000 : document.visibilityState === 'hidden' ? 60_000 : link ? 60_000 : 20_000)
+        if (vivo) t = window.setTimeout(uma, document.visibilityState === 'hidden' ? 60_000 : link ? 60_000 : 20_000)
       })
     }
     const aoVoltar = () => { if (document.visibilityState === 'visible') uma() }
     uma()
     document.addEventListener('visibilitychange', aoVoltar)
     return () => { vivo = false; window.clearTimeout(t); document.removeEventListener('visibilitychange', aoVoltar) }
-  }, [ler, !!link, emCall]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ler, !!link]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (MARCA.id !== 'globalfly') return null
   if (emCall) {
-    if (!link || fechado || (quem === 'admin' && !pedido)) return null
+    if (fechado || (quem === 'admin' && !pedido)) return null
+    const onde = ondeEhATransmissao(linkDaTransmissao)
     return (
       <div className="tl-fundo tl-livre alv-fundo" role="presentation">
         <div className="tl-janela alv-janela" role="dialog" aria-modal="true" aria-labelledby="alv-titulo">
           <span className="tl-selo tl-selo-vivo"><i aria-hidden="true" />Ao vivo agora</span>
           <div className="tl-cabeca">
             <h2 id="alv-titulo">Atenção: a nossa transmissão ao vivo começou</h2>
-            <p>Clique no botão para entrar na call pelo Google Meet.</p>
+            <p>{onde ? `Clique no botão para entrar na transmissão pelo ${onde}.` : 'Clique no botão para entrar na transmissão.'}</p>
           </div>
           <div className="tl-acoes">
-            <a className="tl-botao alv-botao" href={link} target="_blank" rel="noopener noreferrer" onClick={() => setFechado(true)}>
+            <a className="tl-botao alv-botao" href={linkDaTransmissao!} target="_blank" rel="noopener noreferrer" onClick={() => setFechado(true)}>
               <i className="tl-ponto alv-ponto" aria-hidden="true" />Clique aqui para entrar
             </a>
           </div>
@@ -98,7 +104,6 @@ export default function AvisoDaLive() {
       </div>
     )
   }
-  void FIM_DA_CALL
   if (!ver && (!naJanela || quem === 'admin' || (quem === 'visitante' && equipe))) return null
 
   const noAr = agora >= INICIO_DA_LIVE

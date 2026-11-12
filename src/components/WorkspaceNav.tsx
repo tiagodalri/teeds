@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { abrirAvisoDaLive, callNoAr, liveLidaPeloApp } from '../core/teeds/lancamento'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { abrirAvisoDaLive } from '../core/teeds/lancamento'
+import { assinarTransmissao, transmissaoNoAr } from '../core/teeds/transmissao'
 import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { Brand } from './Brand'
 import { MARCA } from '../marca'
@@ -39,11 +40,13 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
   const adminOculto = useMenuAdminOculto()
   const verAdmin = admin && !adminOculto
   const verDivulgacao = mostrarDivulgacao && !(admin && adminOculto)
+  // transmissão ao vivo no ar (12/11/2026): o clique no Ao vivo reabre o popup com o link
+  const transmissao = useSyncExternalStore(assinarTransmissao, transmissaoNoAr)
   // o "Mais" da barra inferior (celular) abre este mesmo menu
   useEffect(() => { const abrir = () => setOpen(true); window.addEventListener('menu:abrir', abrir); return () => window.removeEventListener('menu:abrir', abrir) }, [])
   const navigate = (next: WorkspacePage) => { onNavigate(next); setOpen(false) }
   const estaSelecionado = (id: WorkspacePage) => page === id || (id === 'gestao' && (page === 'monitoramento' || page === 'insights'))
-  const item = (id: WorkspacePage) => <button key={id} data-tour={`nav-${id}`} className={`workspace-link ${estaSelecionado(id) ? 'selected' : ''} ${id === 'aovivo' && aoVivoAgora ? 'no-ar' : ''}`} aria-current={estaSelecionado(id) ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => (id === 'aovivo' && callNoAr(liveLidaPeloApp()?.terminouEm) ? abrirAvisoDaLive() : navigate(id))}>
+  const item = (id: WorkspacePage) => <button key={id} data-tour={`nav-${id}`} className={`workspace-link ${estaSelecionado(id) ? 'selected' : ''} ${id === 'aovivo' && aoVivoAgora ? 'no-ar' : ''}`} aria-current={estaSelecionado(id) ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => { if (id === 'aovivo' && transmissao) { abrirAvisoDaLive(); setOpen(false) } else navigate(id) }}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[id]} /></svg>
     <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'aovivo' && aoVivoAgora && <i className="workspace-aovivo" aria-label="Transmissão no ar agora" title="Transmissão no ar agora"><b className="workspace-label">ao vivo</b></i>}{id === 'assistente' && <small className="workspace-lock workspace-label" aria-label="Acesso restrito" title="Acesso restrito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></small>}
   </button>

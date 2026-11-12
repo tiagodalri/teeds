@@ -162,19 +162,11 @@ export const AVISO_DA_LIVE_DESDE = INICIO_DA_LIVE - 20 * 6e4
 export const PAGINA_DA_LIVE = 'https://globalflytrade.com/live/'
 
 /*
-  10/11/2026, 21h (Tiago, urgente): call fechada pelo Google Meet com os alunos. O link vem do mesmo
-  campo (lancamento_live.youtube). Popup para todos (com "Agora não"), e o Ao vivo do menu piscando em
-  vermelho reabre o popup. Termina com "Encerrar a live" no painel (terminou_em) ou em 4 h.
+  10/11/2026, 21h (Tiago, urgente): call fechada pelo Google Meet, ligada à mão (horário fixo aqui).
+  12/11/2026: virou a Transmissão ao vivo do painel (core/teeds/transmissao.ts): os administradores
+  colam o link, iniciam e encerram. O Ao vivo do menu, piscando, reabre o popup por este evento.
 */
-export const INICIO_DA_CALL = Date.UTC(2026, 10, 11, 0, 0, 0)
-export const FIM_DA_CALL = INICIO_DA_CALL + 4 * 36e5
 export const EVENTO_ABRIR_AVISO_DA_LIVE = 'gf:abrir-aviso-da-live'
-export function callNoAr(terminouEm?: string | null, agora = Date.now()): boolean {
-  if (MARCA.id !== 'globalfly') return false
-  const t = terminouEm ? Date.parse(terminouEm) : NaN
-  const fim = Number.isFinite(t) && t > INICIO_DA_CALL ? t : FIM_DA_CALL
-  return agora >= INICIO_DA_CALL && agora < fim
-}
 export const abrirAvisoDaLive = () => window.dispatchEvent(new Event(EVENTO_ABRIR_AVISO_DA_LIVE))
 
 export interface LiveAberta { inicioPrevisto: string | null; link: string | null; terminouEm: string | null }

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react'
-import { callNoAr, liveLidaPeloApp } from './core/teeds/lancamento'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react'
+import { assinarTransmissao, transmissaoNoAr } from './core/teeds/transmissao'
 import { useSimulador } from './hooks/useSimulador'
 import { PriceChart, type ChartMode, type ContractMarker } from './components/PriceChart'
 import { PositionCard } from './components/PositionCard'
@@ -535,7 +535,9 @@ export default function App() {
   const [avisoTreino, setAvisoTreino] = useState(false)
   // o aviso de "Live iniciada" também sai sozinho (cobria o topo no celular)
   useEffect(() => { if (!avisoTreino) return; const t = window.setTimeout(() => setAvisoTreino(false), 20000); return () => window.clearTimeout(t) }, [avisoTreino])
-  const aoVivoAgora = Boolean(liveAgora) || Boolean(treinoAgora) || callNoAr(liveLidaPeloApp()?.terminouEm)
+  // a transmissão ao vivo ligada pelos administradores (12/11/2026): o Ao vivo do menu pisca para todos
+  const transmissaoAgora = useSyncExternalStore(assinarTransmissao, transmissaoNoAr)
+  const aoVivoAgora = Boolean(liveAgora) || Boolean(treinoAgora) || transmissaoAgora
   // Convidado que prefere entrar na conta: a tela de login no lugar da porta do convite.
   const [querLogin, setQuerLogin] = useState(false)
   useEffect(() => { if (!avisoLive) return; const t = window.setTimeout(() => setAvisoLive(null), 20000); return () => window.clearTimeout(t) }, [avisoLive])
@@ -769,7 +771,8 @@ export default function App() {
     return () => { vivo = false }
     // o plano muda na liberação da live: quem virou GF Member passa a ver a sala de treino sem recarregar
   }, [teeds.sessao?.usuario.id, plano]) // eslint-disable-line react-hooks/exhaustive-deps
-  const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true
+  // com a transmissão no ar, o Ao vivo aparece no menu de todos (o clique abre o popup com o link)
+  const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true || transmissaoAgora
   // nunca por cima da live (na liberação de 09/11 a live abre sozinha para quem acabou de ser liberado)
   const mostrarVideoInicio = !videoInicioVisto && !videoInicioDispensado && !JANELA && !!teeds.sessao && !trancado && planoLido && admin !== null
     && (liberadoAntes || !aulasTravadasParaGfMember(plano, admin, liberadoGeral)) && !assistindoLive && !live?.noAr
