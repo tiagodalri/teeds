@@ -240,6 +240,7 @@ button.fin-kpi:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(
 .fin-linha.pago .fin-linha-acoes { visibility: hidden; }
 .fin-linha.vencido .fin-linha-dia { border-color: color-mix(in srgb, var(--fin-saida) 55%, var(--border)); }
 .fin-linha.vencido .fin-linha-dia b { color: var(--fin-saida); }
+.fin-auto { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--fin-entrada, #16a34a) 14%, transparent); color: var(--fin-entrada, #16a34a); font-size: 10.5px; font-style: normal; font-weight: 700; letter-spacing: .02em; vertical-align: 2px; white-space: nowrap; }
 .fin-clipe { display: inline-grid; place-items: center; flex-shrink: 0; color: var(--muted); }
 .fin-clipe svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .fin-chip { display: inline-flex; align-items: center; gap: 7px; max-width: 100%; padding: 4px 10px 4px 8px; border-radius: 999px; background: color-mix(in srgb, var(--fin-cor, var(--muted)) 11%, transparent); color: var(--text); font-size: 12px; font-style: normal; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

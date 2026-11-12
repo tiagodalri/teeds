@@ -100,6 +100,19 @@ async function erroDe(r: Response, padrao: string): Promise<Error> {
 /** O banco recusou porque o token venceu ou foi encerrado: a tela volta para a senha. */
 export class FinTrancado extends Error { constructor() { super('O financeiro foi bloqueado. Digite sua senha de novo.') } }
 
+/**
+ * Dólar comercial (compra) para converter o markup da Deriv, que vem em US$. Sem resposta em 4 s: null,
+ * e o banco usa a última cotação guardada (fin_cotacoes).
+ */
+async function cotacaoDoDolar(): Promise<number | null> {
+  try {
+    const r = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { signal: AbortSignal.timeout(4000) })
+    if (!r.ok) return null
+    const v = Number((await r.json() as { USDBRL?: { bid?: string } }).USDBRL?.bid)
+    return v > 1 && v < 50 ? v : null
+  } catch { return null }
+}
+
 export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
   const base = SUPABASE.url
   const cab = (extra: Record<string, string> = {}) => {
@@ -161,6 +174,8 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
     preparar: async () => { await rpc('fin_preparar', { p_marca: marca }) },
     ler: async () => {
       if (!lerToken(sessao.usuario.id) || !(await rpc<string | null>('fin_sessao'))) { guardarToken(null); throw new FinTrancado() }
+      // traz as vendas da Cakto e o markup da Deriv para os lançamentos antes de ler (falhou: lê o que já tem)
+      try { await rpc('fin_sincronizar_receitas', { p_marca: marca, p_cotacao: await cotacaoDoDolar() }) } catch (e) { if (e instanceof FinTrancado) throw e }
       const [categorias, contas, socios, projetos, lancamentos] = await Promise.all([
         get<Categoria[]>(`fin_categorias?marca=eq.${m}&order=tipo,ordem,nome`),
         get<Conta[]>(`fin_contas?marca=eq.${m}&order=ordem,nome`),

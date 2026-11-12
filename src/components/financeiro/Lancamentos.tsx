@@ -7,6 +7,13 @@ import {
 import { Icone } from '../Icone'
 import { Vazio } from './ui'
 
+/** Lançamentos que a sincronia traz sozinha (fin_sincronizar_receitas): o selo e o que ele quer dizer. */
+const AUTOMATICO: Record<string, string> = {
+  'cakto': 'Veio da Cakto: valor e data seguem a venda. Categoria, projeto e conta podem ser mudados.',
+  'cakto-reembolso': 'Veio da Cakto: reembolso ou chargeback da venda.',
+  'markup-deriv': 'Markup da Deriv no mês, medido em cada conta real dos clientes deste parceiro. Atualiza até 5 dias depois do fim do mês.',
+}
+
 export type FiltroInicial = 'pagar' | 'receber' | 'vencidos' | null
 type FTipo = 'todos' | 'receita' | 'despesa' | 'socios'
 type FSituacao = 'todas' | 'pago' | 'aberto' | 'vencido'
@@ -131,7 +138,7 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
             return <div key={l.id} role="row" className={`fin-linha ${s}`} onClick={() => aoAbrir(l)}
               onKeyDown={(ev) => { if (ev.key === 'Enter' && ev.target === ev.currentTarget) aoAbrir(l) }} tabIndex={0}>
               <span role="cell" className="fin-linha-dia"><b>{diaDe(l).slice(8)}</b><small>{nomeDoMes(diaDe(l).slice(0, 7), true).split(' ')[0]}</small></span>
-              <span role="cell" className="fin-linha-desc"><b>{l.descricao}{l.anexos.length > 0 && <em className="fin-clipe" title={`${l.anexos.length} ${l.anexos.length === 1 ? 'comprovante' : 'comprovantes'}`} aria-label="Com comprovante"><svg viewBox="0 0 24 24"><path d="M20 11.5l-8.2 8.2a5 5 0 01-7.1-7.1l8.5-8.5a3.3 3.3 0 014.7 4.7l-8.5 8.5a1.7 1.7 0 01-2.4-2.4l7.8-7.8" /></svg></em>}</b>
+              <span role="cell" className="fin-linha-desc"><b>{l.descricao}{AUTOMATICO[l.origem ?? ''] && <em className="fin-auto" title={AUTOMATICO[l.origem!]}>Automático</em>}{l.anexos.length > 0 && <em className="fin-clipe" title={`${l.anexos.length} ${l.anexos.length === 1 ? 'comprovante' : 'comprovantes'}`} aria-label="Com comprovante"><svg viewBox="0 0 24 24"><path d="M20 11.5l-8.2 8.2a5 5 0 01-7.1-7.1l8.5-8.5a3.3 3.3 0 014.7 4.7l-8.5 8.5a1.7 1.7 0 01-2.4-2.4l7.8-7.8" /></svg></em>}</b>
                 <small>{l.tipo === 'aporte' || l.tipo === 'retirada' ? ROTULO_TIPO[l.tipo] : l.contraparte || (l.forma ?? '')}{l.parcelas ? ` · ${l.parcela}/${l.parcelas}` : l.grupo ? ' · mensal' : ''}{l.projeto_id && pro.get(l.projeto_id) ? <em className="fin-de-projeto" style={{ ['--fin-cor' as string]: pro.get(l.projeto_id)!.cor }}>{pro.get(l.projeto_id)!.nome}</em> : null}</small></span>
               <span role="cell">{c ? <em className="fin-chip" style={{ ['--fin-cor' as string]: c.cor }}><i className="fin-ponto" />{c.nome}</em> : l.tipo === 'aporte' || l.tipo === 'retirada' ? <em className="fin-chip socio">Sócio</em> : <em className="fin-sem">Sem categoria</em>}</span>
               <span role="cell" className="fin-linha-conta">{l.tipo === 'devolucao' ? <><b>{parceiroNome(l.pago_por)}</b><small>Devolveu a {so?.nome.split(' ')[0] ?? 'um sócio'}</small></>
