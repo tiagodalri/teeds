@@ -265,8 +265,9 @@
 /* 04/11/2026 (revisão do painel): com o selo Gold no topo, a 390 px a barra passava 27 px da tela
    e a foto do perfil ficava cortada na beira, em todas as telas. Em celular estreito: o "US$" do
    saldo sai (a conta é sempre em dólar e o selo Real/Demo continua), o botão do tema e os vãos
-   encolhem, e a barra nunca empurra a página. */
-@media (max-width: 430px) {
+   encolhem, e a barra nunca empurra a página.
+   12/11/2026: até 480 px (era 430): a 440 px (iPhone Pro Max) o topo de admin ainda faltava 12 px. */
+@media (max-width: 480px) {
   .workspace-app .topbar-right { gap: 4px; flex-shrink: 1; min-width: 0; }
   .workspace-app .topbar-right .conta-chip .saldo > em { display: none; }
   .workspace-app .topbar-right > .tema-btn:not(.tela-cheia-btn) { width: 36px; min-width: 36px; height: 36px; padding: 0; }
@@ -279,6 +280,26 @@
   .workspace-app .topbar-right .avatar-botao .conta-seta { display: none; }
   .workspace-app .topbar-right .avatar-botao { min-width: 44px; min-height: 44px; justify-content: center; padding-inline: 0; }
   .workspace-app .topbar-right .conta-chip { gap: 6px; }
+}
+/* 12/11/2026 (print do Victor, iPhone Pro Max): no Manual a página aparecia encolhida, com uma faixa
+   vazia à direita. A 440 px a regra de 430 px não vale, e o topo de admin (frasco do simulado, saldo
+   de 4 dígitos, tema, selo e avatar) somava 511 px quando a variação "+US$ 0,52" aparecia ao lado do
+   saldo: a página ficava mais larga que a tela e o iPhone reduzia tudo para caber.
+   No celular: a variação flutua logo abaixo do botão da conta (não alarga mais a barra), a barra
+   pode ceder largura, e a casca nunca deixa a página passar da largura da tela. */
+@media (max-width: 900px) {
+  .workspace-app { overflow-x: clip; }
+  .workspace-app .topbar .topbar-right { flex-shrink: 1; min-width: 0; }
+  .workspace-app .topbar .topbar-right > :not(.conta:has(.conta-chip)) { flex-shrink: 0; }
+  .workspace-app .topbar .topbar-right > .conta:has(.conta-chip) { min-width: 0; }
+  .workspace-app .topbar .conta-chip { min-width: 0; }
+  .workspace-app .topbar .conta-chip .saldo-caixa { position: relative; }
+  .workspace-app .topbar .conta-chip .saldo { white-space: nowrap; }
+  .workspace-app .topbar .conta-chip .saldo-delta {
+    position: absolute; top: calc(100% + 16px); right: 0; z-index: 2;
+    padding: 4px 9px; border-radius: 8px; white-space: nowrap; pointer-events: none;
+    background: var(--surface); border: 1px solid var(--border); box-shadow: 0 8px 20px -10px #0009;
+  }
 }
 
 /* conversor e calculadora no menu (11/11/2026): só no celular; no computador estão no topo */
