@@ -15,6 +15,7 @@ import { publicSocket } from '../../core/deriv/client'
 import { roboLigou, sessaoBateuLimite } from '../../core/som'
 import { definirSaldoSimulado, escreverNoLivro } from '../../core/teeds/modoSimulado'
 import { resumoDeEstudo } from '../../core/teeds/estudoDoDono'
+import { guardarPonto, lerPontoGuardado } from '../../core/teeds/sessaoGuardada'
 import {
   configDoTrecho, Ensaio, ensaioAte, estrategiaDa, nomeDaIa, previaDoRoteiro, SEGUNDOS_POR_TICK,
   type FimDoTrecho, type PontoDePartida, type Roteiro,
@@ -56,8 +57,9 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     return { ...base, nome: nomeDaIa(roteiro.ia) }
   }, [roteiro.ia])
   const [partida, setPartida] = useState<PontoDePartida | null>(null)
-  // a sessão começa agora; acelerada, as horas que passariam do agora entram no relatório como agora
-  const t0 = useMemo(() => Math.floor(Date.now() / 1000) * 1000, [previa])
+  // a sessão começa agora; acelerada, as horas que passariam do agora entram no relatório como agora.
+  // Editar ou recarregar a mesma sessão mantém o começo (o relatório não muda de hora).
+  const t0 = useMemo(() => lerPontoGuardado(roteiro.id)?.t0 ?? Math.floor(Date.now() / 1000) * 1000, [roteiro.id])
   const ensaio = useRef<Ensaio | null>(null)
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
   const [tocando, setTocando] = useState(false)
@@ -66,6 +68,10 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   const [fase, setFase] = useState<'rodando' | 'entre' | 'fim'>('rodando')
   const [trecho, setTrecho] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
+  /** Desligou pelo botão do robô no meio da sessão: é uma pausa, o "Continuar" segue dali. */
+  const [desligadoNoRobo, setDesligadoNoRobo] = useState(false)
+  // desligou com um contrato aberto: como o motor, conclui o contrato e só então para
+  const pararAoLiquidar = useRef(false)
   const idSessao = useMemo(() => roteiro.id ?? `simulada:${roteiro.semente}:${Date.now()}`, [roteiro])
   const demo = roteiro.conta === 'demo'
 
@@ -75,6 +81,8 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     setEstado(e.foto())
     setFase(e.fase)
     setTrecho(e.trecho)
+    // onde a sessão está, para editar, sair ou recarregar e voltar no mesmo ponto
+    if (roteiro.id) guardarPonto({ id: roteiro.id, operacoes: e.operacoes, t0 })
     // o saldo do topo anda com a sessão, e as operações dela vão para o relatório do modo simulado
     definirSaldoSimulado(e.saldo)
     const agora = Date.now()
@@ -82,7 +90,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       quando: new Date(Math.min(o.quando, agora)).toISOString(), origem: 'ia' as const, id: roteiro.ia, nome: nomeDaIa(roteiro.ia), ativo: ATIVO_DOS_ROBOS,
       tipo: o.contractType, entrada: o.valor, pagamento: o.ganhou ? o.payout : 0, resultado: o.lucro, ganhou: o.ganhou,
     })))
-  }, [idSessao, roteiro.ia])
+  }, [idSessao, roteiro.ia, roteiro.id, t0])
 
   /** O fim de cada trecho: pausa ali e, se foi meta ou stop, o aviso e o som de verdade. */
   const aoFim = useCallback((f: FimDoTrecho, k: number) => {
@@ -105,9 +113,23 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   useEffect(() => { let vivo = true; void pontoDePartida().then((p) => { if (vivo) setPartida(p) }); return () => { vivo = false } }, [])
   const jaTocou = useRef(false)
   // "Dar o play" já liga: a sessão começa rodando, com o som do play, como a de verdade
+  // Editou a sessão, saiu da aba ou recarregou: volta na mesma operação, parada (o play segue dali).
   useEffect(() => {
-    montar(0)
     if (!partida) return
+    const atual = ensaio.current
+    const onde = atual && atual.r.id === roteiro.id ? atual.operacoes : lerPontoGuardado(roteiro.id)?.operacoes ?? 0
+    const ate = Math.max(0, Math.min(onde, previa.operacoes))
+    setDesligadoNoRobo(false)
+    pararAoLiquidar.current = false
+    if (ate > 0) {
+      setTocando(false)
+      jaTocou.current = true
+      montar(ate)
+      // volta com o robô desligado: o "Continuar" da cabine (ou o play) segue dali
+      setDesligadoNoRobo(true)
+      return
+    }
+    montar(0)
     roboLigou()
     jaTocou.current = true
     setTocando(true)
@@ -127,6 +149,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       if (e.fase !== 'rodando') { setTocando(false); return }
       e.passo(real)
       mostrar()
+      if (pararAoLiquidar.current && !e.foto().emOperacao) { pararAoLiquidar.current = false; setTocando(false) }
     }
     if (vel === 1) {
       let ultimoReal = Date.now()
@@ -148,6 +171,8 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     const e = ensaio.current
     if (!e) return
     setAviso(null)
+    setDesligadoNoRobo(false)
+    pararAoLiquidar.current = false
     if (e.fase === 'fim') { jaTocou.current = false; montar(0) }
     else if (e.fase === 'entre') {
       const recusa = e.religar()
@@ -160,7 +185,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     setTocando(true)
   }, [montar, mostrar])
   const pausar = () => setTocando(false)
-  const irPara = useCallback((op: number) => { setTocando(false); jaTocou.current = op > 0; montar(Math.max(0, op)) }, [montar])
+  const irPara = useCallback((op: number) => { setTocando(false); setDesligadoNoRobo(false); pararAoLiquidar.current = false; jaTocou.current = op > 0; montar(Math.max(0, op)) }, [montar])
 
   // os marcadores: começo, a maior sequência, a meta/stop de cada trecho, o religou
   const marcadores: Marcador[] = useMemo(() => {
@@ -209,8 +234,19 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   if (!estado || !partida) return <div className="robot-session-loading" role="status"><b>Sessão simulada</b><span>Montando o mercado…</span></div>
 
   const cfg = configDoTrecho(roteiro, roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)])
-  const rodando = estado.rodando
-  const desligar = () => { ensaio.current?.desligar('você desligou'); mostrar() }
+  // "Desligar" no robô pausa a sessão onde está; o "Continuar" (ou o play) segue da mesma operação
+  const desligar = () => {
+    setDesligadoNoRobo(true)
+    if (tocando && ensaio.current?.foto().emOperacao) pararAoLiquidar.current = true
+    else setTocando(false)
+  }
+  // concluindo o contrato aberto, a cabine mostra isso; parado, nenhum contrato pela metade (a I.A.
+  // que já comprou a próxima no mesmo tick só a manda quando continuar)
+  const estadoNaCabine: EstadoMotor = desligadoNoRobo && fase === 'rodando'
+    ? tocando
+      ? { ...estado, rodando: false, motivoParada: null, aguardando: 'Concluindo o contrato em andamento…' }
+      : { ...estado, rodando: false, emOperacao: false, emCurso: null, motivoParada: null, aguardando: 'Robô desligado' }
+    : estado
   const total = previa.operacoes
   const feitas = estado.operacoes
 
@@ -219,7 +255,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       <RobotOverview sessoes={[]} paineis={[resumoDeEstudo(estado, { id: idSessao, nome: ident.nome, cor: ident.cor, numero: '#1', modo: null, demo })]} moeda="USD" demoDaTela={demo} />
       <div className="rob-workspace-board modo-lista ssim-quadro">
         <div className="rob-board-slot aberta">
-          <CabineDaSessao roteiro={roteiro} estado={estado} trecho={trecho} inicio={t0} mostrarMarkup={mostrarMarkup}
+          <CabineDaSessao roteiro={roteiro} estado={estadoNaCabine} trecho={trecho} inicio={t0} mostrarMarkup={mostrarMarkup}
             onDesligar={desligar} onLigarDeNovo={fase !== 'fim' ? play : undefined}>
             {limite && <LimiteAtingido tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor} moeda="USD"
               onFechar={() => setLimite(null)} onLigarDeNovo={fase === 'entre' ? () => { setLimite(null); play() } : undefined} />}

@@ -34,6 +34,7 @@ import { roteiroEmBranco, sugerirTrecho, type Roteiro } from '../core/teeds/sess
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { modoSimuladoAtivo, useModoSimulado } from '../core/teeds/modoSimulado'
 import { definirContaSimulada, definirSaldoSimulado } from '../core/teeds/modoSimulado'
+import { esquecerSessao, guardarSessao, lerSessaoGuardada } from '../core/teeds/sessaoGuardada'
 // Sessão simulada (12/11/2026): só no modo simulado (administradores); o código só desce quando abre
 const EstudioDaSessao = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.EstudioDaSessao })))
 const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.BotaoSessaoSimulada })))
@@ -170,10 +171,15 @@ export function RobotsPanel({
     escondidas, montadas e operando, e voltam quando o modo desliga.
   */
   const modoSim = useModoSimulado()
-  const [simulada, setSimulada] = useState<Roteiro | null>(null)
+  const [simulada, setSimuladaAgora] = useState<Roteiro | null>(null)
+  // a sessão aberta fica guardada no navegador: recarregar ou sair da aba volta nela, no mesmo ponto
+  const setSimulada = (r: Roteiro | null) => { if (r) guardarSessao(r); else esquecerSessao(); setSimuladaAgora(r) }
   const [editandoSimulada, setEditandoSimulada] = useState(false)
   const [roteiroEmEdicao, setRoteiroEmEdicao] = useState<Roteiro | null>(null)
-  useEffect(() => { if (!modoSim) { setSimulada(null); setEditandoSimulada(false) } }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!modoSim) { setSimuladaAgora(null); setEditandoSimulada(false) }
+    else setSimuladaAgora((atual) => atual ?? lerSessaoGuardada())
+  }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
   const contadorSim = useRef(1)
   useEffect(() => {
     const abrir = () => abrirEstudioRef.current?.()
