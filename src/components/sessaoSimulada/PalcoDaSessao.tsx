@@ -10,18 +10,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { EstadoMotor } from '../../core/deriv/engine'
 import { identidade } from '../../core/deriv/branding'
 import { ATIVO_DOS_ROBOS } from '../../core/deriv/config'
-import { fetchTickHistory } from '../../core/deriv/market'
+import { fetchTickHistory, subscribeTicks } from '../../core/deriv/market'
 import { publicSocket } from '../../core/deriv/client'
 import { roboLigou, sessaoBateuLimite } from '../../core/som'
-import { definirSaldoSimulado } from '../../core/teeds/saldoSimulado'
-import { useMenuAdminOculto } from '../../core/menuDeAdmin'
+import { definirSaldoSimulado, escreverNoLivro } from '../../core/teeds/modoSimulado'
 import { resumoDeEstudo } from '../../core/teeds/estudoDoDono'
 import {
   configDoTrecho, Ensaio, ensaioAte, estrategiaDa, nomeDaIa, previaDoRoteiro, SEGUNDOS_POR_TICK,
   type FimDoTrecho, type PontoDePartida, type Roteiro,
 } from '../../core/teeds/sessaoSimulada'
-import { RobotLive } from '../RobotLive'
-import { RobotLinha } from '../RobotResumo'
+import { CabineDaSessao } from './CabineDaSessao'
 import { RobotOverview } from '../RobotOverview'
 import { LimiteAtingido, type TipoDeLimite } from '../LimiteAtingido'
 import '../relatorios/relatorios.css'
@@ -31,7 +29,7 @@ const VELOCIDADES = [1, 2, 4, 8, 16]
 const din = (v: number) => `US$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 /** O último preço do ativo das I.A. (cotação pública); sem resposta em 2,5 s, um preço do tamanho certo. */
-async function pontoDePartida(): Promise<PontoDePartida> {
+export async function pontoDePartida(): Promise<PontoDePartida> {
   try {
     const ticks = await Promise.race([
       fetchTickHistory(ATIVO_DOS_ROBOS, 1, publicSocket),
@@ -51,7 +49,6 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   aoEditar: () => void
   aoSair: () => void
 }) {
-  const adminOculto = useMenuAdminOculto()
   const previa = useMemo(() => previaDoRoteiro(roteiro), [roteiro])
   const plano = previa.resultados
   const ident = useMemo(() => {
@@ -59,7 +56,8 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     return { ...base, nome: nomeDaIa(roteiro.ia) }
   }, [roteiro.ia])
   const [partida, setPartida] = useState<PontoDePartida | null>(null)
-  const t0 = useRef(Math.floor(Date.now() / 1000) * 1000)
+  // a sessão começa agora; acelerada, as horas que passariam do agora entram no relatório como agora
+  const t0 = useMemo(() => Math.floor(Date.now() / 1000) * 1000, [previa])
   const ensaio = useRef<Ensaio | null>(null)
   const [estado, setEstado] = useState<EstadoMotor | null>(null)
   const [tocando, setTocando] = useState(false)
@@ -68,7 +66,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   const [fase, setFase] = useState<'rodando' | 'entre' | 'fim'>('rodando')
   const [trecho, setTrecho] = useState(0)
   const [aviso, setAviso] = useState<string | null>(null)
-  const idSessao = useMemo(() => `simulada:${roteiro.semente}:${Date.now()}`, [roteiro])
+  const idSessao = useMemo(() => roteiro.id ?? `simulada:${roteiro.semente}:${Date.now()}`, [roteiro])
   const demo = roteiro.conta === 'demo'
 
   const mostrar = useCallback(() => {
@@ -77,8 +75,14 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     setEstado(e.foto())
     setFase(e.fase)
     setTrecho(e.trecho)
-    definirSaldoSimulado({ valor: e.saldo, demo })
-  }, [demo])
+    // o saldo do topo anda com a sessão, e as operações dela vão para o relatório do modo simulado
+    definirSaldoSimulado(e.saldo)
+    const agora = Date.now()
+    escreverNoLivro(idSessao, e.foto().historico.map((o) => ({
+      quando: new Date(Math.min(o.quando, agora)).toISOString(), origem: 'ia' as const, id: roteiro.ia, nome: nomeDaIa(roteiro.ia), ativo: ATIVO_DOS_ROBOS,
+      tipo: o.contractType, entrada: o.valor, pagamento: o.ganhou ? o.payout : 0, resultado: o.lucro, ganhou: o.ganhou,
+    })))
+  }, [idSessao, roteiro.ia])
 
   /** O fim de cada trecho: pausa ali e, se foi meta ou stop, o aviso e o som de verdade. */
   const aoFim = useCallback((f: FimDoTrecho, k: number) => {
@@ -91,7 +95,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
 
   const montar = useCallback((ateOperacao: number) => {
     if (!partida) return
-    const e = ateOperacao > 0 ? ensaioAte(roteiro, plano, partida, t0.current, ateOperacao) : new Ensaio(roteiro, plano, partida, t0.current)
+    const e = ateOperacao > 0 ? ensaioAte(roteiro, plano, partida, t0, ateOperacao) : new Ensaio(roteiro, plano, partida, t0)
     e.aoFimDoTrecho = aoFim
     ensaio.current = e
     setLimite(null)
@@ -99,23 +103,47 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   }, [partida, roteiro, plano, aoFim, mostrar])
 
   useEffect(() => { let vivo = true; void pontoDePartida().then((p) => { if (vivo) setPartida(p) }); return () => { vivo = false } }, [])
-  useEffect(() => { setTocando(false); montar(0) }, [montar])
-  useEffect(() => () => definirSaldoSimulado(null), [])
+  const jaTocou = useRef(false)
+  // "Dar o play" já liga: a sessão começa rodando, com o som do play, como a de verdade
+  useEffect(() => {
+    montar(0)
+    if (!partida) return
+    roboLigou()
+    jaTocou.current = true
+    setTocando(true)
+  }, [montar]) // eslint-disable-line react-hooks/exhaustive-deps
+  // editar a sessão mantém o id: as operações dela no relatório são reescritas (a anterior "não aconteceu")
 
-  // o relógio: um preço a cada 2 s, dividido pela velocidade
+  /*
+    O relógio. Em 1× a sessão anda no compasso do ativo de verdade: cada tick público do R_75
+    (o mesmo horário e o mesmo preço da Deriv) é um passo do motor. Se o preço real parar de
+    chegar por 5 s, segue no mesmo ritmo com o passeio. Acelerada, um passo a cada 2 s ÷ velocidade.
+  */
   useEffect(() => {
     if (!tocando) return
-    const id = setInterval(() => {
+    const passo = (real?: { preco: number; epoch: number }) => {
       const e = ensaio.current
       if (!e) return
       if (e.fase !== 'rodando') { setTocando(false); return }
-      e.passo()
+      e.passo(real)
       mostrar()
-    }, (SEGUNDOS_POR_TICK * 1000) / vel)
+    }
+    if (vel === 1) {
+      let ultimoReal = Date.now()
+      let ultimoEpoch = 0
+      const parar = subscribeTicks(ATIVO_DOS_ROBOS, (t) => {
+        if (!t.epoch || t.epoch === ultimoEpoch || Date.now() - t.epoch * 1000 > 20000) return
+        ultimoEpoch = t.epoch
+        ultimoReal = Date.now()
+        passo({ preco: t.quote, epoch: t.epoch })
+      }, publicSocket)
+      const vigia = setInterval(() => { if (Date.now() - ultimoReal >= 5000) passo() }, SEGUNDOS_POR_TICK * 1000)
+      return () => { parar(); clearInterval(vigia) }
+    }
+    const id = setInterval(() => passo(), (SEGUNDOS_POR_TICK * 1000) / vel)
     return () => clearInterval(id)
   }, [tocando, vel, mostrar])
 
-  const jaTocou = useRef(false)
   const play = useCallback(() => {
     const e = ensaio.current
     if (!e) return
@@ -180,30 +208,9 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
 
   if (!estado || !partida) return <div className="robot-session-loading" role="status"><b>Sessão simulada</b><span>Montando o mercado…</span></div>
 
-  const t = roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)]
-  const cfg = configDoTrecho(roteiro, t)
-  const est = estrategiaDa(roteiro.ia)
-  const emCurso = estado.emCurso
-  const ultima = estado.historico[0]
-  const tipoAgora = emCurso?.contractType ?? ultima?.contractType ?? est.contractType
-  const b = emCurso?.barreira ?? ultima?.barreira ?? est.barreira ?? 5
-  const regra = ({ DIGITOVER: `maior que ${b}`, DIGITUNDER: `menor que ${b}`, DIGITMATCH: `igual a ${b}`, DIGITDIFF: `diferente de ${b}`, DIGITEVEN: 'par', DIGITODD: 'ímpar' } as Record<string, string>)[tipoAgora] ?? tipoAgora
-  const ganhaCom = (d: number) => tipoAgora === 'DIGITOVER' ? d > b : tipoAgora === 'DIGITUNDER' ? d < b : tipoAgora === 'DIGITMATCH' ? d === b : tipoAgora === 'DIGITDIFF' ? d !== b : tipoAgora === 'DIGITEVEN' ? d % 2 === 0 : tipoAgora === 'DIGITODD' ? d % 2 === 1 : false
-  const parametros = [
-    { rot: 'Ativo', valor: 'Volatility 75' },
-    { rot: 'Entrada', valor: din(cfg.valorAoVencer) },
-    { rot: 'Recuperação', valor: cfg.fatorGale === 0 ? 'Desligada' : 'Automática' },
-    { rot: 'Valor máximo por entrada', valor: 'Sem máximo' },
-    { rot: 'Meta de ganho', valor: cfg.takeProfit > 0 ? din(cfg.takeProfit) : 'Sem meta' },
-    { rot: 'Limite de perda', valor: cfg.stopLoss > 0 ? din(cfg.stopLoss) : 'Sem limite' },
-  ]
+  const cfg = configDoTrecho(roteiro, roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)])
   const rodando = estado.rodando
-  const resumo = {
-    estado, config: cfg, moeda: 'USD', nome: ident.nome, cor: ident.cor, numero: '#1', inicio: t0.current, demo,
-    rotulosTrocados: false, demoComoReal: false, modo: null, conexao: 'open', ceo: mostrarMarkup,
-    onDesligar: rodando ? () => { ensaio.current?.desligar('você desligou'); mostrar() } : undefined, desligando: false,
-    onLigarDeNovo: !rodando && fase !== 'fim' ? play : undefined,
-  }
+  const desligar = () => { ensaio.current?.desligar('você desligou'); mostrar() }
   const total = previa.operacoes
   const feitas = estado.operacoes
 
@@ -212,17 +219,11 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       <RobotOverview sessoes={[]} paineis={[resumoDeEstudo(estado, { id: idSessao, nome: ident.nome, cor: ident.cor, numero: '#1', modo: null, demo })]} moeda="USD" demoDaTela={demo} />
       <div className="rob-workspace-board modo-lista ssim-quadro">
         <div className="rob-board-slot aberta">
-          <div className={`cabine-caixa aberta ssim-cabine ${rodando ? 'rodando' : 'parado'}`} style={{ ['--robo' as string]: ident.cor, ['--robo-suave' as string]: ident.corSuave }}>
-            {!adminOculto && <span className="rsim-tag rsim-tag-canto ssim-tag"><i aria-hidden="true" />Sessão simulada</span>}
-            <RobotLinha {...resumo} aberta />
-            <RobotLive
-              estado={estado} config={cfg} moeda="USD" contaDaSessao={{ contaId: 'simulada', demo, moeda: 'USD' }}
-              estrategiaId={roteiro.ia} nomeEstrategia={ident.nome} ativo="Volatility 75" titulo="#1" regra={regra} cor={ident.cor}
-              ganhaCom={ganhaCom} parametros={parametros} conexao="open" mostrarMarkup={mostrarMarkup} esconderDemo={false}
-              onDesligar={resumo.onDesligar} onLigarDeNovo={resumo.onLigarDeNovo} />
+          <CabineDaSessao roteiro={roteiro} estado={estado} trecho={trecho} inicio={t0} mostrarMarkup={mostrarMarkup}
+            onDesligar={desligar} onLigarDeNovo={fase !== 'fim' ? play : undefined}>
             {limite && <LimiteAtingido tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor} moeda="USD"
               onFechar={() => setLimite(null)} onLigarDeNovo={fase === 'entre' ? () => { setLimite(null); play() } : undefined} />}
-          </div>
+          </CabineDaSessao>
         </div>
       </div>
 
@@ -247,7 +248,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
         </select>
         <button type="button" className="ssim-texto" onClick={() => irPara(feitas - 5)} disabled={feitas === 0}>−5 op.</button>
         <button type="button" className="ssim-texto" onClick={aoEditar}>Editar</button>
-        <button type="button" className="ssim-texto sair" onClick={aoSair}>Sair</button>
+        <button type="button" className="ssim-texto sair" onClick={() => { setTocando(false); aoSair() }}>Encerrar</button>
         {aviso && <small className="ssim-aviso" role="alert">{aviso}</small>}
       </div>
     </>

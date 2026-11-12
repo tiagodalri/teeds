@@ -28,12 +28,15 @@ import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
 import { NomeDoRobo } from './NomeDoRobo'
-import { modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
+import { lerPreparo, modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
-import type { Roteiro } from '../core/teeds/sessaoSimulada'
-// Sessão simulada (12/11/2026): só administradores da GF; o código só desce quando abre
-const EditorDaSessao = lazy(() => import('./sessaoSimulada/EditorDaSessao').then((m) => ({ default: m.EditorDaSessao })))
-const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/EditorDaSessao').then((m) => ({ default: m.BotaoSessaoSimulada })))
+import { roteiroEmBranco, sugerirTrecho, type Roteiro } from '../core/teeds/sessaoSimulada'
+import type { ConfigEstrategia } from '../core/deriv/engine'
+import { modoSimuladoAtivo, useModoSimulado } from '../core/teeds/modoSimulado'
+import { definirContaSimulada, definirSaldoSimulado } from '../core/teeds/modoSimulado'
+// Sessão simulada (12/11/2026): só no modo simulado (administradores); o código só desce quando abre
+const EstudioDaSessao = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.EstudioDaSessao })))
+const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.BotaoSessaoSimulada })))
 const PalcoDaSessao = lazy(() => import('./sessaoSimulada/PalcoDaSessao').then((m) => ({ default: m.PalcoDaSessao })))
 
 interface Props {
@@ -63,6 +66,7 @@ interface Props {
 /** Teto de robos simultaneos: cada um consome assinaturas da mesma conexao.
  *  10 desde 22/09/2026, a pedido do Tiago; o servidor recusa o 11o. */
 const MAX_BLOCOS = 10
+
 
 const din = (v: number, m = 'USD') =>
   `${m} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -159,15 +163,23 @@ export function RobotsPanel({
   // sem a Deriv: a janela que pede a conexão, aberta pelo "Iniciar" de uma I.A.
   const [pedindoDeriv, setPedindoDeriv] = useState(false)
   /*
-    Sessão simulada (12/11/2026, Tiago: "preciso de um motor de operações simulado, assim como o
-    relatório"). Só o admin da GF. Enquanto está aberta, as sessões de verdade ficam escondidas
-    (continuam montadas e operando) e a tela mostra a simulada no lugar delas.
+    Modo simulado geral (12/11/2026, Tiago: "um modo simulado em todos os âmbitos, só para admins:
+    o resultado da operação antes de dar o play, com os parâmetros certinhos"). Com o modo ligado
+    esta aba mostra a vitrine e o preparo de verdade; o "Iniciar" do preparo pergunta como a sessão
+    termina e o play roda a sessão simulada (nada vai ao servidor). As sessões de verdade ficam
+    escondidas, montadas e operando, e voltam quando o modo desliga.
   */
-  const podeSimular = admin === true && !!MARCA.vocabularioIA
+  const modoSim = useModoSimulado()
   const [simulada, setSimulada] = useState<Roteiro | null>(null)
   const [editandoSimulada, setEditandoSimulada] = useState(false)
   const [roteiroEmEdicao, setRoteiroEmEdicao] = useState<Roteiro | null>(null)
-  useEffect(() => { if (!podeSimular) { setSimulada(null); setEditandoSimulada(false) } }, [podeSimular])
+  useEffect(() => { if (!modoSim) { setSimulada(null); setEditandoSimulada(false) } }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
+  const contadorSim = useRef(1)
+  useEffect(() => {
+    const abrir = () => abrirEstudioRef.current?.()
+    window.addEventListener('simulado:estudio', abrir)
+    return () => window.removeEventListener('simulado:estudio', abrir)
+  }, [])
   useEffect(() => { if (logado) { setPedindoDeriv(false); retomarEscolhaDepoisDaDeriv() } }, [logado])
   const alternarDigitos = (chave: string) =>
     setDigitosDe((atual) => (atual === chave ? null : chave))
@@ -180,7 +192,8 @@ export function RobotsPanel({
     if (!sessaoTeeds) { setVivasNoServidor([]); return }
     return acompanharVivas(sessaoTeeds, setVivasNoServidor)
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { onSessoesVivas?.(vivasNoServidor) }, [vivasNoServidor]) // eslint-disable-line react-hooks/exhaustive-deps
+  // no modo simulado a mini-cabine e o Início não mostram as sessões de verdade (gravação)
+  useEffect(() => { onSessoesVivas?.(modoSim ? [] : vivasNoServidor) }, [vivasNoServidor, !!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /*
     Uma sessão que encerrou (meta, stop, desligada) NÃO some da tela.
@@ -225,7 +238,7 @@ export function RobotsPanel({
   const abrirBlocoRef = useRef(abrirBloco)
   abrirBlocoRef.current = abrirBloco
   useEffect(() => {
-    const abrir = () => { if (!preparoPedido) return; preparoPedido = false; abrirBlocoRef.current() }
+    const abrir = () => { if (!preparoPedido) return; preparoPedido = false; if (modoSimuladoAtivo()) window.dispatchEvent(new CustomEvent('simulado:estudio')); else abrirBlocoRef.current() }
     abrir()
     window.addEventListener('robos:preparar', abrir)
     return () => window.removeEventListener('robos:preparar', abrir)
@@ -302,6 +315,7 @@ export function RobotsPanel({
       modelo, symbol, moeda, valorInicial, ticks, estrategia,
       multiplicador, unidade, valorMaximo, stopLoss, takeProfit, maxContratos,
     }
+    if (modoSimuladoAtivo()) { setErro('Você está no modo simulado.'); return }
     try {
       const r = await ligarRobo(socket, config)
       const apelido = nome.trim() || sugerirNome(modelo.nome)
@@ -390,6 +404,76 @@ export function RobotsPanel({
     </div>
   )
 
+  /* ------------------------------------------------ modo simulado (admin) */
+  /*
+    Uma sessão nova do modo simulado: a I.A. pedida pela vitrine (ou a do último preparo), o saldo e a
+    conta do modo, a entrada e os limites do último preparo deste aparelho. O estúdio faz o resto.
+  */
+  const novaSessaoSim = (): Roteiro => {
+    const prep = lerPreparo()
+    const ia = modeloPedidoDaVitrine() ?? prep.modelo ?? 'superior5'
+    pedirModeloDaVitrine(null)
+    const entrada = Math.max(0.35, Number(prep.cfg?.valorAoVencer) || 1)
+    const meta = Number(prep.cfg?.takeProfit) || 10, stop = Number(prep.cfg?.stopLoss) || 30
+    const r: Roteiro = {
+      ...roteiroEmBranco(), id: `simulada-${Date.now()}-${contadorSim.current++}`, nome: 'Sessão', ia, entrada,
+      saldo: modoSim?.saldo ?? 100, conta: modoSim?.conta ?? 'real', modo: prep.modo ?? 'conservador', lossVirtual: null, valorMaximo: 0, ritmo: null,
+      trechos: [{ meta, stop, fim: 'meta', resultado: 0, operacoes: 30, sequencia: 3, momento: 'meio', acerto: null }],
+    }
+    const sug = sugerirTrecho(r, 0, 'meta', r.semente)
+    return sug ? { ...r, trechos: [{ ...r.trechos[0], ...sug }] } : r
+  }
+  const abrirEstudio = (r?: Roteiro) => { setRoteiroEmEdicao(r ?? novaSessaoSim()); setEditandoSimulada(true) }
+  const abrirEstudioRef = useRef(abrirEstudio)
+  abrirEstudioRef.current = abrirEstudio
+  const conteudoSimulado = modoSim && (
+    <>
+      <div className="ger-topo rob-workspace-header">
+        <div>
+          <span className="rob-eyebrow">CENTRAL DE ROBÔS</span>
+          {(simulada || !MARCA.vitrineDosRobos) && <>
+            <h2>{simulada ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
+            <p className="ger-sub">{simulada ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}</p>
+          </>}
+        </div>
+        <div className="rob-workspace-actions">
+          <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => abrirEstudio(simulada ?? undefined)} /></Suspense>
+          <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
+            onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
+            {digitosDe ? 'Fechar dígitos' : 'Ver dígitos'}
+          </button>
+          <button className="rob-new-button" onClick={() => abrirEstudio()}>+ Novo robô</button>
+        </div>
+      </div>
+      {simulada ? (
+        <Suspense fallback={<div className="robot-session-loading" role="status"><b>Sessão</b><span>Abrindo…</span></div>}>
+          <PalcoDaSessao roteiro={simulada} mostrarMarkup={admin && mostrarMarkup}
+            aoEditar={() => abrirEstudio(simulada)} aoSair={() => setSimulada(null)} />
+        </Suspense>
+      ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirEstudio()} /> : (
+        <section className="robot-workspace-empty">
+          <span className="robot-empty-symbol" aria-hidden="true">▷</span>
+          <h3>Um robô. Seus limites. Tudo aqui.</h3>
+          <p>Escolha entre {IDENTIDADES.length} modelos e configure a sessão, uma etapa por vez.</p>
+          <button className="rob-new-button" onClick={() => abrirEstudio()}>Escolher e configurar →</button>
+        </section>
+      )}
+      {editandoSimulada && roteiroEmEdicao && (
+        <Suspense fallback={null}>
+          <EstudioDaSessao inicial={roteiroEmEdicao}
+            aoDarPlay={(r) => {
+              // o topo começa a sessão com o saldo e a conta do estúdio
+              definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
+              setSimulada(r); setEditandoSimulada(false)
+            }}
+            aoFechar={() => setEditandoSimulada(false)} />
+        </Suspense>
+      )}
+    </>
+  )
+  if (modoSim && !logado) return <div className="ger rob robot-workspace tem-acompanhamento">{conteudoSimulado}{digitosDe && <DigitosFlutuante nomeAtivo={nomeAtivoDosRobos} aoFechar={() => setDigitosDe(null)} />}</div>
+
   if (!logado && MARCA.vitrineDosRobos) {
     /*
       08/11/2026 (Tiago): sem a Deriv, a tela das I.A. aparece normalmente,
@@ -428,20 +512,20 @@ export function RobotsPanel({
   }
 
   return (
-    <div className={`ger rob robot-workspace ${temAcompanhamento || simulada ? 'tem-acompanhamento' : ''}`}>
-      <div className="ger-topo rob-workspace-header">
+    <div className={`ger rob robot-workspace ${temAcompanhamento || modoSim ? 'tem-acompanhamento' : ''}`}>
+      {conteudoSimulado}
+      <div className="ger-topo rob-workspace-header" style={modoSim ? { display: 'none' } : undefined}>
         <div>
           <span className="rob-eyebrow">CENTRAL DE ROBÔS</span>
           {/* GlobalFly sem sessão: a vitrine logo abaixo já tem o título e a frase; aqui não repete. */}
-          {(temAcompanhamento || simulada || !MARCA.vitrineDosRobos) && <>
-            <h2>{temAcompanhamento || simulada ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
+          {(temAcompanhamento || !MARCA.vitrineDosRobos) && <>
+            <h2>{temAcompanhamento ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
             <p className="ger-sub">
-              {temAcompanhamento || simulada ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
+              {temAcompanhamento ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}
             </p>
           </>}
         </div>
         <div className="rob-workspace-actions">
-          {podeSimular && <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => { setRoteiroEmEdicao(simulada); setEditandoSimulada(true) }} /></Suspense>}
           {/* a cabine numa janela própria, que a pessoa arrasta para onde quiser (29/10/2026) */}
           <BotaoJanelaSolta qual="cabine" />
           {/* 10/11/2026 (pedido do Victor): ver os dígitos ANTES de ligar uma I.A.; com I.A. ligada
@@ -458,22 +542,8 @@ export function RobotsPanel({
         </div>
       </div>
 
-      {simulada && (
-        <Suspense fallback={<div className="robot-session-loading" role="status"><b>Sessão simulada</b><span>Abrindo…</span></div>}>
-          <PalcoDaSessao roteiro={simulada} mostrarMarkup={admin && mostrarMarkup}
-            aoEditar={() => { setRoteiroEmEdicao(simulada); setEditandoSimulada(true) }} aoSair={() => setSimulada(null)} />
-        </Suspense>
-      )}
-      {editandoSimulada && (
-        <Suspense fallback={null}>
-          <EditorDaSessao inicial={roteiroEmEdicao ?? undefined}
-            aoRodar={(r) => { setSimulada(r); setEditandoSimulada(false) }}
-            aoFechar={() => setEditandoSimulada(false)}
-            aoSair={simulada ? () => { setSimulada(null); setEditandoSimulada(false) } : undefined} />
-        </Suspense>
-      )}
-      {/* com a simulada na tela, o resto some sem desmontar: as sessões de verdade seguem acompanhadas */}
-      <div style={{ display: simulada ? 'none' : 'contents' }}>
+      {/* no modo simulado, o resto some sem desmontar: as sessões de verdade seguem acompanhadas */}
+      <div style={{ display: modoSim ? 'none' : 'contents' }}>
       {/* só os cartões à mostra (uma linha por sessão): bloco escondido não conta duas vezes */}
       <RobotOverview sessoes={vivasNoServidor} rotulosTrocados={rotulosTrocados}
         paineis={chaves.map((k) => estudo.get(k)).filter((d): d is DadosEstudo => !!d)} moeda={moeda} demoDaTela={isDemo} />

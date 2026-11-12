@@ -67,6 +67,9 @@ import { CartaoMultiplicador } from './components/operar/CartaoMultiplicador'
 import { LIVES_AO_VIVO, MARCA } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
+import { ModoSimuladoTopo, abrirPainelSimulado } from './components/modoSimulado/ModoSimuladoTopo'
+import { permitirModoSimulado, useLivroSimulado, useModoSimulado } from './core/teeds/modoSimulado'
+import { comprarSimulado, limparContratosSimulados, useContratosSimulados } from './core/teeds/corretoraSimulada'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { LimiteDoSimulador } from './components/plano/LimiteDoSimulador'
 import { VisorDaApostila } from './components/apostila/VisorDaApostila'
@@ -202,6 +205,8 @@ export default function App() {
   const [adminFalhou, setAdminFalhou] = useState(false)
   const [adminUserId, setAdminUserId] = useState<string | null>(null)
   const adminConfirmado = admin === true && !!teeds.sessao && adminUserId === teeds.sessao.usuario.id
+  // o modo simulado só existe para o administrador confirmado desta conta (o aparelho guardar "ligado" não basta)
+  useEffect(() => { permitirModoSimulado(adminConfirmado) }, [adminConfirmado])
   /* A tela RENASCE quando a plataforma muda.
 
      Trocar de marca trocava o filtro das consultas novas, mas o que já estava
@@ -221,8 +226,22 @@ export default function App() {
   const contasParaMostrar = conta.somenteDemo ? conta.accounts.map((c) => ({ ...c, type: 'real' }))
     : conta.rotulosTrocados ? conta.accounts.map((c) => ({ ...c, type: tipoNaTela(c.type, true) })).sort((a, b) => Number(a.type === 'demo') - Number(b.type === 'demo'))
     : conta.accounts
+  /*
+    Modo simulado geral (12/11/2026, só admin): saldo, conta real/demo, compras manuais e I.A. de
+    mentira, com a tag "Simulado" no topo. `sim` é null para quem não é admin ou com o modo desligado.
+  */
+  const sim = useModoSimulado()
+  const contratosSimulados = useContratosSimulados()
+  const livroSimulado = useLivroSimulado()
+  useEffect(() => { if (!sim) limparContratosSimulados() }, [!!sim]) // eslint-disable-line react-hooks/exhaustive-deps
   // se a conta escolhida aparece como demo na tela do próprio cliente
-  const demoNaTela = conta.rotulosTrocados ? !conta.isDemo : conta.isDemo && !conta.somenteDemo
+  const demoNaTela = sim ? sim.conta === 'demo' : conta.rotulosTrocados ? !conta.isDemo : conta.isDemo && !conta.somenteDemo
+  /** A conta é real na tela (confirmação de dois toques, textos de "dinheiro real"). */
+  const contaRealNaTela = sim ? sim.conta === 'real' : !conta.isDemo
+  /** O saldo que as telas mostram: o simulado no modo simulado; senão o da Deriv. O banco recebe sempre o de verdade. */
+  const saldoNaTela: number | null = sim ? sim.saldo : conta.balance ? conta.balance.amount : null
+  const rotulosNaTela = sim ? false : conta.rotulosTrocados
+  const abrirCarteira = () => (sim ? abrirPainelSimulado() : setVerCarteira(true))
   // sair é sair de tudo: a autorização da Deriv deste aparelho sai junto com a conta
   const sairDeTudo = () => {
     // quem entrar depois neste aparelho escolhe a conta da Deriv (não cai na desta pessoa)
@@ -1005,9 +1024,10 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conta.comprasRecentes, conta.contracts, comprasPendentes, manuais])
   const idsManuais = useMemo(() => new Set(manuais), [manuais])
+  // no modo simulado as posições são só as simuladas (as de verdade seguem na Deriv e voltam quando o modo desliga)
   const minhasTodas = useMemo(
-    () => conta.contracts.filter((c) => idsManuais.has(c.contractId)),
-    [conta.contracts, idsManuais],
+    () => (sim ? contratosSimulados : conta.contracts.filter((c) => idsManuais.has(c.contractId))),
+    [sim, contratosSimulados, conta.contracts, idsManuais],
   )
   // Multiplicadores (30/10/2026): cada tela com as suas posições (o multiplicador não tem prazo nem relógio)
   const naTelaMult = tela === 'multiplicadores'
@@ -1022,7 +1042,8 @@ export default function App() {
   const [encerradas, setEncerradas] = useState<Array<{ c: (typeof minhas)[number]; ate: number }>>([])
   const [ultimasManuais, setUltimasManuais] = useState<Array<(typeof minhas)[number]>>([])
   // o placar é da conta em uso: trocar de conta (demo ↔ real) começa outro, sem misturar resultados
-  useEffect(() => { setUltimasManuais([]) }, [conta.accountId])
+  // trocar o modo simulado também começa outro placar (as simuladas não se misturam com as de verdade)
+  useEffect(() => { setUltimasManuais([]); setEncerradas([]) }, [conta.accountId, !!sim]) // eslint-disable-line react-hooks/exhaustive-deps
   /*
     O markup das operações manuais (23/10/2026, modo CEO): o oficial da Deriv
     quando a proposta informa; senão, 3% do pagamento potencial (a regra da
@@ -1038,7 +1059,7 @@ export default function App() {
   */
   const precosEnviados = useRef(new Map<number, 'entrada' | 'fim'>())
   useEffect(() => {
-    if (!teeds.sessao) return
+    if (!teeds.sessao || sim) return
     for (const c of minhasTodas) {
       const fim = /^(won|lost|sold|cancelled)$/.test(c.status)
       const ja = precosEnviados.current.get(c.contractId)
@@ -1055,7 +1076,8 @@ export default function App() {
     // todas as manuais, das duas telas: a que fechou enquanto a pessoa estava na outra também é registrada
     const finais = minhasTodas.filter((c) => /^(won|lost|sold|cancelled)$/.test(c.status))
     if (!finais.length) return
-    if (teeds.sessao && conta.accountId) {
+    // simuladas nunca vão ao banco
+    if (teeds.sessao && conta.accountId && !sim) {
       for (const c of finais) {
         if (manuaisRegistradas.current.has(c.contractId)) continue
         manuaisRegistradas.current.add(c.contractId)
@@ -1125,7 +1147,7 @@ export default function App() {
   const podeMultitela = MARCA.id === 'globalfly'
   const multitelaAtiva = podeMultitela && tela === 'operar' && multitela.n > 1
   // 29/10/2026: valor acima do saldo também trava a compra (antes o botão seguia ativo e a Deriv recusava)
-  const acimaDoSaldo = !!conta.balance && stake > conta.balance.amount
+  const acimaDoSaldo = saldoNaTela !== null && stake > saldoNaTela
   const podeOperar = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode && mercadoAberto && !acimaDoSaldo
   // Por que o botao esta travado — para o cliente nao ficar adivinhando.
   const motivoBloqueio = podeOperar ? null
@@ -1139,7 +1161,7 @@ export default function App() {
 
   // A mesma trava de conta real vale para os dois modos. Dígitos pulavam ela.
   async function comprarDigito(tipo: DigitContract, barreira: string | undefined, ticks: number) {
-    if (!conta.isDemo && confirmar !== tipo) { setConfirmar(tipo); return }
+    if (contaRealNaTela && confirmar !== tipo) { setConfirmar(tipo); return }
     setConfirmar(null)
     await executar(tipo, { duration: ticks, durationUnit: 't', barrier: barreira })
   }
@@ -1150,7 +1172,7 @@ export default function App() {
       setAviso({ tipo: 'erro', texto: 'Digite um valor a partir de US$ 0,35.' })
       return
     }
-    if (!conta.isDemo && confirmar !== tipo) { setConfirmar(tipo); return }
+    if (contaRealNaTela && confirmar !== tipo) { setConfirmar(tipo); return }
     setConfirmar(null)
     await executar(tipo, { duration, durationUnit: unidade })
   }
@@ -1199,6 +1221,8 @@ export default function App() {
     simbolo: string, tipo: string, valor: number,
     extra: { duration: number; durationUnit: string; barrier?: string },
   ) {
+    // modo simulado: cotação e preço reais, dinheiro simulado; nada é comprado na Deriv nem vai ao banco
+    if (sim) return comprarSimulado({ simbolo, tipo, valor, moeda: 'USD', ...extra })
     if (!conta.socket) throw new Error('[LinhaFechada] sem conexão da conta')
     const p = await requestProposal(conta.socket, {
       symbol: simbolo, contractType: tipo, amount: valor, currency: moeda, ...extra,
@@ -1250,6 +1274,7 @@ export default function App() {
   */
   const podeOperarMult = conta.status === 'logado' && !!conta.socket && !conta.connecting && linhaAberta && !!symbolCode && mercadoAberto
   async function executarMultiplicador(pedido: PedidoMultiplicador, _cotacaoNaTela: CotacaoMultiplicador) {
+    if (sim) { setAviso({ tipo: 'erro', texto: 'No modo simulado os multiplicadores ainda não operam. Use o Operar.' }); return }
     if (!conta.socket || !symbolCode) return
     setComprando(pedido.tipo)
     setAviso(null)
@@ -1297,6 +1322,7 @@ export default function App() {
 
   /** Encerra uma posicao antes do fim (vende de volta para a Deriv, a mercado). */
   async function encerrar(contractId: number) {
+    if (sim) { setAviso({ tipo: 'erro', texto: 'No modo simulado a posição vai até o vencimento.' }); return }
     if (!conta.socket) return
     setVendendo(contractId)
     setAviso(null)
@@ -1446,8 +1472,8 @@ export default function App() {
       : conta.connecting ? 'Conectando à sua conta…'
       : !linhaAberta ? 'Reconectando à Deriv…'
       : !conta.socket ? 'Indisponível agora' : null,
-    real: !conta.isDemo, semDizerReal: conta.rotulosTrocados, tipoNaTela: derivPronta ? (demoNaTela ? 'demo' : 'real') : null,
-    saldo: conta.balance ? conta.balance.amount : null, moeda, socket: conta.socket,
+    real: contaRealNaTela, semDizerReal: rotulosNaTela, tipoNaTela: derivPronta ? (demoNaTela ? 'demo' : 'real') : null,
+    saldo: saldoNaTela, moeda, socket: conta.socket,
     contratos: minhasTodas.filter((c) => !ehMultiplicador(c)),
     encerradas: encerradas.map((e) => e.c).filter((c) => !ehMultiplicador(c)),
     comprar: async (simbolo, tipo, valor, duracao, unidade) => {
@@ -1493,6 +1519,8 @@ export default function App() {
           <Suspense fallback={null}><BotaoSimular className="rsim-abrir-topo" ativo={relatorioSimulado} aoAbrir={() => setPedidoSimulacao((x) => x + 1)} /></Suspense>
         )}
         <div className="topbar-right">
+          {/* modo simulado (só admin): "Simular" some com o olhinho; ligado, a tag "Simulado" fica sempre */}
+          {!JANELA && <ModoSimuladoTopo ocultarBotao={menuAdminOculto} />}
           <RelogioTopo />
           {!derivPronta && (
             <button className="btn-deriv" onClick={conta.login}
@@ -1519,7 +1547,7 @@ export default function App() {
               onRecarregar={() => conta.recarregarDemo()}
               onAbrir={() => void conta.atualizarContas()}
               onSair={conta.desconectar}
-              onCarteira={() => setVerCarteira(true)}
+              onCarteira={abrirCarteira}
             />
           )}
 
@@ -1762,9 +1790,9 @@ export default function App() {
       {tela === 'robos' || tela === 'assistente' ? null : tela === 'inicio' && MARCA.inicio ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo o início…</div></div>}>
           <InicioPagina sessao={teeds.sessao} nome={teeds.usuario?.nome || ''}
-            conta={{ conectada: conta.status === 'logado', demo: demoNaTela, operaEmDemo: conta.account ? conta.isDemo : null, saldo: conta.balance ? conta.balance.amount : null, moeda: conta.account?.currency ?? 'USD' }}
+            conta={{ conectada: conta.status === 'logado', demo: demoNaTela, operaEmDemo: sim ? sim.conta === 'demo' : conta.account ? conta.isDemo : null, saldo: saldoNaTela, moeda: conta.account?.currency ?? 'USD' }}
             treino={membroTreino === true && admin !== true ? { noAr: !!treinoAgora, apresentador: treinoAgora?.apresentador ?? undefined } : null}
-            aoIr={setTela} aoConectar={conta.login} aoAbrirCarteira={() => setVerCarteira(true)} vivas={teeds.sessao ? vivasRobos : undefined} />
+            aoIr={setTela} aoConectar={conta.login} aoAbrirCarteira={abrirCarteira} vivas={teeds.sessao ? vivasRobos : undefined} />
         </Suspense>
       ) : tela === 'perfil' && MARCA.inicio && teeds.sessao ? (
         <Suspense fallback={<div className="ger"><div className="adm-vazio">Abrindo seu perfil…</div></div>}>
@@ -1792,9 +1820,10 @@ export default function App() {
           {/* o catálogo só para o admin: o relatório simulado usa as regras em vigor de cada I.A. (09/11/2026) */}
           <CatalogoProvider sessao={admin === true ? teeds.sessao : null}>
           <RelatoriosPanel sessao={teeds.sessao} socket={conta.socket} conectada={conta.status === 'logado'} contaDemo={conta.account ? conta.isDemo : null}
-            rotulosTrocados={conta.rotulosTrocados} saldo={conta.balance ? conta.balance.amount : null}
+            rotulosTrocados={rotulosNaTela} saldo={saldoNaTela}
             moeda={conta.balance?.currency ?? conta.account?.currency ?? 'USD'} aoIr={(t) => setTela(t)}
-            podeSimular={admin === true} pedidoSimulacao={pedidoSimulacao} aoMudarSimulacao={setRelatorioSimulado} />
+            podeSimular={admin === true} pedidoSimulacao={pedidoSimulacao} aoMudarSimulacao={setRelatorioSimulado}
+            simuladoGeral={sim ? { ops: livroSimulado, saldo: sim.saldo } : null} />
           </CatalogoProvider>
         </Suspense>
       ) : tela === 'divulgacao' && linksDeParceiro && teeds.sessao ? (
@@ -1925,9 +1954,9 @@ export default function App() {
                       duracao={duration} unidade={unidade} faixa={faixa} disponiveis={{ t: !!limites.ticks, s: !!limites.segundos, m: !!limites.minutos }}
                       aoMudarDuracao={setDuration} aoTrocarUnidade={trocarUnidade}
                       botoes={botoesDeCompra} resumo={resumoDaCompra}
-                      saldo={conta.balance ? conta.balance.amount : null} conta={derivPronta ? (demoNaTela ? 'Demo' : 'Real') : null}
+                      saldo={saldoNaTela} conta={derivPronta ? (demoNaTela ? 'Demo' : 'Real') : null}
                       aoConectar={conta.login} conectando={conta.status === 'entrando'}
-                      posicoes={minhas} aoEncerrar={encerrar} encerrando={vendendo} real={!conta.isDemo} aviso={aviso} />} />
+                      posicoes={minhas} aoEncerrar={encerrar} encerrando={vendendo} real={contaRealNaTela} aviso={aviso} />} />
                 ) : (
                   <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
                     granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} moeda={moeda}
@@ -1957,8 +1986,8 @@ export default function App() {
                 cabecalho={<BoletaAtivo nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''} preco={tick?.quote ?? null} pipSize={pipSize}
                   direcao={direction} sintetico={sintetico} aberto={mercadoAberto} />}
                 socket={conta.socket} simbolo={symbolCode} pipSize={pipSize} moeda={moeda}
-                saldo={conta.balance ? conta.balance.amount : null} conta={derivPronta ? (demoNaTela ? 'demo' : 'real') : null}
-                contaReal={!conta.isDemo} semDizerReal={conta.rotulosTrocados}
+                saldo={saldoNaTela} conta={derivPronta ? (demoNaTela ? 'demo' : 'real') : null}
+                contaReal={contaRealNaTela} semDizerReal={rotulosNaTela}
                 podeOperar={podeOperarMult} motivoBloqueio={podeOperarMult ? null : motivoBloqueio} admin={adminConfirmado}
                 comprando={comprando === 'MULTUP' || comprando === 'MULTDOWN' ? comprando : null} aoComprar={executarMultiplicador} />
               {aviso && (
@@ -1975,7 +2004,7 @@ export default function App() {
                   <div className="mpos-vazio">Os multiplicadores que você abrir aparecem aqui, com o resultado ao vivo. Não têm prazo: você fecha quando quiser.</div>
                 )}
                 {minhas.map((c) => (
-                  <CartaoMultiplicador key={c.contractId} c={c} real={!conta.isDemo}
+                  <CartaoMultiplicador key={c.contractId} c={c} real={contaRealNaTela}
                     nomeAtivo={nomeDoAtivo(symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol)}
                     fechando={vendendo === c.contractId} aoFechar={encerrar} aoMudarLimites={mudarLimitesMult} aoCancelar={cancelarMult} />
                 ))}
@@ -1992,13 +2021,13 @@ export default function App() {
             </div>
             <div className="bl-corpo">
               {/* texto enquanto digita: dá para apagar e escrever; aceita vírgula ou ponto, e o mínimo da Deriv vale ao sair do campo */}
-              <MostradorValor stake={stake} texto={stakeTexto} moeda={moeda} alerta={acimaDoSaldo} saldo={conta.balance?.amount ?? null} conta={derivPronta ? (demoNaTela ? 'demo' : 'real') : null}
+              <MostradorValor stake={stake} texto={stakeTexto} moeda={moeda} alerta={acimaDoSaldo} saldo={saldoNaTela} conta={derivPronta ? (demoNaTela ? 'demo' : 'real') : null}
                 aoMudarTexto={(t) => { setStakeTexto(t); const n = lerValor(t); if (n >= 0.35) setStake(n) }}
                 aoMudar={(v) => { setStake(v); setStakeTexto(null) }}
                 aoSair={() => { const n = lerValor(stakeTexto ?? ''); if (stakeTexto !== null) setStake(Math.max(0.35, Number.isFinite(n) ? Math.round(n * 100) / 100 : 0.35)); setStakeTexto(null) }} />
-              {acimaDoSaldo && conta.balance && (
+              {acimaDoSaldo && saldoNaTela !== null && (
                 <p className="bl-alerta">
-                  Valor maior que o seu saldo ({dinheiro(conta.balance.amount, moeda)}). Diminua o valor ou{' '}
+                  Valor maior que o seu saldo ({dinheiro(saldoNaTela, moeda)}). Diminua o valor ou{' '}
                   <a href={DERIV.deposito} target="_blank" rel="noopener noreferrer">deposite na Deriv</a>.
                 </p>
               )}
@@ -2051,7 +2080,7 @@ export default function App() {
             {minhas.map((c) => (
               <PositionCard key={c.contractId} contrato={c}
                 nomeAtivo={nomeDoAtivo(symbols.find((s) => s.symbol === c.symbol)?.name ?? c.symbol)}
-                onEncerrar={encerrar} real={!conta.isDemo} encerrando={vendendo === c.contractId} markup={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual(c) : undefined} />
+                onEncerrar={encerrar} real={contaRealNaTela} encerrando={vendendo === c.contractId} markup={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual(c) : undefined} />
             ))}
           </section>
 

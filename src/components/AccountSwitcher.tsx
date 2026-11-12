@@ -6,7 +6,8 @@ import { DerivLogo } from './DerivMarca'
 import { MARCA } from '../marca'
 import { AccountDemonstration } from './AccountDemonstration'
 import { MASCARA, useValoresOcultos } from '../core/privacidade'
-import { useSaldoSimulado } from '../core/teeds/saldoSimulado'
+import { useModoSimulado } from '../core/teeds/modoSimulado'
+import { abrirPainelSimulado } from './modoSimulado/ModoSimuladoTopo'
 
 interface Props {
   admin?: boolean | null
@@ -41,8 +42,9 @@ interface Props {
 export function AccountSwitcher(props: Props) {
   const { contas, selecionada, isDemo, saldo, moeda, conectando, onTrocar, onRecarregar, onSair } = props
   const ocultos = useValoresOcultos()
-  // sessão simulada rodando (só admin, 12/11/2026): o topo mostra o saldo dela, com a etiqueta da conta escolhida no roteiro
-  const simulado = useSaldoSimulado()
+  // modo simulado (só admin, 12/11/2026): o topo mostra o saldo simulado com a etiqueta escolhida, e tocar abre o painel do modo
+  // (a lista das contas de verdade, com os saldos reais, não aparece na gravação)
+  const simulado = useModoSimulado()
   /*
     Como a etiqueta aparece. No acesso somente-demo (o de demonstracao da
     casa), a conta demo veste a etiqueta da real — verde, "Real" — a pedido
@@ -83,13 +85,13 @@ export function AccountSwitcher(props: Props) {
   return (
     <div className="conta" ref={caixa}>
       <button
-        className={`conta-chip ${simulado ? (simulado.demo ? 'demo' : 'real') : cara(isDemo)} ${aberto ? 'aberto' : ''}`}
-        onClick={() => setAberto((a) => { if (!a) props.onAbrir?.(); return !a })}
+        className={`conta-chip ${simulado ? simulado.conta : cara(isDemo)} ${aberto ? 'aberto' : ''}`}
+        onClick={() => { if (simulado) { abrirPainelSimulado(); return } setAberto((a) => { if (!a) props.onAbrir?.(); return !a }) }}
         aria-expanded={aberto}
         aria-haspopup="menu"
       >
-        {simulado ? <><span className={`selo ${simulado.demo ? 'demo' : 'real'}`}>{simulado.demo ? 'Demo' : 'Real'}</span>
-        <BalanceLive key="simulado" valor={simulado.valor} moeda="USD" conectando={false} /></>
+        {simulado ? <><span className={`selo ${simulado.conta}`}>{simulado.conta === 'demo' ? 'Demo' : 'Real'}</span>
+        <BalanceLive key="simulado" valor={simulado.saldo} moeda="USD" conectando={false} /></>
         : selecionada ? <><span className={`selo ${cara(isDemo)}`}>{rotulo(isDemo)}</span>
         <BalanceLive key="real" valor={saldo} moeda={moeda} conectando={conectando} /></> : <span>Selecionar conta</span>}
         <svg className="conta-seta" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">
@@ -98,7 +100,7 @@ export function AccountSwitcher(props: Props) {
         </svg>
       </button>
 
-      {aberto && (
+      {aberto && !simulado && (
         <div className="menu menu-contas" role="menu">
           <p className="menu-titulo">Suas contas na Deriv</p>
 

@@ -18,6 +18,7 @@ import { roboBloqueado, ROBOS_A_VENDA } from '../core/teeds/robosLiberados'
 import { NomeDoRobo } from './NomeDoRobo'
 import { simboloMoeda } from '../core/dinheiro'
 import { lembrarMetaEStop } from '../core/teeds/planoDoDia'
+import { modoSimuladoAtivo } from '../core/teeds/modoSimulado'
 
 interface Props {
   socket: TeedsSocket | null
@@ -311,6 +312,8 @@ export function LocalRobotPanel({
   async function ligar(config: ConfigEstrategia, ativo: string, modelo = ident) {
     void ativo
     if (envioPendente.current) return
+    // trava: no modo simulado nenhuma sessão de verdade liga por esta tela
+    if (modoSimuladoAtivo()) { setErro('Você está no modo simulado: desligue o modo para operar de verdade.'); return }
     if (!sessaoTeeds || !contaId) {
       setErro(`Entre na sua conta ${MARCA.prosa} e conecte a Deriv para ligar o robô.`)
       return

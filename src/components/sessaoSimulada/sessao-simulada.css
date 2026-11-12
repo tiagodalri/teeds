@@ -79,3 +79,26 @@
   .ssim-marcas { max-width: 120px; }
 }
 @media (prefers-reduced-motion: reduce) { .ssim-pilula, .ssim-fita button, .ssim-barra i { transition: none; } }
+
+/* modo simulado geral: o resumo do preparo no topo do "Como termina" */
+.ssim-do-preparo { display: grid; gap: 3px; padding: 11px 13px; border: 1px solid color-mix(in srgb, #FB923C 40%, var(--border)); border-radius: 12px; background: color-mix(in srgb, #FB923C 7%, var(--bg)); }
+.ssim-do-preparo b { font-size: 15px; }
+.ssim-do-preparo span { font-size: 13px; font-variant-numeric: tabular-nums; }
+.ssim-do-preparo small { font-size: 11.5px; color: var(--muted); }
+
+/* a prévia operação por operação */
+.ssim-tabela { display: grid; gap: 8px; }
+.ssim-tabela h4 { margin: 0; font-size: 14px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.ssim-tabela h4 small { font-size: 12px; font-weight: 600; color: var(--muted); }
+.ssim-tabela-rolo { max-height: 320px; overflow: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); }
+.ssim-tabela table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ssim-tabela th { position: sticky; top: 0; z-index: 1; padding: 8px 10px; background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 700; text-align: right; letter-spacing: .03em; text-transform: uppercase; }
+.ssim-tabela th:first-child, .ssim-tabela td:first-child { text-align: left; color: var(--muted); width: 34px; }
+.ssim-tabela td { padding: 7px 10px; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); text-align: right; font-family: var(--rel-dados); white-space: nowrap; }
+.ssim-tabela tr.g td:first-child { box-shadow: inset 3px 0 0 var(--up); }
+.ssim-tabela tr.p td:first-child { box-shadow: inset 3px 0 0 var(--down); }
+.ssim-tabela td.sobe { color: var(--up); } .ssim-tabela td.cai { color: var(--down); }
+.ssim-tabela td em { margin-left: 6px; padding: 1px 5px; border-radius: 6px; background: color-mix(in srgb, #FB923C 18%, transparent); color: #FB923C; font-style: normal; font-size: 10.5px; font-weight: 800; }
+.ssim-linha-info td { text-align: left !important; font-family: inherit !important; font-size: 12px; color: var(--muted); background: color-mix(in srgb, #FB923C 6%, transparent); }
+
+.ssim-sugerir { justify-self: start; }

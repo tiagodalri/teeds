@@ -1,0 +1,52 @@
+/* Modo simulado geral (12/11/2026). Prefixo msim-. O laranja é o mesmo do relatório e da sessão simulada. */
+
+.msim-ligar { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid color-mix(in srgb, #FB923C 55%, var(--border)); border-radius: 999px;
+  background: transparent; color: #FB923C; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; flex: none; }
+.msim-ligar svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.msim-ligar:hover { background: color-mix(in srgb, #FB923C 12%, transparent); }
+.msim-ligar:focus-visible, .msim-tag:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
+
+/* a tag única do modo, sempre à vista */
+.msim-tag { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: #FB923C; color: #2A1F10;
+  font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .02em; cursor: pointer; white-space: nowrap; flex: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #FB923C 28%, transparent); }
+.msim-tag i { width: 8px; height: 8px; border-radius: 50%; background: #2A1F10; animation: msim-pulso 1.6s ease-in-out infinite; }
+.msim-tag.aberta { box-shadow: 0 0 0 3px color-mix(in srgb, #FB923C 55%, transparent); }
+@keyframes msim-pulso { 50% { opacity: .25; } }
+
+/* o painel */
+.msim-painel { position: fixed; z-index: 400; top: 64px; right: 16px; width: min(360px, calc(100vw - 32px)); max-height: calc(100dvh - 88px); overflow: auto;
+  display: grid; gap: 14px; padding: 16px; border: 1px solid color-mix(in srgb, #FB923C 45%, var(--border)); border-radius: 16px;
+  background: var(--surface); color: var(--text); box-shadow: 0 24px 60px -16px #000c; font-size: 13px; }
+.msim-painel header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.msim-painel header div { display: grid; gap: 2px; }
+.msim-painel header b { font-size: 15px; }
+.msim-painel header small { color: var(--muted); font-size: 12px; }
+.msim-painel header button { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 9px; background: transparent; color: var(--text); font-size: 18px; line-height: 1; cursor: pointer; }
+.msim-painel section { display: grid; gap: 8px; }
+.msim-rot { font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.msim-saldo-grande { font-family: var(--fonte-dados, ui-monospace, Menlo, monospace); font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.msim-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.msim-chips button, .msim-seg button { min-height: 38px; padding: 0 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text);
+  font: inherit; font-weight: 700; font-variant-numeric: tabular-nums; cursor: pointer; }
+.msim-chips button.on, .msim-seg button.on { border-color: #FB923C; background: color-mix(in srgb, #FB923C 16%, var(--bg)); box-shadow: inset 0 0 0 1px #FB923C; }
+.msim-outro { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.msim-outro input { min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; }
+.msim-outro button { height: 40px; padding: 0 14px; border: 0; border-radius: 10px; background: #FB923C; color: #2A1F10; font: inherit; font-weight: 800; cursor: pointer; }
+.msim-outro button:disabled { opacity: .45; cursor: default; }
+.msim-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.msim-lista ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; line-height: 1.4; }
+.msim-lista small { color: var(--muted); line-height: 1.4; }
+.msim-livro { display: flex !important; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); }
+.msim-livro .sobe { color: var(--up); } .msim-livro .cai { color: var(--down); }
+.msim-livro button { height: 30px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font: inherit; font-weight: 650; cursor: pointer; }
+.msim-sair { width: 100%; min-height: 42px; border: 1px solid color-mix(in srgb, var(--down) 55%, var(--border)); border-radius: 12px; background: transparent; color: var(--down); font: inherit; font-weight: 800; cursor: pointer; }
+.msim-painel button:focus-visible, .msim-painel input:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .msim-ligar span { display: none; }
+  .msim-ligar { width: 34px; padding: 0; justify-content: center; }
+  .msim-tag { height: 30px; padding: 0 11px; font-size: 12px; }
+  .msim-painel { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-height: 88dvh; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (prefers-reduced-motion: reduce) { .msim-tag i { animation: none; } }

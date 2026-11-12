@@ -35,7 +35,7 @@ import { NomeDoRobo } from '../NomeDoRobo'
 import { DERIV } from '../../core/deriv/config'
 import { subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
 import { useCatalogoCompleto } from '../../core/teeds/catalogoRobos'
-import { cenariosProntos, definirRegrasDasIas, dinheiroDoCenario, faixaDoCenario, hojeIso, lerCenario, operacoesDoCenario, relatorioDoCenario, type Cenario } from '../../core/teeds/relatorioSimulado'
+import { cenariosProntos, definirRegrasDasIas, dinheiroDoCenario, faixaDoCenario, hojeIso, lerCenario, operacoesDoCenario, relatorioDoCenario, type Cenario, type OperacaoSimulada } from '../../core/teeds/relatorioSimulado'
 import { BotaoSimular, EditorDoCenario } from './SimuladorDeRelatorio'
 
 interface Props {
@@ -56,6 +56,11 @@ interface Props {
   /** Muda a cada toque no botão "Simular relatório" do topo da página. */
   pedidoSimulacao?: number
   aoMudarSimulacao?: (ativa: boolean) => void
+  /**
+   * Modo simulado geral (12/11/2026, só admin): as operações simuladas nesta aba (I.A. e manuais) e o
+   * saldo simulado. Sem um cenário aberto, o relatório é montado com elas; nada vem do banco.
+   */
+  simuladoGeral?: { ops: OperacaoSimulada[]; saldo: number } | null
 }
 
 const pct = (a: number, b: number) => (b !== 0 ? Math.round((a / b) * 100) : 0)
@@ -93,7 +98,7 @@ function lerGuardado(): Guardado {
 
 /* ================================================================ painel */
 
-export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosTrocados = false, saldo, moeda, aoIr, exemplo, podeSimular = false, pedidoSimulacao = 0, aoMudarSimulacao }: Props) {
+export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosTrocados = false, saldo, moeda, aoIr, exemplo, podeSimular = false, pedidoSimulacao = 0, aoMudarSimulacao, simuladoGeral = null }: Props) {
   const ocultos = useValoresOcultos()
   // a simulação: só existe para quem pode simular (o cliente nunca chega aqui, nem com o aparelho mexido)
   const [cenario, setCenario] = useState<Cenario | null>(() => (simLigada() ? lerCenario(CHAVE_SIM) : null))
@@ -104,7 +109,10 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   const sim = podeSimular ? cenario : null
   // as I.A. do simulador sobem a escada com as regras em vigor (catálogo); sem catálogo, o padrão do código
   const versaoRegras = definirRegrasDasIas(useCatalogoCompleto())
-  const opsSim = useMemo(() => (sim ? operacoesDoCenario(sim) : null), [sim, versaoRegras])
+  const opsCenario = useMemo(() => (sim ? operacoesDoCenario(sim) : null), [sim, versaoRegras])
+  // um cenário aberto vale por cima; sem ele, no modo simulado, as operações simuladas da plataforma
+  const geral = !sim && podeSimular && simuladoGeral ? simuladoGeral : null
+  const opsSim = opsCenario ?? geral?.ops ?? null
   const inicial = useMemo(() => {
     const g = lerGuardado()
     return cenario ? { ...g, ...periodoDoCenario(cenario), filtros: {} } : g
@@ -197,15 +205,15 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
   }, [sessao.token, faixa.de, faixa.ate, escolhida, chaveFiltros, versao, pulso, opsSim]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // depósitos e saques: ao vivo da Deriv, só quando a conta conectada é a do filtro
-  const contaDoFiltro = !!sim || !!exemplo?.dinheiro || (conectada && socket && demo === contaDemo)
+  const contaDoFiltro = !!sim || !!geral || !!exemplo?.dinheiro || (conectada && socket && demo === contaDemo)
   useEffect(() => {
-    setDinheiroP(sim ? dinheiroDoCenario(sim) : exemplo?.dinheiro ?? null)
-    if (sim || exemplo || !contaDoFiltro || !socket || demo) return
+    setDinheiroP(sim ? dinheiroDoCenario(sim) : geral ? { depositos: 0, saques: 0, movimentos: [] } : exemplo?.dinheiro ?? null)
+    if (sim || geral || exemplo || !contaDoFiltro || !socket || demo) return
     let vivo = true
     dinheiroDoPeriodo(socket, faixa).then((d) => { if (vivo) setDinheiroP(d) }).catch(() => undefined)
     return () => { vivo = false }
-  }, [contaDoFiltro, faixa.de, faixa.ate, demo, versao, sim]) // eslint-disable-line react-hooks/exhaustive-deps
-  const saldoNaTela = sim ? sim.saldo : saldo
+  }, [contaDoFiltro, faixa.de, faixa.ate, demo, versao, sim, !!geral]) // eslint-disable-line react-hooks/exhaustive-deps
+  const saldoNaTela = sim ? sim.saldo : geral ? geral.saldo : saldo
 
   const v = (x: number) => (ocultos ? MASCARA : dinheiro(x, moeda))
   const vs = (x: number) => (ocultos ? MASCARA : dinheiroComSinal(x, moeda))
@@ -364,7 +372,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
 
       {rel && vazio && (
         <section className="rel-vazio">
-          <h3>{nFiltros ? 'Nenhuma operação com esses filtros' : `Nenhuma operação na conta ${rotuloConta(demo)} neste período`}</h3>
+          <h3>{nFiltros ? 'Nenhuma operação com esses filtros' : geral ? 'Nenhuma operação simulada neste período' : `Nenhuma operação na conta ${rotuloConta(demo)} neste período`}</h3>
           <p>{nFiltros ? 'Tire um filtro ou escolha outro período.' : `Assim que você operar pela ${MARCA.prosa}, cada resultado aparece aqui, com os números da corretora.`}</p>
           <div className="rel-vazio-acoes">
             {nFiltros ? <button type="button" className="rel-btn ouro" onClick={() => setFiltros({})}>Limpar filtros</button> : <>
@@ -378,7 +386,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
       {rel && !vazio && t && <>
         {/* ------------------------------------------------ o resultado */}
         <section className={`rel-heroi ${classe(t.resultado)}`}>
-          {sim && !adminOculto && <span className="rsim-tag rsim-tag-canto"><i aria-hidden="true" />Relatório simulado</span>}
+          {sim && !adminOculto && !simuladoGeral && <span className="rsim-tag rsim-tag-canto"><i aria-hidden="true" />Relatório simulado</span>}
           <div className="rel-heroi-topo">
             <div className="rel-heroi-txt">
               <span className="rel-rot">Resultado · {rotuloDoPeriodo.toLowerCase()} · conta {rotuloConta(demo).toLowerCase()}{nFiltros ? ` · ${nFiltros} ${nFiltros === 1 ? 'filtro' : 'filtros'}` : ''}</span>
@@ -510,7 +518,7 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
           </div>
           {!contaDoFiltro ? <p className="rel-nota">{conectada ? `Para ver depósitos e saques, escolha a conta ${rotuloConta(false)} no topo da plataforma.` : 'Conecte a corretora para ver o saldo, os depósitos e os saques.'}</p> : <>
             <div className="rel-kpis tres">
-              <div><span>Saldo agora</span><b>{saldoNaTela === null ? '—' : v(saldoNaTela)}</b><small>{sim ? 'Valor do cenário simulado' : 'Ao vivo da corretora'}</small></div>
+              <div><span>Saldo agora</span><b>{saldoNaTela === null ? '—' : v(saldoNaTela)}</b><small>{sim ? 'Valor do cenário simulado' : geral ? 'Saldo simulado' : 'Ao vivo da corretora'}</small></div>
               <div><span>Depósitos no período</span><b className="sobe">{dinheiroP ? v(dinheiroP.depositos) : '…'}</b><small>{dinheiroP ? (() => { const k = dinheiroP.movimentos.filter((x) => x.tipo === 'deposit').length; return `${k} ${k === 1 ? 'depósito' : 'depósitos'}` })() : 'Lendo o extrato…'}</small></div>
               <div><span>Saques no período</span><b>{dinheiroP ? v(dinheiroP.saques) : '…'}</b><small>{dinheiroP ? (() => { const k = dinheiroP.movimentos.filter((x) => x.tipo === 'withdrawal').length; return `${k} ${k === 1 ? 'saque' : 'saques'}` })() : 'Lendo o extrato…'}</small></div>
             </div>
@@ -523,9 +531,10 @@ export function RelatoriosPanel({ sessao, socket, conectada, contaDemo, rotulosT
         </section>
       )}
 
-      {rel && !vazio && <TabelaDeOperacoes rel={rel} filtros={filtros} mudar={mudar} ocultos={ocultos} moeda={moeda} vs={vs} simulado={!!sim} />}
+      {rel && !vazio && <TabelaDeOperacoes rel={rel} filtros={filtros} mudar={mudar} ocultos={ocultos} moeda={moeda} vs={vs} simulado={!!sim || !!geral} />}
 
-      {sim ? <p className="rel-fonte"><b>Relatório simulado.</b> Números preenchidos pela equipe da {MARCA.prosa} para as aulas, para mostrar cenários de gerenciamento. Não são operações reais, não foram gravados e não entram em nenhuma cobrança.</p> : <p className="rel-fonte">Números das operações feitas pela {MARCA.prosa}, como a corretora registrou cada contrato. Depósitos, saques e saldo vêm ao vivo da corretora. Valores em dólar. Resultados passados não garantem resultados futuros.</p>}
+      {geral ? <p className="rel-fonte"><b>Modo simulado.</b> As operações simuladas nesta aba (I.A. e manuais), com o saldo simulado. Nada veio da corretora nem do banco.</p>
+      : sim ? <p className="rel-fonte"><b>Relatório simulado.</b> Números preenchidos pela equipe da {MARCA.prosa} para as aulas, para mostrar cenários de gerenciamento. Não são operações reais, não foram gravados e não entram em nenhuma cobrança.</p> : <p className="rel-fonte">Números das operações feitas pela {MARCA.prosa}, como a corretora registrou cada contrato. Depósitos, saques e saldo vêm ao vivo da corretora. Valores em dólar. Resultados passados não garantem resultados futuros.</p>}
 
       {editando && podeSimular && <EditorDoCenario inicial={cenario ?? lerCenario(CHAVE_SIM) ?? cenariosProntos()[0].cenario} aoMostrar={mostrarCenario} aoFechar={() => setEditando(false)} aoSair={sim ? sairDaSimulacao : undefined} />}
       {painelAberto && rel && <PainelDeFiltros rel={rel} filtros={filtros} moeda={moeda} aoAplicar={(f) => { setFiltros(f); setPainelAberto(false) }} aoFechar={() => setPainelAberto(false)} />}

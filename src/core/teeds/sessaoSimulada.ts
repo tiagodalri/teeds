@@ -24,7 +24,7 @@
  * A cabine (RobotLive) recebe um EstadoMotor igual ao do servidor, então a
  * tela é a mesma que o aluno vê. A tag "Sessão simulada" fica sempre à vista.
  */
-import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../deriv/strategies'
+import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca, type Modo } from '../deriv/strategies'
 import type { ConfigEstrategia, Contexto, EstadoMotor, Estrategia, OperacaoMotor, Registro, EmCurso } from '../deriv/engine'
 import { configDeReferencia, parametrosPadrao, type ParametrosDoRobo } from '../deriv/parametros'
 import { PAGAMENTO_POR_DOLAR } from '../deriv/escada'
@@ -66,9 +66,18 @@ export interface Trecho {
   /** A maior sequência de perdas deste trecho. */
   sequencia: number
   momento: Momento
+  /** % de operações ganhas que o trecho deve ter. Vazio = o que a I.A. fizer. */
+  acerto?: number | null
+  /**
+   * A sessão natural que a sugestão rodou (ganhou/perdeu de cada operação). Enquanto os números do
+   * trecho forem os dela (mesma assinatura), o plano é exatamente essa sessão: o pedido fecha sempre.
+   */
+  natural?: { assinatura: string; resultados: boolean[] }
 }
 export interface Roteiro {
   versao: 1
+  /** A sessão (modo simulado): editar mantém o id e reescreve as operações dela no relatório. */
+  id?: string
   nome: string
   ia: string
   conta: 'real' | 'demo'
@@ -81,6 +90,14 @@ export interface Roteiro {
   semente: number
   /** Ganhou/perdeu escolhido na fita, por trecho (substitui o gerador). */
   fita?: boolean[][]
+  /** Modo da recuperação (só nas I.A. que têm o agressivo). */
+  modo?: Modo
+  /** Loss virtual escolhido (I.A. com loss virtual). Vazio = o publicado no painel. */
+  lossVirtual?: number | null
+  /** Valor máximo por entrada do cliente (0 = sem). */
+  valorMaximo?: number
+  /** Segundos em média entre uma operação e a outra. Vazio = o ritmo natural da I.A. no mercado. */
+  ritmo?: number | null
 }
 
 const r2 = (x: number) => Math.round(x * 100) / 100
@@ -123,7 +140,7 @@ export function digitosQueGanham(tipo: string, b = 5): number[] {
   }
 }
 /** Pagamento bruto por US$ 1 (o medido na plataforma, ver escada.ts), pelo número de dígitos que ganham. */
-function pagamentoPorDolar(tipo: string, b?: number): number {
+export function pagamentoPorDolar(tipo: string, b?: number): number {
   const n = digitosQueGanham(tipo, b).length
   const P = PAGAMENTO_POR_DOLAR
   return n === 3 ? P.tresDigitos : n === 5 ? P.cincoDigitos : n === 6 ? P.seisDigitos : n === 9 ? P.noveDigitos : 1 + (10 / Math.max(1, n) - 1) * 0.94
@@ -269,7 +286,12 @@ export class Caixa {
 /** A configuração de cada trecho: as regras em vigor da I.A. + entrada, meta e stop do roteiro. */
 export function configDoTrecho(r: Roteiro, t: Trecho): ConfigEstrategia {
   const base = Math.max(ENTRADA_MINIMA, r2(r.entrada || 1))
-  return { ...configDeReferencia(parametrosDa(r.ia), base), takeProfit: Math.max(0, t.meta || 0), stopLoss: Math.max(0, t.stop || 0) }
+  const cfg = configDeReferencia(parametrosDa(r.ia), base, r.modo ?? 'conservador')
+  return {
+    ...cfg, valorMaximo: Math.max(0, r.valorMaximo ?? 0),
+    ...(r.lossVirtual !== undefined && r.lossVirtual !== null ? { lossVirtualCliente: r.lossVirtual } : {}),
+    takeProfit: Math.max(0, t.meta || 0), stopLoss: Math.max(0, t.stop || 0),
+  }
 }
 
 /* ========================================================= a corrida */
@@ -448,6 +470,21 @@ const emResultados = (ciclos: number[], aberta = 0) => [
   ...Array.from({ length: aberta }, () => false),
 ]
 
+/** Quanto o acerto obtido foge do pedido (cada ponto percentual pesa como meia operação a mais). */
+function notaDoAcerto(ops: Array<{ ganhou: boolean }>, t: Trecho): number {
+  if (t.acerto === undefined || t.acerto === null || !ops.length) return 0
+  const pct = (ops.filter((o) => o.ganhou).length / ops.length) * 100
+  const d = Math.abs(pct - t.acerto)
+  return d < 0.5 ? 0 : d * 10
+}
+
+/** O que define a sessão de um trecho: se mudar, a sessão natural guardada deixa de valer. */
+export function assinaturaDoTrecho(r: Roteiro, k: number): string {
+  const sem = (t: Trecho) => ({ ...t, natural: t.natural?.assinatura ?? null })
+  const t = r.trechos[k]
+  return JSON.stringify([r.ia, r.entrada, r.saldo, r.modo ?? null, r.lossVirtual ?? null, r.valorMaximo ?? 0, versaoRegras, r.trechos.slice(0, k).map(sem), t.meta, t.stop, t.fim, t.operacoes, t.sequencia, t.momento, t.acerto ?? null, t.fim === 'desligou' ? t.resultado : 0])
+}
+
 /** Gera os ganhou/perdeu de cada trecho para fechar com o roteiro. */
 export function planejar(r: Roteiro): Plano {
   if (r.fita) return { resultados: r.fita.map((f) => [...f]), avisos: [] }
@@ -457,6 +494,12 @@ export function planejar(r: Roteiro): Plano {
   const tab = tabelaDosCiclos(r, 40)
   let R0 = 0
   r.trechos.forEach((t, k) => {
+    // a sessão natural da sugestão, se os números ainda são os dela
+    if (t.natural && t.natural.assinatura === assinaturaDoTrecho(r, k)) {
+      resultados.push([...t.natural.resultados])
+      R0 = correr({ ...r, trechos: r.trechos.slice(0, k + 1) }, resultados).trechos[k]?.resultado ?? R0
+      return
+    }
     const N = Math.max(1, Math.round(t.operacoes))
     const S = Math.max(0, Math.min(38, Math.round(t.sequencia)))
     /** O lucro que a I.A. deixaria em `ops` operações errando do jeito dela (média de sorteios). */
@@ -506,9 +549,36 @@ export function planejar(r: Roteiro): Plano {
       let s = 0, maior = 0
       dele.forEach((o) => { s = o.ganhou ? 0 : s + 1; maior = Math.max(maior, s) })
       const nota = (fim.tipo === t.fim ? 0 : 10_000) + Math.abs(dele.length - N) * 20 + Math.abs(maior - S) * 50
-        + (t.fim === 'desligou' ? Math.abs(fim.resultado - t.resultado) * 10 : 0)
+        + (t.fim === 'desligou' ? Math.abs(fim.resultado - t.resultado) * 10 : 0) + notaDoAcerto(dele, t)
       if (!melhor || nota < melhor.nota) melhor = { lista, nota, resultado: fim.resultado }
       if (nota < 0.05) break
+    }
+    // reparo: troca ganhou/perdeu de uma operação (ou de duas vizinhas) conferindo na caixa, até fechar
+    if (melhor && melhor.nota >= 0.05) {
+      const avaliar = (lista: boolean[]) => {
+        const corrida = correr({ ...r, trechos: r.trechos.slice(0, k + 1) }, [...resultados, lista])
+        const fim = corrida.trechos[k]
+        if (!fim) return { nota: Infinity, resultado: R0 }
+        const dele = corrida.ops.filter((o) => o.trecho === k)
+        let sq = 0, mx = 0
+        dele.forEach((o) => { sq = o.ganhou ? 0 : sq + 1; mx = Math.max(mx, sq) })
+        const nota = (fim.tipo === t.fim ? 0 : 10_000) + Math.abs(dele.length - N) * 20 + Math.abs(mx - S) * 50 + (t.fim === 'desligou' ? Math.abs(fim.resultado - t.resultado) * 10 : 0) + notaDoAcerto(dele, t)
+        return { nota, resultado: fim.resultado }
+      }
+      const rnd = sorteio(sementeDe(JSON.stringify(['reparo', r.ia, k, t, r.semente])))
+      let lista = [...melhor.lista]
+      // a lista pode precisar de mais operações do que a montagem deu
+      while (lista.length < N) lista.push(rnd() < 0.5)
+      let atual = avaliar(lista)
+      for (let volta = 0; volta < 1500 && atual.nota >= 0.05; volta++) {
+        const nova = [...lista]
+        const i = Math.floor(rnd() * nova.length)
+        if (rnd() < 0.5 || i + 1 >= nova.length) nova[i] = !nova[i]
+        else [nova[i], nova[i + 1]] = [nova[i + 1], nova[i]]
+        const a = avaliar(nova)
+        if (a.nota <= atual.nota) { lista = nova; atual = a }
+      }
+      melhor = { lista, nota: atual.nota, resultado: atual.resultado }
     }
     resultados.push(melhor?.lista ?? [])
     R0 = melhor?.resultado ?? R0
@@ -532,7 +602,7 @@ export interface Previa {
   duracao: number
   avisos: string[]
   /** Os números que não bateram com o pedido, com a sugestão de usar o que saiu. */
-  diferencas: Array<{ trecho: number; campo: 'operacoes' | 'resultado' | 'sequencia' | 'fim'; pedido: string; saiu: string; usar?: Partial<Trecho> }>
+  diferencas: Array<{ trecho: number; campo: 'operacoes' | 'resultado' | 'sequencia' | 'fim' | 'acerto'; pedido: string; saiu: string; usar?: Partial<Trecho> }>
 }
 
 /** Segundos entre um tick e outro no ativo das I.A. (R_75: um a cada 2 s). */
@@ -566,10 +636,15 @@ export function previaDoRoteiro(r: Roteiro): Previa {
     if (t.fim === 'desligou' && Math.abs(fimK.resultado - t.resultado) > 0.004 && !r.fita) diferencas.push({ trecho: k, campo: 'resultado', pedido: din(t.resultado), saiu: din(fimK.resultado), usar: { resultado: fimK.resultado } })
     let s = 0, maior = 0
     dele.forEach((o) => { s = o.ganhou ? 0 : s + 1; maior = Math.max(maior, s) })
+    if (t.acerto !== undefined && t.acerto !== null && dele.length && !r.fita) {
+      const pct = Math.round((dele.filter((o) => o.ganhou).length / dele.length) * 100)
+      if (Math.abs(pct - t.acerto) >= 1) diferencas.push({ trecho: k, campo: 'acerto', pedido: `${t.acerto}%`, saiu: `${pct}%`, usar: { acerto: pct } })
+    }
     if (maior !== Math.round(t.sequencia) && !r.fita) diferencas.push({ trecho: k, campo: 'sequencia', pedido: String(Math.round(t.sequencia)), saiu: String(maior), usar: { sequencia: maior } })
   })
   // ticks: o 1º de cada operação é a entrada e o 2º a saída; as I.A. com loss virtual esperam alguns entre uma e outra
-  const espera = estrategiaDa(r.ia).lossVirtualAjustavel && (parametrosDa(r.ia).entrada.lossVirtual ?? 0) > 0 ? 5 : 0
+  const lv = r.lossVirtual ?? parametrosDa(r.ia).entrada.lossVirtual ?? 0
+  const espera = estrategiaDa(r.ia).lossVirtualAjustavel && lv > 0 ? 5 : 0
   return {
     corrida, resultados: plano.resultados,
     resultado: ops.length ? ops[ops.length - 1].resultado : 0,
@@ -638,6 +713,8 @@ export class Ensaio {
   private casas: number
   private sigma: number
   readonly t0: number
+  /** O relógio da sessão (ms): o horário do tick real em 1×, ou 2 s por tick quando acelerada. */
+  private relogio: number
   tick = 0
   trecho = 0
   fase: FaseDoEnsaio = 'rodando'
@@ -650,6 +727,13 @@ export class Ensaio {
   private proximoId: number
   /** Chamado quando um trecho termina (meta, stop, desligou): o palco pausa ali. */
   aoFimDoTrecho: ((fim: FimDoTrecho, trecho: number) => void) | null = null
+  /**
+   * Ritmo pedido (segundos por operação): quantos ticks a I.A. analisa antes de cada entrada nova.
+   * Os dígitos desses ticks são escolhidos para a análise da própria estratégia confirmar a entrada
+   * nessa hora (o loss virtual completa no tick certo). Só com preço gerado (o real não se escolhe).
+   */
+  private esperaBase: number | null = null
+  private esperaAlvo = 0
 
   constructor(r: Roteiro, plano: boolean[][], partida: PontoDePartida, t0: number) {
     this.r = r
@@ -661,7 +745,14 @@ export class Ensaio {
     // R_75: 75% ao ano, um tick a cada 2 s
     this.sigma = partida.preco * 0.75 * Math.sqrt(SEGUNDOS_POR_TICK / (365 * 86400))
     this.t0 = t0
+    this.relogio = t0
     this.proximoId = 280_000_000_000 + Math.floor(this.rnd() * 9_000_000_000)
+    if (r.ritmo && r.ritmo > 0) {
+      // ticks de análise por entrada nova = (ritmo em ticks − os 2 do contrato) × operações ÷ entradas novas
+      const ops = plano.reduce((s, l) => s + l.length, 0)
+      const novas = plano.reduce((s, l) => s + 1 + l.slice(0, -1).filter(Boolean).length, 0) || 1
+      this.esperaBase = Math.max(0, ((r.ritmo / SEGUNDOS_POR_TICK) - 2) * ops / novas)
+    }
     this.estado = {
       rodando: false, emOperacao: false, operacoes: 0, vitorias: 0, derrotas: 0, perdasSeguidas: 0, resultado: 0, movimentado: 0,
       valorAtual: 0, aguardando: '', motivoParada: null, registros: [], digitos: [], curva: [0], condicao: null, ultimoLucro: null,
@@ -670,7 +761,7 @@ export class Ensaio {
     this.ligar()
   }
 
-  get agora(): number { return this.t0 + this.tick * SEGUNDOS_POR_TICK * 1000 }
+  get agora(): number { return this.relogio }
   get saldo(): number { return this.caixa.saldo }
   get operacoes(): number { return this.caixa.operacoes }
 
@@ -686,8 +777,8 @@ export class Ensaio {
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v)
   }
   /** O próximo preço; com `digito`, o último dígito é esse (só a última casa muda: menos que um pip de diferença). */
-  private proximoPreco(digito?: number): number {
-    let p = this.preco + this.normal() * this.sigma
+  private proximoPreco(digito?: number, real?: number): number {
+    let p = real ?? this.preco + this.normal() * this.sigma
     if (digito !== undefined) {
       const txt = p.toFixed(this.casas)
       p = Number(txt.slice(0, -1) + String(digito))
@@ -703,6 +794,7 @@ export class Ensaio {
     this.caixa.ligar(cfg)
     this.noPlano = 0
     this.esperaAtual = 0
+    this.novaEspera()
     this.estado.rodando = true
     this.estado.motivoParada = null
     this.estado.perdasSeguidas = 0
@@ -778,6 +870,7 @@ export class Ensaio {
     e.historico = [op, ...e.historico]
     e.ticksAnalisados = 0
     this.esperaAtual = 0
+    this.novaEspera()
     this.registrar(v.ganhou ? `Ganhou ${din(lucro)}` : `Perdeu ${din(Math.abs(lucro))}`, v.ganhou ? 'ganho' : 'perda')
     try { e.estrategia = this.caixa.est.telemetria?.(this.caixa.contexto) ?? null } catch { e.estrategia = null }
     if (!this.caixa.rodando) { this.fecharTrecho(); return }
@@ -829,11 +922,46 @@ export class Ensaio {
     return null
   }
 
-  /** Um tick do mercado. */
-  passo() {
+  private novaEspera() {
+    if (this.esperaBase === null) return
+    this.esperaAlvo = Math.max(1, Math.round(this.esperaBase * (0.55 + this.rnd() * 0.9)))
+  }
+  /** O dígito do próximo tick para a entrada acontecer na hora do ritmo (a análise é a da estratégia). */
+  private digitoDoRitmo(): number | undefined {
+    if (this.esperaBase === null || !this.caixa.rodando || this.emVoo) return undefined
+    const e = this.caixa.est
+    const ctx = this.caixa.contexto
+    const cfg = this.caixa.config
+    const falta = this.esperaAlvo - (this.esperaAtual + 1)
+    const L = e.medidor?.({ digitos: ctx.digitos, config: cfg })?.alvo ?? 0
+    const ordem = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => this.rnd() - 0.5)
+    const como = (d: number) => {
+      const digitos = [...ctx.digitos, d].slice(-120)
+      return { entra: e.entrar({ ...ctx, digitos }), conta: e.medidor?.({ digitos, config: cfg })?.valor ?? 0 }
+    }
+    if (falta <= 0) return ordem.find((d) => como(d).entra) ?? undefined
+    // ainda não: a contagem vai subindo para completar exatamente no tick certo
+    const quer = Math.max(0, L - falta)
+    let melhor: number | undefined, dist = Infinity
+    for (const d of ordem) {
+      const c = como(d)
+      if (c.entra) continue
+      const x = Math.abs(c.conta - quer)
+      if (x < dist) { dist = x; melhor = d }
+    }
+    return melhor
+  }
+
+  /**
+   * Um tick do mercado. Com `real` (1×), é o tick de verdade do ativo: o mesmo horário e o mesmo
+   * preço da Deriv; no tick de saída de um contrato só o último dígito muda para o do roteiro.
+   * Sem ele (acelerada, ou pulando), um passeio aleatório do mesmo tamanho, 2 s por tick.
+   */
+  passo(real?: { preco: number; epoch: number }) {
     // parada, a sessão não assina mais o preço (como o motor): a fita fica onde parou
     if (this.fase !== 'rodando') return
     this.tick += 1
+    this.relogio = real ? Math.max(this.relogio + 1, real.epoch * 1000) : this.relogio + SEGUNDOS_POR_TICK * 1000
     const v = this.emVoo
     // o tick de saída já sai com o dígito do roteiro
     let digito: number | undefined
@@ -842,7 +970,8 @@ export class Ensaio {
       const lado = v.ganhou ? quem : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => !quem.includes(d))
       digito = lado[Math.floor(this.rnd() * lado.length)]
     }
-    const p = this.proximoPreco(digito)
+    if (digito === undefined && !real) digito = this.digitoDoRitmo()
+    const p = this.proximoPreco(digito, real?.preco)
     const d = this.digitoDe(p)
     this.caixa.digitos = [...this.caixa.digitos, d].slice(-120)
     this.estado.digitos = this.caixa.digitos
@@ -879,4 +1008,76 @@ export function ensaioAte(r: Roteiro, plano: boolean[][], partida: PontoDePartid
     e.passo()
   }
   return e
+}
+
+/* ===================================================== sugestão natural */
+
+/**
+ * Números que a I.A. faria sozinha para terminar do jeito pedido (12/11/2026, Tiago: "não está
+ * respeitando"): roda a caixa com ganhos e perdas sorteados na chance real do contrato até a sessão
+ * bater a meta (ou o stop), e devolve quantas operações levou e a pior sequência. Com eles o gerador
+ * fecha exatamente. Para "desligou", uns 30 a 60 operações naturais e o resultado em que parou.
+ */
+export function sugerirTrecho(r: Roteiro, k: number, fim: Fim, semente = 1): Pick<Trecho, 'operacoes' | 'sequencia' | 'momento' | 'resultado' | 'natural'> | null {
+  const q = chanceDePerder(r.ia)
+  const anteriores = correr({ ...r, trechos: r.trechos.slice(0, k) }, planejar({ ...r, trechos: r.trechos.slice(0, k) }).resultados)
+  const t = r.trechos[k]
+  const alvo = t.acerto ?? null
+  let escolhida: { pct: number; volta: ReturnType<typeof montarSugestao> } | null = null
+  const montarSugestao = (numeros: { operacoes: number; sequencia: number; momento: Momento; resultado: number }, lista: boolean[]) => {
+    const comNumeros: Roteiro = { ...r, trechos: r.trechos.map((x, i) => (i === k ? { ...x, fim, ...numeros, natural: undefined } : x)) }
+    return { ...numeros, natural: { assinatura: assinaturaDoTrecho(comNumeros, k), resultados: lista } }
+  }
+  for (let tentativa = 0; tentativa < (alvo === null ? 40 : 160); tentativa++) {
+    const rnd = sorteio(sementeDe(JSON.stringify(['sugestao', r.ia, r.entrada, k, fim, t.meta, t.stop, semente, tentativa])))
+    const cx = new Caixa(r.ia, r.saldo)
+    // o placar de antes de religar
+    cx.resultado = anteriores.trechos[k - 1]?.resultado ?? 0
+    cx.saldo = anteriores.ops.length ? anteriores.ops[anteriores.ops.length - 1].saldo : r.saldo
+    cx.ligar(configDoTrecho(r, t))
+    const limite = fim === 'desligou' ? 30 + Math.floor(rnd() * 31) : 3000
+    let seq = 0, maior = 0, onde = 0, n = 0
+    const lista: boolean[] = []
+    while (cx.rodando && n < limite) {
+      const c = cx.comprar()
+      if (!c) break
+      const p = cx.perdasSeguidas === 0 ? q.entrada : q.recuperacao
+      const ganhou = rnd() >= p
+      cx.liquidar(c, ganhou, null)
+      lista.push(ganhou)
+      n++
+      seq = ganhou ? 0 : seq + 1
+      if (seq > maior) { maior = seq; onde = n }
+    }
+    const tipo = cx.rodando ? 'desligou' : tipoDoMotivo(cx.motivo ?? '')
+    if (tipo !== fim || n === 0) continue
+    const momento: Momento = onde < n * 0.33 ? 'comeco' : onde < n * 0.7 ? 'meio' : 'fim'
+    // os números da sessão (a do stop conta a maior de todas, como a revisão mostra)
+    const numeros = { operacoes: n, sequencia: maior, momento, resultado: cx.resultado }
+    if (alvo === null) return montarSugestao(numeros, lista)
+    // com acerto pedido: entre as sessões naturais, a que mais chega perto dele
+    const pct = (lista.filter(Boolean).length / n) * 100
+    if (!escolhida || Math.abs(pct - alvo) < Math.abs(escolhida.pct - alvo)) escolhida = { pct, volta: montarSugestao(numeros, lista) }
+    if (Math.abs(pct - alvo) < 0.5) break
+  }
+  return escolhida?.volta ?? null
+}
+
+/* ===================================================== o tempo da sessão */
+
+export interface Tempo { ticks: number; segundos: number; porOperacao: number; operacoes: number }
+/**
+ * Roda o ensaio inteiro (religando entre os trechos) com o preço gerado, 2 s por tick, e mede quanto
+ * a sessão dura de verdade. Com ritmo pedido é ele; sem, o ritmo natural da análise da I.A.
+ */
+export function tempoDaSessao(r: Roteiro, plano: boolean[][], partida: PontoDePartida = { preco: 61234.5678, casas: 4 }): Tempo {
+  const e = new Ensaio(r, plano, partida, 0)
+  let ticks = 0
+  for (let i = 0; i < 400_000 && e.fase !== 'fim'; i++) {
+    if (e.fase === 'entre') { if (e.religar()) break; continue }
+    e.passo(); ticks++
+  }
+  const operacoes = e.operacoes
+  const segundos = ticks * SEGUNDOS_POR_TICK
+  return { ticks, segundos, porOperacao: operacoes ? segundos / operacoes : 0, operacoes }
 }

@@ -3,6 +3,7 @@ import { identidade } from '../core/deriv/branding'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { Emblema } from './RobotCard'
 import { ligarNoServidor } from '../core/teeds/servidorRobos'
+import { modoSimuladoAtivo } from '../core/teeds/modoSimulado'
 import { roboLigou } from '../core/som'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import type { Proposta } from '../core/teeds/chat'
@@ -63,6 +64,8 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
     // Conta real pede dois toques. O primeiro troca o rótulo do botão para
     // dizer, com o valor escrito por extenso, o que vai acontecer — porque
     // "Ligar" e "gastar dinheiro de verdade" não deveriam ser o mesmo gesto.
+    // modo simulado (admin): nada liga de verdade daqui; a sessão simulada é pela aba das I.A.
+    if (modoSimuladoAtivo()) { setErro('Você está no modo simulado. Para simular, ligue pela aba das I.A.'); return }
     if (real && !confirmando) { setConfirmando(true); return }
     setLigando(true); setErro(null)
     try {
