@@ -61,7 +61,7 @@ export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriod
   return <div className="fin-resumo">
     <div className="fin-kpis">
       <article className="fin-kpi fin-entra"><span>Receitas</span><strong>{reais(r.entradas)}</strong><small>Recebido · {rotuloPeriodo}</small></article>
-      <article className="fin-kpi fin-sai"><span>Despesas</span><strong>{reais(r.saidas)}</strong><small>Pago · {rotuloPeriodo}</small></article>
+      <article className="fin-kpi fin-sai"><span>Despesas</span><strong>{reais(r.saidas)}</strong><small>{r.porFora > 0 ? `Inclui ${reais(r.porFora)} pagos por fora` : `Pago · ${rotuloPeriodo}`}</small></article>
       <article className={`fin-kpi destaque ${r.resultado < 0 ? 'negativo' : 'positivo'}`}><span>Resultado</span><strong>{reais(r.resultado)}</strong>
         <small>{r.margem != null ? `Margem de ${pct(r.margem)}` : r.resultado < 0 ? 'Sem receita no período' : 'Receitas menos despesas'}</small></article>
       <button type="button" className={`fin-kpi ${r.nReceberVencido ? 'alerta' : ''}`} onClick={() => aoIr('lancamentos', 'receber')}><span>A receber</span><strong>{reais(r.aReceber)}</strong>

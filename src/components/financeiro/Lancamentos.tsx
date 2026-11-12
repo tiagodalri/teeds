@@ -144,7 +144,7 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
               <span role="cell" className="fin-linha-conta">{l.tipo === 'devolucao' ? <><b>{parceiroNome(l.pago_por)}</b><small>Devolveu a {so?.nome.split(' ')[0] ?? 'um sócio'}</small></>
                 : l.pago_por ? <><b>{parceiroNome(l.pago_por)}</b><small>Do bolso dele · ninguém devolve</small></>
                 : l.pago_fora && so ? <><b>{so.nome}</b><small>{parceiroDoProjeto(dados, l.projeto_id)?.nome.split(' ')[0] ?? 'O parceiro'} devolve</small></>
-                : l.pago_fora ? <><b>Por fora</b><small>Só no custo do projeto</small></>
+                : l.pago_fora ? <><b>Por fora</b><small>Fora do caixa</small></>
                 : so && l.tipo === 'despesa' && !l.conta_id ? <><b>{so.nome}</b><small>A plataforma devolve</small></>
                 : so && (l.tipo === 'aporte' || l.tipo === 'retirada' || !l.conta_id)
                 ? <><b>{so.nome}</b><small>{l.tipo === 'despesa' ? 'Do próprio bolso' : l.tipo === 'receita' ? 'Na conta pessoal' : l.conta_id ? con.get(l.conta_id)?.nome : ''}</small></>

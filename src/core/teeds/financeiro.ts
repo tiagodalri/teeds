@@ -287,13 +287,23 @@ export interface Resumo {
   aReceber: number; aReceberVencido: number; nReceberVencido: number
   aPagar: number; aPagarVencido: number; nPagarVencido: number
   saldoContas: number
+  /** a parte de `saidas` que o parceiro pagou do bolso (pago por fora): conta no resultado, não no caixa */
+  porFora: number
 }
-/** O resumo do período: o que foi recebido e pago nele (caixa) e o que está em aberto agora. */
+/**
+ * O resumo do período: o que foi recebido e pago nele e o que está em aberto agora.
+ * Despesa paga por fora (o parceiro pagou do bolso) entra nas despesas e no resultado (12/11/2026, Tiago: com a
+ * receita da Cakto e do markup entrando nos projetos, o resultado sem o custo dos parceiros ficava inflado);
+ * continua fora do saldo das contas, do a pagar e da divisão entre os sócios.
+ */
 export function resumir(d: DadosFin, p: Periodo, hojeDia = hoje()): Resumo {
-  let entradas = 0, saidas = 0, aportes = 0, retiradas = 0
+  let entradas = 0, saidas = 0, aportes = 0, retiradas = 0, porFora = 0
   let aReceber = 0, aReceberVencido = 0, nReceberVencido = 0, aPagar = 0, aPagarVencido = 0, nPagarVencido = 0
   for (const l of d.lancamentos) {
-    if (l.pago_fora) continue
+    if (l.pago_fora) {
+      if (l.tipo === 'despesa' && l.pago_em && l.pago_em >= p.de && l.pago_em <= p.ate) { saidas += l.valor; porFora += l.valor }
+      continue
+    }
     if (l.pago_em) {
       if (l.pago_em < p.de || l.pago_em > p.ate) continue
       if (l.tipo === 'receita') entradas += l.valor
@@ -315,6 +325,7 @@ export function resumir(d: DadosFin, p: Periodo, hojeDia = hoje()): Resumo {
     entradas, saidas, resultado, margem: entradas > 0 ? resultado / entradas : null, aportes, retiradas,
     aReceber, aReceberVencido, nReceberVencido, aPagar, aPagarVencido, nPagarVencido,
     saldoContas: saldosDasContas(d).reduce((s, c) => s + (c.conta.ativo ? c.saldo : 0), 0),
+    porFora,
   }
 }
 
@@ -335,7 +346,7 @@ export function mesAMes(d: DadosFin, ate: string, n = 12): Mes[] {
   const meses: Mes[] = Array.from({ length: n }, (_, i) => ({ mes: mesDe(somarMeses(inicioDoMes(ate), i - n + 1)), entradas: 0, saidas: 0, resultado: 0 }))
   const por = new Map(meses.map((x) => [x.mes, x]))
   for (const l of d.lancamentos) {
-    if (l.pago_fora || !l.pago_em || !ehOperacional(l.tipo)) continue
+    if (!l.pago_em || !ehOperacional(l.tipo)) continue // pago por fora entra, como no resumo
     const x = por.get(mesDe(l.pago_em)); if (!x) continue
     if (l.tipo === 'receita') x.entradas += l.valor; else x.saidas += l.valor
   }
@@ -350,7 +361,7 @@ export function porCategoria(d: DadosFin, p: Periodo, tipo: 'receita' | 'despesa
   const m = new Map<string, FatiaCategoria>()
   let total = 0
   for (const l of d.lancamentos) {
-    if (l.pago_fora || l.tipo !== tipo || !l.pago_em || l.pago_em < p.de || l.pago_em > p.ate) continue
+    if (l.tipo !== tipo || !l.pago_em || l.pago_em < p.de || l.pago_em > p.ate) continue
     const c = l.categoria_id ? cat.get(l.categoria_id) : undefined
     const chave = c?.id ?? '-'
     const x = m.get(chave) ?? { id: c?.id ?? null, nome: c?.nome ?? 'Sem categoria', cor: c?.cor ?? '#94A3B8', valor: 0, n: 0, parte: 0 }
