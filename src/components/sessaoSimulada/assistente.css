@@ -38,6 +38,13 @@
 .asi-modos button small { font-size: 11.5px; color: var(--muted); line-height: 1.35; }
 .asi-modos button.on { border-color: var(--est-ouro); background: color-mix(in srgb, var(--est-ouro) 12%, var(--surface)); box-shadow: inset 0 0 0 1px var(--est-ouro); }
 
+.asi-lv { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.asi-lv button { display: grid; gap: 1px; justify-items: center; align-content: center; min-height: 46px; padding: 4px 2px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.asi-lv button b { font-family: var(--est-dados); font-size: 14px; font-variant-numeric: tabular-nums; }
+.asi-lv button small { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.asi-lv button:hover { border-color: color-mix(in srgb, var(--est-ouro) 50%, var(--border)); }
+.asi-lv button.padrao { border-style: dashed; border-color: color-mix(in srgb, var(--est-ouro) 60%, var(--border)); }
+.asi-lv button.on { border-style: solid; border-color: var(--est-ouro); background: color-mix(in srgb, var(--est-ouro) 14%, var(--surface)); }
 .asi-valores { display: grid; gap: 8px; }
 .asi-chips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .asi-chips button { min-height: 40px; padding: 0 6px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-family: var(--est-dados); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }

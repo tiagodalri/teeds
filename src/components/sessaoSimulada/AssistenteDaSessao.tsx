@@ -18,7 +18,7 @@ import {
   definirRegrasDaSessao, digitosQueGanham, estrategiaDa, IAS_DA_SESSAO, nomeDaIa, parametrosDa,
   type Momento, type PontoDePartida, type Roteiro,
 } from '../../core/teeds/sessaoSimulada'
-import { montarCenarios, type Cenario, type Pedido, type Resposta, type Sugestao } from '../../core/teeds/cenariosDaSessao'
+import { esperaDoLossVirtual, montarCenarios, type Cenario, type Pedido, type Resposta, type Sugestao } from '../../core/teeds/cenariosDaSessao'
 import { PreviaDaSessao } from './PreviaDaSessao'
 import { pontoDePartida } from './PalcoDaSessao'
 import '../relatorios/relatorios.css'
@@ -56,7 +56,10 @@ function sobreAIa(id: string): string {
 
 /* --------------------------------------------------------- as perguntas */
 
-type Etapa = 'ia' | 'modo' | 'saldo' | 'entrada' | 'resultado' | 'tempo'
+type Etapa = 'ia' | 'modo' | 'lv' | 'saldo' | 'entrada' | 'resultado' | 'tempo'
+const LOSS_VIRTUAL_MAXIMO = 12
+const esperaEmTexto = (s: number) => (s < 90 ? `${Math.round(s)} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1).replace('.', ',')} h`)
+const lvEmTexto = (n: number) => (n === 0 ? 'Sem loss virtual' : `${n} ${n === 1 ? 'dígito' : 'dígitos'}`)
 
 function Pergunta({ n, titulo, resposta, aberta, futura, aoAlterar, children, dica }: {
   n: number; titulo: string; resposta?: ReactNode; aberta: boolean; futura: boolean; aoAlterar: () => void; children?: ReactNode; dica?: ReactNode
@@ -205,6 +208,8 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
   const versao = definirRegrasDaSessao(useCatalogoCompleto())
   const [ia, setIa] = useState<string | null>(iaInicial && (IAS_DA_SESSAO as readonly string[]).includes(iaInicial) ? iaInicial : null)
   const [modo, setModo] = useState<Modo | null>(null)
+  /** Loss virtual escolhido (0 = sem). Só nas I.A. que entram por loss virtual, como no preparo de verdade. */
+  const [lv, setLv] = useState<number | null>(null)
   // o saldo é sempre uma pergunta (o do topo aparece como atalho)
   const [saldo, setSaldo] = useState<number | null>(null)
   const [conta, setConta] = useState<'real' | 'demo'>(contaInicial)
@@ -227,19 +232,21 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
   }, [aoFechar, aberto])
 
   const comModos = ia ? temModos(ia, parametrosDa(ia)) : false
+  const lvDoPainel = ia ? parametrosDa(ia).entrada.lossVirtual ?? 0 : 0
+  const comLV = !!ia && !!estrategiaDa(ia).lossVirtualAjustavel && lvDoPainel > 0
   const resultado = valor === null ? null : sinal === 'prejuizo' ? -valor : valor
   // a ordem das perguntas; a primeira sem resposta é a aberta
-  const etapas: Etapa[] = ['ia', ...(comModos ? ['modo' as const] : []), 'saldo', 'entrada', 'resultado', 'tempo']
+  const etapas: Etapa[] = ['ia', ...(comModos ? ['modo' as const] : []), ...(comLV ? ['lv' as const] : []), 'saldo', 'entrada', 'resultado', 'tempo']
   const respondida: Record<Etapa, boolean> = {
-    ia: !!ia, modo: !comModos || modo !== null, saldo: saldo !== null && saldo > 0, entrada: entrada !== null,
+    ia: !!ia, modo: !comModos || modo !== null, lv: !comLV || lv !== null, saldo: saldo !== null && saldo > 0, entrada: entrada !== null,
     resultado: resultado !== null && resultado !== 0, tempo: minutos !== null,
   }
   const atual = editando ?? etapas.find((e) => !respondida[e]) ?? null
   const responder = (f: () => void) => { f(); setEditando(null); setAberto(null) }
 
-  const pedido: Pedido | null = useMemo(() => (ia && saldo && entrada !== null && resultado && minutos && (!comModos || modo)
-    ? { ia, modo: comModos ? modo! : 'conservador', saldo, conta, entrada, resultado, minutos, momento, semente } : null),
-  [ia, modo, saldo, conta, entrada, resultado, minutos, momento, semente, comModos])
+  const pedido: Pedido | null = useMemo(() => (ia && saldo && entrada !== null && resultado && minutos && (!comModos || modo) && (!comLV || lv !== null)
+    ? { ia, modo: comModos ? modo! : 'conservador', saldo, conta, entrada, resultado, minutos, momento, semente, lossVirtual: comLV ? lv : null } : null),
+  [ia, modo, lv, saldo, conta, entrada, resultado, minutos, momento, semente, comModos, comLV])
   const chave = pedido ? JSON.stringify(pedido) : ''
 
   const [resposta, setResposta] = useState<{ chave: string; r: Resposta } | null>(null)
@@ -296,7 +303,7 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
             <div className="asi-ias" role="radiogroup" aria-label={`Qual ${IA}`}>
               {IAS_DA_SESSAO.map((id) => (
                 <button key={id} type="button" role="radio" aria-checked={ia === id} className={ia === id ? 'on' : ''}
-                  onClick={() => responder(() => { setIa(id); if (!temModos(id, parametrosDa(id))) setModo(null); else if (ia !== id) setModo(null) })}>
+                  onClick={() => responder(() => { setIa(id); if (ia !== id) { setModo(null); setLv(null) } })}>
                   <span className="asi-ia-nome"><NomeDoRobo nome={nomeDaIa(id)} id={id} /></span>
                   <small>{sobreAIa(id)}</small>
                 </button>
@@ -315,6 +322,22 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
                   </button>
                 ))}
               </div>
+            </Pergunta>
+          )}
+
+          {comLV && ia && (
+            <Pergunta {...pergunta('lv')} titulo="Com qual loss virtual?"
+              resposta={lv !== null && <>{lvEmTexto(lv)}{lv === lvDoPainel && <em className="asi-tag">Padrão</em>}</>}
+              dica={<>Quantos dígitos seguidos que teriam perdido a {nomeDaIa(ia)} espera antes de cada entrada nova. Quanto maior, mais ela espera e menos operações cabem no tempo. Não muda o acerto nem a escada.</>}>
+              <div className="asi-lv" role="radiogroup" aria-label="Loss virtual">
+                {Array.from({ length: LOSS_VIRTUAL_MAXIMO + 1 }, (_, n) => (
+                  <button key={n} type="button" role="radio" aria-checked={lv === n} className={`${lv === n ? 'on' : ''} ${n === lvDoPainel ? 'padrao' : ''}`} onClick={() => responder(() => setLv(n))}>
+                    <b>{n === 0 ? 'Sem' : n}</b>
+                    <small>{n === 0 ? 'direto' : `~${esperaEmTexto(esperaDoLossVirtual(ia, n))}`}</small>
+                  </button>
+                ))}
+              </div>
+              <small className="asi-dica">Embaixo de cada número, a espera média por entrada nova no mercado. O padrão do painel é {lvDoPainel}.</small>
             </Pergunta>
           )}
 
@@ -345,7 +368,7 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
           </Pergunta>
 
           <Pergunta {...pergunta('tempo')} titulo="Quanto tempo de sessão?" resposta={minutos !== null && duracao(minutos)}
-            dica={ia && parametrosDa(ia).entrada.lossVirtual ? `A ${nomeDaIa(ia)} analisa antes de entrar: o tempo vira o ritmo da análise, e a sessão dura exatamente isso.` : ia ? `A ${nomeDaIa(ia)} entra direto, uma operação a cada 4 s: o tempo define a quantidade de operações.` : undefined}>
+            dica={ia && (comLV ? (lv ?? lvDoPainel) : lvDoPainel) > 0 ? `A ${nomeDaIa(ia)} analisa antes de entrar: o tempo e o loss virtual definem quantas operações cabem, e a sessão dura exatamente isso.` : ia ? `A ${nomeDaIa(ia)} entra direto, uma operação a cada 4 s: o tempo define a quantidade de operações.` : undefined}>
             <Valores rotulo="Tempo" valores={TEMPOS} atual={minutos} sufixo="min" min={1} formato={duracao} aoEscolher={(v) => responder(() => setMinutos(Math.round(v)))} />
           </Pergunta>
 
@@ -392,7 +415,7 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
               <div className="asi-cenarios-topo">
                 <div>
                   <b>{cenarios.length === 1 ? 'Um cenário fecha' : `${cenarios.length} cenários fecham`} com o pedido</b>
-                  <small>{nomeDaIa(pedido.ia)}{comModos ? ` · ${NOME_DO_MODO[pedido.modo]}` : ''} · entrada {usd(pedido.entrada)} · {dinheiroComSinal(pedido.resultado, 'USD')} · {duracao(pedido.minutos)} · saldo {usd(pedido.saldo)}</small>
+                  <small>{nomeDaIa(pedido.ia)}{comModos ? ` · ${NOME_DO_MODO[pedido.modo]}` : ''}{comLV && pedido.lossVirtual != null ? ` · ${pedido.lossVirtual === 0 ? 'sem loss virtual' : `loss virtual ${pedido.lossVirtual}`}` : ''} · entrada {usd(pedido.entrada)} · {dinheiroComSinal(pedido.resultado, 'USD')} · {duracao(pedido.minutos)} · saldo {usd(pedido.saldo)}</small>
                 </div>
                 <button type="button" className="asi-sortear" onClick={() => { setSemente((s) => s + 1); setAberto(null) }}>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6" /><path d="M20 10a8 8 0 0 0-14.3-4.3L4 8m16 8-1.7 2.3A8 8 0 0 1 4 14" /></svg>

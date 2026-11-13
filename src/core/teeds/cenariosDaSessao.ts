@@ -41,6 +41,12 @@ export interface Pedido {
   momento: Momento
   /** "Sortear outros": a mesma estrutura com outra sessão. */
   semente?: number
+  /**
+   * Loss virtual escolhido (0 = sem, até 12), nas I.A. que entram por loss virtual. Vazio = o publicado
+   * no painel. Muda o tempo: a I.A. espera esse tanto de dígitos seguidos que teriam perdido antes de
+   * cada entrada nova, então quanto maior, menos operações cabem na sessão.
+   */
+  lossVirtual?: number | null
 }
 
 export interface Cenario {
@@ -82,24 +88,32 @@ export interface Resposta {
 const r2 = (x: number) => Math.round(x * 100) / 100
 const ENTRADA_MINIMA = 0.35
 /**
- * Até onde as chances podem ser trabalhadas (em log-odds). 13/11/2026, Tiago: "com entrada de 0,50 na
- * Raptor agressiva dá para bater 411 em 45 min, é questão de saber trabalhar os números: quantas
- * sequências de perda e quantas perdas em cada uma". O gerador não fica mais preso ao que a I.A. faz em
- * média: ele escolhe com que frequência as sequências começam e até onde descem (sempre pelas regras da
- * escada, com cada sequência recuperada), e avisa no cartão quando a sessão foi montada assim.
+ * Cada I.A. tem a sua conta (13/11/2026, Tiago: "com entrada de 0,50 na Raptor agressiva dá para bater
+ * 411 em 45 min, é questão de saber trabalhar os números"; "o acerto deve ser sempre coerente com o
+ * perfil do robô"; "faça esse cálculo estratégico para cada uma das I.A., tudo milimetricamente pensado
+ * de acordo com a realidade delas").
+ *
+ * Uma sessão é feita de CICLOS: k perdas seguidas e o ganho que fecha. O que cada ciclo deixa sai da
+ * escada de verdade da I.A. e do modo (`ciclosDaEscada`), e é bem diferente de uma para a outra:
+ *  - Raptor: o ganho limpo (0 a 8) deixa 6% da entrada; perdeu, recupera no 7-8-9 (paga 192%). No
+ *    conservador quem rende é o ciclo de UMA perda (+92%); no agressivo, as sequências fundas (+20% do
+ *    que foi recuperado, e a escada cresce 1,6x por degrau);
+ *  - Falcon e Legacy: o ganho limpo deixa 56%; a escada cresce 2,85x por degrau (recupera e sobra 10%
+ *    da entrada), então o saldo limita a sequência e quem rende é o ganho limpo;
+ *  - Gulf e Phenom: o ganho limpo deixa 192%; conservador recupera no zero a zero (+5%), agressivo +20%.
+ *
+ * O acerto é o do perfil: cada ciclo tem um ganho só, então acerto = 1 ÷ operações por ciclo. O gerador
+ * fixa o acerto no do perfil da I.A. (dentro de uma faixa estreita) e escolhe a MISTURA de ciclos
+ * (quantos de cada profundidade) que dá o lucro por operação pedido. Entre todas as misturas que fecham,
+ * fica a mais parecida com a natural daquela I.A. (a de menor divergência: a natural inclinada pela
+ * profundidade e pelo lucro do ciclo). Os limites são exatos: o mínimo e o máximo que qualquer mistura
+ * alcança com aquele acerto e aquela maior sequência.
  */
-const INCLINACAO_MAXIMA = 5
-/** Acima disso a sessão tem mais (ou menos) sequências do que a I.A. costuma ter: o cartão avisa. */
-const INCLINACAO_HABITUAL = 1
-/**
- * O acerto é sempre o do perfil da I.A. (13/11/2026, Tiago: "o acerto deve ser sempre coerente com o
- * perfil do robô"): as chances só são trabalhadas dentro desta faixa em volta do acerto natural, e uma
- * sessão que saia além da faixa aceita é descartada. O que muda de um cenário para o outro é a troca
- * entre menos sequências mais fundas e mais sequências mais rasas, nunca o quanto a I.A. acerta.
- */
-const FAIXA_DO_ACERTO = 0.06
+const FAIXA_DO_ACERTO = [0, 0.02, -0.02, 0.04, -0.04, 0.06, -0.06]
+/** Uma sessão sorteada fora disto em volta do perfil é descartada. */
 const ACERTO_ACEITO = 0.1
-const SEGUNDOS_MAXIMOS_POR_OPERACAO = 75
+/** Divergência (em nats) acima da qual a mistura já não parece a natural da I.A.: o cartão avisa. */
+const DIVERGENCIA_HABITUAL = 0.1
 const SEQUENCIA_MAXIMA = 20
 const OPERACOES_MAXIMAS = 4000
 
@@ -124,12 +138,17 @@ interface Compasso {
   L: number
   /** Depois de uma perda segue a sequência sem analisar (família do AG7). */
   segue: boolean
+  /**
+   * Quantos ticks a I.A. espera, em média, por uma entrada nova no mercado de verdade: o tempo até saírem
+   * L dígitos seguidos que teriam perdido (chance q cada um) = (1 − q^L) ÷ (q^L × (1 − q)).
+   */
+  espera: number
 }
 const compassos = new Map<string, Compasso>()
 
 /** Quanto tempo cada operação leva nesta I.A.: medido no próprio Ensaio. */
 function compassoDa(r: Roteiro): Compasso {
-  const chave = JSON.stringify([r.ia, r.modo ?? null, parametrosDa(r.ia)])
+  const chave = JSON.stringify([r.ia, r.modo ?? null, r.lossVirtual ?? null, parametrosDa(r.ia)])
   const pronto = compassos.get(chave)
   if (pronto) return pronto
   const q = chanceDePerder(r.ia)
@@ -145,17 +164,15 @@ function compassoDa(r: Roteiro): Compasso {
   const direta = nat.porOperacao <= 4.5
   const params = parametrosDa(r.ia)
   const L = direta ? 0 : Math.max(0, r.lossVirtual ?? params.entrada.lossVirtual ?? 0)
-  const c: Compasso = { direta, sNat: nat.porOperacao, L, segue: params.entrada.sequenciaSemAnalise ?? true }
+  const e = estrategiaDa(r.ia)
+  const qd = 1 - digitosQueGanham(e.contractType, e.barreira).length / 10
+  const espera = L > 0 ? (1 - Math.pow(qd, L)) / (Math.pow(qd, L) * (1 - qd)) : 0
+  const c: Compasso = { direta, sNat: nat.porOperacao, L, segue: params.entrada.sequenciaSemAnalise ?? true, espera }
   compassos.set(chave, c)
   return c
 }
 
 /* ------------------------------------------------------------ a sessão */
-
-const inclinar = (p: number, tau: number) => {
-  const lo = Math.log(p / (1 - p)) - tau
-  return 1 / (1 + Math.exp(-lo))
-}
 
 interface Sessao {
   lista: boolean[]
@@ -170,7 +187,7 @@ interface Sessao {
   saldoMinimo: number
   /** Em que operação começou a maior sequência (no lucro). */
   ondeS: number
-  /** O quanto as chances foram trabalhadas para a sessão fechar (0 = as do contrato). */
+  /** O quanto a mistura de ciclos se afasta da natural da I.A. (0 = a natural). */
   distancia: number
 }
 
@@ -200,17 +217,16 @@ function perdasDaEscada(r: Roteiro, cfg: ConfigEstrategia): number[] {
   return acc
 }
 
-/** A chance de perder na entrada (`pe`) e de continuar perdendo na recuperação (`pr`). */
-interface Chances { pe: number; pr: number; distancia: number }
+/** A mistura de ciclos de uma sessão: p[k] = a parte dos ciclos com k perdas antes do ganho que fecha. */
+interface Mistura { p: number[]; distancia: number }
 
 /**
  * O pouso na meta (no lucro): `liq[k]` é o que um ciclo de k perdas deixa e `folga` o quanto o último
- * ganho pode passar da meta. Perto dela, a sequência só desce até onde o ganho que fecha não estoura o
- * pedido (e desce, se o ganho de agora estouraria e um mais fundo não).
+ * ganho pode passar da meta. Perto dela, só entram os ciclos que não estouram o pedido.
  */
 interface Pouso { liq: number[]; folga: number }
 
-function simular(r: Roteiro, cfg: ConfigEstrategia, ch: Chances, rnd: () => number,
+function simular(r: Roteiro, cfg: ConfigEstrategia, mi: Mistura, rnd: () => number,
   forma: Forma, limite: number, escada: number[], pouso: Pouso | null = null): Sessao | null {
   const cx = new Caixa(r.ia, r.saldo)
   cx.ligar(cfg)
@@ -219,11 +235,36 @@ function simular(r: Roteiro, cfg: ConfigEstrategia, ch: Chances, rnd: () => numb
   let stopNecessario = 0, saldoMinimo = 0
   /** No prejuízo: até quantas perdas seguidas cabem antes do stop, medido no começo do ciclo. */
   let cabeNoCiclo = Infinity
-  /** O resultado no começo do ciclo em andamento (para o pouso). */
-  let noCiclo = 0
-  const { pe, pr } = ch
+  /** Quantas perdas o ciclo em andamento tem antes do ganho (sorteado da mistura no começo do ciclo). */
+  let fundo = 0
   // as outras sequências ficam abaixo da maior: ela é única e vem no momento pedido
   const teto = forma.tipo === 'livre' ? forma.teto : forma.S - 1
+  /**
+   * A profundidade do próximo ciclo, sorteada da mistura (até onde cabe no stop). Perto da meta, um ciclo
+   * que estouraria o pedido vira o mais fundo que ainda cabe: a sessão pousa sem se arrastar.
+   */
+  const sortearFundo = (resultado: number): number => {
+    const ate = Math.min(teto, cabeNoCiclo, mi.p.length - 1)
+    if (ate <= 0) return 0
+    let total = 0
+    for (let k = 0; k <= ate; k++) total += mi.p[k]
+    let fundo = 0
+    if (total > 0) {
+      let x = rnd() * total
+      fundo = ate
+      for (let k = 0; k <= ate; k++) { x -= mi.p[k]; if (x <= 0) { fundo = k; break } }
+    }
+    if (!pouso || forma.tipo !== 'meta') return fundo
+    const cabe = cfg.takeProfit - resultado + pouso.folga
+    if (pouso.liq[fundo] <= cabe) return fundo
+    // o que mais rende entre os que cabem; se nenhum cabe, o que menos passa
+    let melhor = -1, menor = 0
+    for (let k = 0; k <= ate; k++) {
+      if (pouso.liq[k] <= cabe && (melhor < 0 || pouso.liq[k] > pouso.liq[melhor])) melhor = k
+      if (pouso.liq[k] < pouso.liq[menor]) menor = k
+    }
+    return melhor >= 0 ? melhor : menor
+  }
   while (cx.rodando && n < limite) {
     // no prejuízo, a sequência final começa num começo de ciclo, quando cabe exatamente em S perdas
     if (forma.tipo === 'stop' && !colapso && seq === 0) {
@@ -238,7 +279,6 @@ function simular(r: Roteiro, cfg: ConfigEstrategia, ch: Chances, rnd: () => numb
       cabeNoCiclo = Math.max(0, m - 2)
     }
     const antes = cx.resultado
-    if (seq === 0) noCiclo = antes
     const c = cx.comprar()
     if (!c) break
     stopNecessario = Math.max(stopNecessario, r2(c.valor - Math.min(0, antes)))
@@ -247,20 +287,13 @@ function simular(r: Roteiro, cfg: ConfigEstrategia, ch: Chances, rnd: () => numb
     if (colapso) ganhou = false
     else if (forcar > 0) { ganhou = false; forcar--; if (forcar === 0) deveGanhar = true }
     else if (deveGanhar) { ganhou = true; deveGanhar = false }
-    else if (forma.tipo === 'meta' && !feito && seq === 0 && n >= forma.inicio) {
+    else if (forma.tipo === 'meta' && !feito && seq === 0 && n >= forma.inicio
+      && (!pouso || (pouso.liq[forma.S] ?? Infinity) <= cfg.takeProfit - antes + pouso.folga)) {
       feito = true; ganhou = false; forcar = forma.S - 1; ondeS = n
       if (forcar === 0) deveGanhar = true
-    } else if (seq >= teto || seq >= cabeNoCiclo) ganhou = true
-    else {
-      ganhou = rnd() >= (seq === 0 ? pe : pr)
-      if (pouso && forma.tipo === 'meta') {
-        const cabe = cfg.takeProfit - noCiclo + pouso.folga
-        const agora = (pouso.liq[seq] ?? Infinity) <= cabe
-        let depois = false
-        for (let j = seq + 1; j <= teto && j < pouso.liq.length; j++) if (pouso.liq[j] <= cabe) { depois = true; break }
-        if (!agora && depois) ganhou = false
-        else if (agora && !depois) ganhou = true
-      }
+    } else {
+      if (seq === 0) fundo = sortearFundo(antes)
+      ganhou = seq >= fundo || seq >= teto || seq >= cabeNoCiclo
     }
     cx.liquidar(c, ganhou, null)
     lista.push(ganhou)
@@ -272,7 +305,20 @@ function simular(r: Roteiro, cfg: ConfigEstrategia, ch: Chances, rnd: () => numb
   }
   const m = cx.motivo ?? ''
   const tipo = /^meta de lucro/i.test(m) ? 'meta' : /^limite de perda/i.test(m) ? 'stop' : 'outro'
-  return { lista, n, tipo, resultado: cx.resultado, maior, pico, vale, stopNecessario, saldoMinimo, ondeS, distancia: ch.distancia }
+  return { lista, n, tipo, resultado: cx.resultado, maior, pico, vale, stopNecessario, saldoMinimo, ondeS, distancia: mi.distancia }
+}
+
+const textoDaEspera = (s: number) => (s < 90 ? `${Math.round(s)} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${(s / 3600).toFixed(1).replace('.', ',')} h`)
+
+/**
+ * Quanto a I.A. espera, em média, por uma entrada nova com este loss virtual (segundos, no mercado de
+ * verdade): para a tela explicar a escolha. 0 = entra direto.
+ */
+export function esperaDoLossVirtual(ia: string, lossVirtual: number): number {
+  if (lossVirtual <= 0) return 0
+  const e = estrategiaDa(ia)
+  const q = 1 - digitosQueGanham(e.contractType, e.barreira).length / 10
+  return ((1 - Math.pow(q, lossVirtual)) / (Math.pow(q, lossVirtual) * (1 - q))) * SEGUNDOS_POR_TICK
 }
 
 /** O acerto natural da I.A.: um ganho por ciclo, e as perdas que as chances do contrato dão em média. */
@@ -281,15 +327,25 @@ export function acertoDoPerfil(ia: string): number {
   return 1 / (1 + q.entrada / (1 - q.recuperacao))
 }
 
-const chancesDoContrato = (ia: string): Chances => { const q = chanceDePerder(ia); return { pe: q.entrada, pr: q.recuperacao, distancia: 0 } }
+/**
+ * A mistura natural da I.A.: a chance de o ciclo ter k perdas com as chances do contrato (perder na
+ * entrada; continuar perdendo na recuperação), só até `teto` perdas.
+ */
+function misturaNatural(ia: string, teto: number): Mistura {
+  const q = chanceDePerder(ia)
+  const p = [1 - q.entrada]
+  for (let k = 1; k <= teto; k++) p.push(q.entrada * Math.pow(q.recuperacao, k - 1) * (1 - q.recuperacao))
+  const soma = p.reduce((a, b) => a + b, 0)
+  return { p: p.map((x) => x / soma), distancia: 0 }
+}
 
-/** Lucro médio por operação com estas chances (sem meta nem stop), medido na Caixa. */
-function lucroPorOperacao(r: Roteiro, cfg: ConfigEstrategia, ch: Chances, teto: number, ops: number, semente: number): number {
+/** Lucro médio por operação com esta mistura (sem meta nem stop), medido na Caixa. */
+function lucroPorOperacao(r: Roteiro, cfg: ConfigEstrategia, mi: Mistura, teto: number, ops: number, semente: number): number {
   const livre = { ...r, saldo: 1e12 }
   const sem = { ...cfg, takeProfit: 0, stopLoss: 0 }
   let lucro = 0, feitas = 0
   for (let i = 0; i < 16; i++) {
-    const s = simular(livre, sem, ch, sorteio(semente + i * 7919), { tipo: 'livre', teto }, ops, [])
+    const s = simular(livre, sem, mi, sorteio(semente + i * 7919), { tipo: 'livre', teto }, ops, [])
     if (!s) continue
     lucro += s.resultado; feitas += s.n
   }
@@ -313,52 +369,96 @@ function ciclosDaEscada(r: Roteiro, cfg: ConfigEstrategia): number[] {
 }
 
 /**
- * Uma sessão feita de ciclos com estas chances, as sequências indo até `teto`: o lucro por operação e
- * o acerto (cada ciclo tem um ganho só, então o acerto é 1 ÷ operações por ciclo).
+ * O mínimo e o máximo de lucro por ciclo que QUALQUER mistura alcança com `m` perdas por ciclo em média
+ * (ciclos de 0 a `teto` perdas). É uma conta exata: os extremos são sempre misturas de duas
+ * profundidades (o contorno de cima e o de baixo da tabela dos ciclos).
  */
-function ritmoDosCiclos(liq: number[], teto: number, pe: number, pr: number): { ritmo: number; acerto: number } {
+function limitesDaMistura(liq: number[], teto: number, m: number): { min: number; max: number } | null {
   const T = Math.min(teto, liq.length - 1)
-  if (T <= 0) return { ritmo: liq[0], acerto: 1 }
-  let lucro = (1 - pe) * liq[0], ops = 1 - pe, chega = pe
-  for (let k = 1; k <= T; k++) {
-    const prob = k < T ? chega * (1 - pr) : chega
-    lucro += prob * liq[k]; ops += prob * (k + 1)
-    chega *= pr
+  if (m < 0 || m > T) return null
+  let min = Infinity, max = -Infinity
+  for (let i = 0; i <= T; i++) for (let j = i; j <= T; j++) {
+    if (i > m || j < m) continue
+    const v = i === j ? liq[i] : liq[i] + ((liq[j] - liq[i]) * (m - i)) / (j - i)
+    if (v < min) min = v
+    if (v > max) max = v
   }
-  return { ritmo: lucro / ops, acerto: 1 / ops }
+  return Number.isFinite(min) ? { min, max } : null
 }
 
-interface Solucao { chances: Chances; ritmo: number; min: number; max: number }
 /**
- * As chances que dão `alvo` de lucro por operação COM o acerto do perfil da I.A., o mais perto possível
- * das do contrato. Varre as duas (com que frequência uma sequência começa; até onde ela desce) só dentro
- * da faixa do acerto. `min` e `max` são o que dá para tirar nessa faixa. `null`: com as sequências
- * limitadas a `teto`, o acerto do perfil não existe (sequências rasas demais).
+ * A mistura mais parecida com a natural que tem `m` perdas por ciclo em média e deixa `L` de lucro por
+ * ciclo: a natural inclinada pela profundidade (alfa) e pelo lucro do ciclo (beta). É a de menor
+ * divergência entre todas as que fecham as duas contas.
  */
-function chancesPara(alvo: number, liq: number[], teto: number, ia: string): Solucao | null {
-  const q = chanceDePerder(ia)
-  const perfil = acertoDoPerfil(ia)
-  const tol = Math.max(1e-4, Math.abs(alvo) * 0.015)
-  let melhor: Solucao['chances'] | null = null, ritmoMelhor = 0
-  let perto: Solucao['chances'] | null = null, ritmoPerto = 0, erro = Infinity
-  let min = Infinity, max = -Infinity
-  const passo = 0.125
-  for (let te = -INCLINACAO_MAXIMA; te <= INCLINACAO_MAXIMA + 1e-9; te += passo) {
-    const pe = inclinar(q.entrada, te)
-    for (let tr = -INCLINACAO_MAXIMA; tr <= INCLINACAO_MAXIMA + 1e-9; tr += passo) {
-      const pr = inclinar(q.recuperacao, tr)
-      const { ritmo, acerto } = ritmoDosCiclos(liq, teto, pe, pr)
-      if (Math.abs(acerto - perfil) > FAIXA_DO_ACERTO) continue
-      if (ritmo < min) min = ritmo
-      if (ritmo > max) max = ritmo
-      const distancia = Math.hypot(te, tr)
-      const e = Math.abs(ritmo - alvo)
-      if (e <= tol && (!melhor || distancia < melhor.distancia)) { melhor = { pe, pr, distancia }; ritmoMelhor = ritmo }
-      if (e < erro) { erro = e; perto = { pe, pr, distancia }; ritmoPerto = ritmo }
-    }
+function inclinarMistura(nat: number[], liq: number[], teto: number, m: number, L: number): Mistura {
+  const T = Math.min(teto, liq.length - 1, nat.length - 1)
+  let esc = 1e-9
+  for (let k = 0; k <= T; k++) esc = Math.max(esc, Math.abs(liq[k]))
+  const logNat = nat.slice(0, T + 1).map((x) => Math.log(Math.max(1e-300, x)))
+  const pesos = (alfa: number, beta: number): number[] => {
+    const e: number[] = []
+    let topo = -Infinity
+    for (let k = 0; k <= T; k++) { const v = logNat[k] + alfa * k + (beta * liq[k]) / esc; e.push(v); if (v > topo) topo = v }
+    let soma = 0
+    const w = e.map((v) => { const x = Math.exp(v - topo); soma += x; return x })
+    return w.map((x) => x / soma)
   }
-  if (!perto) return null
-  return melhor ? { chances: melhor, ritmo: ritmoMelhor, min, max } : { chances: perto, ritmo: ritmoPerto, min, max }
+  const media = (p: number[], f: (k: number) => number) => p.reduce((s, x, k) => s + x * f(k), 0)
+  const alfaDe = (beta: number): number => {
+    let a = -120, b = 120
+    for (let i = 0; i < 48; i++) { const meio = (a + b) / 2; if (media(pesos(meio, beta), (k) => k) < m) a = meio; else b = meio }
+    return (a + b) / 2
+  }
+  let a = -800, b = 800
+  for (let i = 0; i < 56; i++) {
+    const meio = (a + b) / 2
+    if (media(pesos(alfaDe(meio), meio), (k) => liq[k]) < L) a = meio; else b = meio
+  }
+  const beta = (a + b) / 2
+  const p = pesos(alfaDe(beta), beta)
+  const distancia = p.reduce((s, x, k) => (x > 1e-12 ? s + x * Math.log(x / Math.max(1e-300, nat[k])) : s), 0)
+  return { p, distancia }
+}
+
+interface Solucao {
+  /** A mistura que fecha (null: o lucro pedido fica fora do que o acerto do perfil alcança). */
+  mistura: Mistura | null
+  /** O mínimo e o máximo de lucro por operação com o acerto do perfil e as sequências até `teto`. */
+  min: number
+  max: number
+}
+/**
+ * A mistura de ciclos que dá `ritmo` de lucro por operação com o acerto do perfil da I.A. (o exato; se
+ * não fechar, o mais próximo dentro da faixa). `null`: com as sequências limitadas a `teto`, o acerto do
+ * perfil não existe (sequências rasas demais para aquela I.A.).
+ */
+function misturaPara(ritmo: number, liq: number[], teto: number, ia: string, soLimites = false, ordem: number[] = FAIXA_DO_ACERTO): Solucao | null {
+  const perfil = acertoDoPerfil(ia)
+  const T = Math.min(teto, liq.length - 1)
+  const nat = misturaNatural(ia, T).p
+  let min = Infinity, max = -Infinity
+  let achada: Mistura | null = null
+  let perto: { m: number; L: number; falta: number } | null = null
+  for (const d of ordem) {
+    const acerto = perfil + d
+    if (acerto <= 0.01 || acerto >= 0.995) continue
+    const m = 1 / acerto - 1
+    const lim = limitesDaMistura(liq, T, m)
+    if (!lim) continue
+    const ops = m + 1
+    if (lim.min / ops < min) min = lim.min / ops
+    if (lim.max / ops > max) max = lim.max / ops
+    const L = ritmo * ops
+    if (L >= lim.min && L <= lim.max) { if (!achada && !soLimites) achada = inclinarMistura(nat, liq, T, m, L); continue }
+    // fora por pouco: fica guardado o ponto mais próximo, um pouco para dentro do limite
+    const borda = L < lim.min ? lim.min : lim.max
+    const falta = Math.abs(L - borda) / Math.max(1e-9, Math.abs(L))
+    if (!perto || falta < perto.falta) perto = { m, L: borda + (L < lim.min ? 1 : -1) * (lim.max - lim.min) * 0.02, falta }
+  }
+  if (!Number.isFinite(min)) return null
+  if (!achada && !soLimites && perto && perto.falta <= 0.1) achada = inclinarMistura(nat, liq, T, perto.m, perto.L)
+  return { mistura: achada, min, max }
 }
 
 /* ------------------------------------------------------------- o pedido */
@@ -367,7 +467,7 @@ export function roteiroDoPedido(p: Pedido): Roteiro {
   return {
     ...roteiroEmBranco(), nome: `${nomeDaIa(p.ia)} · ${p.resultado >= 0 ? '+' : '−'}US$ ${Math.abs(p.resultado)} · ${p.minutos} min`,
     ia: p.ia, modo: p.modo, conta: p.conta, saldo: p.saldo, entrada: Math.max(ENTRADA_MINIMA, r2(p.entrada)),
-    lossVirtual: null, valorMaximo: 0, ritmo: null, semente: p.semente ?? 1,
+    lossVirtual: p.lossVirtual ?? null, valorMaximo: 0, ritmo: null, semente: p.semente ?? 1,
     trechos: [{ meta: 0, stop: 0, fim: 'meta', resultado: 0, operacoes: 0, sequencia: 0, momento: p.momento, acerto: null }],
   }
 }
@@ -379,6 +479,7 @@ export function conferirPedido(p: Pedido): string | null {
   if (p.entrada > p.saldo) return `A entrada (${din(p.entrada)}) é maior que o saldo da conta (${din(p.saldo)}).`
   if (!p.resultado) return 'Informe o resultado esperado.'
   if (p.resultado < 0 && -p.resultado > p.saldo) return `O prejuízo pedido (${din(-p.resultado)}) é maior que o saldo da conta (${din(p.saldo)}).`
+  if (p.lossVirtual != null && !(Number.isInteger(p.lossVirtual) && p.lossVirtual >= 0 && p.lossVirtual <= 12)) return 'O loss virtual vai de 0 (sem) a 12 dígitos.'
   if (!(p.minutos >= 1)) return 'Informe o tempo da sessão.'
   if (p.minutos > 240) return 'O tempo máximo é de 4 horas.'
   return null
@@ -390,7 +491,7 @@ interface Tentativa { sessao: Sessao; nota: number }
  * Uma sessão com a maior sequência = S, no tempo pedido. `rapida` = menos sorteios (só para testar
  * se o pedido é viável, nas sugestões).
  */
-function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: number; hi: number; direta: boolean }, semente: number, rapida = false, faixa: [number, number] = [0, 1]): Sessao | null {
+function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: number; hi: number; direta: boolean }, semente: number, rapida = false, faixa: [number, number] = [0, 1], ordem: number[] = FAIXA_DO_ACERTO): Sessao | null {
   const lucro = p.resultado > 0
   const t: Trecho = { meta: lucro ? p.resultado : 0, stop: lucro ? p.saldo : -p.resultado, fim: lucro ? 'meta' : 'stop', resultado: 0, operacoes: alvo.n, sequencia: S, momento: p.momento, acerto: null }
   const cfg = configDoTrecho(r, t)
@@ -415,8 +516,8 @@ function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: numb
   }
   const teto = S - 1
   // nem trabalhando as sequências no limite: esta maior sequência não fecha
-  const primeira = chancesPara(ritmoAlvo, liq, teto, p.ia)
-  if (!primeira || ritmoAlvo > primeira.max * 1.1 + 1e-6 || ritmoAlvo < primeira.min * 0.9 - 1e-6) return null
+  const primeira = misturaPara(ritmoAlvo, liq, teto, p.ia, false, ordem)
+  if (!primeira?.mistura) return null
   const perfil = acertoDoPerfil(p.ia)
   /** O acerto da sessão (no prejuízo, sem a queda final: ela é o fim da sessão, não o perfil). */
   const acertoDa = (x: Sessao) => {
@@ -425,7 +526,7 @@ function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: numb
     for (let i = 0; i < ate; i++) if (x.lista[i]) g++
     return g / ate
   }
-  let chances = primeira.chances
+  let mistura = primeira.mistura
   let fator = 1
   const forma: Forma = lucro
     ? { tipo: 'meta', S, inicio: Math.round(alvo.n * (p.momento === 'comeco' ? 0.12 : p.momento === 'meio' ? 0.45 : 0.78)) }
@@ -440,8 +541,8 @@ function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: numb
     const ns: number[] = []
     let passaram = 0, naoCairam = 0
     for (let i = 0; i < porRodada; i++) {
-      const rnd = sorteio(sementeDe(JSON.stringify([p.ia, p.modo, p.entrada, p.resultado, p.minutos, p.saldo, p.momento, S, faixa, semente, rodada, i])))
-      const s = simular(r, cfg, chances, rnd, forma, limite, escada, lucro ? { liq, folga: passaAte * 0.8 } : null)
+      const rnd = sorteio(sementeDe(JSON.stringify([p.ia, p.modo, p.lossVirtual ?? null, p.entrada, p.resultado, p.minutos, p.saldo, p.momento, S, faixa, ordem[0], semente, rodada, i])))
+      const s = simular(r, cfg, mistura, rnd, forma, limite, escada, lucro ? { liq, folga: passaAte * 0.8 } : null)
       if (!s) { passaram++; continue }
       ns.push(s.n)
       if (s.tipo !== (lucro ? 'meta' : 'stop')) { naoCairam++; continue }
@@ -464,14 +565,14 @@ function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: numb
     if (lucro) {
       if (!ns.length) break
       const med = ns.sort((a, b) => a - b)[Math.floor(ns.length / 2)]
-      fator *= Math.min(1.5, Math.max(0.67, med / alvo.n))
+      fator = Math.min(2.5, Math.max(0.4, fator * Math.min(1.5, Math.max(0.67, med / alvo.n))))
     } else {
       // subiu além da janela (ou nunca chegou nela): menos (ou mais) lucro antes da queda
       if (passaram > porRodada * 0.5) fator *= 0.88
       else if (naoCairam > porRodada * 0.5) fator *= 1.12
       else if (!ns.length) break
     }
-    chances = chancesPara(ritmoAlvo * fator, liq, teto, p.ia)?.chances ?? chances
+    mistura = misturaPara(ritmoAlvo * fator, liq, teto, p.ia, false, ordem)?.mistura ?? mistura
   }
   if (!melhor) return null
   const s = melhor.sessao
@@ -491,13 +592,20 @@ function alvoDeOperacoes(p: Pedido, c: Compasso, r: Roteiro): { n: number; lo: n
   const ticks = Math.round(T / SEGUNDOS_POR_TICK)
   // direta: 1 tick para a 1ª compra e 2 por operação (entrada e saída), uma emendada na outra
   if (c.direta) { const n = Math.max(2, Math.round((ticks - 1) / 2)); return { n, lo: n, hi: n, direta: true } }
-  // com análise: cada operação 2 ticks + L ticks de análise a cada entrada nova (≈ 40% delas)
-  const lo = Math.max(2, Math.ceil(T / SEGUNDOS_MAXIMOS_POR_OPERACAO)), hi = Math.max(lo, Math.floor(ticks / (2 + c.L * 0.45)))
+  /*
+    Com análise: cada operação leva 2 ticks, e cada entrada nova (uma por ciclo, ou seja, uma a cada
+    1 ÷ acerto operações) espera a análise. A espera média da sessão fica perto da real daquele loss
+    virtual: entre metade e duas vezes e meia a média do mercado (e nunca menos que os L dígitos).
+  */
+  const acerto = acertoDoPerfil(p.ia)
+  const novasPorOp = c.segue ? acerto : 1
+  const hi0 = Math.floor(ticks / (2 + novasPorOp * Math.max(c.L, c.espera * 0.5)))
+  const lo = Math.max(2, Math.ceil(ticks / (2 + novasPorOp * Math.max(c.L, c.espera * 2.5)))), hi = Math.max(lo, hi0)
   // o número de operações que a I.A. faria sozinha até o resultado (no prejuízo, o ritmo natural)
   let n = Math.round(T / c.sNat)
   if (p.resultado > 0) {
     const cfg = configDoTrecho(r, { meta: 0, stop: 0, fim: 'meta', resultado: 0, operacoes: 0, sequencia: 0, momento: 'meio' })
-    const mu = lucroPorOperacao(r, cfg, chancesDoContrato(p.ia), 8, 400, 99)
+    const mu = lucroPorOperacao(r, cfg, misturaNatural(p.ia, 8), 8, 400, 99)
     if (mu > 0) n = Math.round(p.resultado / mu)
   }
   return { n: Math.min(hi, Math.max(lo, n)), lo, hi, direta: false }
@@ -594,7 +702,7 @@ function sequenciasQueFecham(p: Pedido, r: Roteiro, n: number, Sfit: number, tod
   for (let S = 1; S <= Math.min(SEQUENCIA_MAXIMA, Sfit, liq.length - 1); S++) {
     const resto = p.resultado - liq[S]
     const ops = Math.max(1, n - S - 1)
-    const sol = chancesPara(resto / ops, liq, S - 1, p.ia)
+    const sol = misturaPara(resto / ops, liq, S - 1, p.ia, true)
     if (!sol) continue
     const min = liq[S] + sol.min * ops, max = liq[S] + sol.max * ops
     if (todas || (resto > 0 && p.resultado <= max * 1.05 && p.resultado >= min * 0.95)) lista.push({ S, min, max })
@@ -633,7 +741,7 @@ function montarCenario(p: Pedido, r: Roteiro, s: Sessao, c: Compasso, partida: P
   const T = p.minutos * 60
   let tempo = tempoDaSessao(roteiro, [s.lista], partida)
   if (!c.direta) {
-    const semente = sementeDe(JSON.stringify(['agenda', p.ia, p.minutos, s.n, p.semente ?? 1]))
+    const semente = sementeDe(JSON.stringify(['agenda', p.ia, p.lossVirtual ?? null, p.minutos, s.n, p.semente ?? 1]))
     let ajuste = 0
     for (let i = 0; i < 3; i++) {
       const agenda = agendaDaAnalise(c, p.ia, s.lista, T, semente, ajuste)
@@ -658,7 +766,7 @@ function montarCenario(p: Pedido, r: Roteiro, s: Sessao, c: Compasso, partida: P
     resultado: previa.resultado, operacoes: ops.length, acerto: ops.length ? Math.round((previa.ganhas / ops.length) * 100) : 0,
     meta, stop, maiorSequencia: nS, perdidoNaSequencia: perdido, entradaQueRecuperou: fechou && fechou.ganhou ? fechou.valor : null,
     maiorEntrada: previa.maiorEntrada, piorMomento: s.vale, melhorMomento: s.pico, saldoMinimo: s.saldoMinimo, saldoFinal: previa.saldoFinal,
-    trabalhada: s.distancia > INCLINACAO_HABITUAL,
+    trabalhada: s.distancia > DIVERGENCIA_HABITUAL,
   }
 }
 
@@ -677,8 +785,29 @@ export function montarCenarios(p: Pedido, partida?: PontoDePartida): Resposta {
   const ordem = [...espalhadas, ...candidatas.filter((x) => !espalhadas.includes(x))]
   for (const o of ordem) {
     if (achadas.length >= 4) break
-    const s = sessaoCom(p, r, o.S, alvo, semente, false, o.faixa)
+    // não fechou com estes sorteios: mais uma leva antes de desistir desta opção
+    const s = sessaoCom(p, r, o.S, alvo, semente, false, o.faixa) ?? sessaoCom(p, r, o.S, alvo, semente + 7919, false, o.faixa)
     if (s) achadas.push({ chave: o.chave, s })
+  }
+  /*
+    Menos de 4 maiores sequências fecham (na Falcon e na Legacy a escada cresce 2,85x por degrau e poucas
+    cabem no saldo): as opções que faltam são a mesma maior sequência com outro jeito de chegar lá, mais
+    sequências rasas (acerto um pouco abaixo do perfil) ou menos sequências, mais fundas (um pouco acima).
+  */
+  if (p.resultado > 0 && achadas.length > 0 && achadas.length < 4) {
+    const acertoDe = (x: Sessao) => x.lista.filter(Boolean).length / x.n
+    const bases = [...achadas].sort((a, b) => a.chave - b.chave)
+    for (const [ordemDoAcerto, lado] of [[[-0.05, -0.03, -0.06], 0.3], [[0.05, 0.03, 0.06], 0.6]] as Array<[number[], number]>) {
+      for (const base of bases) {
+        if (achadas.length >= 4) break
+        const s = sessaoCom(p, r, base.s.maior, alvo, semente, false, [0, 1], ordemDoAcerto)
+        // só entra se for outra sessão de verdade: o acerto ou o pior momento mudam
+        if (!s) continue
+        const mesma = achadas.filter((a) => a.s.maior === s.maior)
+        if (mesma.some((a) => Math.abs(acertoDe(a.s) - acertoDe(s)) < 0.03 && Math.abs(a.s.vale - s.vale) < Math.max(p.entrada * 1.5, Math.abs(a.s.vale) * 0.3))) continue
+        achadas.push({ chave: base.chave + lado, s })
+      }
+    }
   }
   achadas.sort((a, b) => a.chave - b.chave)
   const cenarios: Cenario[] = []
@@ -729,26 +858,25 @@ function diagnosticar(p: Pedido, r: Roteiro, c: Compasso, alvo: { n: number; lo:
   let problema: string
   if (lucro) {
     // o que dá para alcançar trabalhando as sequências até onde o saldo aguenta
-    const Sfit = sequenciaQueCabe(p, r)
-    const alto = sequenciasQueFecham(p, r, alvo.hi, Sfit, true), baixo = sequenciasQueFecham(p, r, alvo.lo, Sfit, true)
-    const maximo = alto.reduce((m, v) => Math.max(m, v.max), 0)
-    const minimo = baixo.reduce((m, v) => Math.min(m, v.min), Infinity)
-    const mu0 = lucroPorOperacao(r, cfg, chancesDoContrato(p.ia), 10, Math.min(alvo.n, 600), 6)
+    const faixa = faixaDoLucro(p)
+    const maximo = faixa?.max ?? 0, minimo = faixa?.min ?? Infinity
+    const mu0 = lucroPorOperacao(r, cfg, misturaNatural(p.ia, 10), 10, Math.min(alvo.n, 600), 6)
     let eEst: number, tEst: number, rEst: number
     if (p.resultado > maximo) {
       problema = `Em ${p.minutos} min, com entrada de ${din(p.entrada)} e saldo de ${din(p.saldo)}, a ${nome} chega a uns ${din(Math.max(0, maximo))} no máximo, com o acerto do perfil dela (cerca de ${Math.round(acertoDoPerfil(p.ia) * 100)}%) e as sequências de perda mais fundas que o saldo aguenta. ${din(p.resultado)} não cabe nesse tempo.`
       const folga = Math.max(0.01, maximo * 0.6)
       eEst = p.entrada * (p.resultado / folga); tEst = p.minutos * (p.resultado / folga); rEst = folga
     } else if (p.resultado < minimo) {
-      problema = `Em ${p.minutos} min, com entrada de ${din(p.entrada)}, a ${nome} passa de ${din(p.resultado)} bem antes do fim: a meta seria batida cedo demais.`
+      problema = `Em ${p.minutos} min, com entrada de ${din(p.entrada)}, a ${nome} faz pelo menos uns ${din(minimo)} com o acerto do perfil dela (cerca de ${Math.round(acertoDoPerfil(p.ia) * 100)}%). Uma meta de ${din(p.resultado)} seria batida bem antes do fim.`
       const folga = minimo * 1.5
       eEst = p.entrada * (p.resultado / folga); tEst = p.minutos * (p.resultado / folga); rEst = folga
     } else {
-      problema = `Com saldo de ${din(p.saldo)}, entrada de ${din(p.entrada)} e ${p.minutos} min, nenhuma sessão da ${nome} fechou em ${din(p.resultado)} dentro das regras da escada.`
+      problema = `Com saldo de ${din(p.saldo)}, entrada de ${din(p.entrada)} e ${p.minutos} min, a ${nome} alcança de ${din(Math.max(0, minimo))} a ${din(maximo)}, mas ${din(p.resultado)} fica num ponto que nenhuma sessão fechou no tempo exato.`
       const natural = Math.max(0.01, mu0 * alvo.n)
       eEst = p.entrada * (p.resultado / natural); tEst = p.minutos * (p.resultado / natural); rEst = natural
     }
-    void c
+    // com loss virtual, o tempo limita as operações: a pessoa precisa saber disso para ajustar
+    if (!c.direta && c.L > 0) problema += ` Com loss virtual de ${c.L} ${c.L === 1 ? 'dígito' : 'dígitos'}, a ${nome} espera em média ${textoDaEspera(c.espera * SEGUNDOS_POR_TICK)} por entrada nova: cabem de ${alvo.lo} a ${alvo.hi} operações nesse tempo.`
     const e = primeiroQueFecha(ENTRADAS.filter((v) => v <= p.saldo), eEst, p.entrada, (v) => viavel({ ...p, entrada: v }))
     if (e !== null) sugestoes.push({ campo: 'entrada', valor: e })
     const m = primeiroQueFecha(MINUTOS, tEst, p.minutos, (v) => viavel({ ...p, minutos: v }))
@@ -766,4 +894,17 @@ function diagnosticar(p: Pedido, r: Roteiro, c: Compasso, alvo: { n: number; lo:
     if (res !== null) sugestoes.push({ campo: 'resultado', valor: -res })
   }
   return { problema, sugestoes }
+}
+
+/**
+ * O que a I.A. alcança de lucro com este saldo, esta entrada e este tempo, com o acerto do perfil dela
+ * (a menor e a maior sessão que alguma mistura de ciclos fecha). `null`: nenhuma sequência cabe no saldo.
+ */
+export function faixaDoLucro(p: Pedido): { min: number; max: number } | null {
+  const r = roteiroDoPedido(p)
+  const alvo = alvoDeOperacoes(p, compassoDa(r), r)
+  const Sfit = sequenciaQueCabe(p, r)
+  const alto = sequenciasQueFecham(p, r, alvo.hi, Sfit, true), baixo = sequenciasQueFecham(p, r, alvo.lo, Sfit, true)
+  if (!alto.length || !baixo.length) return null
+  return { min: baixo.reduce((m, v) => Math.min(m, v.min), Infinity), max: alto.reduce((m, v) => Math.max(m, v.max), 0) }
 }
