@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { lerFichaCliente, lerRastroCliente, type FichaCliente as Ficha, type RastroCliente } from '../core/teeds/clientes'
+import { lerFichaCliente, lerRastroCliente, type FichaCliente as Ficha, type RastroCliente, markupDoCliente, type MarkupDoCliente } from '../core/teeds/clientes'
 import { horasLegiveis, idiomaLegivel, lugarDoFuso } from '../core/teeds/insights'
 import { todasAsAulas } from '../core/teeds/aulas'
 import { useModulosEmUso } from '../core/teeds/gradeAulas'
@@ -139,6 +139,21 @@ function AceitesDosTermos({ sessao, userId }: { sessao: SessaoTeeds; userId: str
   )
 }
 
+/**
+ * O markup real da ficha (13/11/2026). Dois números convivem: o contado operação por operação
+ * (I.A. + manuais, na hora, o mesmo da coluna "Markup gerado" da lista) e o que a Deriv confirma
+ * por dia, que o servidor busca de tempos em tempos e chega depois. O grande é o das operações;
+ * o confirmado fica embaixo, para conferência.
+ */
+function CartaoMarkup({ ops, deriv }: { ops: MarkupDoCliente | null; deriv: number }) {
+  const valor = ops ? ops.total : deriv
+  const partes = ops && ops.manual > 0 && ops.ia > 0 ? ` (I.A. ${usd(ops.ia)} · manual ${usd(ops.manual)})` : ''
+  return <div className={valor > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(valor)}</b>
+    <small>{ops ? `${ops.operacoes.toLocaleString('pt-BR')} operações em conta real${partes}${ops.hoje > 0 ? ` · hoje +${usd(ops.hoje)}` : ''}` : 'O que a casa ganhou com o cliente'}</small>
+    {ops && <small className="fc-mk-deriv">Confirmado pela Deriv: {usd4(deriv)}</small>}
+  </div>
+}
+
 export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId: string }) {
   const [ficha, setFicha] = useState<Ficha | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -146,6 +161,8 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
   const [aba, setAba] = useState<Aba>('geral')
   const [emailAberto, setEmailAberto] = useState<number | null>(null)
   const [rastro, setRastro] = useState<RastroCliente | null>(null)
+  // 13/11/2026: o markup contado operação por operação (o mesmo da lista de clientes)
+  const [mkOps, setMkOps] = useState<MarkupDoCliente | null>(null)
   // 04/11/2026: os módulos da grade publicada no painel (ou os do código)
   const modulos = useModulosEmUso(sessao, { admin: true })
   const catalogo = useMemo(() => todasAsAulas({}, modulos), [modulos])
@@ -156,8 +173,13 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
     // O rastro vem à parte: só a aba de comportamento usa, e a ficha já é
     // pesada. Falha dele não derruba a ficha.
     lerRastroCliente(sessao, userId).then((r) => { if (vivo) setRastro(r) }).catch(() => {})
+    setMkOps(null)
     lerFichaCliente(sessao, userId)
-      .then((f) => { if (vivo) { if (f) setFicha(f); else setErro('Esta ficha não está disponível para o seu acesso.') } })
+      .then((f) => {
+        if (!vivo) return
+        if (f) { setFicha(f); markupDoCliente(sessao, userId, f.cliente.marca).then((m) => { if (vivo) setMkOps(m) }).catch(() => {}) }
+        else setErro('Esta ficha não está disponível para o seu acesso.')
+      })
       .catch((e) => { if (vivo) setErro((e as Error).message) })
       .finally(() => { if (vivo) setCarregando(false) })
     return () => { vivo = false }
@@ -203,7 +225,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
           <div className={saldo > 0 ? 'ok' : ''}><span>Saldo real</span><b>{reais.length ? usd(saldo) : '—'}</b><small>{reais.length
             ? `${reais.length} conta${reais.length === 1 ? '' : 's'} real${reais.length === 1 ? '' : 'is'} · lido ${haQuantoTempo(saldoLidoEm)}`
             : 'Sem conta conectada'}</small>{operandoReal && <small className="fc-saldo-vivo">Operando em conta real agora: o saldo muda a cada operação</small>}</div>
-          <div className={mk.comissaoReal > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(mk.comissaoReal)}</b><small>O que a casa ganhou com o cliente</small></div>
+          <CartaoMarkup ops={mkOps} deriv={mk.comissaoReal} />
         </div>
 
         {c.sessaoAtual && <p className="fc-agora">● Está na plataforma agora, há {horasLegiveis(c.sessaoAtualSegundos)}.</p>}
@@ -275,7 +297,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
       {/* --------------------------------------------------------- dinheiro */}
       {aba === 'dinheiro' && <>
         <div className="fc-kpis">
-          <div className={mk.comissaoReal > 0 ? 'ok' : ''}><span>Markup real</span><b>{usd4(mk.comissaoReal)}</b><small>Conta real · o que a casa ganhou</small></div>
+          <CartaoMarkup ops={mkOps} deriv={mk.comissaoReal} />
           <div><span>Markup total</span><b>{usd4(mk.comissao)}</b><small>Somando demonstração</small></div>
           <div className={ex.depositos > 0 ? 'ok' : ''}><span>Depositou</span><b>{usd(ex.depositos)}</b><small>{ex.saques ? `Sacou ${usd(Math.abs(ex.saques))}` : 'Nenhum saque'}</small></div>
           <div className={ops.resultadoReal >= 0 ? 'ok' : 'ruim'}><span>Resultado real</span><b>{usd(ops.resultadoReal)}</b><small>{n(ops.reais)} operações reais</small></div>

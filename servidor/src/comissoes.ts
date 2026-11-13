@@ -136,14 +136,37 @@ async function appsDoDia(socket: TeedsSocket, dia: string): Promise<{ apps: Map<
   const { de, ate } = janelaDoDia(dia)
   const apps = new Map<number, string>()
   const horas = new Map<number, number>()
+  /*
+    13/11/2026: o extrato recusava o recorte de datas ("Input validation failed: date_from,
+    date_to") em toda conta que tinha operado — 153 contas numa manhã. Sem o extrato, a conta
+    não sabe por qual app veio cada operação, e as operações MANUAIS ficavam de fora do markup
+    confirmado (um cliente com US$ 111 de manual aparecia só com o das I.A.). Agora as datas vão
+    como número (é o que o esquema da Deriv pede) e, se ainda assim ela recusar, a leitura segue
+    sem recorte e o dia é separado aqui, como a coleta de depósitos já faz (extrato.ts).
+  */
+  let recorte = true
   let pular = 0
   for (let pagina = 0; pagina < MAX_PAGINAS; pagina += 1) {
-    const res = await pedirComPaciencia(socket, {
-      statement: 1, description: 1, limit: POR_PAGINA, offset: pular,
-      date_from: String(de), date_to: String(ate),
-    })
+    let res: any
+    try {
+      res = await pedirComPaciencia(socket, {
+        statement: 1, description: 1, limit: POR_PAGINA, offset: pular,
+        ...(recorte ? { date_from: de, date_to: ate } : {}),
+      })
+    } catch (e) {
+      if (recorte && /date_from|date_to|InputValidation/i.test((e as Error).message)) {
+        recorte = false; pular = 0; pagina -= 1
+        continue
+      }
+      throw e
+    }
     const linhas = ((res.statement as any)?.transactions ?? []) as Array<Record<string, any>>
+    // sem recorte o extrato vem do mais novo para o mais antigo: para quando passar do dia
+    let maisAntiga = Number.POSITIVE_INFINITY
     for (const l of linhas) {
+      const quandoLinha = Number(l.transaction_time ?? l.purchase_time ?? 0)
+      if (quandoLinha) maisAntiga = Math.min(maisAntiga, quandoLinha)
+      if (!recorte && quandoLinha && (quandoLinha < de || quandoLinha > ate)) continue
       const contrato = Number(l.contract_id ?? 0)
       if (!contrato) continue
       // Só a linha de COMPRA carrega o app; a de venda é o fechamento.
@@ -153,6 +176,7 @@ async function appsDoDia(socket: TeedsSocket, dia: string): Promise<{ apps: Map<
       if (compra && quando) horas.set(contrato, quando)
     }
     if (linhas.length < POR_PAGINA) break
+    if (!recorte && maisAntiga < de) break
     pular += POR_PAGINA
   }
   return { apps, horas }

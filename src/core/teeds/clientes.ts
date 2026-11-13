@@ -1202,6 +1202,16 @@ export async function coletasDeExtrato(sessao: SessaoTeeds): Promise<ColetaExtra
   } catch { return [] }
 }
 
+/** O markup de um cliente contado operação por operação (I.A. + manuais, conta real), igual à lista de clientes. */
+export interface MarkupDoCliente { total: number; hoje: number; operacoes: number; ia: number; manual: number; ultima: string | null }
+export async function markupDoCliente(sessao: SessaoTeeds, userId: string, marca: string): Promise<MarkupDoCliente | null> {
+  const r = await rest<any>('/rpc/teeds_markup_do_cliente', sessao.token, {
+    method: 'POST', body: JSON.stringify({ p_marca: marca, p_user_id: userId }),
+  })
+  if (!r) return null
+  return { total: Number(r.total ?? 0), hoje: Number(r.hoje ?? 0), operacoes: Number(r.operacoes ?? 0), ia: Number(r.ia ?? 0), manual: Number(r.manual ?? 0), ultima: r.ultima ?? null }
+}
+
 /* ------------------------------------------------------- a ficha completa */
 
 export interface FichaCliente {
