@@ -370,7 +370,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     if (passo === 'plano') { if (planoValido) setPasso('decolar'); return }
   }
   function iniciar() {
-    if (submitted.current || ligando || !planoValido || (!isDemo && !confirmaReal)) return
+    // 13/11/2026: sem a caixinha "Confirmo os valores" na conta real (atrapalhava o scalper)
+    if (submitted.current || ligando || !planoValido) return
     submitted.current = true
     // o máximo de operações saiu do preparo: a sessão para pela meta ou pelo limite
     const preparada = configurarPreparo(inicial, { ...valores, maxOperacoes: '0' }, modelo.id, modo, parametros)
@@ -535,12 +536,6 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
                 </section>
                 {isDemo && !demoComoReal && !rotulosTrocados && dados?.testeDemo && <section><p>Este robô roda uma regra em teste nas contas demo.</p></section>}
               </div>
-              {!isDemo && (
-                <label className={`plv-real ${confirmaReal ? 'ok' : ''}`}>
-                  <input type="checkbox" checked={confirmaReal} disabled={ligando} onChange={(e) => setConfirmaReal(e.target.checked)} />
-                  <span>{rotulosTrocados ? <>Confirmo os valores acima.</> : <>Entendo que esta sessão usa <b>dinheiro real</b> e confirmo os valores acima.</>}</span>
-                </label>
-              )}
             </aside>
           </div>
         )}
@@ -565,7 +560,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
         {trancada
           ? <button type="button" className="plv-principal" onClick={() => { onCancelar(); abrirMeuPlano('black') }}>Liberar no Black<span aria-hidden="true">→</span></button>
           : passo === 'decolar'
-          ? <button type="button" className="plv-principal" disabled={ligando || !planoValido || (!isDemo && !confirmaReal)} onClick={iniciar}>
+          ? <button type="button" className="plv-principal" disabled={ligando || !planoValido} onClick={iniciar}>
               {ligando ? `Iniciando… ${segundos}s` : <><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3.2v9.6L12.6 8z" fill="currentColor" /></svg>Iniciar robô</>}
             </button>
           : <button type="submit" className="plv-principal" disabled={ligando || (passo === 'plano' ? !planoValido : !disponivel)}>

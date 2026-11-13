@@ -43,9 +43,8 @@ export function CartaoMultiplicador({ c, nomeAtivo, real, fechando, aoFechar, ao
   const ate = m?.cancelamentoAte ? new Date(m.cancelamentoAte * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
   const preco = (v: number | null | undefined) => (v === null || v === undefined ? '—' : formatPrice(v, c.pipSize))
 
-  const fechar = () => { if (real && armado !== 'fechar') { setArmado('fechar'); return } setArmado(null); aoFechar(c.contractId) }
+  const fechar = () => { setArmado(null); aoFechar(c.contractId) } // 1º clique, também na real (13/11/2026)
   const cancelar = async () => {
-    if (real && armado !== 'cancelar') { setArmado('cancelar'); return }
     setArmado(null); setOcupado(true); setErro(null)
     try { await aoCancelar(c.contractId) } catch (e) { setErro((e as Error).message) } finally { setOcupado(false) }
   }

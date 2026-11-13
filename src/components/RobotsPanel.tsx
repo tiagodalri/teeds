@@ -313,7 +313,7 @@ export function RobotsPanel({
 
   async function ligar() {
     if (!socket) return
-    if (!isDemo && !confirmaReal) { setConfirmaReal(true); return }
+    // liga no 1º clique, também na conta real (13/11/2026)
     setConfirmaReal(false)
     setLigando(true)
     setErro(null)

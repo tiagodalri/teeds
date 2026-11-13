@@ -219,7 +219,7 @@ export function PositionCard({ contrato: c, nomeAtivo, onEncerrar, encerrando, m
         disabled={concluido || liquidando || !c.isValidToSell || encerrando}
         aria-label={armado ? `Confirmar: encerrar agora por ${dinheiro(c.bidPrice)}` : undefined}
         onClick={() => {
-          if (real && !armado) { setArmado(true); return }
+          // encerra no 1º clique, também na conta real (13/11/2026)
           setArmado(false)
           onEncerrar(c.contractId)
         }}

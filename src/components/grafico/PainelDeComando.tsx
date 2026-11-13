@@ -215,7 +215,7 @@ function LinhaDaPosicao({ c, moeda, real, encerrando, aoEncerrar }: { c: OpenCon
   const ticks = /_(\d+)T(?:_|$)/.exec(c.shortcode)?.[1]
   const total = Math.max(1, c.expiryTime - c.startTime)
   const progresso = Math.min(100, Math.max(0, ((total - restante) / total) * 100))
-  const encerrar = () => { if (real && !armado) { setArmado(true); return } setArmado(false); aoEncerrar(c.contractId) }
+  const encerrar = () => { setArmado(false); aoEncerrar(c.contractId) } // 1º clique, também na real (13/11/2026)
   return (
     <div className="pdc-pos">
       <span className={`pdc-pos-dir ${sobe ? 'sobe' : 'cai'}`} aria-label={sobe ? 'Compra' : 'Venda'}>{sobe ? '▲' : '▼'}</span>
