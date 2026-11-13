@@ -58,7 +58,9 @@ function haQuanto(iso: string | null): string {
 }
 
 const PERIODOS = [7, 30, 90] as const
-type Periodo = typeof PERIODOS[number] | 'personalizado'
+type Periodo = typeof PERIODOS[number] | 'semana' | 'mes' | 'personalizado'
+/** Segunda-feira da semana de `iso` (AAAA-MM-DD): a semana das metas vai de segunda a domingo (13/11/2026). */
+const segundaDa = (iso: string) => { const d = new Date(`${iso}T12:00:00Z`); return menosDias(iso, (d.getUTCDay() + 6) % 7) }
 type Vista = 'dia' | 'cliente' | 'uma'
 type Tipo = 'todos' | 'deposit' | 'withdrawal'
 type Direcao = 'asc' | 'desc'
@@ -149,6 +151,8 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
   const hoje = hojeSp()
   const janela = useMemo(() => periodo === 'personalizado'
     ? { inicio: de <= ate ? de : ate, fim: de <= ate ? ate : de }
+    : periodo === 'semana' ? { inicio: segundaDa(hoje), fim: hoje }
+    : periodo === 'mes' ? { inicio: `${hoje.slice(0, 8)}01`, fim: hoje }
     : { inicio: menosDias(hoje, periodo - 1), fim: hoje }, [periodo, de, ate, hoje])
   const diasNaJanela = Math.round((Date.parse(janela.fim) - Date.parse(janela.inicio)) / 864e5) + 1
 
@@ -228,12 +232,16 @@ export function Movimentacoes({ sessao, onAbrirCliente }: { sessao: SessaoTeeds;
   const abrirFicha = onAbrirCliente
   const doDia = diaAberto ? filtrada.filter((m) => diaSp(m.ocorridaEm) === diaAberto) : []
   const doCliente = clienteAberto ? filtrada.filter((m) => m.userId === clienteAberto) : []
-  const rotuloPeriodo = periodo === 'personalizado' ? `${diaBr(janela.inicio)} a ${diaBr(janela.fim)}` : `${periodo} dias`
+  const rotuloPeriodo = periodo === 'personalizado' ? `${diaBr(janela.inicio)} a ${diaBr(janela.fim)}`
+    : periodo === 'semana' ? 'Esta semana' : periodo === 'mes' ? 'Este mês' : `${periodo} dias`
   const vazio = !carregando && !falhou && filtrada.length === 0
 
   return <div className="dps">
     <div className="rc-filtros dps-topo">
       <div className="rc-periodo">
+        {/* 13/11/2026: "Esta semana" (segunda a domingo) e "Este mês", os mesmos períodos das metas da Visão geral */}
+        <button className={periodo === 'semana' ? 'on' : ''} onClick={() => setPeriodo('semana')}>Esta semana</button>
+        <button className={periodo === 'mes' ? 'on' : ''} onClick={() => setPeriodo('mes')}>Este mês</button>
         {PERIODOS.map((p) => <button key={p} className={periodo === p ? 'on' : ''} onClick={() => setPeriodo(p)}>{p} dias</button>)}
         <button className={periodo === 'personalizado' ? 'on' : ''} onClick={() => setPeriodo('personalizado')}>Escolher datas</button>
       </div>
