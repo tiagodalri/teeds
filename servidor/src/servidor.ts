@@ -17,7 +17,7 @@ import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { emailDaConta } from '../../src/core/teeds/emailDaConta'
 import { atender, autorizacao } from './mcp'
-import { contasDoUsuarioParaLigar, roboLiberado, simuladorPermitido } from './supabase'
+import { contasDoUsuarioParaLigar, esvaziarOperacoes, roboLiberado, simuladorPermitido } from './supabase'
 import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, salvarRegiaoDoCliente, salvarVisita, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { aplicarNasSessoesVivas, aquecerSala, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
 import {
@@ -1404,6 +1404,19 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
 // Rede de segurança: uma promessa esquecida em qualquer canto vira registro, não
 // queda do motor com as sessões de todos os clientes no ar.
 process.on('unhandledRejection', (erro) => { console.error('promessa sem tratamento (o motor segue):', erro) })
+/*
+  Desligamento (systemctl restart manda SIGTERM): as operações ainda no pacote
+  (fila-operacoes.ts, no máximo ~0,5 s de operações) gravam antes de sair.
+  Espera no máximo 5 s; o systemd daria 90.
+*/
+let saindo = false
+for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(sinal, () => {
+    if (saindo) return
+    saindo = true
+    void esvaziarOperacoes(null, 5000).then((ok) => { console.log(`[saida] ${sinal}: operações guardadas ${ok ? 'gravadas' : 'NÃO gravadas em 5 s'}`); process.exit(0) })
+  })
+}
 
 // Sessao que ficou "rodando" depois de um reinicio e tela mentindo para o
 // cliente: o robo nao existe mais, mas a Teeds diz que sim.

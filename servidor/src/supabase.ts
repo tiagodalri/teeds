@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { emailDeDemonstracao } from '../../src/core/deriv/accountAccess'
 import { emailReal, marcaDaConta } from '../../src/core/teeds/emailDaConta'
 import { criarLote } from './lote'
+import { criarFilaDeOperacoes, type LinhaDeOperacao, type PlacarDaSessao } from './fila-operacoes'
 import { canaisDaSessao, canalDosEventos, criarRadio, type Transmissao } from './radio'
 
 /**
@@ -309,59 +310,93 @@ export async function registrarOperacao(
     proximaEntrada: number
   },
 ): Promise<void> {
+  const linha = linhaDaOperacao(sessao, op)
+  const placar = placarDaSessao(sessao, estado)
+  if (OPERACOES_EM_LOTE) { filaDeOperacoes(linha, placar); return }
+  await gravarUmaOperacao(linha, placar)
+}
+
+/** A linha de operacoes_robos de uma operação liquidada. */
+function linhaDaOperacao(sessao: SessaoGravada, op: Parameters<typeof registrarOperacao>[1]): LinhaDeOperacao {
+  return {
+    contract_id: op.contractId,
+    user_id: sessao.user_id,
+    marca: sessao.marca,
+    conta_id: op.contaId,
+    robo_id: op.roboId,
+    robo_nome: op.roboNome,
+    ativo: op.ativo,
+    tipo_contrato: op.tipoContrato,
+    demo: op.demo,
+    moeda: op.moeda,
+    entrada: op.entrada,
+    pagamento: op.pagamento,
+    resultado: op.resultado,
+    ganhou: op.ganhou,
+    markup: Number((op.pagamento * 0.03).toFixed(4)),
+    markup_deriv: op.markupDeriv,
+    executada_em: op.executadaEm,
+    sessao_id: sessao.id,
+    seq: op.seq,
+    preco_entrada: op.precoEntrada,
+    digito_entrada: op.digitoEntrada,
+    preco_saida: op.precoSaida,
+    digito_saida: op.digitoSaida,
+    acumulado: op.acumulado,
+  }
+}
+
+/** O placar da sessão depois desta operação. */
+function placarDaSessao(sessao: SessaoGravada, estado: Parameters<typeof registrarOperacao>[2]): PlacarDaSessao {
+  return {
+    id: sessao.id,
+    operacoes: estado.operacoes,
+    ganhas: estado.ganhas,
+    perdidas: estado.perdidas,
+    resultado: Number(estado.resultado.toFixed(2)),
+    movimentado: Number(estado.movimentado.toFixed(2)),
+    entrada_atual: estado.proximaEntrada,
+  }
+}
+
+/** O caminho de antes do pacote: duas idas ao banco por operação. Continua valendo como reserva. */
+async function gravarUmaOperacao(linha: LinhaDeOperacao, placar: PlacarDaSessao): Promise<void> {
   try {
-    await rest('/operacoes_robos', {
-      method: 'POST',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        contract_id: op.contractId,
-        user_id: sessao.user_id,
-        marca: sessao.marca,
-        conta_id: op.contaId,
-        robo_id: op.roboId,
-        robo_nome: op.roboNome,
-        ativo: op.ativo,
-        tipo_contrato: op.tipoContrato,
-        demo: op.demo,
-        moeda: op.moeda,
-        entrada: op.entrada,
-        pagamento: op.pagamento,
-        resultado: op.resultado,
-        ganhou: op.ganhou,
-        markup: Number((op.pagamento * 0.03).toFixed(4)),
-        markup_deriv: op.markupDeriv,
-        executada_em: op.executadaEm,
-        sessao_id: sessao.id,
-        seq: op.seq,
-        preco_entrada: op.precoEntrada,
-        digito_entrada: op.digitoEntrada,
-        preco_saida: op.precoSaida,
-        digito_saida: op.digitoSaida,
-        acumulado: op.acumulado,
-      }),
-    })
+    await rest('/operacoes_robos', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(linha) })
   } catch (e) {
     // contrato repetido não é falha: a Deriv às vezes reemite o mesmo evento
     if ((e as any).code !== '23505') console.error('[supabase] operacoes_robos:', (e as Error).message)
   }
-
   try {
-    await rest(`/sessoes_robos?id=eq.${encodeURIComponent(sessao.id)}`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        operacoes: estado.operacoes,
-        ganhas: estado.ganhas,
-        perdidas: estado.perdidas,
-        resultado: Number(estado.resultado.toFixed(2)),
-        movimentado: Number(estado.movimentado.toFixed(2)),
-        entrada_atual: estado.proximaEntrada,
-      }),
-    })
+    const { id, ...campos } = placar
+    await rest(`/sessoes_robos?id=eq.${encodeURIComponent(id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(campos) })
   } catch (e) {
     console.error('[supabase] sessoes_robos:', (e as Error).message)
   }
 }
+
+/*
+  As operações em PACOTE (13/11/2026, ver fila-operacoes.ts e a migração
+  20261113180000_operacoes_em_pacote.sql): uma ida ao banco a cada ~0,5 s leva
+  as operações de todas as sessões, com nova tentativa se o banco não
+  responder. OPERACOES_EM_LOTE=0 volta ao caminho antigo sem mexer no código;
+  OPERACOES_LOTE_MS ajusta a espera.
+*/
+const OPERACOES_EM_LOTE = process.env.OPERACOES_EM_LOTE !== '0'
+const filaDeOperacoes = criarFilaDeOperacoes({
+  esperaMs: Math.max(50, Number(process.env.OPERACOES_LOTE_MS ?? 500) || 500),
+  enviar: async (operacoes, sessoes) => {
+    await rest('/rpc/teeds_gravar_operacoes', {
+      method: 'POST',
+      body: JSON.stringify({ p_operacoes: operacoes, p_sessoes: sessoes }),
+      signal: AbortSignal.timeout(20_000),
+    })
+  },
+  umAUm: gravarUmaOperacao,
+})
+export const medidasDasOperacoes = filaDeOperacoes.medidas
+/** Espera as operações guardadas gravarem (todas, ou só de uma sessão). */
+export const esvaziarOperacoes = (sessaoId: string | null, limiteMs?: number) => filaDeOperacoes.esvaziar(sessaoId, limiteMs)
 
 /* ------------------------------------------------------------------ *
  * Fecha a sessão. Chamado em TODA saída — stop, meta, teto, parada
@@ -455,6 +490,9 @@ export async function encerrarSessao(
   sessao: SessaoGravada,
   { motivo, erro = null }: { motivo: string; erro?: string | null },
 ): Promise<void> {
+  // as operações desta sessão que ainda estão no pacote gravam ANTES: o aviso de comissão
+  // (gatilho no encerramento) precisa ver o placar final. Desiste em 15 s e encerra mesmo assim.
+  await esvaziarOperacoes(sessao.id).catch(() => false)
   try {
     await rest(`/sessoes_robos?id=eq.${encodeURIComponent(sessao.id)}`, {
       method: 'PATCH',
