@@ -11,20 +11,27 @@ import { CabineDaSessao } from './CabineDaSessao'
 const usd = (x: number) => dinheiro(x, 'USD')
 const relogio = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
 
-export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte }: {
+export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, comFoco = false }: {
   roteiro: Roteiro
   previa: Previa
   partida: PontoDePartida
   inicio: number
   /** Em que segundo da sessão termina cada operação (para mostrar o relógio). */
   segundosAte?: number[]
+  /**
+   * Prévia ao vivo do termômetro: a cabine para no momento mais tenso (depois da última perda da maior
+   * sequência, com a maior entrada em andamento) ou no fim; mexer na linha do tempo leva a qualquer operação.
+   */
+  comFoco?: boolean
 }) {
   const [aba, setAba] = useState<'cabine' | 'operacoes'>('cabine')
   const ops = previa.corrida.ops
   const total = ops.length
   const [opVista, setOpVista] = useState<number | null>(null)
+  const [foco, setFoco] = useState<'sequencia' | 'fim'>('sequencia')
   useEffect(() => { setOpVista(null) }, [previa])
-  const n = Math.min(opVista ?? total, total)
+  const naSequencia = Math.min(total, previa.maiorSequencia.desde + previa.maiorSequencia.n)
+  const n = Math.min(opVista ?? (comFoco && foco === 'sequencia' ? naSequencia : total), total)
   const plano = roteiro.fita ?? previa.resultados
   const foto = useMemo(() => {
     const e = ensaioAte(roteiro, plano, partida, inicio, n)
@@ -36,6 +43,15 @@ export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte }
 
   return (
     <div className="asi-previa">
+      {comFoco && (
+        <div className="asi-foco">
+          <span>A cabine para</span>
+          <div className="est-seg" role="radiogroup" aria-label="Momento da prévia">
+            <button type="button" role="radio" aria-checked={opVista === null && foco === 'sequencia'} className={opVista === null && foco === 'sequencia' ? 'on' : ''} onClick={() => { setFoco('sequencia'); setOpVista(null) }}><b>Na maior sequência</b></button>
+            <button type="button" role="radio" aria-checked={opVista === null && foco === 'fim'} className={opVista === null && foco === 'fim' ? 'on' : ''} onClick={() => { setFoco('fim'); setOpVista(null) }}><b>No fim</b></button>
+          </div>
+        </div>
+      )}
       <div className="est-linha">
         <div className="est-linha-topo">
           <span>{n === 0 ? 'Antes da 1ª operação' : n === total ? `Fim · ${total} operações${quando}` : `Depois da operação ${n} de ${total}${quando}`}</span>

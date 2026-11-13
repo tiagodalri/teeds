@@ -74,6 +74,8 @@ export interface Cenario {
   saldoFinal: number
   /** A sessão tem mais (ou menos) sequências de perda do que a I.A. costuma ter: foi montada para fechar o pedido. */
   trabalhada: boolean
+  /** As entradas da maior sequência, na ordem (as perdas e, se houve, a que recuperou no fim). */
+  escada: number[]
 }
 
 export type CampoSugerido = 'entrada' | 'minutos' | 'resultado'
@@ -767,6 +769,7 @@ function montarCenario(p: Pedido, r: Roteiro, s: Sessao, c: Compasso, partida: P
     meta, stop, maiorSequencia: nS, perdidoNaSequencia: perdido, entradaQueRecuperou: fechou && fechou.ganhou ? fechou.valor : null,
     maiorEntrada: previa.maiorEntrada, piorMomento: s.vale, melhorMomento: s.pico, saldoMinimo: s.saldoMinimo, saldoFinal: previa.saldoFinal,
     trabalhada: s.distancia > DIVERGENCIA_HABITUAL,
+    escada: ops.slice(desde, desde + nS + (fechou && fechou.ganhou ? 1 : 0)).map((o) => o.valor),
   }
 }
 
@@ -907,4 +910,60 @@ export function faixaDoLucro(p: Pedido): { min: number; max: number } | null {
   const alto = sequenciasQueFecham(p, r, alvo.hi, Sfit, true), baixo = sequenciasQueFecham(p, r, alvo.lo, Sfit, true)
   if (!alto.length || !baixo.length) return null
   return { min: baixo.reduce((m, v) => Math.min(m, v.min), Infinity), max: alto.reduce((m, v) => Math.max(m, v.max), 0) }
+}
+
+/* ------------------------------------------------- o termômetro do risco */
+
+/**
+ * Um nível do termômetro (13/11/2026, Tiago: "quero um termômetro para arrastar a bolinha e definir o
+ * quanto a operação é conservadora ou agressiva; conforme eu movo, o prejuízo acumulado e as maiores
+ * entradas vão se adaptando, até o ponto que eu ache ideal"). Cada nível é uma maior sequência de perdas
+ * que fecha o pedido: do menor risco que fecha até o que o saldo aguenta.
+ */
+export interface NivelDeRisco {
+  /** Ordena os níveis (do mais tranquilo ao mais arriscado). */
+  chave: number
+  S: number
+  faixa: [number, number]
+  /** Variação da mesma sequência (acerto um pouco abaixo ou acima do perfil), quando poucas cabem no saldo. */
+  ordem: number[] | null
+}
+
+/** Todos os níveis de risco que fecham o pedido pela conta dos ciclos (a sessão de cada um sai em `cenarioDoNivel`). */
+export function niveisDeRisco(p: Pedido): NivelDeRisco[] {
+  if (conferirPedido(p)) return []
+  const r = roteiroDoPedido(p)
+  const alvo = alvoDeOperacoes(p, compassoDa(r), r)
+  if (p.resultado < 0) return opcoesDeRisco(p, r, alvo).map((o) => ({ chave: o.chave, S: o.S, faixa: o.faixa, ordem: null }))
+  const viaveis = sequenciasQueFecham(p, r, alvo.n, sequenciaQueCabe(p, r)).map((v) => v.S)
+  const niveis: NivelDeRisco[] = viaveis.map((S) => ({ chave: S, S, faixa: [0, 1], ordem: null }))
+  // poucas sequências fecham (ou cabem no saldo): entre uma e outra, a mesma sequência com mais ciclos rasos
+  // ou menos e mais fundos. O termômetro ganha marcas finas: muda o pior momento e o saldo exigido.
+  if (niveis.length < 6) {
+    for (const S of viaveis) {
+      niveis.push({ chave: S + 0.3, S, faixa: [0, 1], ordem: [-0.05, -0.03, -0.06] })
+      niveis.push({ chave: S + 0.6, S, faixa: [0, 1], ordem: [0.05, 0.03, 0.06] })
+    }
+  }
+  return niveis.sort((a, b) => a.chave - b.chave)
+}
+
+/** A sessão de um nível, conferida (ou `null` se nenhuma fechou no tempo exato com o acerto do perfil). */
+export function cenarioDoNivel(p: Pedido, nivel: NivelDeRisco, partida?: PontoDePartida): Cenario | null {
+  const r = roteiroDoPedido(p)
+  const c = compassoDa(r)
+  const alvo = alvoDeOperacoes(p, c, r)
+  const semente = p.semente ?? 1
+  const ordem = nivel.ordem ?? FAIXA_DO_ACERTO
+  const s = sessaoCom(p, r, nivel.S, alvo, semente, false, nivel.faixa, ordem) ?? sessaoCom(p, r, nivel.S, alvo, semente + 7919, false, nivel.faixa, ordem)
+  return s ? montarCenario(p, r, s, c, partida) : null
+}
+
+/** Por que nenhum nível fecha, com os ajustes mais próximos que fecham (conferidos). */
+export function diagnosticoDoPedido(p: Pedido): { problema: string; sugestoes: Sugestao[] } {
+  const erro = conferirPedido(p)
+  if (erro) return { problema: erro, sugestoes: [] }
+  const r = roteiroDoPedido(p)
+  const c = compassoDa(r)
+  return diagnosticar(p, r, c, alvoDeOperacoes(p, c, r))
 }

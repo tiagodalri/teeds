@@ -64,7 +64,7 @@
 .asi-sinal button.on.prejuizo { background: color-mix(in srgb, var(--down) 16%, var(--bg)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--down) 60%, transparent); }
 
 /* ------------------------------------------------------- os cenários */
-.asi-cenarios { display: grid; grid-auto-rows: min-content; gap: 12px; min-width: 0; min-height: 0; padding: 16px 20px 24px; overflow: auto; }
+.asi-cenarios { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: min-content; gap: 12px; min-width: 0; min-height: 0; padding: 16px 20px 24px; overflow: auto; }
 .asi-cenarios-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .asi-cenarios-topo div { display: grid; gap: 2px; min-width: 0; }
 .asi-cenarios-topo b { font-size: 16px; }
@@ -167,3 +167,158 @@
   .asi-modos { grid-template-columns: minmax(0, 1fr); }
   .asi-previa .est-legenda .asi-abas { width: 100%; margin-left: 0; }
 }
+
+/* ------------------------------------------------ o termômetro do risco (13/11/2026). Prefixo cal-. */
+.cal { --cor: var(--up); --f: .5; display: grid; gap: 12px; min-width: 0; }
+.cal-topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cal-topo > div:first-child { display: grid; gap: 2px; }
+.cal-topo b { font-size: 15px; }
+.cal-topo small { font-size: 12.5px; color: var(--muted); }
+.cal-nivel { display: grid; justify-items: end; gap: 1px; animation: cal-pulso .32s ease-out; }
+.cal-nivel span { padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--cor);
+  background: color-mix(in srgb, var(--cor) 14%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cor) 45%, transparent); }
+.cal-nivel em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 700; }
+@keyframes cal-pulso { from { transform: scale(1.08); } to { transform: none; } }
+
+.cal-termo { display: grid; gap: 8px; padding: 76px 16px 12px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
+.cal-pista { position: relative; height: 40px; }
+.cal-trilho { position: absolute; left: 20px; right: 20px; top: 12px; height: 16px; border-radius: 999px; overflow: hidden;
+  background: linear-gradient(90deg, #22c55e, #facc15 38%, #fb923c 66%, #ef4444); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+.cal-trilho::before { content: ''; position: absolute; inset: 0; background: var(--surface); opacity: .72; }
+.cal-trilho i { position: absolute; inset: 0; background: linear-gradient(90deg, #22c55e, #facc15 38%, #fb923c 66%, #ef4444); clip-path: inset(0 calc((1 - var(--f)) * 100%) 0 0); }
+.cal-trilho::after { content: ''; position: absolute; left: 0; right: 0; top: 2px; height: 5px; border-radius: 999px; background: linear-gradient(180deg, rgba(255, 255, 255, .35), transparent); }
+.cal-marcas { position: absolute; left: 20px; right: 20px; top: 0; height: 40px; pointer-events: none; }
+.cal-marcas i { position: absolute; top: 15px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 2px color-mix(in srgb, var(--text) 55%, transparent); animation: cal-marca .3s ease-out; }
+.cal-marcas i.sub { top: 17px; width: 6px; height: 6px; margin-left: -3px; box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--text) 40%, transparent); }
+.cal-marcas i.on { opacity: 0; }
+@keyframes cal-marca { from { transform: scale(0); } to { transform: none; } }
+.cal-range { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 40px; margin: 0; background: transparent; cursor: grab; touch-action: pan-y; }
+.cal-range:active { cursor: grabbing; }
+.cal-range:disabled { cursor: default; }
+.cal-range::-webkit-slider-runnable-track { height: 40px; background: transparent; }
+.cal-range::-moz-range-track { height: 40px; background: transparent; }
+.cal-range::-webkit-slider-thumb { -webkit-appearance: none; width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--cor);
+  background: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--cor) 30%, #fff) 70%);
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--cor) 22%, transparent), 0 6px 16px rgba(0, 0, 0, .35); transition: box-shadow .15s, transform .15s; }
+.cal-range::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; border: 4px solid var(--cor);
+  background: radial-gradient(circle at 35% 30%, #fff, color-mix(in srgb, var(--cor) 30%, #fff) 70%);
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--cor) 22%, transparent), 0 6px 16px rgba(0, 0, 0, .35); }
+.cal-range:active::-webkit-slider-thumb { transform: scale(1.12); box-shadow: 0 0 0 12px color-mix(in srgb, var(--cor) 26%, transparent), 0 8px 22px rgba(0, 0, 0, .4); }
+.cal-range:focus-visible { outline: none; }
+.cal-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--cor); }
+.cal-balao { position: absolute; bottom: calc(100% + 10px); transform: translateX(-50%); display: grid; justify-items: center; gap: 0; padding: 6px 12px; border-radius: 12px; white-space: nowrap; pointer-events: none;
+  background: var(--cor); color: #08121f; font-size: 13px; font-weight: 700; box-shadow: 0 6px 16px color-mix(in srgb, var(--cor) 35%, transparent); transition: left .08s linear, background .2s; }
+.cal-balao b { font-family: var(--est-dados); font-size: 17px; font-weight: 800; }
+.cal-balao small { font-size: 10.5px; font-weight: 700; opacity: .8; }
+.cal-balao::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -6px; border: 6px solid transparent; border-top-color: var(--cor); transition: border-color .2s; }
+.cal-pontas { display: flex; justify-content: space-between; gap: 6px; padding: 0 6px; font-size: 11px; font-weight: 700; color: var(--muted); }
+.cal-pontas span:first-child { color: #22c55e; } .cal-pontas span:last-child { color: #ef4444; }
+.cal-progresso { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; font-size: 11.5px; color: var(--muted); font-weight: 700; }
+.cal-progresso i { height: 3px; border-radius: 999px; background: color-mix(in srgb, var(--text) 12%, transparent); overflow: hidden; }
+.cal-progresso i b { display: block; height: 100%; background: var(--est-ouro); transition: width .2s; }
+
+.cal-painel { display: grid; grid-template-columns: minmax(200px, 250px) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.cal-medidor { position: relative; display: grid; align-content: center; justify-items: center; padding: 12px 10px 14px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); }
+.cal-medidor svg { width: 100%; max-width: 230px; display: block; }
+.cal-medidor path { fill: none; stroke-width: 15; stroke-linecap: round; }
+.cal-medidor .fundo { stroke: color-mix(in srgb, var(--text) 11%, transparent); }
+.cal-medidor .cheio { stroke: var(--cor); transition: stroke .25s; }
+.cal-medidor .risco { stroke: var(--surface); stroke-width: 2; }
+.cal-medidor .agulha { stroke: var(--text); stroke-width: 3.5; stroke-linecap: round; }
+.cal-medidor .eixo { fill: var(--text); }
+.cal-medidor-texto { display: grid; justify-items: center; gap: 0; margin-top: -4px; text-align: center; }
+.cal-medidor-texto strong { font-family: var(--est-dados); font-size: 30px; font-weight: 800; line-height: 1.05; color: var(--cor); font-variant-numeric: tabular-nums; transition: color .25s; }
+.cal-medidor-texto small { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+.cal-medidor-texto em { font-style: normal; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cal-mostradores { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px; }
+.cal-mostrador { display: grid; gap: 4px; align-content: start; padding: 12px 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); min-width: 0; }
+.cal-mostrador.grande { grid-column: 1 / -1; border-color: color-mix(in srgb, var(--cor) 45%, var(--border)); background: color-mix(in srgb, var(--cor) 7%, var(--surface)); transition: border-color .25s, background .25s; }
+.cal-mostrador small { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.cal-mostrador strong { font-family: var(--est-dados); font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.15; }
+.cal-mostrador.grande strong { font-size: 40px; color: var(--cor); line-height: 1; transition: color .25s; }
+.cal-mostrador strong em { font-style: normal; font-family: inherit; font-size: 14px; font-weight: 700; color: var(--text); font-family: var(--font, inherit); }
+.cal-mostrador strong.cai { color: var(--down); } .cal-mostrador strong.sobe { color: var(--up); }
+.cal-barra { display: block; height: 5px; border-radius: 999px; background: color-mix(in srgb, var(--text) 10%, transparent); overflow: hidden; }
+.cal-barra b { display: block; height: 100%; border-radius: 999px; background: var(--cor); transition: width .3s cubic-bezier(.2, .8, .2, 1), background .25s; }
+
+.cal-escada-caixa { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); min-width: 0; }
+.cal-escada-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.cal-escada-topo b { font-size: 13.5px; }
+.cal-escada-topo small { font-size: 12px; color: var(--muted); }
+.cal-escada { display: flex; align-items: flex-end; gap: 5px; height: 148px; overflow-x: auto; scrollbar-width: none; }
+.cal-escada::-webkit-scrollbar { display: none; }
+.cal-degrau { flex: 1 1 0; min-width: 26px; max-width: 64px; display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; gap: 3px; height: 100%; animation: cal-sobe .28s ease-out; }
+.cal-degrau em { font-style: normal; font-family: var(--est-dados); font-size: 10.5px; font-weight: 700; text-align: center; white-space: nowrap; color: var(--text); font-variant-numeric: tabular-nums; }
+.cal-degrau i { display: block; border-radius: 6px 6px 3px 3px; background: linear-gradient(180deg, var(--down), color-mix(in srgb, var(--down) 55%, transparent)); transition: height .32s cubic-bezier(.2, .8, .2, 1); }
+.cal-degrau.fecha i { background: linear-gradient(180deg, var(--up), color-mix(in srgb, var(--up) 55%, transparent)); }
+.cal-degrau small { font-size: 10px; font-weight: 700; text-align: center; color: var(--muted); }
+.cal-degrau.fecha small { color: var(--up); }
+@keyframes cal-sobe { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.cal-sessao { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); min-width: 0; }
+.cal-placar { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.cal-placar div { display: grid; gap: 1px; }
+.cal-placar small { font-size: 10.5px; font-weight: 700; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.cal-placar strong { font-family: var(--est-dados); font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cal-placar .sobe { color: var(--up); } .cal-placar .cai { color: var(--down); }
+.cal .asi-curva { background: var(--bg); }
+
+.cal-acoes { position: sticky; bottom: -24px; z-index: 6; display: flex; align-items: center; gap: 10px; margin: 0 -20px -24px; padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--border); background: var(--surface); }
+.cal-acoes > span { flex: 1; min-width: 0; font-size: 12.5px; line-height: 1.4; }
+.cal-acoes .asi-ver { padding: 0 16px; height: 46px; flex: none; }
+.cal-acoes .est-play { flex: none; }
+
+@media (max-width: 1000px) {
+  .cal-painel { grid-template-columns: minmax(0, 1fr); }
+  .cal-medidor svg { max-width: 210px; }
+  .cal-acoes { bottom: 0; margin: 0 -12px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; }
+  .cal-acoes > span { display: none; }
+  .cal-acoes .asi-ver, .cal-acoes .est-play { flex: 1; justify-content: center; }
+  .cal-pontas span:nth-child(2), .cal-pontas span:nth-child(3) { display: none; }
+  /* com a prévia aberta as perguntas saem do caminho; o termômetro fica */
+}
+@media (max-width: 420px) {
+  .cal-mostrador.grande strong { font-size: 32px; }
+  .cal-mostrador strong { font-size: 18px; }
+  .cal-termo { padding-left: 8px; padding-right: 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .cal *, .cal-nivel { animation: none !important; transition: none !important; } }
+
+/* prévia ao vivo ao lado do termômetro (13/11/2026): as perguntas recolhem na faixa de resumo */
+.asi .asi-corpo.imersivo { grid-template-columns: minmax(0, 1fr); }
+.asi-corpo.imersivo .asi-perguntas { display: none; }
+.asi-voltar-termo { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; border: 0; border-radius: 12px; background: var(--est-ouro); color: #051528; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.asi-voltar-termo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.asi-resumo { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; flex: 1; min-width: 0; }
+.asi-cenarios-topo .asi-resumo div { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.asi-resumo dt { font-size: 10.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.asi-resumo dd { margin: 0; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.asi-resumo dd .sobe { color: var(--up); } .asi-resumo dd .cai { color: var(--down); }
+.asi-alterar { border-style: solid; }
+.cal-dupla { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; min-width: 0; }
+.cal-previa { display: grid; min-width: 0; gap: 10px; }
+.cal-previa-topo { display: grid; gap: 1px; }
+.cal-previa-topo b { font-size: 15px; }
+.cal-previa-topo small { font-size: 12.5px; color: var(--muted); }
+.asi-foco { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.cal-momento { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; color: var(--muted); padding-top: 4px; }
+/* tela larga: termômetro à esquerda, cabine ao vivo à direita, sempre à vista */
+.cal-dupla.ao-lado { grid-template-columns: minmax(520px, 5fr) minmax(0, 6fr); }
+.cal-dupla.ao-lado .cal-previa { position: sticky; top: 0; align-content: start; }
+.cal-dupla.ao-lado .cal-ver-previa { display: none; }
+.cal-dupla.ao-lado .cal-previa .est-palco { zoom: .82; }
+.cal-dupla.ao-lado .cal-previa .est-fita { max-height: 40px; }
+@media (max-width: 1000px) {
+  .asi-cenarios-topo .asi-resumo { flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .asi-cenarios-topo .asi-resumo::-webkit-scrollbar { display: none; }
+  .asi-cenarios-topo .asi-resumo div { flex: none; }
+  .asi-cenarios-topo .asi-sortear { flex: 1; justify-content: center; }
+}
+@media (max-width: 560px) {
+  .cal-momento, .asi-foco { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .cal-acoes .est-play { font-size: 14px; padding: 0 12px; white-space: nowrap; }
+  .cal-acoes .asi-ver { padding: 0 10px; white-space: nowrap; }
+}
+
+.asi-cenarios-topo { min-width: 0; }
+.cal, .cal-termo, .cal-painel, .cal-mostradores { min-width: 0; }
