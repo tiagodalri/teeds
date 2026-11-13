@@ -210,7 +210,7 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
                 })}
               </div>
               <div className="vgm-eixo" aria-hidden="true">
-                {HORAS.map((h) => <span key={h}>{h % 3 === 0 ? `${h}h` : ''}</span>)}
+                {HORAS.map((h) => <span key={h}>{h}<i>h</i></span>)}
               </div>
             </section>
           </div>
