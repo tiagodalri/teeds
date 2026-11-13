@@ -164,7 +164,10 @@ function CartaoDoCenario({ c, i, total, pedido, aoVer, aoUsar, aberto }: {
         <div><small>Duração</small><strong>{relogio(c.tempo.segundos)}</strong></div>
       </div>
       <Curva c={c} />
-      <p className="asi-historia">{historia(c, pedido.minutos)}</p>
+      <p className="asi-historia">
+        {historia(c, pedido.minutos)}
+        {c.trabalhada && <small className="asi-montada">Sessão montada: o ritmo de perdas e ganhos foi trabalhado para fechar o pedido, dentro das regras da escada.</small>}
+      </p>
       <dl className="asi-numeros">
         <div><dt>Maior sequência</dt><dd>{c.maiorSequencia} {c.maiorSequencia === 1 ? 'perda' : 'perdas'}</dd></div>
         <div><dt>Perdido nela</dt><dd className="cai">{usd(c.perdidoNaSequencia)}</dd></div>
