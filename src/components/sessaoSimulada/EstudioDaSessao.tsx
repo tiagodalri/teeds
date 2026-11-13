@@ -138,7 +138,8 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
     "desligada" (`soltar`) o resultado também é sorteado.
   */
   const naturalizar = (x: Roteiro, aPartir = 0, semente = x.semente, soltar: number | null = null): Roteiro => {
-    let atual: Roteiro = { ...x, fita: undefined }
+    // a agenda da análise (cenários) só vale para a sessão exata que a montou
+    let atual: Roteiro = { ...x, fita: undefined, esperas: undefined }
     for (let k = aPartir; k < atual.trechos.length; k++) {
       const t = atual.trechos[k]
       const pedido = t.fim === 'desligou' && soltar !== k ? t.resultado : null
@@ -151,7 +152,7 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
   const mudar = (p: Partial<Roteiro>) => setR((x) => naturalizar({ ...x, ...p }))
   const mudarTrecho = (k: number, p: Partial<Trecho>, refazer: boolean) => setR((x) => {
     const virouDesligada = p.fim === 'desligou' && x.trechos[k].fim !== 'desligou'
-    const y = { ...x, fita: undefined, trechos: x.trechos.map((t, i) => (i === k ? { ...t, ...p } : t)) }
+    const y = { ...x, fita: undefined, esperas: undefined, trechos: x.trechos.map((t, i) => (i === k ? { ...t, ...p } : t)) }
     return refazer ? naturalizar(y, k, y.semente, virouDesligada ? k : null) : y
   })
   /** O resultado em que a pessoa desliga: a meta (ou o stop) que estiver no caminho sobe junto. */
@@ -204,7 +205,7 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
 
   const trocarResultado = (i: number) => {
     const fita = r.trechos.map((_, k) => ops.map((o, j) => ({ o, j })).filter(({ o }) => o.trecho === k).map(({ o, j }) => (j === i ? !o.ganhou : o.ganhou)))
-    setR((x) => ({ ...x, fita }))
+    setR((x) => ({ ...x, fita, esperas: undefined }))
   }
   const play = () => aoDarPlay({ ...r, fita: r.fita ?? previa.resultados })
 
@@ -294,7 +295,7 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
         <div className="est-marca"><i aria-hidden="true" /><div><b>Estúdio da simulação</b><small>Configure, confira a prévia e dê o play</small></div></div>
         <div className="est-ias" role="radiogroup" aria-label={`Qual ${IA}`}>
           {IAS_DA_SESSAO.map((id) => (
-            <button key={id} type="button" role="radio" aria-checked={r.ia === id} className={r.ia === id ? 'on' : ''} onClick={() => mudar({ ia: id, modo: 'conservador', lossVirtual: null, ritmo: null })}>
+            <button key={id} type="button" role="radio" aria-checked={r.ia === id} className={r.ia === id ? 'on' : ''} onClick={() => mudar({ ia: id, modo: 'conservador', lossVirtual: null, ritmo: null, esperas: undefined })}>
               <NomeDoRobo nome={nomeDaIa(id)} id={id} />
             </button>
           ))}
@@ -372,8 +373,8 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
               {lvEfetivo > 0 ? (
                 <div className="est-sinal">
                   <Segmentos rotulo="Ritmo" valor={r.ritmo ? 'definir' : 'natural'} opcoes={[{ id: 'natural', nome: 'Natural' }, { id: 'definir', nome: 'Definir' }]}
-                    aoMudar={(v) => setR((x) => ({ ...x, ritmo: v === 'natural' ? null : Math.max(6, Math.round(natural.porOperacao)) }))} />
-                  {r.ritmo ? <Numero id="est-ritmo" valor={r.ritmo} sufixo="s" min={5} max={600} aoMudar={(x) => setR((y) => ({ ...y, ritmo: Math.max(5, Math.round(x ?? 5)) }))} /> : <span className="est-fixo">≈ {Math.round(natural.porOperacao)} s</span>}
+                    aoMudar={(v) => setR((x) => ({ ...x, esperas: undefined, ritmo: v === 'natural' ? null : Math.max(6, Math.round(natural.porOperacao)) }))} />
+                  {r.ritmo ? <Numero id="est-ritmo" valor={r.ritmo} sufixo="s" min={5} max={600} aoMudar={(x) => setR((y) => ({ ...y, esperas: undefined, ritmo: Math.max(5, Math.round(x ?? 5)) }))} /> : <span className="est-fixo">≈ {Math.round(natural.porOperacao)} s</span>}
                 </div>
               ) : <span className="est-fixo">≈ 4 s por operação</span>}
             </Campo>
@@ -420,7 +421,7 @@ export function EstudioDaSessao({ inicial, aoDarPlay, aoFechar }: { inicial: Rot
                   onClick={() => setOpVista(i + 1)} aria-label={`Operação ${i + 1}, ${o.ganhou ? 'ganhou' : 'perdeu'}`} />
               ))}
             </div>
-            <div className="est-legenda"><span><i className="g" />Ganhou</span><span><i className="p" />Perdeu</span><span><i className="rec" />Na recuperação</span>{r.fita && <button type="button" onClick={() => setR((x) => ({ ...x, fita: undefined }))}>Desfazer as trocas</button>}</div>
+            <div className="est-legenda"><span><i className="g" />Ganhou</span><span><i className="p" />Perdeu</span><span><i className="rec" />Na recuperação</span>{r.fita && <button type="button" onClick={() => setR((x) => ({ ...x, fita: undefined, esperas: undefined }))}>Desfazer as trocas</button>}</div>
           </div>
 
           {aba === 'cabine' ? (

@@ -98,6 +98,12 @@ export interface Roteiro {
   valorMaximo?: number
   /** Segundos em média entre uma operação e a outra. Vazio = o ritmo natural da I.A. no mercado. */
   ritmo?: number | null
+  /**
+   * A agenda da análise (cenários, 13/11/2026): por trecho, quantos ticks a I.A. analisa antes de cada
+   * entrada nova (a 1ª, e a de depois de cada ganho). Com ela a sessão dura exatamente o planejado,
+   * na prévia e no play em 1× (sem ela, o ritmo sorteia a espera em volta da média).
+   */
+  esperas?: number[][]
 }
 
 const r2 = (x: number) => Math.round(x * 100) / 100
@@ -364,7 +370,7 @@ function tabelaDosCiclos(r: Roteiro, maximo: number) {
 }
 
 /** A chance de perder de cada I.A., na entrada e na recuperação (para a sessão parecer natural). */
-function chanceDePerder(ia: string): { entrada: number; recuperacao: number } {
+export function chanceDePerder(ia: string): { entrada: number; recuperacao: number } {
   const e = estrategiaDa(ia)
   const base = 1 - digitosQueGanham(e.contractType, e.barreira).length / 10
   if (ia === 'goreme') return { entrada: base, recuperacao: 0.7 }
@@ -733,10 +739,14 @@ export class Ensaio {
   /**
    * Ritmo pedido (segundos por operação): quantos ticks a I.A. analisa antes de cada entrada nova.
    * Os dígitos desses ticks são escolhidos para a análise da própria estratégia confirmar a entrada
-   * nessa hora (o loss virtual completa no tick certo). Só com preço gerado (o real não se escolhe).
+   * nessa hora (o loss virtual completa no tick certo). Em 1×, com o tick de verdade, muda só o
+   * último dígito do preço (como no tick de saída): o mesmo horário, e a sessão dura o que a prévia diz.
    */
   private esperaBase: number | null = null
   private esperaAlvo = 0
+  /** A próxima espera ainda não foi lida da agenda (lê no 1º tick de análise depois de cada operação). */
+  private precisaEspera = true
+  private entradasNovas = 0
 
   constructor(r: Roteiro, plano: boolean[][], partida: PontoDePartida, t0: number) {
     this.r = r
@@ -750,7 +760,8 @@ export class Ensaio {
     this.t0 = t0
     this.relogio = t0
     this.proximoId = 280_000_000_000 + Math.floor(this.rnd() * 9_000_000_000)
-    if (r.ritmo && r.ritmo > 0) {
+    if (r.esperas?.length) this.esperaBase = 0
+    else if (r.ritmo && r.ritmo > 0) {
       // ticks de análise por entrada nova = (ritmo em ticks − os 2 do contrato) × operações ÷ entradas novas
       const ops = plano.reduce((s, l) => s + l.length, 0)
       const novas = plano.reduce((s, l) => s + 1 + l.slice(0, -1).filter(Boolean).length, 0) || 1
@@ -797,6 +808,7 @@ export class Ensaio {
     this.caixa.ligar(cfg)
     this.noPlano = 0
     this.esperaAtual = 0
+    this.entradasNovas = 0
     this.novaEspera()
     this.estado.rodando = true
     this.estado.motivoParada = null
@@ -927,28 +939,51 @@ export class Ensaio {
 
   private novaEspera() {
     if (this.esperaBase === null) return
-    this.esperaAlvo = Math.max(1, Math.round(this.esperaBase * (0.55 + this.rnd() * 0.9)))
+    this.precisaEspera = true
   }
-  /** O dígito do próximo tick para a entrada acontecer na hora do ritmo (a análise é a da estratégia). */
-  private digitoDoRitmo(): number | undefined {
+  /** A espera desta entrada nova: a da agenda, ou sorteada em volta do ritmo. */
+  private lerEspera() {
+    const agenda = this.r.esperas?.[this.trecho]
+    if (agenda?.length) this.esperaAlvo = Math.max(1, agenda[Math.min(this.entradasNovas, agenda.length - 1)])
+    else this.esperaAlvo = Math.max(1, Math.round((this.esperaBase ?? 0) * (0.55 + this.rnd() * 0.9)))
+    this.entradasNovas += 1
+    this.precisaEspera = false
+  }
+  /**
+   * O dígito do próximo tick para a entrada acontecer na hora do ritmo (a análise é a da estratégia).
+   * `candidato` é o dígito que o tick traria (o real, em 1×): fica ele sempre que servir. Para a entrada
+   * sair exatamente no tick marcado, a contagem da análise (loss virtual, alvo L) precisa: nunca chegar
+   * a L antes; zerar L ticks antes do fim; e subir 1 a cada tick até completar no tick marcado.
+   */
+  private digitoDoRitmo(candidato?: number): number | undefined {
     if (this.esperaBase === null || !this.caixa.rodando || this.emVoo) return undefined
+    if (this.precisaEspera) this.lerEspera()
     const e = this.caixa.est
     const ctx = this.caixa.contexto
     const cfg = this.caixa.config
     const falta = this.esperaAlvo - (this.esperaAtual + 1)
     const L = e.medidor?.({ digitos: ctx.digitos, config: cfg })?.alvo ?? 0
-    const ordem = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => this.rnd() - 0.5)
     const como = (d: number) => {
       const digitos = [...ctx.digitos, d].slice(-120)
       return { entra: e.entrar({ ...ctx, digitos }), conta: e.medidor?.({ digitos, config: cfg })?.valor ?? 0 }
     }
-    if (falta <= 0) return ordem.find((d) => como(d).entra) ?? undefined
-    // ainda não: a contagem vai subindo para completar exatamente no tick certo
+    const serve = (d: number) => {
+      const c = como(d)
+      if (falta <= 0) return c.entra
+      if (c.entra) return false
+      if (L <= 0) return true
+      return falta > L ? c.conta <= L - 1 : c.conta === L - falta
+    }
+    if (candidato !== undefined && serve(candidato)) return candidato
+    const ordem = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => this.rnd() - 0.5)
+    const certo = ordem.find(serve)
+    if (certo !== undefined) return certo
+    // não tem como (a contagem já passou do ponto): o mais perto, sem entrar antes da hora
     const quer = Math.max(0, L - falta)
     let melhor: number | undefined, dist = Infinity
     for (const d of ordem) {
       const c = como(d)
-      if (c.entra) continue
+      if (c.entra && falta > 0) continue
       const x = Math.abs(c.conta - quer)
       if (x < dist) { dist = x; melhor = d }
     }
@@ -973,8 +1008,12 @@ export class Ensaio {
       const lado = v.ganhou ? quem : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].filter((d) => !quem.includes(d))
       digito = lado[Math.floor(this.rnd() * lado.length)]
     }
-    if (digito === undefined && !real) digito = this.digitoDoRitmo()
-    const p = this.proximoPreco(digito, real?.preco)
+    let base = real?.preco
+    if (digito === undefined && this.esperaBase !== null && !v && this.caixa.rodando) {
+      base = real?.preco ?? this.preco + this.normal() * this.sigma
+      digito = this.digitoDoRitmo(this.digitoDe(Number(base.toFixed(this.casas))))
+    }
+    const p = this.proximoPreco(digito, base)
     const d = this.digitoDe(p)
     this.caixa.digitos = [...this.caixa.digitos, d].slice(-120)
     this.estado.digitos = this.caixa.digitos
@@ -1186,7 +1225,11 @@ function sugerirAteOResultado(r: Roteiro, k: number, alvo: number, semente: numb
 
 /* ===================================================== o tempo da sessão */
 
-export interface Tempo { ticks: number; segundos: number; porOperacao: number; operacoes: number }
+export interface Tempo {
+  ticks: number; segundos: number; porOperacao: number; operacoes: number
+  /** Em que segundo da sessão cada operação terminou. */
+  marcas: number[]
+}
 /**
  * Roda o ensaio inteiro (religando entre os trechos) com o preço gerado, 2 s por tick, e mede quanto
  * a sessão dura de verdade. Com ritmo pedido é ele; sem, o ritmo natural da análise da I.A.
@@ -1194,11 +1237,13 @@ export interface Tempo { ticks: number; segundos: number; porOperacao: number; o
 export function tempoDaSessao(r: Roteiro, plano: boolean[][], partida: PontoDePartida = { preco: 61234.5678, casas: 4 }): Tempo {
   const e = new Ensaio(r, plano, partida, 0)
   let ticks = 0
+  const marcas: number[] = []
   for (let i = 0; i < 400_000 && e.fase !== 'fim'; i++) {
     if (e.fase === 'entre') { if (e.religar()) break; continue }
     e.passo(); ticks++
+    while (marcas.length < e.operacoes) marcas.push(ticks * SEGUNDOS_POR_TICK)
   }
   const operacoes = e.operacoes
   const segundos = ticks * SEGUNDOS_POR_TICK
-  return { ticks, segundos, porOperacao: operacoes ? segundos / operacoes : 0, operacoes }
+  return { ticks, segundos, porOperacao: operacoes ? segundos / operacoes : 0, operacoes, marcas }
 }

@@ -39,6 +39,7 @@ import { esquecerSessao, guardarSessao, lerSessaoGuardada } from '../core/teeds/
 const EstudioDaSessao = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.EstudioDaSessao })))
 const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.BotaoSessaoSimulada })))
 const PalcoDaSessao = lazy(() => import('./sessaoSimulada/PalcoDaSessao').then((m) => ({ default: m.PalcoDaSessao })))
+const AssistenteDaSessao = lazy(() => import('./sessaoSimulada/AssistenteDaSessao').then((m) => ({ default: m.AssistenteDaSessao })))
 
 interface Props {
   socket: TeedsSocket | null
@@ -182,7 +183,7 @@ export function RobotsPanel({
   }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
   const contadorSim = useRef(1)
   useEffect(() => {
-    const abrir = () => abrirEstudioRef.current?.()
+    const abrir = () => abrirAssistenteRef.current?.()
     window.addEventListener('simulado:estudio', abrir)
     return () => window.removeEventListener('simulado:estudio', abrir)
   }, [])
@@ -429,9 +430,20 @@ export function RobotsPanel({
     const sug = sugerirTrecho(r, 0, 'meta', r.semente)
     return sug ? { ...r, trechos: [{ ...r.trechos[0], ...sug }] } : r
   }
-  const abrirEstudio = (r?: Roteiro) => { setRoteiroEmEdicao(r ?? novaSessaoSim()); setEditandoSimulada(true) }
-  const abrirEstudioRef = useRef(abrirEstudio)
-  abrirEstudioRef.current = abrirEstudio
+  const abrirEstudio = (r?: Roteiro) => { setAssistente(null); setRoteiroEmEdicao(r ?? novaSessaoSim()); setEditandoSimulada(true) }
+  /*
+    13/11/2026: sessão nova começa pelas perguntas (I.A., modo, saldo, entrada, resultado, tempo) e os
+    4 cenários com prévia; o estúdio completo fica para o ajuste fino e para editar a sessão que está no ar.
+  */
+  const [assistente, setAssistente] = useState<{ ia: string | null } | null>(null)
+  const abrirAssistente = () => {
+    const ia = modeloPedidoDaVitrine()
+    pedirModeloDaVitrine(null)
+    setEditandoSimulada(false)
+    setAssistente({ ia })
+  }
+  const abrirAssistenteRef = useRef(abrirAssistente)
+  abrirAssistenteRef.current = abrirAssistente
   const conteudoSimulado = modoSim && (
     <>
       <div className="ger-topo rob-workspace-header">
@@ -443,13 +455,13 @@ export function RobotsPanel({
           </>}
         </div>
         <div className="rob-workspace-actions">
-          <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => abrirEstudio(simulada ?? undefined)} /></Suspense>
+          <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => (simulada ? abrirEstudio(simulada) : abrirAssistente())} /></Suspense>
           <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
             onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
             {digitosDe ? 'Fechar dígitos' : 'Ver dígitos'}
           </button>
-          <button className="rob-new-button" onClick={() => abrirEstudio()}>+ Novo robô</button>
+          <button className="rob-new-button" onClick={() => abrirAssistente()}>+ Novo robô</button>
         </div>
       </div>
       {simulada ? (
@@ -457,13 +469,24 @@ export function RobotsPanel({
           <PalcoDaSessao roteiro={simulada} mostrarMarkup={admin && mostrarMarkup}
             aoEditar={() => abrirEstudio(simulada)} aoSair={() => setSimulada(null)} />
         </Suspense>
-      ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirEstudio()} /> : (
+      ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirAssistente()} /> : (
         <section className="robot-workspace-empty">
           <span className="robot-empty-symbol" aria-hidden="true">▷</span>
           <h3>Um robô. Seus limites. Tudo aqui.</h3>
           <p>Escolha entre {IDENTIDADES.length} modelos e configure a sessão, uma etapa por vez.</p>
-          <button className="rob-new-button" onClick={() => abrirEstudio()}>Escolher e configurar →</button>
+          <button className="rob-new-button" onClick={() => abrirAssistente()}>Escolher e configurar →</button>
         </section>
+      )}
+      {assistente && (
+        <Suspense fallback={null}>
+          <AssistenteDaSessao ia={assistente.ia} saldo={modoSim?.saldo ?? null} conta={modoSim?.conta ?? 'real'}
+            aoDarPlay={(r) => {
+              definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
+              setSimulada(r); setAssistente(null)
+            }}
+            aoAbrirEstudio={(r) => abrirEstudio(r ? { ...r, id: r.id ?? `simulada-${Date.now()}-${contadorSim.current++}` } : undefined)}
+            aoFechar={() => setAssistente(null)} />
+        </Suspense>
       )}
       {editandoSimulada && roteiroEmEdicao && (
         <Suspense fallback={null}>
