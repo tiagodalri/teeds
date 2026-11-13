@@ -476,6 +476,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
      uma página sem fim, e era impossível achar uma sessão. (30/09/2026) */
   const [limiteEncerradas, setLimiteEncerradas] = useState(40)
   const [encerradas, setEncerradas] = useState<SessaoEncerrada[]>([])
+  /* 13/11/2026: a lista de 30 dias leva segundos; sem isto ela dizia "Nenhuma sessão encerrada" enquanto carregava. */
+  const [carregandoEncerradas, setCarregandoEncerradas] = useState(false)
   const [replayDe, setReplayDe] = useState<SessaoEncerrada | null>(null)
   /* Markup por sessão, buscado à parte: `sessoes_robos` não guarda markup. */
   const [markups, setMarkups] = useState<Map<string, MarkupDaSessao>>(new Map())
@@ -678,15 +680,16 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   /* ------------------------------------------------ replay e auditoria */
   useEffect(() => {
     const aborto = new AbortController()
-    if (aba === 'replay') listarEncerradas(sessao, undefined, undefined, aborto.signal, marca).then((l) => {
+    if (aba === 'replay') { setCarregandoEncerradas(true); listarEncerradas(sessao, undefined, undefined, aborto.signal, marca).then((l) => {
       setEncerradas(l)
+      setCarregandoEncerradas(false)
       void garantirClientes(l.map((x) => x.userId))
       // O markup vem depois e sem travar a lista: se falhar, as sessões
       // aparecem do mesmo jeito e só a coluna fica sem número.
       setSomandoMarkup(true)
       void markupDasSessoes(sessao, l.map((x) => x.id), aborto.signal, marca, new Map(l.map((x) => [x.id, x.marca])))
         .then((m) => { if (!aborto.signal.aborted) { setMarkups(m); setSomandoMarkup(false) } })
-    }).catch(falhar)
+    }).catch((e) => { if (!aborto.signal.aborted) setCarregandoEncerradas(false); falhar(e) }) }
     if (aba === 'auditoria') listarAuditoria(sessao, undefined, aborto.signal, marca).then((l) => { setAuditoria(l); void garantirClientes(l.flatMap((x) => [x.clienteId, x.adminId].filter(Boolean) as string[])) }).catch(falhar)
     return () => aborto.abort()
   }, [aba, sessao, marca, garantirClientes, falhar])
@@ -1002,7 +1005,9 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
                 <span className="adm-seta">▶</span>
               </button>
             ) })}
-            {!encerradas.length && <div className="mon-estado"><b>Nenhuma sessão encerrada nos últimos 30 dias.</b></div>}
+            {!encerradas.length && (carregandoEncerradas
+              ? <div className="mon-estado" role="status"><b>Carregando as sessões encerradas…</b>São os últimos 30 dias; leva alguns segundos.</div>
+              : <div className="mon-estado"><b>Nenhuma sessão encerrada nos últimos 30 dias.</b></div>)}
             {!!encerradas.length && !encerradasFiltradas.length && <div className="mon-estado"><b>Nenhuma sessão passa pelos filtros.</b>Ajuste o dia, o horário, a busca ou o tipo de conta.</div>}
           </div>
           {encerradasFiltradas.length > limiteEncerradas && (

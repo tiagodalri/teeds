@@ -177,13 +177,26 @@ export async function listarEncerradas(sessao: SessaoTeeds, dias: number = LIMIT
   const corte = new Date(Date.now() - dias * 86400_000).toISOString()
   const pagina = 1000
   const linhas: any[] = []
-  for (let desde = 0; desde < limite; desde += pagina) {
-    const lote = await rest<any[]>(
-      `/sessoes_robos?select=id,sessao_ref,marca,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em,parceiro&${filtroDeMarca(marca)}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc,id.desc&limit=${Math.min(pagina, limite - desde)}&offset=${desde}`,
-      sessao.token, { signal },
-    )
-    linhas.push(...(lote ?? []))
-    if (!lote || lote.length < Math.min(pagina, limite - desde)) break
+  const ler = (desde: number) => rest<any[]>(
+    `/sessoes_robos?select=id,sessao_ref,marca,user_id,conta_id,demo,moeda,robo_id,robo_nome,ativo,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em,parceiro&${filtroDeMarca(marca)}&situacao=neq.rodando&criada_em=gte.${encodeURIComponent(corte)}&order=criada_em.desc,id.desc&limit=${Math.min(pagina, limite - desde)}&offset=${desde}`,
+    sessao.token, { signal },
+  )
+  /*
+    13/11/2026: 30 dias da GlobalFly já passam de 7.800 sessões — 8 páginas, uma depois da outra, eram ~5 s
+    com a lista mostrando "Nenhuma sessão encerrada" (o Tiago achou que tinham sumido operações). Agora as
+    páginas vêm de 4 em 4 ao mesmo tempo, na ordem, até a primeira que vier incompleta.
+  */
+  const AO_MESMO_TEMPO = 4
+  for (let desde = 0; desde < limite; desde += pagina * AO_MESMO_TEMPO) {
+    const inicios = Array.from({ length: AO_MESMO_TEMPO }, (_, k) => desde + k * pagina).filter((d) => d < limite)
+    const lotes = await Promise.all(inicios.map(ler))
+    let acabou = false
+    for (let k = 0; k < lotes.length; k++) {
+      const lote = lotes[k] ?? []
+      linhas.push(...lote)
+      if (lote.length < Math.min(pagina, limite - inicios[k])) { acabou = true; break }
+    }
+    if (acabou) break
   }
   return linhas.map((l) => ({
     id: l.id, sessaoRef: l.sessao_ref ?? '', marca: l.marca ?? '', userId: l.user_id, contaId: l.conta_id, demo: Boolean(l.demo), moeda: l.moeda,
