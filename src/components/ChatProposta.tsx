@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { identidade } from '../core/deriv/branding'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { Emblema } from './RobotCard'
@@ -54,6 +54,7 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
   const [stop, setStop] = useState(proposta.stopLoss)
   const [meta, setMeta] = useState(proposta.takeProfit)
   const [confirmando, setConfirmando] = useState(false)
+  const ligandoAgora = useRef(false)
   const [ligando, setLigando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [ligado, setLigado] = useState(false)
@@ -61,12 +62,12 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
   const real = !proposta.demo
 
   async function ligar() {
-    // Conta real pede dois toques. O primeiro troca o rótulo do botão para
-    // dizer, com o valor escrito por extenso, o que vai acontecer — porque
-    // "Ligar" e "gastar dinheiro de verdade" não deveriam ser o mesmo gesto.
+    // 13/11/2026 (pedido do Tiago): liga no 1º toque, também na conta real.
+    // Um toque duplo sem querer não liga duas vezes (trava em ref).
     // modo simulado (admin): nada liga de verdade daqui; a sessão simulada é pela aba das I.A.
     if (modoSimuladoAtivo()) { setErro('Você está no modo simulado. Para simular, ligue pela aba das I.A.'); return }
-    if (real && !confirmando) { setConfirmando(true); return }
+    if (ligandoAgora.current) return
+    ligandoAgora.current = true
     setLigando(true); setErro(null)
     try {
       const config: ConfigEstrategia = {
@@ -90,6 +91,7 @@ export function ChatProposta({ proposta, sessao, onLigado, rotulosTrocados = fal
       setErro((e as Error).message)
       setConfirmando(false)
     } finally {
+      ligandoAgora.current = false
       setLigando(false)
     }
   }
