@@ -3,7 +3,7 @@
  * escolhido da linha do tempo, ou a lista das operações. É o mesmo Ensaio do play, com a mesma fita e a
  * mesma agenda: o que aparece aqui é o que vai acontecer.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { dinheiro, dinheiroComSinal } from '../../core/dinheiro'
 import { ensaioAte, type PontoDePartida, type Previa, type Roteiro } from '../../core/teeds/sessaoSimulada'
 import { CabineDaSessao } from './CabineDaSessao'
@@ -11,7 +11,7 @@ import { CabineDaSessao } from './CabineDaSessao'
 const usd = (x: number) => dinheiro(x, 'USD')
 const relogio = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`
 
-export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, comFoco = false }: {
+export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, comFoco = false, ladoALado = false }: {
   roteiro: Roteiro
   previa: Previa
   partida: PontoDePartida
@@ -23,6 +23,8 @@ export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, 
    * sequência, com a maior entrada em andamento) ou no fim; mexer na linha do tempo leva a qualquer operação.
    */
   comFoco?: boolean
+  /** Em tela larga, a cabine e a lista das operações aparecem juntas (para validar operação por operação). */
+  ladoALado?: boolean
 }) {
   const [aba, setAba] = useState<'cabine' | 'operacoes'>('cabine')
   const ops = previa.corrida.ops
@@ -40,9 +42,17 @@ export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, 
   const opSel = n > 0 ? ops[n - 1] : null
   const fim = previa.corrida.trechos[0]
   const quando = n > 0 && segundosAte?.[n - 1] !== undefined ? ` · ${relogio(segundosAte[n - 1])}` : ''
+  // a lista acompanha o momento escolhido: a operação da vez fica no meio da lista (rola só a lista, não a tela)
+  const rolo = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const caixa = rolo.current
+    const linha = caixa?.querySelector<HTMLElement>('tr.sel')
+    if (!caixa || !linha) return
+    caixa.scrollTop = Math.max(0, linha.offsetTop - caixa.clientHeight / 2 + linha.offsetHeight / 2)
+  }, [n, previa])
 
   return (
-    <div className="asi-previa">
+    <div className={`asi-previa ${ladoALado ? 'lado' : ''}`}>
       {comFoco && (
         <div className="asi-foco">
           <span>A cabine para</span>
@@ -80,17 +90,16 @@ export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, 
         </div>
       </div>
 
-      {aba === 'cabine' ? (
-        <div className="est-palco robot-workspace">
+      <div className={`asi-previa-corpo aba-${aba}`}>
+        <div className="asi-bloco-cabine est-palco robot-workspace">
           <div className="rob-workspace-board modo-lista ssim-quadro">
             <div className="rob-board-slot aberta">
               <CabineDaSessao roteiro={roteiro} estado={foto.estado} trecho={foto.trecho} inicio={inicio} />
             </div>
           </div>
         </div>
-      ) : (
-        <div className="est-tabela ssim-tabela">
-          <div className="ssim-tabela-rolo">
+        <div className="asi-bloco-tabela est-tabela ssim-tabela">
+          <div className="ssim-tabela-rolo" ref={rolo}>
             <table>
               <thead><tr><th>#</th><th>Entrada</th><th>Resultado</th><th>Sessão</th><th>Saldo</th></tr></thead>
               <tbody>
@@ -109,7 +118,7 @@ export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, 
             </table>
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

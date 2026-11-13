@@ -219,6 +219,58 @@ function perdasDaEscada(r: Roteiro, cfg: ConfigEstrategia): number[] {
   return acc
 }
 
+/**
+ * A queda até o stop, medida no próprio motor. Não dá para tirar da escada: enquanto a sessão está no
+ * positivo o motor limita cada entrada ao valor do stop (a folga é o stop mais o que já está negativo),
+ * e uma entrada aparada muda as seguintes. Então a conta é rodar a Caixa perdendo, a partir do pico.
+ *  - `perdasDe(P)`: quantas perdas seguidas levam do resultado P até o stop;
+ *  - `cabeDe(P)`: até quantas perdas uma sequência pode ter e ainda ser recuperada (a entrada que
+ *    recupera precisa caber inteira: aparada ela não recupera, e a sessão afundaria antes da hora);
+ *  - `limiar(k)`: o menor pico em que a queda leva pelo menos k perdas.
+ * As duas contas só sobem com o pico, então ficam guardadas como degraus (uma bisseção por degrau).
+ */
+interface Queda { perdasDe: (P: number) => number; cabeDe: (P: number) => number; limiar: (k: number) => number }
+function quedaDoStop(r: Roteiro, cfg: ConfigEstrategia): Queda {
+  const medir = (P: number): { perdas: number; cabe: number } => {
+    const cx = new Caixa(r.ia, 1e12)
+    cx.ligar({ ...cfg, takeProfit: 0 })
+    cx.resultado = r2(P)
+    let perdas = 0, cabe = -1
+    while (cx.rodando && perdas < 80) {
+      const avisos = cx.avisos.length
+      const c = cx.comprar()
+      if (!c) break
+      // esta entrada saiu aparada: a recuperação só cabe inteira até a anterior
+      if (cabe < 0 && cx.avisos.length > avisos) cabe = Math.max(0, perdas - 1)
+      cx.liquidar(c, false, null)
+      perdas++
+    }
+    return { perdas, cabe: cabe < 0 ? Math.max(0, perdas - 1) : cabe }
+  }
+  const TETO = 1e7
+  const degraus = (de: (P: number) => number) => {
+    const base = de(0)
+    const guardados = new Map<number, number>()
+    /** O menor pico em que a conta chega a k. */
+    const limiar = (k: number): number => {
+      if (k <= base) return 0
+      const pronto = guardados.get(k)
+      if (pronto !== undefined) return pronto
+      let a = 0, b = TETO
+      if (de(b) < k) { guardados.set(k, Infinity); return Infinity }
+      for (let i = 0; i < 44 && b - a > 0.004; i++) { const meio = (a + b) / 2; if (de(meio) >= k) b = meio; else a = meio }
+      const v = Math.ceil(b * 100) / 100
+      guardados.set(k, v)
+      return v
+    }
+    const em = (P: number): number => { let k = base; while (k < 80 && limiar(k + 1) <= P) k++; return k }
+    return { limiar, em }
+  }
+  const perdas = degraus((P) => medir(P).perdas)
+  const cabe = degraus((P) => medir(P).cabe)
+  return { perdasDe: perdas.em, cabeDe: cabe.em, limiar: perdas.limiar }
+}
+
 /** A mistura de ciclos de uma sessão: p[k] = a parte dos ciclos com k perdas antes do ganho que fecha. */
 interface Mistura { p: number[]; distancia: number }
 
@@ -229,7 +281,7 @@ interface Mistura { p: number[]; distancia: number }
 interface Pouso { liq: number[]; folga: number }
 
 function simular(r: Roteiro, cfg: ConfigEstrategia, mi: Mistura, rnd: () => number,
-  forma: Forma, limite: number, escada: number[], pouso: Pouso | null = null): Sessao | null {
+  forma: Forma, limite: number, queda: Queda | null, pouso: Pouso | null = null): Sessao | null {
   const cx = new Caixa(r.ia, r.saldo)
   cx.ligar(cfg)
   const lista: boolean[] = []
@@ -269,16 +321,12 @@ function simular(r: Roteiro, cfg: ConfigEstrategia, mi: Mistura, rnd: () => numb
   }
   while (cx.rodando && n < limite) {
     // no prejuízo, a sequência final começa num começo de ciclo, quando cabe exatamente em S perdas
-    if (forma.tipo === 'stop' && !colapso && seq === 0) {
-      const falta = cx.resultado + cfg.stopLoss
-      let m = 0
-      while (m < escada.length - 1 && escada[m] < falta - 1e-9) m++
-      if (escada[m] < falta - 1e-9) return null
+    if (forma.tipo === 'stop' && !colapso && seq === 0 && queda) {
+      const m = queda.perdasDe(cx.resultado)
       if (m > forma.S || cx.resultado > forma.pMax + 1e-9) return null
       if (m === forma.S && n + forma.S >= forma.nMin && cx.resultado >= forma.pMin - 1e-9) colapso = true
-      // antes da queda final, nenhuma sequência encosta no stop: até a entrada que recupera precisa caber
-      // inteira (aparada pelo stop ela não recupera, e a sessão afundaria antes da hora)
-      cabeNoCiclo = Math.max(0, m - 2)
+      // antes da queda final, nenhuma sequência encosta no stop: até a entrada que recupera cabe inteira
+      cabeNoCiclo = queda.cabeDe(cx.resultado)
     }
     const antes = cx.resultado
     const c = cx.comprar()
@@ -347,7 +395,7 @@ function lucroPorOperacao(r: Roteiro, cfg: ConfigEstrategia, mi: Mistura, teto: 
   const sem = { ...cfg, takeProfit: 0, stopLoss: 0 }
   let lucro = 0, feitas = 0
   for (let i = 0; i < 16; i++) {
-    const s = simular(livre, sem, mi, sorteio(semente + i * 7919), { tipo: 'livre', teto }, ops, [])
+    const s = simular(livre, sem, mi, sorteio(semente + i * 7919), { tipo: 'livre', teto }, ops, null)
     if (!s) continue
     lucro += s.resultado; feitas += s.n
   }
@@ -503,6 +551,7 @@ function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: numb
   // o lucro por operação que leva a sessão a durar o pedido
   let ritmoAlvo: number
   let pMin = 0, pMax = Infinity
+  let queda: Queda | null = null
   if (lucro) {
     // a maior sequência (e a recuperação dela) já deixa a parte dela; o resto vem das outras operações
     const resto = p.resultado - liq[S]
@@ -510,13 +559,16 @@ function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: numb
     ritmoAlvo = resto / Math.max(1, alvo.n - S - 1)
   } else {
     // o pico antes de cair precisa estar na janela em que a queda leva exatamente S perdas
-    const lo = Math.max(0, escada[S - 1] - t.stop), hi = escada[S] - t.stop
-    if (hi < 0) return null
-    pMin = lo + (hi - lo) * faixa[0]
-    pMax = lo + (hi - lo) * faixa[1]
+    queda = quedaDoStop(r, cfg)
+    const lo = queda.limiar(S), hi = queda.limiar(S + 1) - 0.01
+    if (!Number.isFinite(lo) || !(hi > lo)) return null
+    const fim = Number.isFinite(hi) ? hi : lo + t.stop * 4
+    pMin = lo + (fim - lo) * faixa[0]
+    pMax = lo + (fim - lo) * faixa[1]
     ritmoAlvo = ((pMin + pMax) / 2) / Math.max(1, alvo.n - S)
   }
-  const teto = S - 1
+  // no prejuízo, as sequências de antes da queda não podem encostar no stop (ver quedaDoStop)
+  const teto = lucro || !queda ? S - 1 : Math.min(S - 1, queda.cabeDe(0))
   // nem trabalhando as sequências no limite: esta maior sequência não fecha
   const primeira = misturaPara(ritmoAlvo, liq, teto, p.ia, false, ordem)
   if (!primeira?.mistura) return null
@@ -544,7 +596,7 @@ function sessaoCom(p: Pedido, r: Roteiro, S: number, alvo: { n: number; lo: numb
     let passaram = 0, naoCairam = 0
     for (let i = 0; i < porRodada; i++) {
       const rnd = sorteio(sementeDe(JSON.stringify([p.ia, p.modo, p.lossVirtual ?? null, p.entrada, p.resultado, p.minutos, p.saldo, p.momento, S, faixa, ordem[0], semente, rodada, i])))
-      const s = simular(r, cfg, mistura, rnd, forma, limite, escada, lucro ? { liq, folga: passaAte * 0.8 } : null)
+      const s = simular(r, cfg, mistura, rnd, forma, limite, queda, lucro ? { liq, folga: passaAte * 0.8 } : null)
       if (!s) { passaram++; continue }
       ns.push(s.n)
       if (s.tipo !== (lucro ? 'meta' : 'stop')) { naoCairam++; continue }
@@ -650,16 +702,44 @@ interface OpcaoDeRisco { S: number; faixa: [number, number]; chave: number }
  * cair (em duas faixas por sequência).
  */
 function opcoesDeRisco(p: Pedido, r: Roteiro, alvo: { n: number }): OpcaoDeRisco[] {
-  const lista = sequenciasPossiveis(p, r, alvo)
-  if (p.resultado > 0) return lista.map((S) => ({ S, faixa: [0, 1], chave: S }))
-  const escada = perdasDaEscada(r, configDoTrecho(r, { meta: 0, stop: 0, fim: 'meta', resultado: 0, operacoes: 0, sequencia: 0, momento: 'meio' }))
-  return lista.flatMap((S): OpcaoDeRisco[] => {
-    const lo = Math.max(0, escada[S - 1] + p.resultado), hi = escada[S] + p.resultado
-    // a janela do pico vira até 4 opções (subiu pouco … subiu bem antes de cair), cada uma com pelo
-    // menos 20% do prejuízo de largura, para os cenários não saírem iguais
-    const partes = Math.max(1, Math.min(4, Math.floor((hi - lo) / Math.max(0.01, -p.resultado * 0.2))))
-    return Array.from({ length: partes }, (_, i) => ({ S, faixa: [i / partes, (i + 1) / partes] as [number, number], chave: S * 10 + i }))
-  })
+  if (p.resultado > 0) return sequenciasPossiveis(p, r, alvo).map((S) => ({ S, faixa: [0, 1], chave: S }))
+  const cfg = configDoTrecho(r, { meta: 0, stop: -p.resultado, fim: 'stop', resultado: 0, operacoes: 0, sequencia: 0, momento: 'meio' })
+  const liq = ciclosDaEscada(r, cfg)
+  const queda = quedaDoStop(r, cfg)
+  const de = queda.perdasDe(0)
+  const lista: OpcaoDeRisco[] = []
+  for (let S = Math.max(1, de); S <= Math.min(SEQUENCIA_MAXIMA, de + 9); S++) {
+    // só entra a queda cujo pico a I.A. alcança nesse tempo, com o acerto do perfil dela
+    const j = janelaDoPico(p.ia, alvo.n, S, queda, liq, -p.resultado)
+    if (!j) continue
+    // a parte alcançável da janela vira até 4 opções (subiu pouco … subiu bem antes de cair), cada uma com
+    // pelo menos 20% do prejuízo de largura, para as sessões não saírem iguais
+    const partes = Math.max(1, Math.min(4, Math.floor((j.hi - j.lo) / Math.max(0.01, -p.resultado * 0.2))))
+    const larg = Math.max(1e-9, j.wHi - j.wLo)
+    for (let i = 0; i < partes; i++) {
+      const a = j.lo + ((j.hi - j.lo) * i) / partes, b = j.lo + ((j.hi - j.lo) * (i + 1)) / partes
+      lista.push({ S, faixa: [(a - j.wLo) / larg, (b - j.wLo) / larg], chave: S * 10 + i })
+    }
+  }
+  return lista
+}
+
+/**
+ * No prejuízo com a queda final de S perdas: a janela do pico (o quanto a sessão precisa ter subido
+ * para a queda levar exatamente S perdas até o stop) e a parte dela que a I.A. alcança em `n` operações
+ * com o acerto do perfil. `null`: essa queda não fecha.
+ */
+function janelaDoPico(ia: string, n: number, S: number, queda: Queda, liq: number[], stop: number): { lo: number; hi: number; wLo: number; wHi: number } | null {
+  const wLo = queda.limiar(S)
+  if (!Number.isFinite(wLo)) return null
+  const fim = queda.limiar(S + 1) - 0.01
+  const wHi = Number.isFinite(fim) ? fim : wLo + stop * 4
+  if (!(wHi > wLo)) return null
+  const sol = misturaPara(0, liq, Math.min(S - 1, queda.cabeDe(0)), ia, true)
+  if (!sol) return null
+  const ops = Math.max(1, n - S)
+  const lo = Math.max(wLo, sol.min * ops * 1.03), hi = Math.min(wHi, sol.max * ops * 0.97)
+  return hi > lo ? { lo, hi, wLo, wHi } : null
 }
 
 /** As sequências candidatas, da mais curta à mais longa que o saldo e a I.A. aguentam. */
@@ -667,11 +747,7 @@ function sequenciasPossiveis(p: Pedido, r: Roteiro, alvo: { n: number }): number
   const lucro = p.resultado > 0
   const t: Trecho = { meta: 0, stop: 0, fim: 'meta', resultado: 0, operacoes: 0, sequencia: 0, momento: 'meio' }
   const escada = perdasDaEscada(r, configDoTrecho(r, t))
-  if (!lucro) {
-    let Smin = 1
-    while (Smin < escada.length - 1 && escada[Smin] < -p.resultado - 1e-9) Smin++
-    return Array.from({ length: 9 }, (_, i) => Smin + i).filter((S) => S <= Math.min(SEQUENCIA_MAXIMA, escada.length - 1))
-  }
+  if (!lucro) return []
   // até onde a escada cabe no saldo (as perdas e a entrada que recupera)
   let Sfit = 0
   while (Sfit + 1 < escada.length - 1 && escada[Sfit + 2] <= p.saldo * 0.97) Sfit++
@@ -910,6 +986,35 @@ export function faixaDoLucro(p: Pedido): { min: number; max: number } | null {
   const alto = sequenciasQueFecham(p, r, alvo.hi, Sfit, true), baixo = sequenciasQueFecham(p, r, alvo.lo, Sfit, true)
   if (!alto.length || !baixo.length) return null
   return { min: baixo.reduce((m, v) => Math.min(m, v.min), Infinity), max: alto.reduce((m, v) => Math.max(m, v.max), 0) }
+}
+
+/**
+ * Os prejuízos que a I.A. consegue fechar com este saldo, esta entrada e este tempo (o menor e o maior
+ * stop em que alguma queda fecha, com o acerto do perfil). Antes de cair, a sessão sobe; por isso um
+ * stop pequeno demais para o tempo não fecha: a queda não devolveria o que ela já fez.
+ */
+export function faixaDoPrejuizo(p: Pedido): { min: number; max: number } | null {
+  const r = roteiroDoPedido({ ...p, resultado: -1 })
+  const alvo = alvoDeOperacoes({ ...p, resultado: -1 }, compassoDa(r), r)
+  const base = configDoTrecho(r, { meta: 0, stop: 0, fim: 'stop', resultado: 0, operacoes: 0, sequencia: 0, momento: 'meio' })
+  const liq = ciclosDaEscada(r, base)
+  const fecha = (stop: number) => {
+    const queda = quedaDoStop(r, { ...base, stopLoss: stop })
+    const de = queda.perdasDe(0)
+    for (let S = Math.max(1, de); S <= Math.min(SEQUENCIA_MAXIMA, de + 9); S++) if (janelaDoPico(p.ia, alvo.n, S, queda, liq, stop)) return true
+    return false
+  }
+  const lo = Math.max(0.5, p.entrada), hi = p.saldo
+  if (!(hi > lo)) return null
+  let min = Infinity, max = -Infinity
+  const pontos = 40
+  for (let i = 0; i <= pontos; i++) {
+    const stop = r2(lo * Math.pow(hi / lo, i / pontos))
+    if (!fecha(stop)) continue
+    if (stop < min) min = stop
+    if (stop > max) max = stop
+  }
+  return Number.isFinite(min) ? { min, max } : null
 }
 
 /* ------------------------------------------------- o termômetro do risco */
