@@ -17,6 +17,7 @@ import { DERIV } from '../../src/core/deriv/config'
 import { MARCAS, marcaPorId } from '../../src/marca/marcas'
 import { emailDaConta } from '../../src/core/teeds/emailDaConta'
 import { atender, autorizacao } from './mcp'
+import { contasDoUsuarioParaLigar, roboLiberado, simuladorPermitido } from './supabase'
 import { contasDoUsuario, emailEntregue, emailFalhou, emailsPendentes, limitesDoCliente, limparSessoesOrfas, salvarLeadCapturado, salvarRegiaoDoCliente, salvarVisita, supabaseConfigurado, usuarioDoToken } from './supabase'
 import { aplicarNasSessoesVivas, aquecerSala, contas, iniciar, montarConfig, parar, sessoesVivasPorVersao, todas, ver } from './sessoes'
 import {
@@ -216,6 +217,11 @@ const SEGREDO = segredoMcp()
  */
 /** Pedidos de ligar robô em andamento, por login, conta e robô. */
 const ligandoAgora = new Set<string>()
+/** Começa uma consulta antes da hora sem deixar a recusa dela solta (o Node derruba o processo por rejeição sem dono). */
+function adiantar<T>(p: Promise<T>): Promise<T> {
+  p.catch(() => undefined)
+  return p
+}
 
 async function minhaSessao(userId: string, id: string) {
   const s = ver(id)
@@ -1133,8 +1139,23 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         // separada — e é a ficha desta marca que autoriza aqui.
         const marcaDoPedido = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
         if (marcaDoPedido !== marcaDaOrigem.id) return json(403, { erro: 'A plataforma do pedido não corresponde ao acesso atual.' })
+        // Tudo que não depende de resposta anterior sai junto (13/11/2026: na
+        // live, com o banco lento, o play fazia ~7 consultas em fila e levou
+        // até 24 s). `adiantar` só impede que uma recusa precoce deixe uma
+        // promessa sem dono — quem der `await` depois ainda recebe o erro.
+        const vitrine = vitrineDoPedido(marcaDoPedido, corpo.parceiro)
+        const roboPedido = String(corpo.roboId ?? '')
+        const pCofre = adiantar((async () => {
+          const appDoPedido = vitrine === undefined ? undefined : await appDaVitrine(marcaDoPedido, vitrine)
+          return autorizacaoParaOperar(dono.id, autorizacao, appDoPedido)
+        })())
+        const pLimites = adiantar(limitesDoCliente(dono.id))
+        // aquece o que o motor confere logo antes de ligar (sessoes.ts › iniciar)
+        adiantar(roboLiberado(dono.id, marcaPorId(marcaDoPedido).id, roboPedido))
+        adiantar(simuladorPermitido(dono.id, marcaDoPedido))
+
         etapa = 'lendo as contas do login'
-        const minhas = await contasDoUsuario(dono.id, marcaDoPedido)
+        const minhas = await contasDoUsuarioParaLigar(dono.id, marcaDoPedido, contaId)
         if (!minhas.includes(contaId)) {
           // Recusa silenciosa custa horas de investigação: fica registrada.
           console.warn(
@@ -1168,9 +1189,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         etapa = 'lendo a autorização guardada'
         // O parceiro vale pela URL (27/10/2026): no /n opera pelo app do Naor, no /v e no direto pelo da marca.
         // Pedido de site antigo (sem vitrine) segue como antes: a autorização mais recente.
-        const vitrine = vitrineDoPedido(marcaDoPedido, corpo.parceiro)
-        const appDoPedido = vitrine === undefined ? undefined : await appDaVitrine(marcaDoPedido, vitrine)
-        const cofre = await autorizacaoParaOperar(dono.id, autorizacao, appDoPedido)
+        const cofre = await pCofre
         if (!cofre.ok) return json(403, { erro: cofre.motivo })
         const auth = cofre.sessao
         etapa = 'listando as contas na Deriv'
@@ -1187,7 +1206,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         }
 
         etapa = 'conferindo os limites'
-        const limites = { ...PADRAO, ...(await limitesDoCliente(dono.id) ?? {}) }
+        const limites = { ...PADRAO, ...(await pLimites ?? {}) }
         const veredito = conferir({
           entrada: valorInicial, stopLoss, takeProfit,
           saldo: conta.balance, demo: conta.type === 'demo', moeda: conta.currency,
@@ -1245,7 +1264,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         const contaId = String(corpo.contaId ?? '').trim()
         if (!contaId) return json(400, { erro: 'Diga a conta.' })
         const marcaDoPedido = marcaPorId(typeof corpo.marca === 'string' ? corpo.marca : undefined).id
-        const minhas = await contasDoUsuario(dono.id, marcaDoPedido)
+        // a lista lembrada do play (60 s): abrir o preparo do robô não precisa ir ao banco toda vez
+        const minhas = await contasDoUsuarioParaLigar(dono.id, marcaDoPedido, contaId)
         if (!minhas.includes(contaId)) return json(200, { ok: false })
         const vitrineAq = vitrineDoPedido(marcaDoPedido, corpo.parceiro)
         const cofre = await autorizacaoParaOperar(dono.id, autorizacao, vitrineAq === undefined ? undefined : await appDaVitrine(marcaDoPedido, vitrineAq))

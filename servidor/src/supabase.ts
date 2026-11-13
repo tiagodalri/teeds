@@ -26,13 +26,51 @@ const CHAVE = process.env.SUPABASE_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_K
 
 export const supabaseConfigurado = () => Boolean(URL_BASE && CHAVE)
 
+/* ------------------------------------------------------------------ *
+ * Memória curta para o play (13/11/2026).
+ *
+ * Na live de 12/11 (90 pessoas), todo mundo deu play junto e o banco foi de
+ * 0,2 s para 1,5–4 s por consulta. O play fazia ~7 consultas em fila, então
+ * levou 10–24 s. As respostas que quase nunca mudam (plano, I.A. liberada,
+ * limites, contas do login) agora valem por alguns segundos/minutos, e dois
+ * plays iguais ao mesmo tempo dividem a mesma consulta.
+ *
+ * "Sim" vale mais que "não": quem acabou de comprar a I.A. ou o simulador não
+ * pode ficar 5 minutos barrado — o "não" expira em 10 s.
+ * ------------------------------------------------------------------ */
+const lembrados = new Map<string, { ate: number; valor: Promise<unknown> }>()
+const LEMBRADOS_NO_MAXIMO = 20_000
+function lembrar<T>(chave: string, msSim: number, msNao: number, buscar: () => Promise<T>, sim: (v: T) => boolean = Boolean): Promise<T> {
+  const agora = Date.now()
+  const guardado = lembrados.get(chave)
+  if (guardado && guardado.ate > agora) return guardado.valor as Promise<T>
+  if (lembrados.size >= LEMBRADOS_NO_MAXIMO) {
+    for (const [k, v] of lembrados) if (v.ate <= agora) lembrados.delete(k)
+    if (lembrados.size >= LEMBRADOS_NO_MAXIMO) lembrados.clear()
+  }
+  const valor = buscar()
+  // enquanto a consulta está no ar, quem chegar junto espera a mesma resposta
+  const item = { ate: agora + msNao, valor: valor as Promise<unknown> }
+  lembrados.set(chave, item)
+  valor.then(
+    (v) => { if (lembrados.get(chave) === item) item.ate = Date.now() + (sim(v) ? msSim : msNao) },
+    () => { if (lembrados.get(chave) === item) lembrados.delete(chave) },   // erro não fica guardado
+  )
+  return valor
+}
+function esquecer(prefixo: string) {
+  for (const k of lembrados.keys()) if (k.startsWith(prefixo)) lembrados.delete(k)
+}
+
 export async function simuladorPermitido(userId: string, marca: string): Promise<boolean> {
-  return (await rest<boolean>('/rpc/teeds_simulador_permitido', {method:'POST',body:JSON.stringify({p_user:userId,p_marca:marca})})) === true
+  return lembrar(`simulador:${userId}:${marca}`, 5 * 60_000, 10_000, async () =>
+    (await rest<boolean>('/rpc/teeds_simulador_permitido', {method:'POST',body:JSON.stringify({p_user:userId,p_marca:marca})})) === true)
 }
 
 /** A I.A. está liberada para esta pessoa nesta marca? (GlobalFly: Gulf e Phenom são vendidos à parte, 23/10/2026) */
 export async function roboLiberado(userId: string, marca: string, roboId: string): Promise<boolean> {
-  return (await rest<boolean>('/rpc/teeds_robo_liberado', { method: 'POST', body: JSON.stringify({ p_user: userId, p_marca: marca, p_robo: roboId }) })) === true
+  return lembrar(`liberado:${userId}:${marca}:${roboId}`, 5 * 60_000, 10_000, async () =>
+    (await rest<boolean>('/rpc/teeds_robo_liberado', { method: 'POST', body: JSON.stringify({ p_user: userId, p_marca: marca, p_robo: roboId }) })) === true)
 }
 
 /**
@@ -536,6 +574,19 @@ export async function contasDoUsuario(userId: string, marca?: string): Promise<s
   return (linhas ?? []).map((l) => String(l.conta_id))
 }
 
+/**
+ * As contas do login, para o play: vale 60 s. Se a conta pedida não estiver
+ * na lista lembrada (acabou de conectar a Deriv), pergunta ao banco de novo
+ * antes de recusar — a memória nunca barra ninguém.
+ */
+export async function contasDoUsuarioParaLigar(userId: string, marca: string, contaId: string): Promise<string[]> {
+  const chave = `contas:${userId}:${marca}`
+  const lista = await lembrar(chave, 60_000, 60_000, () => contasDoUsuario(userId, marca), () => true)
+  if (lista.includes(contaId)) return lista
+  esquecer(chave)
+  return lembrar(chave, 60_000, 60_000, () => contasDoUsuario(userId, marca), () => true)
+}
+
 /* ------------------------------------------------------------------ *
  * O chat: limites por cliente e contagem de uso
  *
@@ -549,9 +600,10 @@ export async function limitesDoCliente(userId: string): Promise<Partial<{
 }> | null> {
   if (!URL_BASE) return null
   try {
-    const linhas = await rest<any[]>(
+    // ajuste de limite é raro e feito pelo admin: 60 s de atraso não pesa; 90 consultas por segundo na live pesam
+    const linhas = await lembrar(`limites:${userId}`, 60_000, 60_000, () => rest<any[]>(
       `/chat_limites?select=*&user_id=eq.${encodeURIComponent(userId)}&limit=1`,
-    )
+    ), () => true)
     const l = linhas?.[0]
     if (!l) return null
     return {
@@ -664,11 +716,13 @@ export async function lerSegredosDeriv(
 ): Promise<Array<{ segredo: string; marca: string; appId: string | null }>> {
   if (!URL_BASE) return []
   const out: Array<{ segredo: string; marca: string; appId: string | null }> = []
-  try {
-    const porApp = await rest<any[]>(`/deriv_autorizacoes_apps?select=segredo,marca,app_id&user_id=eq.${encodeURIComponent(userId)}&order=atualizado_em.desc`)
-    for (const l of porApp ?? []) if (l?.segredo) out.push({ segredo: String(l.segredo), marca: String(l.marca ?? 'teeds'), appId: String(l.app_id) })
-  } catch { /* tabela nova ainda não existe: segue com a antiga */ }
-  const antiga = await lerSegredoDeriv(userId)
+  // as duas leituras ao mesmo tempo (13/11/2026): em fila, eram duas esperas no play
+  const [porApp, antiga] = await Promise.all([
+    rest<any[]>(`/deriv_autorizacoes_apps?select=segredo,marca,app_id&user_id=eq.${encodeURIComponent(userId)}&order=atualizado_em.desc`)
+      .catch(() => [] as any[]),   // tabela nova ainda não existe: segue com a antiga
+    lerSegredoDeriv(userId),
+  ])
+  for (const l of porApp ?? []) if (l?.segredo) out.push({ segredo: String(l.segredo), marca: String(l.marca ?? 'teeds'), appId: String(l.app_id) })
   if (antiga) out.push({ ...antiga, appId: null })
   return out
 }
