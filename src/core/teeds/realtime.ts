@@ -44,6 +44,15 @@ interface Opcoes {
   /** Nome do canal — precisa ser único por assinatura na página. */
   canal: string
   tabelas: Array<{ tabela: string; filtro?: string; evento?: '*' | 'INSERT' | 'UPDATE' | 'DELETE' }>
+  /**
+   * Ouvir o RÁDIO em vez das tabelas (13/11/2026): canal PRIVADO de Broadcast
+   * com este nome. O servidor transmite `{ tabela, tipo, linha }` no evento
+   * 'linha' e a tela recebe pelo mesmo `aoMudar`, como se fosse uma mudança
+   * de linha. Quem pode entrar decide a regra em realtime.messages (o banco
+   * confere UMA vez, na entrada, e não relê cada gravação). Com isto, `canal`
+   * e `tabelas` são ignorados.
+   */
+  transmissao?: string
   aoMudar: (m: MudancaDeLinha) => void
   aoEstado?: (estado: EstadoDoCanal, detalhe?: string) => void
   /** Cada batimento respondido informa o RTT medido, em ms. */
@@ -71,7 +80,7 @@ export function assinarMudancas(op: Opcoes): AssinaturaRealtime {
   let religando: ReturnType<typeof setTimeout> | null = null
   const batimentosEmVoo = new Map<string, number>()
   const vistos = new Set<string>()
-  const topico = `realtime:${op.canal}`
+  const topico = `realtime:${op.transmissao ?? op.canal}`
   const agora = () => op.agora?.() ?? Date.now()
   const batimentoMs = op.batimentoMs ?? BATIMENTO_MS
   const silencioMaximoMs = op.silencioMaximoMs ?? SILENCIO_MAXIMO_MS
@@ -84,10 +93,12 @@ export function assinarMudancas(op: Opcoes): AssinaturaRealtime {
     mandar({
       topic: topico, event: 'phx_join', ref: joinRef, join_ref: joinRef,
       payload: {
-        config: {
-          broadcast: { self: false }, presence: { key: '' },
-          postgres_changes: op.tabelas.map((t) => ({ event: t.evento ?? '*', schema: 'public', table: t.tabela, filter: t.filtro })),
-        },
+        config: op.transmissao
+          ? { broadcast: { self: false }, presence: { key: '' }, postgres_changes: [], private: true }
+          : {
+            broadcast: { self: false }, presence: { key: '' },
+            postgres_changes: op.tabelas.map((t) => ({ event: t.evento ?? '*', schema: 'public', table: t.tabela, filter: t.filtro })),
+          },
         access_token: token,
       },
     })
@@ -132,6 +143,18 @@ export function assinarMudancas(op: Opcoes): AssinaturaRealtime {
         if (vistos.has(chave)) return
         vistos.add(chave); if (vistos.size > 2000) { const primeiro = vistos.values().next().value; if (primeiro) vistos.delete(primeiro) }
         op.aoMudar({ tipo: d.type, tabela: d.table, linha: d.record ?? {}, antiga: d.old_record ?? null, confirmadaEm: d.commit_timestamp ?? '' })
+        return
+      }
+      if (msg.event === 'broadcast' && msg.topic === topico && op.transmissao) {
+        const d = msg.payload?.payload
+        if (!d || typeof d.tabela !== 'string' || !d.linha) return
+        // Só o evento é único pela seq; foto e pulso repetidos são o mesmo estado (e o pulso repete a seq de propósito).
+        if (d.tipo === 'INSERT') {
+          const chave = `${d.tabela}|${d.linha.sessao_id ?? ''}|${d.linha.seq ?? ''}`
+          if (vistos.has(chave)) return
+          vistos.add(chave); if (vistos.size > 2000) { const primeiro = vistos.values().next().value; if (primeiro) vistos.delete(primeiro) }
+        }
+        op.aoMudar({ tipo: d.tipo === 'INSERT' ? 'INSERT' : 'UPDATE', tabela: d.tabela, linha: d.linha, antiga: null, confirmadaEm: '' })
         return
       }
       if (msg.event === 'system' && msg.topic === topico && msg.payload?.status === 'error') {

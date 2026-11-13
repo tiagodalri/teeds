@@ -6,7 +6,7 @@ import {
   marcadorDoEvento, mascararConta, mascararEmail, ordenarEventos, paraEstadoMotor, reconstruir, saudeDoSinal, semaforo,
   type EstadoEspelho, type EventoEspelho, type Integridade, type MensagemEspelho, type PassoReplay, type Saude, type SessaoEspelho,
 } from '../core/teeds/espelho'
-import { assinarMudancas, type EstadoDoCanal } from '../core/teeds/realtime'
+import { assinarMudancas, type EstadoDoCanal, type MudancaDeLinha } from '../core/teeds/realtime'
 import {
   ErroDoMonitoramento, auditar, auditarNegado, carregarEventos, eventosDaSessao, lerEspelho, lerSessaoMae, listarAuditoria, listarEncerradas, listarEspelhos,
   paraEvento, paraSessaoEspelho, type RegistroAuditoria, type SessaoEncerrada,
@@ -585,7 +585,37 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       // Ao (re)entrar no canal, a foto completa vem ANTES de a tela dizer "ao vivo".
       aoEstado: (e) => { if (e === 'ao-vivo') { void carregarTudo().then(() => setCanal('ao-vivo')) } else setCanal(e) },
       aoRtt: (ms) => setRttMs(rtt.current.registrar(ms)),
-      aoMudar: (m) => {
+      aoMudar: (m) => aoMudarDoMosaico.current(m),
+    })
+    return () => assinatura.fechar()
+  }, [sessao.token, receber]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /*
+    O RÁDIO (13/11/2026): foto e pulso chegam transmitidos pelo servidor, sem o
+    banco reler cada gravação (era metade do trabalho dele e o que travou o
+    play na live de 12/11). Admin geral ouve o canal da marca; o admin do
+    parceiro, só os canais dos parceiros que ele vê — a regra mora no banco
+    (realtime.messages), conferida uma vez na entrada. A assinatura das
+    tabelas acima fica até o banco tirá-las da publicação; depois ela só
+    fica muda, e as duas entregam o mesmo lance (a seq descarta a repetição).
+  */
+  const canaisDoRadio = useMemo(() => {
+    if (!papel) return ''
+    if (doParceiro) return (papel.ve.length ? papel.ve : [papel.parceiro ?? '']).map((p) => `espelho:${MARCA.id}:${p === '' ? '-' : p}`).join(' ')
+    return marcas.map((m) => `espelho:${m}`).join(' ')
+  }, [papel, doParceiro, marcas])
+  useEffect(() => {
+    if (!canaisDoRadio) return
+    const lista = canaisDoRadio.split(' ').map((topico) => assinarMudancas({
+      token: sessao.token, canal: topico, transmissao: topico, tabelas: [],
+      aoEstado: (e) => { if (e === 'ao-vivo') console.info(`[monitoramento] rádio ao vivo: ${topico}`) },
+      aoMudar: (m) => aoMudarDoMosaico.current(m),
+    }))
+    return () => lista.forEach((a) => a.fechar())
+  }, [canaisDoRadio, sessao.token])
+
+  const aoMudarDoMosaico = useRef<(m: MudancaDeLinha) => void>(() => undefined)
+  aoMudarDoMosaico.current = (m: MudancaDeLinha) => {
         const recebidoEm = Date.now()
         const emitidoEm = Number(m.linha.emitido_em ?? 0)
         if (emitidoEm) { desvio.current.registrar(emitidoEm, recebidoEm); setDesvioS(desvio.current.desvioSegundos) }
@@ -602,10 +632,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             return mapa
           })
         }
-      },
-    })
-    return () => assinatura.fechar()
-  }, [sessao.token, receber]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
 
   /* ---------------------------------------------------- foco */
@@ -635,7 +662,17 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
         receber({ origem: 'evento', evento: ev, recebidoEm })
       },
     })
-    return () => assinatura.fechar()
+    // o rádio da cabine: os eventos desta sessão transmitidos pelo servidor (ver o rádio do mosaico, acima)
+    const radio = assinarMudancas({
+      token: sessao.token, canal: `espelho-sessao:${id}`, transmissao: `espelho-sessao:${id}`, tabelas: [],
+      aoMudar: (m) => {
+        if (m.tabela !== 'eventos_robos_ao_vivo' || m.tipo !== 'INSERT') return
+        const ev = paraEvento(m.linha)
+        setEventos((mapa) => { const n = new Map(mapa); n.set(ev.sessaoId, ordenarEventos([...(n.get(ev.sessaoId) ?? []), ev])); return n })
+        receber({ origem: 'evento', evento: ev, recebidoEm: Date.now() })
+      },
+    })
+    return () => { assinatura.fechar(); radio.fechar() }
   }, [foco, focoAutorizado, sessao.token, receber]) // eslint-disable-line react-hooks/exhaustive-deps
   const abrirFoco = useCallback(async (id: string) => {
     focoAnterior.current = document.activeElement as HTMLElement

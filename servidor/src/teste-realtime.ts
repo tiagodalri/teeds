@@ -183,6 +183,37 @@ async function provas() {
     conferir('R12 backoff: 1ª religação em 0,5–1,5 s, 2ª em 1–3 s, 3ª em 2–6 s (com jitter)', [esperas[0] >= 450 && esperas[0] <= 1600, esperas[1] >= 950 && esperas[1] <= 3100, esperas[2] >= 1950 && esperas[2] <= 6100], [true, true, true])
     t.assinatura.fechar()
   }
+  /* 13. o rádio (13/11/2026): canal privado de Broadcast, sem tabelas, e a linha chega pelo mesmo aoMudar */
+  {
+    SocketFalso.abertos = []; SocketFalso.criados = 0
+    const t = montar({ canal: 'ignorado', transmissao: 'espelho:globalfly', tabelas: [] })
+    const ws = t.socket(); ws.abrir()
+    const join = ws.ultimo('phx_join')
+    conferir('R13 join do rádio: tópico do canal, privado, sem postgres_changes, com token', [join.topic, join.payload.config.private, join.payload.config.postgres_changes, join.payload.access_token], ['realtime:espelho:globalfly', true, [], 'tok-1'])
+    ws.confirmarJoin()
+    const foto = { tabela: 'sessoes_robos_ao_vivo', tipo: 'UPDATE', linha: { sessao_id: 's1', seq: 4, estado: { fase: 'operando' } } }
+    ws.receber({ topic: 'realtime:espelho:globalfly', event: 'broadcast', payload: { type: 'broadcast', event: 'linha', payload: foto } })
+    ws.receber({ topic: 'realtime:espelho:globalfly', event: 'broadcast', payload: { type: 'broadcast', event: 'linha', payload: foto } })
+    conferir('R13b foto chega como mudança de linha (repetida passa: é o mesmo estado)', t.mudancas.map((m) => [m.tabela, m.tipo, m.linha.seq]), [['sessoes_robos_ao_vivo', 'UPDATE', 4], ['sessoes_robos_ao_vivo', 'UPDATE', 4]])
+    const ev = { tabela: 'eventos_robos_ao_vivo', tipo: 'INSERT', linha: { sessao_id: 's1', seq: 5, tipo: 'entrada' } }
+    ws.receber({ topic: 'realtime:espelho:globalfly', event: 'broadcast', payload: { type: 'broadcast', event: 'linha', payload: ev } })
+    ws.receber({ topic: 'realtime:espelho:globalfly', event: 'broadcast', payload: { type: 'broadcast', event: 'linha', payload: ev } })
+    conferir('R13c evento repetido (mesma sessão e seq) entra uma vez só', t.mudancas.filter((m) => m.tabela === 'eventos_robos_ao_vivo').length, 1)
+    ws.receber({ topic: 'realtime:outro', event: 'broadcast', payload: { type: 'broadcast', event: 'linha', payload: { ...ev, linha: { ...ev.linha, seq: 9 } } } })
+    ws.receber({ topic: 'realtime:espelho:globalfly', event: 'broadcast', payload: { type: 'broadcast', event: 'linha', payload: { lixo: 1 } } })
+    conferir('R13d transmissão de outro canal ou sem linha é ignorada', t.mudancas.length, 3)
+    t.assinatura.fechar()
+  }
+  /* 14. o rádio recusado (quem não pode ouvir) não finge ao vivo */
+  {
+    SocketFalso.abertos = []; SocketFalso.criados = 0
+    const t = montar({ transmissao: 'espelho:globalfly', tabelas: [] })
+    const ws = t.socket(); ws.abrir()
+    const j = ws.ultimo('phx_join')
+    ws.receber({ topic: j.topic, event: 'phx_reply', ref: j.ref, payload: { status: 'error', response: { reason: 'Unauthorized: You do not have permissions to read from this Channel topic: espelho:globalfly' } } })
+    conferir('R14 recusa do canal privado não fica ao vivo', t.assinatura.aoVivo(), false)
+    t.assinatura.fechar()
+  }
 }
 
 provas().then(() => {

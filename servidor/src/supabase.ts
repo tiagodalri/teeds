@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { emailDeDemonstracao } from '../../src/core/deriv/accountAccess'
 import { emailReal, marcaDaConta } from '../../src/core/teeds/emailDaConta'
 import { criarLote } from './lote'
+import { canaisDaSessao, canalDosEventos, criarRadio, type Transmissao } from './radio'
 
 /**
  * Espelha no Supabase tudo que o robô faz.
@@ -180,7 +181,11 @@ export function ultimoDigito(precoTexto: unknown): number | null {
   return d >= 0 && d <= 9 ? d : null
 }
 
-export interface SessaoGravada { id: string; user_id: string; marca: string }
+export interface SessaoGravada {
+  id: string; user_id: string; marca: string
+  /** A vitrine da sessão como o banco gravou ('n', 'v', '' = direto; null = marca sem parceiros). Decide o canal do rádio. */
+  parceiro?: string | null
+}
 
 /* ------------------------------------------------------------------ *
  * Abre a sessão, antes da 1ª entrada, para a tela já mostrar o robô
@@ -228,7 +233,7 @@ export async function abrirSessao(dados: {
   }
   const { user_id, tipo, moeda } = dono ?? await usuarioDaConta(dados.contaId)
 
-  const linhas = await rest<any[]>('/sessoes_robos?select=id,user_id', {
+  const linhas = await rest<any[]>('/sessoes_robos?select=id,user_id,parceiro', {
     method: 'POST',
     headers: { Prefer: 'return=representation' },
     body: JSON.stringify({
@@ -1117,19 +1122,46 @@ const loteDeEventos = criarLote<Linha>({ enviar: gravarEventos, enviarUm: gravar
 const loteDePulsos = criarLote<Linha>({ enviar: gravarPulsos, enviarUm: gravarPulsos, chave: porSessao, esperaMs: ESPERA_DO_LOTE })
 export const medidasDosLotes = { fotos: loteDeFotos.medidas, eventos: loteDeEventos.medidas, pulsos: loteDePulsos.medidas }
 
+/*
+  O rádio (13/11/2026, ver radio.ts): cada gravação do espelho também sai
+  transmitida direto para as telas do admin, ANTES e independente do banco —
+  o lance aparece mesmo com o banco lento. A gravação segue igual (é de onde a
+  tela se completa ao abrir e ao reconectar). Repetição do publicador (nova
+  tentativa da gravação) transmite de novo: a tela ignora evento de seq já
+  vista, e foto/pulso repetidos são o mesmo estado.
+*/
+const RADIO_LIGADO = process.env.RADIO_DESLIGADO !== '1'
+const enviarAoRealtime = async (mensagens: Transmissao[]) => {
+  const res = await fetch(`${URL_BASE}/realtime/v1/api/broadcast`, {
+    method: 'POST',
+    headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages: mensagens }),
+    signal: AbortSignal.timeout(10_000),
+  })
+  if (!res.ok) throw new Error(`Erro ${res.status} no Realtime: ${(await res.text().catch(() => '')).slice(0, 200)}`)
+}
+const radio = criarRadio({ enviar: enviarAoRealtime, esperaMs: ESPERA_DO_LOTE || 40 })
+export const medidasDoRadio = radio.medidas
+const noAr = (topicos: string[], tabela: string, tipo: 'INSERT' | 'UPDATE', linha: Record<string, unknown>) => {
+  if (RADIO_LIGADO && supabaseConfigurado()) radio(topicos, 'linha', { tabela, tipo, linha })
+}
+
 export async function escreverFotoDoEspelho(sessao: SessaoGravada, foto: FotoDoEspelho): Promise<void> {
   const linha = linhaDaFoto(sessao, foto)
+  noAr(canaisDaSessao(sessao.marca, sessao.parceiro), 'sessoes_robos_ao_vivo', 'UPDATE', { ...linha, parceiro: sessao.parceiro ?? null })
   return EM_LOTE ? loteDeFotos(linha) : gravarFotos(linha)
 }
 
 export async function escreverEventoDoEspelho(sessao: SessaoGravada, ev: EventoDoEspelho): Promise<void> {
   const linha = linhaDoEvento(sessao, ev)
+  noAr([canalDosEventos(sessao.id)], 'eventos_robos_ao_vivo', 'INSERT', linha)
   return EM_LOTE ? loteDeEventos(linha) : gravarEventos(linha)
 }
 
 /** O pulso: pequeno, a cada tick (coalescido) e no batimento de presença. */
 export async function escreverPulsoDoEspelho(sessao: SessaoGravada, p: PulsoDoEspelho): Promise<void> {
   const linha = linhaDoPulso(sessao, p)
+  noAr(canaisDaSessao(sessao.marca, sessao.parceiro), 'pulsos_robos_ao_vivo', 'UPDATE', linha)
   return EM_LOTE ? loteDePulsos(linha) : gravarPulsos(linha)
 }
 
