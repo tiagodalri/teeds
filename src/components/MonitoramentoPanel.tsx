@@ -563,41 +563,18 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   useEffect(() => { const id = setInterval(() => setAgora(Date.now()), 1000); return () => clearInterval(id) }, [])
   useEffect(() => { auditar(sessao, { tipo: 'painel', acao: 'abriu', marca: marcaDoRegistro }).catch(falhar); return () => { auditar(sessao, { tipo: 'painel', acao: 'fechou', marca: marcaDoRegistro }).catch(() => { /* a tela já fechou */ }) } }, [sessao, marcaDoRegistro, falhar])
 
-  /* -------------------------------------------------- tempo real */
-  useEffect(() => {
-    const canalId = `monitor-${marcas.join('-')}-${Math.random().toString(36).slice(2, 8)}`
-    const assinatura = assinarMudancas({
-      token: sessao.token, canal: canalId,
-      // O filtro do realtime é de igualdade, então a Rede vira uma assinatura
-      // por marca em cada tabela. Com duas marcas são quatro, no mesmo canal.
-      //
-      // Os EVENTOS não vêm mais da marca inteira (09/11/2026, véspera da live):
-      // eram mais da metade dos avisos — ~1 por segundo por robô, para cada
-      // admin com esta tela aberta — e com 200 robôs um admin sozinho chegava
-      // perto do teto de avisos por segundo do Supabase, que desliga quem
-      // passa. A lista anda pelas fotos (que seguem cada evento em até 2 s) e
-      // pelos pulsos (presença e fita); os eventos ao vivo chegam só da cabine
-      // aberta, numa assinatura própria (abaixo).
-      tabelas: marcas.flatMap((m) => [
-        { tabela: 'sessoes_robos_ao_vivo', filtro: `marca=eq.${m}` },
-        { tabela: 'pulsos_robos_ao_vivo', filtro: `marca=eq.${m}` },
-      ]),
-      // Ao (re)entrar no canal, a foto completa vem ANTES de a tela dizer "ao vivo".
-      aoEstado: (e) => { if (e === 'ao-vivo') { void carregarTudo().then(() => setCanal('ao-vivo')) } else setCanal(e) },
-      aoRtt: (ms) => setRttMs(rtt.current.registrar(ms)),
-      aoMudar: (m) => aoMudarDoMosaico.current(m),
-    })
-    return () => assinatura.fechar()
-  }, [sessao.token, receber]) // eslint-disable-line react-hooks/exhaustive-deps
-
+  /* -------------------------------------------------- tempo real: o RÁDIO */
   /*
-    O RÁDIO (13/11/2026): foto e pulso chegam transmitidos pelo servidor, sem o
-    banco reler cada gravação (era metade do trabalho dele e o que travou o
-    play na live de 12/11). Admin geral ouve o canal da marca; o admin do
-    parceiro, só os canais dos parceiros que ele vê — a regra mora no banco
-    (realtime.messages), conferida uma vez na entrada. A assinatura das
-    tabelas acima fica até o banco tirá-las da publicação; depois ela só
-    fica muda, e as duas entregam o mesmo lance (a seq descarta a repetição).
+    13/11/2026: foto e pulso chegam transmitidos pelo servidor (servidor/src/radio.ts),
+    sem o banco reler cada gravação — a releitura era metade do trabalho dele e o que
+    travou o play na live de 12/11. Admin geral ouve o canal da marca (um por marca na
+    Rede); o admin do parceiro, só os canais dos parceiros que ele vê. A regra mora no
+    banco (realtime.messages) e é conferida uma vez, na entrada.
+
+    As tabelas do espelho SAÍRAM da releitura do Realtime: assiná-las (como até a
+    versão anterior) faz o canal cair e religar a cada segundo, e cada religada relia
+    o período inteiro. Por isso o rádio é o único transporte; a foto completa vem pela
+    REST ao (re)entrar e na reconciliação de 20 s, como antes.
   */
   const canaisDoRadio = useMemo(() => {
     if (!papel) return ''
@@ -606,13 +583,28 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   }, [papel, doParceiro, marcas])
   useEffect(() => {
     if (!canaisDoRadio) return
-    const lista = canaisDoRadio.split(' ').map((topico) => assinarMudancas({
+    const topicos = canaisDoRadio.split(' ')
+    const estados = new Map<string, EstadoDoCanal>()
+    let relendo: Promise<void> | null = null
+    // Ao (re)entrar, a foto completa vem ANTES de a tela dizer "ao vivo"; vários canais (Rede) entram juntos e releem uma vez só.
+    const reler = () => (relendo ??= carregarTudo().finally(() => { setTimeout(() => { relendo = null }, 3000) }))
+    const juntar = () => {
+      const l = topicos.map((t) => estados.get(t) ?? 'conectando')
+      const pior = l.find((e) => e === 'token-expirado') ?? l.find((e) => e === 'reconectando') ?? l.find((e) => e === 'conectando') ?? l[0]
+      return pior
+    }
+    const lista = topicos.map((topico, i) => assinarMudancas({
       token: sessao.token, canal: topico, transmissao: topico, tabelas: [],
-      aoEstado: (e) => { if (e === 'ao-vivo') console.info(`[monitoramento] rádio ao vivo: ${topico}`) },
+      aoEstado: (e) => {
+        estados.set(topico, e)
+        if (e === 'ao-vivo') { console.info(`[monitoramento] rádio ao vivo: ${topico}`); void reler().then(() => setCanal(juntar())) }
+        else setCanal(juntar())
+      },
+      aoRtt: i === 0 ? (ms) => setRttMs(rtt.current.registrar(ms)) : undefined,
       aoMudar: (m) => aoMudarDoMosaico.current(m),
     }))
     return () => lista.forEach((a) => a.fechar())
-  }, [canaisDoRadio, sessao.token])
+  }, [canaisDoRadio, sessao.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const aoMudarDoMosaico = useRef<(m: MudancaDeLinha) => void>(() => undefined)
   aoMudarDoMosaico.current = (m: MudancaDeLinha) => {
@@ -643,9 +635,9 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     if (!foco || focoAutorizado !== 'sim') return
     const id = foco
     let primeiraEntrada = true
-    const assinatura = assinarMudancas({
-      token: sessao.token, canal: `monitor-foco-${id.slice(0, 8)}-${Math.random().toString(36).slice(2, 8)}`,
-      tabelas: [{ tabela: 'eventos_robos_ao_vivo', filtro: `sessao_id=eq.${id}`, evento: 'INSERT' as const }],
+    // o rádio da cabine: os eventos desta sessão transmitidos pelo servidor (ver o rádio do mosaico, acima)
+    const radio = assinarMudancas({
+      token: sessao.token, canal: `espelho-sessao:${id}`, transmissao: `espelho-sessao:${id}`, tabelas: [],
       // Ao religar o canal, o que passou enquanto ele esteve fora vem pela REST.
       aoEstado: (e) => {
         if (e !== 'ao-vivo') return
@@ -656,23 +648,12 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
       },
       aoMudar: (m) => {
         if (m.tabela !== 'eventos_robos_ao_vivo' || m.tipo !== 'INSERT') return
-        const recebidoEm = Date.now()
-        const ev = paraEvento(m.linha)
-        setEventos((mapa) => { const n = new Map(mapa); n.set(ev.sessaoId, ordenarEventos([...(n.get(ev.sessaoId) ?? []), ev])); return n })
-        receber({ origem: 'evento', evento: ev, recebidoEm })
-      },
-    })
-    // o rádio da cabine: os eventos desta sessão transmitidos pelo servidor (ver o rádio do mosaico, acima)
-    const radio = assinarMudancas({
-      token: sessao.token, canal: `espelho-sessao:${id}`, transmissao: `espelho-sessao:${id}`, tabelas: [],
-      aoMudar: (m) => {
-        if (m.tabela !== 'eventos_robos_ao_vivo' || m.tipo !== 'INSERT') return
         const ev = paraEvento(m.linha)
         setEventos((mapa) => { const n = new Map(mapa); n.set(ev.sessaoId, ordenarEventos([...(n.get(ev.sessaoId) ?? []), ev])); return n })
         receber({ origem: 'evento', evento: ev, recebidoEm: Date.now() })
       },
     })
-    return () => { assinatura.fechar(); radio.fechar() }
+    return () => radio.fechar()
   }, [foco, focoAutorizado, sessao.token, receber]) // eslint-disable-line react-hooks/exhaustive-deps
   const abrirFoco = useCallback(async (id: string) => {
     focoAnterior.current = document.activeElement as HTMLElement

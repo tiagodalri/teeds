@@ -22,6 +22,7 @@ const PLAYS = Number(process.env.PLAYS ?? 50)
 const TELAS = Number(process.env.TELAS ?? 20)
 const AQUECER_S = Number(process.env.AQUECER ?? 60)
 const RODADA = process.env.RODADA ?? 'x'
+const MARCA_TESTE = process.env.MARCA_TESTE ?? 'teeds'
 const TESTE_USER = process.env.TESTE_USER ?? ''
 const URL_SB = (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
 const CHAVE = process.env.SUPABASE_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
@@ -90,10 +91,10 @@ async function ligarTudo() {
     const estrategia = ESTRATEGIAS_LOCAIS.find((e) => e.id === id)!
     const config = { valorInicial: 1, valorAoVencer: 1, fatorGale: 2, galeApos: 1, valorMaximo: 0, takeProfit: 0, stopLoss: 0, maxOperacoes: 0, parametros: parametrosPadrao(id), parametrosVersao: 1 }
     const [linha] = await rest('/sessoes_robos?select=id,user_id,parceiro', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({
-      sessao_ref: `carga-banco-${RODADA}-${i}`, user_id: TESTE_USER, marca: 'teeds', conta_id: 'VRTCCARGA', demo: true, moeda: 'USD',
+      sessao_ref: `carga-banco-${RODADA}-${i}`, user_id: TESTE_USER, marca: MARCA_TESTE, conta_id: 'VRTCCARGA', demo: true, moeda: 'USD',
       robo_id: id, robo_nome: `Carga ${id}`, ativo: 'R_75', origem: 'navegador', entrada_inicial: 1, entrada_atual: 1, stop_loss: 0, take_profit: 0, max_operacoes: 0, situacao: 'rodando',
     }) })
-    const gravada = { id: linha.id, user_id: linha.user_id, marca: 'teeds', parceiro: linha.parceiro ?? null }
+    const gravada = { id: linha.id, user_id: linha.user_id, marca: MARCA_TESTE, parceiro: linha.parceiro ?? null }
     sessoes.push(gravada.id)
     const motor = new MotorTeeds({ socket, estrategia, config: config as never, symbol: 'R_75', moeda: 'USD', pipSize: 4 })
     const espelho = new PublicadorEspelho(gravada as never, config as never, () => socket.state)
