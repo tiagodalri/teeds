@@ -66,18 +66,20 @@ conferir('e as sessões encerradas na mesma variável',
 conferir('e as cabines ao vivo também',
   /listarEspelhos\(sessao, horas, undefined, marca\)/.test(monitorPainel), true)
 
-// O filtro do realtime é de igualdade, então a Rede vira uma assinatura por
-// marca em cada tabela. Escutar menos marcas do que a tela mostra faria os
-// cartões de uma plataforma congelarem sem ninguém perceber.
-conferir('o tempo real abre uma assinatura por marca',
-  /tabelas: marcas\.flatMap\(\(m\) => \[/.test(monitorPainel), true)
-// Desde 09/11/2026 a marca inteira leva só fotos e pulsos (os eventos eram mais
-// da metade dos avisos do Realtime); os eventos ao vivo vêm da cabine aberta,
-// filtrados pela sessão — que já pertence a uma marca do laço.
-conferir('e as duas tabelas da lista escutam a marca do laço',
-  (monitorPainel.match(/filtro: `marca=eq\.\$\{m\}`/g) ?? []).length, 2)
+// Desde 13/11/2026 o tempo real é o RÁDIO (servidor/src/radio.ts): um canal
+// privado por marca (a Rede ouve todas as marcas que a tela mostra — ouvir menos
+// faria os cartões de uma plataforma congelarem sem ninguém perceber), canais do
+// parceiro para o admin do parceiro, e a cabine aberta ouve só a própria sessão.
+conferir('o tempo real abre um canal do rádio por marca da tela',
+  /marcas\.map\(\(m\) => `espelho:\$\{m\}`\)/.test(monitorPainel), true)
+conferir('e o admin do parceiro ouve só os canais dos parceiros que ele vê',
+  /`espelho:\$\{MARCA\.id\}:\$\{p === '' \? '-' : p\}`/.test(monitorPainel), true)
 conferir('e os eventos ao vivo escutam a sessão da cabine aberta',
-  /tabela: 'eventos_robos_ao_vivo', filtro: `sessao_id=eq\.\$\{id\}`/.test(monitorPainel), true)
+  /transmissao: `espelho-sessao:\$\{id\}`/.test(monitorPainel), true)
+// As tabelas do espelho saíram da releitura do Realtime: assiná-las faz o canal
+// cair e religar a cada segundo (e reler o período inteiro a cada vez).
+conferir('e nenhuma tabela do espelho é assinada pela releitura',
+  /tabela: '(sessoes|pulsos|eventos)_robos_ao_vivo'/.test(monitorPainel), false)
 
 // Na Rede as consultas pedem as duas marcas, e cada cartão diz de onde veio.
 conferir('a Rede consulta a lista de marcas',
