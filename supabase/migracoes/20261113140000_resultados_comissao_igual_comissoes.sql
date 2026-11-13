@@ -64,12 +64,16 @@ begin
   mk as (
     select ops.uid,
            coalesce(sum(ops.mk) filter (where not ops.demo), 0) as real,
-           coalesce(sum(ops.mk) filter (where ops.demo), 0)     as demo
+           coalesce(sum(ops.mk) filter (where ops.demo), 0)     as demo,
+           count(*) filter (where not ops.demo) as n_real,
+           count(*) filter (where ops.demo)     as n_demo
     from ops group by ops.uid
   )
   select c.user_id, c.nome, c.email,
          coalesce(d.contas_reais, 0), coalesce(d.contas_demo, 0),
-         coalesce(d.operacoes_real, 0)::bigint, coalesce(d.operacoes_demo, 0)::bigint,
+         -- quem só operou no manual e ainda não entrou em comissoes_diarias também conta como "operou"
+         greatest(coalesce(d.operacoes_real, 0), coalesce(k.n_real, 0))::bigint,
+         greatest(coalesce(d.operacoes_demo, 0), coalesce(k.n_demo, 0))::bigint,
          coalesce(d.entradas_real, 0), coalesce(d.entradas_demo, 0),
          coalesce(d.pagamentos_real, 0), coalesce(d.pagamentos_demo, 0),
          coalesce(d.resultado_real, 0), coalesce(d.resultado_demo, 0),
