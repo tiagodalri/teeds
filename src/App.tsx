@@ -315,6 +315,7 @@ export default function App() {
   const [aviso, setAviso] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
   // Em conta real o primeiro clique arma e o segundo compra; guarda o tipo armado.
   const [confirmar, setConfirmar] = useState<string | null>(null)
+  const compraEmCurso = useRef(false)
   const [vendendo, setVendendo] = useState<number | null>(null)
   const [modo, setModo] = useState<'direcao' | 'digitos'>('direcao')
   // Multitela (10/11/2026, ideia do Victor Dias): na GlobalFly
@@ -1162,9 +1163,8 @@ export default function App() {
     : acimaDoSaldo ? 'Saldo insuficiente'
     : 'Indisponível agora'
 
-  // A mesma trava de conta real vale para os dois modos. Dígitos pulavam ela.
+  // 13/11/2026 (pedido do Tiago): compra no 1º clique, também na conta real. O segundo clique fazia perder o tempo da entrada.
   async function comprarDigito(tipo: DigitContract, barreira: string | undefined, ticks: number) {
-    if (contaRealNaTela && confirmar !== tipo) { setConfirmar(tipo); return }
     setConfirmar(null)
     await executar(tipo, { duration: ticks, durationUnit: 't', barrier: barreira })
   }
@@ -1175,7 +1175,6 @@ export default function App() {
       setAviso({ tipo: 'erro', texto: 'Digite um valor a partir de US$ 0,35.' })
       return
     }
-    if (contaRealNaTela && confirmar !== tipo) { setConfirmar(tipo); return }
     setConfirmar(null)
     await executar(tipo, { duration, durationUnit: unidade })
   }
@@ -1183,8 +1182,8 @@ export default function App() {
   /*
     Atalhos da boleta (computador): Shift+↑ Comprar, Shift+↓ Vender
     (27/10/2026: Subir/Descer viraram Comprar/Vender, pedido do Tiago), + e − mudam o valor. Com Shift de propósito: uma seta solta rola a
-    página, e compra por engano não pode acontecer. Na conta real o primeiro
-    atalho arma e o segundo confirma, igual ao clique. Nunca dispara digitando
+    página, e compra por engano não pode acontecer. Compra no primeiro atalho,
+    igual ao clique (13/11/2026). Nunca dispara digitando
     num campo nem com uma janela aberta por cima.
   */
   const atalhoRef = useRef<(e: KeyboardEvent) => void>(() => {})
@@ -1254,6 +1253,9 @@ export default function App() {
     extra: { duration: number; durationUnit: string; barrier?: string },
   ) {
     if (!conta.socket || !symbolCode) return
+    // compra no 1º clique: um clique duplo sem querer não pode virar duas entradas
+    if (compraEmCurso.current) return
+    compraEmCurso.current = true
     setComprando(tipo)
     setAviso(null)
     try {
@@ -1265,6 +1267,7 @@ export default function App() {
     } catch (e) {
       setAviso({ tipo: 'erro', texto: traduzirErro((e as Error).message) })
     } finally {
+      compraEmCurso.current = false
       setComprando(null)
     }
   }

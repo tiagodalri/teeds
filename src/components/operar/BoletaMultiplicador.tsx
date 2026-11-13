@@ -129,7 +129,7 @@ export function BoletaMultiplicador({ cabecalho, socket, simbolo, pipSize, moeda
   async function clicar(tipo: Tipo) {
     const c = cotas[tipo]
     if (!pode || !c || !multiplicador || comprando) return
-    if (contaReal && armado !== tipo) { setArmado(tipo); return }
+    // compra no 1º clique, também na conta real (13/11/2026)
     setArmado(null)
     await aoComprar({ tipo, stake, multiplicador, takeProfit, stopLoss, cancelamento }, c)
   }
