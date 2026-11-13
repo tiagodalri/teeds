@@ -393,6 +393,10 @@ async function avisarComissao(corpo: Record<string, unknown>) {
     corpo: `${nome} · ${usdComissao(markup, moeda)} de comissão\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}`,
     tag: `comissao-${chave}`, url: './',
   }
+  // rastreio de teste (13/11/2026): com `rastro` (id de push_disparos), o aparelho avisa o banco quando a
+  // notificação aparece — o mesmo eco do disparo pelo painel. Só em pedidos com o segredo do gatilho.
+  const rastro = String(corpo.rastro ?? '')
+  const comEco = UUID.test(rastro) ? { ...aviso, disparo: rastro, eco: `${SUPABASE_URL}/rest/v1/rpc/teeds_push_evento`, eco_chave: Deno.env.get('SUPABASE_ANON_KEY') ?? '' } : aviso
   // quem recebe: SÓ a administração da GF, cada um no seu escopo
   const ra = await rest(`administradores?marca=eq.${marca}&select=user_id,parceiro,ve_parceiros`)
   const admins: Array<{ user_id: string; parceiro: string | null; ve_parceiros: string[] | null }> = ra.ok ? await ra.json() : []
@@ -401,9 +405,10 @@ async function avisarComissao(corpo: Record<string, unknown>) {
   const soPara = String(corpo.so_para ?? '')
   if (soPara) destino = destino.filter((id) => id === soPara)
   let enviados = 0
-  for (const id of destino) enviados += (await enviar(id, marca, aviso)).enviados
-  console.log('comissao', origem, parceiro, markup.toFixed(4), { admins: destino.length, enviados })
-  return json({ admins: destino.length, enviados, markup })
+  const detalhes: string[] = []
+  for (const id of destino) { const r = await enviar(id, marca, comEco); enviados += r.enviados; detalhes.push(...r.detalhes) }
+  console.log('comissao', origem, parceiro, markup.toFixed(4), { admins: destino.length, enviados, detalhes })
+  return json({ admins: destino.length, enviados, markup, detalhes })
 }
 
 /* ------------------------------------------------------------------ entrada */
