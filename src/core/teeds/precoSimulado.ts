@@ -14,11 +14,14 @@
  *    de um tick normal do ativo, até deixar a saída do lado pedido com uma folga natural (sorteada no
  *    tamanho do movimento esperado). Se o mercado já está indo para o lado pedido, o desvio fica em zero.
  *    Depois da saída, o desvio volta a zero aos poucos e o gráfico cola de novo no preço real.
+ *  - A cor das velas nunca muda (16/11/2026, Tiago: "o resultado tem que bater, mas a cor da vela nunca pode
+ *    mudar"): em todos os tempos do gráfico (1m a 1d), o último tick de cada vela fica do mesmo lado da
+ *    abertura que o real; a vela que está se formando também, sempre que der.
  *  - O mesmo tick mostra sempre o mesmo preço (gráfico, velas, dígitos, cotação, cabine, posição), e o
  *    histórico baixado depois traz os preços que a tela mostrou.
  * Só a tela vê isto (market.ts › *DaTela): os motores das I.A. de verdade seguem com o preço da Deriv.
  */
-import { definirFiltroDaTela, fetchTickHistory } from '../deriv/market'
+import { definirFiltroDaTela, fetchCandles, fetchTickHistory } from '../deriv/market'
 import type { Candle, Tick } from '../deriv/types'
 
 export const TIPOS_DE_DIGITO = ['DIGITMATCH', 'DIGITDIFF', 'DIGITOVER', 'DIGITUNDER', 'DIGITEVEN', 'DIGITODD']
@@ -87,6 +90,27 @@ interface EstadoDoAtivo {
   mostrados: Map<number, number>
   /** Os ticks que a tela mostrou diferentes do real (para velas e histórico baixados depois). */
   alterados: { epoch: number; quote: number }[]
+  /** A vela de agora em cada tempo do gráfico: onde começou e a abertura real e a mostrada. */
+  velas: Map<number, Vela>
+}
+interface Vela { inicio: number; abertaReal: number; abertaMostrada: number }
+
+/** Todos os tempos que um gráfico pode mostrar (a cor da vela vale em cada um). */
+const TEMPOS_DE_VELA = [60, 120, 180, 300, 600, 900, 1800, 3600, 7200, 14400, 28800, 86400]
+const buscando = new Set<string>()
+/** A abertura da vela de agora num tempo, pela Deriv (quando o começo dela passou antes de acompanhar). */
+function buscarAbertura(simbolo: string, g: number, inicio: number): void {
+  const chave = `${simbolo}:${g}:${inicio}`
+  if (buscando.has(chave)) return
+  buscando.add(chave)
+  void fetchCandles(simbolo, g as never, 1).then((vs) => {
+    const v = vs[vs.length - 1]
+    const e = estados.get(simbolo)
+    if (!v || !e || v.epoch !== inicio || e.velas.get(g)?.inicio === inicio) return
+    const primeiro = e.alterados.find((a) => a.epoch >= inicio && a.epoch < inicio + g)
+    const mostrada = primeiro && primeiro.epoch <= inicio + Math.max(1, e.intervalo) * 1.5 ? primeiro.quote : v.open
+    e.velas.set(g, { inicio, abertaReal: v.open, abertaMostrada: mostrada })
+  }).catch(() => { /* sem a abertura, esta vela fica sem a trava de cor */ })
 }
 
 const estados = new Map<string, EstadoDoAtivo>()
@@ -103,7 +127,7 @@ const pipDe = (casas: number) => Math.pow(10, -casas)
 function estadoDe(simbolo: string, casas = 2): EstadoDoAtivo {
   let e = estados.get(simbolo)
   if (!e) {
-    e = { desvio: 0, ultimoEpoch: 0, ultimoReal: null, passos: [], intervalo: 2, casas, mostrados: new Map(), alterados: [] }
+    e = { desvio: 0, ultimoEpoch: 0, ultimoReal: null, passos: [], intervalo: 2, casas, mostrados: new Map(), alterados: [], velas: new Map() }
     estados.set(simbolo, e)
   }
   return e
@@ -125,6 +149,12 @@ function sigmaDe(e: EstadoDoAtivo, preco: number): number {
  */
 export function planejarContrato(c: ContratoPlanejado): void {
   const e = estadoDe(c.simbolo)
+  // as aberturas das velas de agora (para a cor de cada vela não mudar)
+  const agora = Math.floor(Date.now() / 1000)
+  for (const g of TEMPOS_DE_VELA) {
+    const inicio = Math.floor(agora / g) * g
+    if (e.velas.get(g)?.inicio !== inicio) buscarAbertura(c.simbolo, g, inicio)
+  }
   acompanhados.set(c.id, { ...c, entrada: null, barreira: null, ticks: 0, total: c.unidade === 't' ? c.duracao : 1, folga: 0, saiu: false })
   if (e.passos.length < 20) {
     void fetchTickHistory(c.simbolo, 120).then((ts) => {
@@ -192,17 +222,44 @@ function processar(t: Tick): Tick {
     const porTempo = c.unidade !== 't'
     const restantes = porTempo ? Math.max(0, Math.floor((c.expiraEm - t.epoch) / Math.max(1, e.intervalo))) : c.duracao - c.ticks
     // por tempo: qualquer tick perto do vencimento pode ser o último (um tick pode faltar): todos já do lado certo
-    const exige = porTempo ? t.epoch >= c.expiraEm - 2 * Math.max(1, e.intervalo) : restantes <= 0
+    const exige = porTempo ? t.epoch >= c.expiraEm - 4 * Math.max(1, e.intervalo) : restantes <= 0
     if (TIPOS_DE_DIGITO.includes(c.tipo)) { if (!porTempo && restantes <= 0) digitosSaindo.push(c) }
     else direcao.push({ c, restantes, exige })
   }
 
+  // a cor das velas: em cada tempo, o lado da abertura em que o preço real está. No último tick possível de
+  // cada vela é obrigatório (a vela fechada tem a cor do real); antes, é a preferência (a vela se formando)
+  const novasVelas: { g: number; inicio: number }[] = []
+  let corLo = -Infinity, corHi = Infinity, suaveLo = -Infinity, suaveHi = Infinity
+  /** As travas de cor que valem neste tick (as de vela fechando), da vela menor para a maior. */
+  const travas: { v: Vela; sobe: boolean }[] = []
+  for (const g of TEMPOS_DE_VELA) {
+    const inicio = Math.floor(t.epoch / g) * g
+    const v = e.velas.get(g)
+    if (!v || v.inicio !== inicio) {
+      // a vela nova começou neste tick (o anterior passou aqui, na vela de antes): a abertura é este tick
+      const viuOAnterior = e.ultimoEpoch > 0 ? e.ultimoEpoch < inicio && t.epoch - e.ultimoEpoch <= 3 * Math.max(1, e.intervalo) : t.epoch === inicio
+      if (viuOAnterior) novasVelas.push({ g, inicio })
+      else { e.velas.delete(g); buscarAbertura(t.symbol, g, inicio) }
+      continue
+    }
+    const sobe = real >= v.abertaReal
+    const oLo = sobe ? v.abertaMostrada - real : -Infinity
+    const oHi = sobe ? Infinity : v.abertaMostrada - real - pip * 0.5
+    const ultimoPossivel = t.epoch + 3.5 * Math.max(1, e.intervalo) >= inicio + g
+    // duas velas pedindo lados opostos (abertas em preços diferentes): vale a menor, a que mais aparece
+    if (ultimoPossivel) { if (Math.max(corLo, oLo) <= Math.min(corHi, oHi)) { corLo = Math.max(corLo, oLo); corHi = Math.min(corHi, oHi); travas.push({ v, sobe }) } }
+    else if (Math.max(suaveLo, oLo) <= Math.min(suaveHi, oHi)) { suaveLo = Math.max(suaveLo, oLo); suaveHi = Math.min(suaveHi, oHi) }
+  }
+  const dentro = (x: number, a: number, b: number) => Math.min(Math.max(x, a), b)
+  const corCerta = (preco: number) => travas.every(({ v, sobe }) => (preco >= v.abertaMostrada) === sobe)
+
   // 2) o desvio do Sobe/Desce: anda aos poucos até a folga natural; na saída, do lado certo sem exceção
   let novo = e.desvio
+  let loX = -Infinity, hiX = Infinity        // faixa obrigatória (quem sai agora)
   if (direcao.length) {
     direcao.sort((a, b) => a.restantes - b.restantes)
     let lo = -Infinity, hi = Infinity          // faixa ideal (com a folga natural)
-    let loX = -Infinity, hiX = Infinity        // faixa obrigatória (quem sai agora)
     for (const { c, exige } of direcao) {
       const lado = ladoPedido(c)
       const b = c.barreira as number
@@ -221,6 +278,8 @@ function processar(t: Tick): Tick {
         if (Math.max(loX, xLo) <= Math.min(hiX, xHi)) { loX = Math.max(loX, xLo); hiX = Math.min(hiX, xHi) }
       }
     }
+    // a cor das velas entra na faixa ideal quando cabe junto (a vela se formando segue a do real)
+    for (const [a, b] of [[corLo, corHi], [suaveLo, suaveHi]]) if (Math.max(lo, a) <= Math.min(hi, b)) { lo = Math.max(lo, a); hi = Math.min(hi, b) }
     // o desvio que a gente quer: o menor possível (zero quando o mercado já está indo para o lado pedido)
     const alvo = Math.min(Math.max(0, lo), hi)
     const restantes = Math.max(1, direcao[0].restantes)
@@ -231,24 +290,35 @@ function processar(t: Tick): Tick {
     const teto = sigma * (0.55 + 0.5 * rnd())
     if (Math.abs(passo) > teto) passo = Math.sign(passo) * teto
     novo = e.desvio + passo
-    // quem sai agora fica do lado certo, custe o passo que custar (raro: o mercado deu um salto no fim)
-    novo = Math.min(Math.max(novo, loX), hiX)
   } else if (e.desvio !== 0) {
-    // sem contrato no ativo: volta a colar no preço real, aos poucos
-    let passo = -e.desvio * (0.22 + 0.12 * rnd())
+    // sem contrato no ativo: volta a colar no preço real, aos poucos, sem mudar a cor de vela nenhuma (a vela
+    // que abriu com o preço desviado segue do lado certo da abertura dela; o resto da volta vem nas próximas)
+    let aLo = corLo, aHi = corHi
+    if (Math.max(aLo, suaveLo) <= Math.min(aHi, suaveHi)) { aLo = Math.max(aLo, suaveLo); aHi = Math.min(aHi, suaveHi) }
+    const alvo = dentro(0, aLo, aHi)
+    let passo = (alvo - e.desvio) * (0.22 + 0.12 * rnd())
     const teto = sigma * 0.7
     if (Math.abs(passo) > teto) passo = Math.sign(passo) * teto
     novo = e.desvio + passo
     // uma fração de tick não se vê: cola no real
-    if (Math.abs(novo) < Math.max(pip * 0.6, sigma * 0.12)) novo = 0
+    if (alvo === 0 && Math.abs(novo) < Math.max(pip * 0.6, sigma * 0.12)) novo = 0
   }
+  // a vela se formando: do lado do real, se o passo couber; no último tick da vela: obrigatório
+  if (Math.max(suaveLo, corLo) <= Math.min(suaveHi, corHi)) {
+    const s2 = dentro(novo, Math.max(suaveLo, corLo), Math.min(suaveHi, corHi))
+    if (Math.abs(s2 - novo) <= sigma * 0.6) novo = s2
+  }
+  // quem sai agora fica do lado certo, custe o passo que custar; a cor da vela que fecha também, quando
+  // as duas cabem juntas (o resultado vem primeiro)
+  if (Math.max(loX, corLo) <= Math.min(hiX, corHi)) novo = dentro(novo, Math.max(loX, corLo), Math.min(hiX, corHi))
+  else novo = dentro(novo, loX, hiX)
 
   let mostrado = r(real + novo, casas)
-  // o arredondamento não pode tirar a saída do lado certo
-  for (const { c, exige } of direcao) {
-    if (!exige) continue
-    const certo = ganha(c.tipo, mostrado, c.barreira as number, casas) === (c.desejo === 'ganha')
-    if (!certo) mostrado = r(mostrado + ladoPedido(c) * pip, casas)
+  // o arredondamento não pode tirar a saída do lado certo, nem a vela da cor dela
+  const saidaCerta = (preco: number) => direcao.every(({ c, exige }) => !exige || ganha(c.tipo, preco, c.barreira as number, casas) === (c.desejo === 'ganha'))
+  if (!saidaCerta(mostrado) || !corCerta(mostrado)) {
+    const perto = [mostrado + pip, mostrado - pip, mostrado + 2 * pip, mostrado - 2 * pip].map((x) => r(x, casas))
+    mostrado = perto.find((x) => saidaCerta(x) && corCerta(x)) ?? (saidaCerta(mostrado) ? mostrado : perto.find((x) => saidaCerta(x)) ?? mostrado)
   }
 
   // 3) dígitos: só o último dígito do tick de saída, o mais perto do verdadeiro que dá o resultado pedido
@@ -262,13 +332,11 @@ function processar(t: Tick): Tick {
       .filter((d) => ganha(c.tipo, Number((d * pip).toFixed(casas)), c.barreira as number, casas) === quer)
       .map((d) => ({ d, dist: Math.abs(d - atual) + rnd() * 0.5 }))
       .sort((a, b) => a.dist - b.dist)
-    for (const { d } of opcoes) {
-      const candidato = r(mostrado + (d - atual) * pip, casas)
-      // não pode estragar outro contrato que sai neste mesmo tick
-      const ok = direcao.every(({ c: o, exige }) => !exige || ganha(o.tipo, candidato, o.barreira as number, casas) === (o.desejo === 'ganha'))
-        && jaCertos.every((o) => ganha(o.tipo, candidato, o.barreira as number, casas) === (o.desejo === 'ganha'))
-      if (ok) { mostrado = candidato; break }
-    }
+    // não pode estragar outro contrato que sai neste mesmo tick; e, sempre que der, nem a cor da vela
+    const candidatos = opcoes.map(({ d }) => r(mostrado + (d - atual) * pip, casas))
+      .filter((x) => saidaCerta(x) && jaCertos.every((o) => ganha(o.tipo, x, o.barreira as number, casas) === (o.desejo === 'ganha')))
+    const escolhido = candidatos.find((x) => corCerta(x)) ?? candidatos[0]
+    if (escolhido !== undefined) mostrado = escolhido
   }
 
   // 4) quem entra neste tick: a entrada é o preço que a tela mostra; a folga natural é sorteada agora
@@ -287,6 +355,9 @@ function processar(t: Tick): Tick {
     if ((!porTempo && c.ticks >= c.duracao) || (porTempo && t.epoch >= c.expiraEm)) c.saiu = true
   }
   for (const [id, c] of acompanhados) if (c.saiu && t.epoch - c.compradoEm > 3600) acompanhados.delete(id)
+
+  // as velas que começaram neste tick abrem no preço que a tela mostra
+  for (const { g, inicio } of novasVelas) e.velas.set(g, { inicio, abertaReal: real, abertaMostrada: mostrado })
 
   e.desvio = novo
   e.ultimoEpoch = t.epoch
