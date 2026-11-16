@@ -352,12 +352,14 @@ export async function requestProposal(
     currency: string
     /** Barreira - nos contratos de digito, o digito escolhido. */
     barrier?: string
+    /** 'payout': `amount` é o pagamento (o preço vem no askPrice). Padrão: o valor da entrada. */
+    basis?: 'stake' | 'payout'
   },
 ): Promise<{ id: string; askPrice: number; payout: number; longcode: string; appMarkup: number | null }> {
   const res = await socket.send({
     proposal: 1,
     amount: params.amount,
-    basis: 'stake',
+    basis: params.basis ?? 'stake',
     contract_type: params.contractType,
     currency: params.currency,
     duration: params.duration,

@@ -44,6 +44,15 @@ interface EmAndamento {
   /** Variação típica de um tick (para estimar quanto a posição vale antes do fim). */
   passos: number[]
   parar: () => void
+  /**
+   * O valor de encerrar pela cotação da Deriv (16/11/2026, Tiago: "os valores de encerrar antes batem com a
+   * Deriv?"): a cada ~2 s, a cotação de um contrato equivalente (mesmo pagamento, mesma distância da
+   * barreira, o tempo que falta), menos o desconto da Deriv ao recomprar, medido na própria compra.
+   */
+  cotacao: { valor: number; em: number; chance: number } | null
+  pedindo: boolean
+  /** Meia diferença entre compra e venda da Deriv, em fração do pagamento (medida na compra, no preço justo). */
+  margem: number | null
 }
 
 const contratos = new Map<number, OpenContract>()
@@ -71,6 +80,9 @@ export function limparContratosSimulados(): void {
 }
 
 const barreiraDe = (a: EmAndamento, entrada: number) => barreiraDoPedido(a.c.contractType, a.barreiraPedida, entrada)
+/** Segundos entre ticks do ativo: os "(1s)" têm um por segundo, os outros um a cada 2 s. */
+const segundosPorTick = (simbolo: string) => (/^1HZ/.test(simbolo) ? 1 : 2)
+
 /** Chance de ganhar daqui até o fim, só para o "quanto vale agora" da posição. */
 function chanceAgora(a: EmAndamento, spot: number, agora: number): number {
   const c = a.c
@@ -79,7 +91,7 @@ function chanceAgora(a: EmAndamento, spot: number, agora: number): number {
     const todos = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
     return todos.filter((d) => ganha(c.contractType, Number(`0.${d}`), c.barrier ?? 0, 1)).length / 10
   }
-  const restante = a.unidade === 't' ? Math.max(1, a.duracao - a.ticksDesdeEntrada) : Math.max(1, (c.expiryTime - agora) / 2)
+  const restante = a.unidade === 't' ? Math.max(1, a.duracao - a.ticksDesdeEntrada) : Math.max(1, (c.expiryTime - agora) / segundosPorTick(c.symbol))
   const media = a.passos.length ? a.passos.reduce((s, x) => s + x * x, 0) / a.passos.length : 0
   const sigma = Math.sqrt(media) * Math.sqrt(restante) || 1e-9
   const z = (spot - (c.barrier ?? c.entrySpot)) / sigma
@@ -109,6 +121,43 @@ function liquidar(a: EmAndamento, saida: number, epoch: number) {
     quando: new Date(epoch * 1000).toISOString(), origem: 'manual', id: 'manual', nome: 'Manual', ativo: c.symbol,
     tipo: c.contractType, entrada: c.buyPrice, pagamento: venceu ? c.payout : 0, resultado: lucro, ganhou: venceu,
   })
+}
+
+/** O menor prazo que a Deriv cota no Comprar/Vender dos sintéticos (abaixo dele, vale o cálculo daqui). */
+const PRAZO_MINIMO_DA_COTACAO = 15
+
+/**
+ * Pede à Deriv quanto vale a posição agora: a cotação de um contrato equivalente pelo pagamento dela, com a
+ * barreira na mesma distância do preço que a tela mostra (com o roteiro, o preço da tela anda desviado do real,
+ * e a Deriv cota a partir do real: a distância é o que vale). Sem comprar nada (linha pública).
+ */
+async function cotarVenda(a: EmAndamento, precoNaTela: number): Promise<void> {
+  const c = a.c
+  if (a.pedindo || c.barrier === null) return
+  const restante = c.expiryTime - Math.floor(Date.now() / 1000)
+  if (restante < PRAZO_MINIMO_DA_COTACAO) return
+  a.pedindo = true
+  // a chance no preço em que a cotação foi pedida: entre uma cotação e outra, o valor anda com o preço
+  const chanceNaHora = chanceAgora(a, precoNaTela, Math.floor(Date.now() / 1000))
+  const tipo = /^CALL/.test(c.contractType) ? 'CALL' : 'PUT'
+  const casas = c.pipSize || 2
+  const pedir = (barreira?: string) => requestProposal(publicSocket, {
+    symbol: c.symbol, contractType: tipo, amount: c.payout, basis: 'payout', currency: c.currency,
+    duration: restante, durationUnit: 's', ...(barreira !== undefined ? { barrier: barreira } : {}),
+  })
+  try {
+    // o desconto ao recomprar: na compra, o preço justo era metade do pagamento (no preço); o que passou disso
+    // é a margem da Deriv. Com barreira pedida, mede com uma cotação no preço de agora.
+    if (a.margem === null) {
+      const base = a.barreiraPedida ? (await pedir()).askPrice : c.buyPrice
+      a.margem = Math.min(0.1, Math.max(0, base / c.payout - 0.5))
+    }
+    const d = Number((c.barrier - precoNaTela).toFixed(casas))
+    const barreira = Math.abs(d) < Math.pow(10, -casas) ? undefined : `${d > 0 ? '+' : '-'}${Math.abs(d).toFixed(casas)}`
+    const p = await pedir(barreira)
+    const valor = Math.min(c.payout, Math.max(0, r2(p.askPrice - 2 * a.margem * c.payout)))
+    a.cotacao = { valor, em: Date.now(), chance: chanceNaHora }
+  } catch { /* segue com o cálculo daqui até a próxima */ } finally { a.pedindo = false }
 }
 
 /** Como na Deriv: só o Comprar/Vender por tempo encerra antes (ticks e dígitos vão até o fim). */
@@ -183,7 +232,8 @@ export async function comprarSimulado(pedido: {
     expiryTime: porTempo ? agora + pedido.duration * (SEGUNDOS[pedido.durationUnit] ?? 1) : agora + pedido.duration * 2,
     pipSize: 2, pipSizeInformado: false, appMarkup: p.appMarkup,
   }
-  const a: EmAndamento = { c, duracao: pedido.duration, unidade: pedido.durationUnit, barreiraPedida: pedido.barrier, ticksDesdeEntrada: 0, ultimo: null, passos: [], parar: () => {} }
+  const a: EmAndamento = { c, duracao: pedido.duration, unidade: pedido.durationUnit, barreiraPedida: pedido.barrier, ticksDesdeEntrada: 0, ultimo: null, passos: [], parar: () => {},
+    cotacao: null, pedindo: false, margem: pedido.barrier ? null : Math.min(0.1, Math.max(0, p.askPrice / p.payout - 0.5)) }
   contratos.set(id, c)
   andamento.set(id, a)
   // o roteiro da manual: a próxima operação dele diz o resultado; "Mercado" deixa o preço de verdade decidir
@@ -213,9 +263,20 @@ export async function comprarSimulado(pedido: {
       if (porTempo && t.epoch === atual.c.expiryTime) { liquidar(atual, t.quote, t.epoch); return }
       atual.c = { ...atual.c, currentSpot: t.quote }
     }
-    const valeAgora = r2(atual.c.payout * chanceAgora(atual, t.quote, t.epoch))
     // como na Deriv: o Comprar/Vender por tempo pode encerrar antes, até perto do fim
     const vende = podeEncerrarAntes(atual.c.contractType, atual.unidade) && atual.c.entrySpot !== null && t.epoch < atual.c.expiryTime - 1
+    // quanto vale agora: a cotação da Deriv (renovada a cada ~2 s); sem ela (últimos 15 s, ou falhou), o cálculo
+    // daqui com o mesmo desconto da Deriv ao recomprar (maior no meio, some quando o resultado já está decidido)
+    const chance = chanceAgora(atual, t.quote, t.epoch)
+    const margem = atual.margem ?? 0
+    let valeAgora = r2(Math.max(0, atual.c.payout * (chance - 2 * margem * 4 * chance * (1 - chance))))
+    if (vende) {
+      // a última cotação da Deriv, andando com o preço de cada tick desde que foi pedida
+      if (atual.cotacao && Date.now() - atual.cotacao.em < 6000) {
+        valeAgora = r2(Math.min(atual.c.payout, Math.max(0, atual.cotacao.valor + atual.c.payout * (chance - atual.cotacao.chance))))
+      }
+      if (!atual.cotacao || Date.now() - atual.cotacao.em > 1500) void cotarVenda(atual, t.quote)
+    }
     atual.c = { ...atual.c, isValidToSell: vende, motivoSemVenda: vende ? null : atual.c.motivoSemVenda, bidPrice: valeAgora, profit: r2(valeAgora - atual.c.buyPrice), profitPercentage: r2(((valeAgora - atual.c.buyPrice) / atual.c.buyPrice) * 100) }
     contratos.set(id, atual.c)
     avisar()
