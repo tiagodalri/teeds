@@ -193,11 +193,11 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                 <button type="button" className="in-pilula ouro" onClick={() => aoIr('robos')}><Icone d={ICONE.ia} />Ligar I.A.</button>
                 <button type="button" className="in-pilula" onClick={() => aoIr('operar')}><Icone d={ICONE.manual} />Operar</button>
                 <a className="in-pilula" href={CAIXA_DERIV} target="_blank" rel="noopener noreferrer"><Icone d={ICONE.deposito} />Depositar</a>
-                {aoAbrirCarteira && <button type="button" className="in-pilula" onClick={aoAbrirCarteira}><Icone d={ICONE.carteira} />Carteira</button>}
+                {aoAbrirCarteira && <button type="button" className="in-pilula" data-livre onClick={aoAbrirCarteira}><Icone d={ICONE.carteira} />Carteira</button>}
               </>
             ) : (
               <>
-                <button type="button" className="in-pilula ouro" onClick={conectar}>Conectar minha Deriv</button>
+                <button type="button" className="in-pilula ouro" data-livre onClick={conectar}>Conectar minha Deriv</button>
                 {afiliadoDaDeriv() && <a className="in-pilula" href={afiliadoDaDeriv()} target="_blank" rel="noopener noreferrer">Ainda não tenho conta</a>}
               </>
             )}
@@ -219,7 +219,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
           { id: 'aulas', rotulo: 'Aulas', icone: ICONE.aulas, fazer: () => aoIr('aulas') },
           { id: 'ajuda', rotulo: MARCA.suporte ? 'Suporte' : 'Ajuda', icone: ICONE.ajuda, fazer: () => (MARCA.suporte ? abrirSuporte() : aoIr('aulas')) },
         ].map((a) => (
-          <button key={a.id} type="button" className={a.principal ? 'principal' : ''} onClick={a.fazer}>
+          <button key={a.id} type="button" className={a.principal ? 'principal' : ''} data-livre={a.id === 'deposito' || a.id === 'ajuda' ? '' : undefined} onClick={a.fazer}>
             <span className="in-acao-circulo"><Icone d={a.icone} />{a.externo && <i className="in-acao-externo"><Icone d={ICONE.externo} /></i>}</span>
             <span className="in-acao-rotulo">{a.rotulo}</span>
           </button>

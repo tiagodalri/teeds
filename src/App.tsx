@@ -72,6 +72,8 @@ import { permitirModoSimulado, useLivroSimulado, useModoSimulado } from './core/
 import { comprarSimulado, limparContratosSimulados, useContratosSimulados } from './core/teeds/corretoraSimulada'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { LimiteDoSimulador } from './components/plano/LimiteDoSimulador'
+import { TravaDaConta } from './components/plano/TravaDaConta'
+import { TELAS_LIVRES, abrirLiberarConta, useContaTravada } from './core/teeds/liberacao'
 import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
@@ -258,6 +260,8 @@ export default function App() {
   const [categoria, setCategoria] = useState<Categoria | null>(null)
   // 05/11/2026: o subplano do GF Member (Gold, Black, Prestige) e a janela "Meu plano"
   const meuSubplano = useMeuSubplano()
+  // 16/11/2026: Gold sem saldo na conta real da GF = só Início, Suporte, Perfil, depósitos e Marketplace
+  const contaTravada = useContaTravada()
   const [planoAberto, setPlanoAberto] = useState<{ foco: string | null } | null>(null)
   useEffect(() => {
     if (!MARCA.seloCategoria) return
@@ -710,6 +714,10 @@ export default function App() {
   useEffect(() => { if (trancado && tela !== 'inicio' && MARCA.inicio) setTela('inicio') }, [trancado, tela]) // eslint-disable-line react-hooks/exhaustive-deps
   // abriu a tela das I.A.: confere na hora o que está no ar (sem robô, a consulta é espaçada)
   useEffect(() => { if (tela === 'robos' && !trancado) conferirVivasAgora() }, [tela, trancado])
+  // conta travada (Gold sem saldo): qualquer tela fora das livres volta para o Início com o aviso
+  useEffect(() => {
+    if (contaTravada && !JANELA && !TELAS_LIVRES.has(tela)) { setTela('inicio'); abrirLiberarConta() }
+  }, [contaTravada, tela]) // eslint-disable-line react-hooks/exhaustive-deps
   // liberado na live: a plataforma abre com um recado
   const estavaTrancado = useRef(false)
   useEffect(() => {
@@ -1639,6 +1647,14 @@ export default function App() {
         </Suspense>
       )}
 
+      {/* Gold sem saldo na conta real (GF, 16/11/2026): a janela "Libere a sua conta" e a trava dos cliques */}
+      {MARCA.id === 'globalfly' && !JANELA && teeds.sessao && !trancado && (
+        <TravaDaConta sessao={teeds.sessao} marca={MARCA.id} tela={tela}
+          contas={conta.status === 'logado' ? conta.todasAsContas : []} derivConectada={conta.status === 'logado'}
+          vivas={vivasRobos} planos={meuSubplano?.subplanos ?? []} comprador={teeds.sessao.usuario}
+          aoConectar={conta.login} aoAtualizarContas={conta.atualizarContas} />
+      )}
+
       {/* o olhinho dos itens de admin também tira o chat interno da equipe (Tiago, 27/10/2026) */}
       {adminConfirmado && !JANELA && teeds.sessao && !menuAdminOculto && (
         <Suspense fallback={null}>
@@ -1669,14 +1685,14 @@ export default function App() {
       )}
 
       {/* o vídeo de boas-vindas vem antes do tour; GF Member só depois da live (as aulas ainda estão travadas) */}
-      {mostrarVideoInicio && teeds.sessao && (
+      {mostrarVideoInicio && teeds.sessao && !contaTravada && (
         <Suspense fallback={null}>
           <BoasVindasEmVideo sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} plano={plano} admin={admin} aoFechar={fecharVideoInicio} aoSemVideo={() => setVideoInicioDispensado(true)} />
         </Suspense>
       )}
 
       {/* o tour nunca abre por cima da live (na liberação de 09/11 ela continua aberta): espera ela fechar */}
-      {tour && !JANELA && teeds.sessao && !trancado && !mostrarVideoInicio && !decidindoVideoInicio && !assistindoLive && !live?.noAr && (
+      {tour && !JANELA && teeds.sessao && !trancado && !contaTravada && !mostrarVideoInicio && !decidindoVideoInicio && !assistindoLive && !live?.noAr && (
         <TourGuiado passos={passosDoTour({ nome: teeds.usuario?.nome || '', treino: !!MARCA.aoVivo && (membroTreino === true || admin === true) })}
           obrigatorio={tour === 'obrigatorio'} telaAtual={tela} irPara={setTela}
           aoTerminar={(destino) => fimDoTour(destino)} aoFechar={() => (tour === 'obrigatorio' ? fimDoTour() : setTour(null))} />

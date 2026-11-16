@@ -15,6 +15,7 @@
 import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { createPortal } from 'react-dom'
 import { RelogioDoSimulador, JanelaSemTempo } from './components/plano/LimiteDoSimulador'
+import { JanelaLiberarConta } from './components/plano/LiberarConta'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './styles/app.css'
@@ -652,6 +653,18 @@ function Laboratorio() {
           <RelogioDoSimulador restante={0} total={total} correndo={false} aoAbrir={() => undefined} />
         </div>
         {!q.has('sem-janela') && createPortal(<JanelaSemTempo dados={dados} atual={atual} aoFechar={() => undefined} />, document.body)}
+      </div>
+    )
+  }
+  // ?tela=liberar-conta(&sem-deriv): a janela do Gold sem saldo na conta real (16/11/2026)
+  if (qual === 'liberar-conta') {
+    const q = new URLSearchParams(location.search)
+    const sp = (id: string, nome: string, ordem: number, preco: number, ref: number, comp: number, ias: string[] | null, horas: number | null) => ({ id, nome, ordem, chamada: ({ black: 'Todas as I.A., mais simulador e a sala extra.', prestige: 'Tudo liberado, sem compartilhamento, com assessor e GFT Lab.' } as Record<string, string>)[id] ?? '', precoReferencia: ref, preco, cobranca: preco ? 'anual' : 'aquisicao-zero', compartilhamento: comp, ias, simuladorHoras: horas, salaExtra: !!preco, assessor: horas == null, lab: horas == null, checkoutUrl: 'https://pay.cakto.com.br/exemplo', checkoutPorParceiro: {}, assessorWhatsapp: null, ativo: true })
+    const planos = [sp('gold', 'Gold', 1, 0, 997, 0.1, ['goreme', 'falcon', 'legacy'], 1), sp('black', 'Black', 2, 997, 1997, 0.05, null, 12), sp('prestige', 'Prestige', 3, 1997, 2997, 0, null, null)] as never
+    const semDeriv = q.has('sem-deriv')
+    return (
+      <div className="app workspace-app" style={{ minHeight: '100dvh' }}>
+        {createPortal(<JanelaLiberarConta planos={planos} derivConectada={!semDeriv} saldoReal={semDeriv ? null : 0} aoFechar={() => undefined} />, document.body)}
       </div>
     )
   }

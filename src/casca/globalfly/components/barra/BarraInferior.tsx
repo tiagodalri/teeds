@@ -36,6 +36,7 @@ export function BarraInferior({ tela, irPara, aoVivoAgora = false }: { tela: Wor
         }
         return (
           <button key={i.id} type="button" className={`${ativo ? 'ativo' : ''} ${i.id === 'suporte' ? 'barra-suporte' : ''}`.trim()}
+            data-livre={i.id === 'inicio' || i.id === 'suporte' || i.id === 'mais' ? '' : undefined}
             aria-current={ativo && i.id !== 'mais' && i.id !== 'suporte' ? 'page' : undefined} onClick={tocar}>
             <span className="barra-icone">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d={i.d} /></svg>

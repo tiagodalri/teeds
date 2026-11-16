@@ -249,15 +249,24 @@ function enderecoDoDestino(marca: string, destino: string, parceiro: string | nu
 async function disparar(req: Request, corpo: Record<string, unknown>) {
   const marca = String(corpo.marca ?? '')
   if (!MARCAS.has(marca)) return json({ erro: 'Plataforma inválida.' }, 400)
-  const quem = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICO, Authorization: req.headers.get('Authorization') ?? '' } })
-  if (!quem.ok) return json({ erro: 'Entre na sua conta.' }, 401)
-  const u = await quem.json()
-  // o admin geral, ou o admin do parceiro com acesso total, que dispara só para os clientes dele (05/11/2026)
-  const adm = await rest(`administradores?user_id=eq.${u.id}&or=(marca.eq.${marca},marca.eq.teeds)&select=marca,parceiro,acesso_total,ve_parceiros`)
-  const linhasAdm: Array<{ marca: string; parceiro: string | null; acesso_total: boolean; ve_parceiros: string[] | null }> = adm.ok ? await adm.json() : []
-  const geral = linhasAdm.some((l) => !l.parceiro)
-  const doParceiro = linhasAdm.find((l) => l.marca === marca && l.parceiro && l.acesso_total)
-  if (!geral && !doParceiro) return json({ erro: 'Só a administração dispara notificações.' }, 403)
+  // 16/11/2026: o próprio sistema (com o segredo do gatilho) dispara para os 'travados' (Gold sem saldo)
+  const gatilho = req.headers.get('x-gatilho')
+  const segredo = gatilho ? await lerConfig('PUSH_GATILHO') : null
+  const sistema = !!segredo && gatilho === segredo
+  let u: { id: string } | null = null
+  let geral = sistema
+  let doParceiro: { marca: string; parceiro: string | null; acesso_total: boolean; ve_parceiros: string[] | null } | undefined
+  if (!sistema) {
+    const quem = await fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: { apikey: SERVICO, Authorization: req.headers.get('Authorization') ?? '' } })
+    if (!quem.ok) return json({ erro: 'Entre na sua conta.' }, 401)
+    u = await quem.json()
+    // o admin geral, ou o admin do parceiro com acesso total, que dispara só para os clientes dele (05/11/2026)
+    const adm = await rest(`administradores?user_id=eq.${u!.id}&or=(marca.eq.${marca},marca.eq.teeds)&select=marca,parceiro,acesso_total,ve_parceiros`)
+    const linhasAdm: Array<{ marca: string; parceiro: string | null; acesso_total: boolean; ve_parceiros: string[] | null }> = adm.ok ? await adm.json() : []
+    geral = linhasAdm.some((l) => !l.parceiro)
+    doParceiro = linhasAdm.find((l) => l.marca === marca && l.parceiro && l.acesso_total)
+    if (!geral && !doParceiro) return json({ erro: 'Só a administração dispara notificações.' }, 403)
+  }
 
   const titulo = String(corpo.titulo ?? '').trim().slice(0, 70)
   const texto = String(corpo.corpo ?? '').trim().slice(0, 200)
@@ -267,10 +276,11 @@ async function disparar(req: Request, corpo: Record<string, unknown>) {
   const pedido = String(corpo.parceiro ?? '')
   const parceiro = !geral && doParceiro ? ((doParceiro.ve_parceiros ?? []).includes(pedido) && PARCEIROS.has(pedido) ? pedido : String(doParceiro.parceiro)) : PARCEIROS.has(String(corpo.parceiro ?? '')) || corpo.parceiro === 'direto' ? String(corpo.parceiro) : null
   if (!titulo || !texto) return json({ erro: 'Escreva o título e a mensagem.' }, 400)
-  if (!['todos', 'aguardando', 'membros', 'ativos', 'eu'].includes(publico)) return json({ erro: 'Escolha para quem enviar.' }, 400)
+  if (!['todos', 'aguardando', 'membros', 'ativos', 'travados', 'eu'].includes(publico)) return json({ erro: 'Escolha para quem enviar.' }, 400)
+  if (sistema && publico === 'eu') return json({ erro: 'Escolha para quem enviar.' }, 400)
   if (destino.startsWith('http') && !/^https:\/\//.test(destino)) return json({ erro: 'O link precisa começar com https://' }, 400)
 
-  const rd = await rest('rpc/teeds_push_destinos', { method: 'POST', body: JSON.stringify({ p_marca: marca, p_publico: publico, p_parceiro: parceiro, p_eu: u.id }) })
+  const rd = await rest('rpc/teeds_push_destinos', { method: 'POST', body: JSON.stringify({ p_marca: marca, p_publico: publico, p_parceiro: parceiro, p_eu: u?.id ?? null }) })
   const lista: Array<{ tabela: string; chave: string; endpoint: string; p256dh: string; auth: string; parceiro: string | null; pessoa: string | null }> = rd.ok ? await rd.json() : []
 
   // Rastreio (02/11/2026, Tiago: "consigo rastrear quem recebeu e quem clicou?"): o disparo
@@ -278,7 +288,7 @@ async function disparar(req: Request, corpo: Record<string, unknown>) {
   // o banco (teeds_push_evento) quando ela aparece e quando é tocada. Os aparelhos alcançados
   // ficam em push_disparo_destinos ANTES do envio, para o primeiro "recebeu" já encontrar a linha.
   const rc = await rest('push_disparos', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify({
-    marca, criado_por: u.id, titulo, corpo: texto, destino, publico, parceiro, aparelhos: lista.length, teste: publico === 'eu',
+    marca, criado_por: u?.id ?? null, titulo, corpo: texto, destino, publico, parceiro, aparelhos: lista.length, teste: publico === 'eu',
   }) })
   const disparo: string | null = rc.ok ? (await rc.json())[0]?.id ?? null : null
   const aparelhoDe = new Map<string, string>()
