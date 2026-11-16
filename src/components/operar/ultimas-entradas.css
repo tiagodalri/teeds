@@ -1,0 +1,52 @@
+/* 16/11/2026: "Suas últimas entradas" minimalista (UltimasEntradas.tsx), prefixo ulm-.
+   Tipografia e linhas finas; cor só no resultado e no último dígito. */
+.bl-ultimas.ulm { padding: 0 0 6px; }
+.ulm header { padding: 13px 16px 10px; }
+.ulm header .bl-rot { font-size: 13.5px; }
+.ulm header small.ulm-hoje { padding: 0; background: none; color: var(--muted); font-family: inherit; font-size: 11.5px; font-weight: 600; }
+.ulm-total.ganho, .ulm-contagem .ganho { color: var(--up); } .ulm-total.perda, .ulm-contagem .perda { color: var(--down); }
+
+.ulm-resumo { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 12px; padding: 0 16px; }
+.ulm-resumo > div { display: grid; gap: 2px; min-width: 0; }
+.ulm-rot { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.ulm-total { font: 700 20px var(--fonte-dados, ui-monospace, monospace); font-variant-numeric: tabular-nums; letter-spacing: -.02em; white-space: nowrap; }
+.ulm-contagem { margin: 0 0 0 auto; color: var(--muted); font-size: 11.5px; line-height: 1.45; text-align: right; white-space: nowrap; }
+.ulm-proporcao { display: flex; gap: 2px; height: 2px; margin: 10px 16px 2px; border-radius: 2px; overflow: hidden; }
+.ulm-proporcao i { display: block; height: 100%; border-radius: 2px; }
+.ulm-proporcao i.ganho { background: var(--up); } .ulm-proporcao i.perda { background: var(--down); }
+.ulm-markup-dia { margin: 8px 16px 0; color: var(--muted); font-size: 11px; }
+.ulm-markup-dia b { color: var(--gf-ouro, var(--primary)); font-family: var(--fonte-dados, ui-monospace, monospace); }
+
+.ulm-lista { list-style: none; margin: 8px 0 0; padding: 0 16px; flex: 1 1 auto; min-height: 0; overflow-y: auto; font-variant-numeric: tabular-nums; }
+.ulm-lista li { display: grid; gap: 3px; padding: 9px 0; border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent); }
+.ulm-l1, .ulm-l2 { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.ulm-nome { flex: 1 1 auto; min-width: 3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 12.5px; font-weight: 600; }
+.ulm-nome i { margin-right: 5px; font-style: normal; font-size: 9px; vertical-align: 1px; }
+.ulm-nome i.sobe { color: var(--up); } .ulm-nome i.desce { color: var(--down); }
+.ulm-res { flex: none; font: 700 12.5px var(--fonte-dados, ui-monospace, monospace); white-space: nowrap; }
+.ulm li.ganho .ulm-res { color: var(--up); } .ulm li.perda .ulm-res { color: var(--down); }
+.ulm-markup { justify-self: end; color: var(--gf-ouro, var(--primary)); font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.ulm-l2 { color: var(--muted); font-size: 11.5px; }
+.ulm-quando { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ulm-hora { font-family: var(--fonte-dados, ui-monospace, monospace); }
+.ulm-saida { flex: none; }
+.ulm-saida .pcd { color: var(--muted); font-size: 11.5px; }
+/* o último dígito só na cor, sem a "tecla" de fundo */
+.ulm-saida .pcd-dig { display: inline; min-width: 0; margin: 0; padding: 0; background: none; font-weight: 800; }
+.ulm-saida .pcd-dig.ganho { color: var(--up); } .ulm-saida .pcd-dig.perda { color: var(--down); }
+
+.ulm-mais { display: block; margin: 4px auto 0; padding: 6px 10px; border: 0; background: none; color: var(--gf-ouro, var(--primary)); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.ulm-mais:hover { text-decoration: underline; }
+.ulm-mais:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; border-radius: 6px; }
+
+/* computador: o cartão do tamanho do conteúdo (não estica com espaço vazio); se faltar altura, a lista rola */
+@media (min-width: 901px) {
+  .layout-operar .trade:has(.bl) > .bl-ultimas.ulm { flex: 0 1 auto; min-height: 0; }
+  .ulm-lista:has(li:nth-child(3)) { min-height: 112px; }
+}
+@media (max-width: 560px) {
+  .ulm header, .ulm-resumo { padding-inline: 14px; }
+  .ulm-lista { padding-inline: 14px; }
+  .ulm-proporcao { margin-inline: 14px; }
+  .ulm-markup-dia { margin-inline: 14px; }
+}

@@ -12,6 +12,7 @@
  * Só desenvolvimento: o Vite monta apenas o `index.html` na publicação, então
  * este arquivo nunca chega ao site. Não há rede nem conta envolvida.
  */
+import { UltimasEntradas } from './components/operar/UltimasEntradas'
 import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { createPortal } from 'react-dom'
 import { RelogioDoSimulador, JanelaSemTempo } from './components/plano/LimiteDoSimulador'
@@ -553,9 +554,46 @@ function LabCurvaViva() {
   return <div className="rob-workspace-board modo-lista"><Cabine estado={estado} expandido={cockpit} titulo="Robô 1" /></div>
 }
 
+/**
+ * ?tela=ultimas(&n=1)(&markup) — 16/11/2026: "Suas últimas entradas" minimalista com entradas de exemplo
+ * (largura da coluna do Operar). &n=quantas, &markup mostra como o administrador vê.
+ */
+function LabUltimas() {
+  const q = new URLSearchParams(location.search)
+  const n = Number(q.get('n') ?? 14)
+  const agora = Math.floor(Date.now() / 1000)
+  const base = [
+    { t: 'PUT', s: 'R_75', p: 10.24, x: 39440.348, pip: 4, b: null },
+    { t: 'CALL', s: 'R_75', p: 15.67, x: 39310.202, pip: 4, b: null },
+    { t: 'CALL', s: 'R_75', p: -10, x: 39275.005, pip: 4, b: null },
+    { t: 'DIGITOVER', s: '1HZ100V', p: 250.61, x: 860.09, pip: 2, b: 4 },
+    { t: 'DIGITOVER', s: '1HZ100V', p: 125.3, x: 861.1, pip: 2, b: 4 },
+    { t: 'DIGITUNDER', s: '1HZ100V', p: -40, x: 860.87, pip: 2, b: 7 },
+    { t: 'CALL', s: 'R_75', p: 47.7, x: 39621.0678, pip: 4, b: null },
+  ]
+  const ops = Array.from({ length: n }, (_, i) => {
+    const e = base[i % base.length]
+    return {
+      contractId: 9000 + i, symbol: e.s, contractType: e.t, buyPrice: 25, bidPrice: 0, payout: 44.6, profit: e.p, profitPercentage: 0,
+      status: e.p >= 0 ? 'won' : 'lost', isValidToSell: false, motivoSemVenda: null, isExpired: true, entrySpot: e.x, currentSpot: null,
+      exitSpot: e.x, barrier: e.b, longcode: '', shortcode: '', currency: 'USD', purchaseTime: agora - i * 340, startTime: agora - i * 340,
+      expiryTime: agora - i * 340 + 300, pipSize: e.pip, appMarkup: null,
+    }
+  })
+  const nomes: Record<string, string> = { R_75: '75 Index', '1HZ100V': '100 (1s) Index' }
+  return (
+    <div className="layout-operar" style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
+      <div className="trade" style={{ width: Number(q.get('w') ?? 272), flex: 'none' }}>
+        <UltimasEntradas operacoes={ops} nomeDoAtivo={(s) => nomes[s] ?? s} markupDe={q.has('markup') ? (c) => +(c.payout * 0.03).toFixed(2) : undefined} />
+      </div>
+    </div>
+  )
+}
+
 function Laboratorio() {
   const qual = new URLSearchParams(location.search).get('tela') ?? 'cabine'
   // a home vem com a casca inteira da plataforma: fora da moldura do laboratório
+  if (qual === 'ultimas') return <LabUltimas />
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   if (qual === 'organizacao') return <Suspense fallback={null}><LabOrganizacao /></Suspense>

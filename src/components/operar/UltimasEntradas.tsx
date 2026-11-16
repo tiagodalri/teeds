@@ -1,65 +1,80 @@
 /**
- * "Suas últimas entradas" (22/10/2026): as operações manuais encerradas nesta
- * sessão, na coluna do Operar. Cada uma com o preço que fechou e o último
- * dígito em destaque, para o cliente conferir o dígito que valeu.
+ * "Suas últimas entradas" (22/10/2026): as operações manuais encerradas hoje,
+ * na coluna do Operar. Cada uma com o preço que fechou e o último dígito em
+ * destaque, para o cliente conferir o dígito que valeu.
+ *
+ * 16/11/2026 (Tiago escolheu o "A · Minimalista" do mockup): o resultado do dia
+ * em cima com uma linha fina de ganhos x perdas; cada entrada em duas linhas
+ * (nome e resultado; horário, ativo e saída), sem caixinhas nem pílulas. Cor só
+ * no resultado e no último dígito. A lista guarda o dia (volta ao recarregar e
+ * zera à meia-noite: ver App.tsx).
  */
+import { useState } from 'react'
 import type { OpenContract } from '../../core/deriv/trading'
 import { dinheiro, dinheiroComSinal } from '../../core/dinheiro'
 import { PrecoComDigito } from '../preco/PrecoComDigito'
 import { nomeDaOperacao } from '../PositionCard'
+import './ultimas-entradas.css'
 
 // o mesmo nome das outras telas ("Acima de 4", "Compra"), vindo de um lugar só
 const nomeCurto = (c: OpenContract) => nomeDaOperacao(c.contractType, c.barrier)
 const hora = (epoch: number) => new Date(epoch * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+const contar = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
 
-/** Quantas entradas a tabela mostra; o placar de cima soma todas as da sessão. */
-const NA_TABELA = 10
+/** Quantas entradas a lista mostra fechada; "Ver todas" abre o dia inteiro. */
+const NA_LISTA = 10
 
 export function UltimasEntradas({ operacoes, nomeDoAtivo, markupDe }: { operacoes: OpenContract[]; nomeDoAtivo: (simbolo: string) => string; markupDe?: (c: OpenContract) => number }) {
-  // `operacoes` é a sessão inteira, da mais recente para a mais antiga (10/11/2026)
-  const naTabela = operacoes.slice(0, NA_TABELA)
-  // modo CEO: o markup de cada entrada e o total da lista
+  const [todas, setTodas] = useState(false)
+  // `operacoes` é o dia inteiro, da mais recente para a mais antiga
+  const naLista = todas ? operacoes : operacoes.slice(0, NA_LISTA)
   const totalMarkup = markupDe ? operacoes.reduce((t, c) => t + markupDe(c), 0) : 0
-  // 26/10/2026 (Tiago: "uma tabelinha bem intuitiva, pras infos não ficarem jogadas"):
-  // o resumo em cima e as entradas em colunas com cabeçalho
   const ganhos = operacoes.filter((c) => c.profit >= 0).length
+  const perdas = operacoes.length - ganhos
   const resultado = operacoes.reduce((t, c) => t + c.profit, 0)
   const moeda = operacoes[0]?.currency ?? 'USD'
+  const pctGanhos = operacoes.length ? (ganhos / operacoes.length) * 100 : 0
   return (
-    <section className="bl-ultimas" aria-label="Suas últimas entradas">
-      <header><span className="bl-rot">Suas últimas entradas</span>{markupDe && <small className="bl-ult-markup-total" title="Markup gerado pelas entradas desta sessão">Markup {dinheiro(totalMarkup, moeda)}</small>}</header>
-      <dl className="bl-ult-resumo">
-        <div><dt>Entradas</dt><dd>{operacoes.length}</dd></div>
-        <div><dt>Ganhos</dt><dd className="ganho">{ganhos}</dd></div>
-        <div><dt>Perdas</dt><dd className="perda">{operacoes.length - ganhos}</dd></div>
-        <div className="bl-ult-total"><dt>Resultado</dt><dd className={resultado >= 0 ? 'ganho' : 'perda'}>{dinheiroComSinal(resultado, moeda)}</dd></div>
-      </dl>
-      <div className="bl-ult-tabela">
-        <table>
-          <thead><tr><th scope="col">Operação</th><th scope="col" className="num" title="Preço de saída: o último dígito é o que valeu">Saída</th><th scope="col" className="num">Resultado</th></tr></thead>
-          <tbody>
-            {naTabela.map((c) => {
-              const subiu = /^(CALL|HIGHER|MULTUP)$/.test(c.contractType)
-              const comDirecao = /^(CALL|PUT|HIGHER|LOWER|MULTUP|MULTDOWN)$/.test(c.contractType)
-              const ganhou = c.profit >= 0
-              return (
-                <tr key={c.contractId} className={ganhou ? 'ganho' : 'perda'}>
-                  <td className="bl-ult-nome">
-                    <b>{comDirecao && <i aria-hidden="true" className={subiu ? 'sobe' : 'desce'}>{subiu ? '▲ ' : '▼ '}</i>}<span>{nomeCurto(c)}</span></b>
-                    <small><span className="bl-ult-hora">{hora(c.startTime)}</span> · {nomeDoAtivo(c.symbol)}</small>
-                  </td>
-                  <td className="bl-ult-preco num">{c.exitSpot !== null ? <PrecoComDigito valor={c.exitSpot} casas={c.pipSize} tom={ganhou ? 'ganho' : 'perda'} /> : '—'}</td>
-                  <td className="num">
-                    <b className="bl-ult-res">{dinheiroComSinal(c.profit, c.currency)}</b>
-                    {markupDe && <small className="bl-ult-markup">Markup {markupDe(c).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-        {operacoes.length > naTabela.length && <p className="bl-ult-mais">Mostrando as {naTabela.length} mais recentes de {operacoes.length} entradas. O placar acima soma todas.</p>}
+    <section className="bl-ultimas ulm" aria-label="Suas últimas entradas">
+      <header><span className="bl-rot">Suas últimas entradas</span><small className="ulm-hoje" title="A lista guarda as entradas de hoje e recomeça à meia-noite">Hoje</small></header>
+      <div className="ulm-resumo">
+        <div>
+          <span className="ulm-rot">Resultado do dia</span>
+          <b className={`ulm-total ${resultado >= 0 ? 'ganho' : 'perda'}`}>{dinheiroComSinal(resultado, moeda)}</b>
+        </div>
+        <p className="ulm-contagem">
+          {contar(operacoes.length, 'entrada', 'entradas')}<br />
+          <span className={ganhos ? 'ganho' : undefined}>{contar(ganhos, 'ganho', 'ganhos')}</span> · <span className={perdas ? 'perda' : undefined}>{contar(perdas, 'perda', 'perdas')}</span>
+        </p>
       </div>
+      <div className="ulm-proporcao" aria-hidden="true">
+        {ganhos > 0 && <i className="ganho" style={{ width: `${pctGanhos}%` }} />}
+        {perdas > 0 && <i className="perda" style={{ width: `${100 - pctGanhos}%` }} />}
+      </div>
+      {markupDe && <p className="ulm-markup-dia" title="Markup gerado pelas entradas de hoje">Markup do dia <b>{dinheiro(totalMarkup, moeda)}</b></p>}
+      <ol className="ulm-lista">
+        {naLista.map((c) => {
+          const subiu = /^(CALL|HIGHER|MULTUP)$/.test(c.contractType)
+          const comDirecao = /^(CALL|PUT|HIGHER|LOWER|MULTUP|MULTDOWN)$/.test(c.contractType)
+          const ganhou = c.profit >= 0
+          return (
+            <li key={c.contractId} className={ganhou ? 'ganho' : 'perda'}>
+              <div className="ulm-l1">
+                <span className="ulm-nome">{comDirecao && <i aria-hidden="true" className={subiu ? 'sobe' : 'desce'}>{subiu ? '▲' : '▼'}</i>}{nomeCurto(c)}</span>
+                <b className="ulm-res">{dinheiroComSinal(c.profit, c.currency)}</b>
+              </div>
+              <div className="ulm-l2">
+                <span className="ulm-quando"><span className="ulm-hora">{hora(c.startTime)}</span> · {nomeDoAtivo(c.symbol)}</span>
+                <span className="ulm-saida" title="Preço de saída: o último dígito é o que valeu">{c.exitSpot !== null ? <PrecoComDigito valor={c.exitSpot} casas={c.pipSize} tom={ganhou ? 'ganho' : 'perda'} /> : '—'}</span>
+              </div>
+              {markupDe && <small className="ulm-markup">Markup {markupDe(c).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>}
+            </li>
+          )
+        })}
+      </ol>
+      {operacoes.length > NA_LISTA && (
+        <button type="button" className="ulm-mais" onClick={() => setTodas((v) => !v)}>{todas ? 'Mostrar só as últimas 10' : `Ver todas (${operacoes.length})`}</button>
+      )}
     </section>
   )
 }
