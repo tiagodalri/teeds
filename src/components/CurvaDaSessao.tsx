@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { OperacaoMotor } from '../core/deriv/engine'
 import './curva-sessao.css'
 
@@ -85,19 +85,26 @@ interface Props {
 }
 
 export function CurvaDaSessao({ pontos, historico, operacoes }: Props) {
-  const caixa = useRef<HTMLDivElement>(null)
+  const caixa = useRef<HTMLDivElement | null>(null)
   const [tam, setTam] = useState({ w: 0, h: 0 })
-  const id = useId().replace(/:/g, '')
+  const id = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  /*
+    16/11/2026 (Tiago: "o gráfico ali sumiu"): a caixa só existe a partir da 1ª operação (antes aparece o
+    "A curva aparece na primeira operação"). A medida rodava uma vez só, na montagem, quando a caixa ainda
+    não existia: a curva nunca era medida e não desenhava. Agora mede quando a caixa aparece.
+  */
+  const [no, setNo] = useState<HTMLDivElement | null>(null)
+  const refCaixa = useCallback((el: HTMLDivElement | null) => { caixa.current = el; setNo(el) }, [])
 
   useLayoutEffect(() => {
-    const el = caixa.current
+    const el = no
     if (!el) return
     const medir = () => setTam(t => (t.w === el.clientWidth && t.h === el.clientHeight ? t : { w: el.clientWidth, h: el.clientHeight }))
     medir()
     const ro = new ResizeObserver(medir)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [])
+  }, [no])
 
   // animação: quando chega UMA operação nova, a linha cresce até ela
   const [quadro, setQuadro] = useState<{ k: number; ultimo: number; lo: number; hi: number } | null>(null)
@@ -183,7 +190,7 @@ export function CurvaDaSessao({ pontos, historico, operacoes }: Props) {
   const info = focoValido != null ? detalhe(focoValido) : null
 
   return (
-    <div ref={caixa} className="tv-curva tvc" onPointerMove={aoMover} onPointerDown={aoMover} onPointerLeave={(e) => { if (e.pointerType === 'mouse') setFoco(null) }}
+    <div ref={refCaixa} className="tv-curva tvc" onPointerMove={aoMover} onPointerDown={aoMover} onPointerLeave={(e) => { if (e.pointerType === 'mouse') setFoco(null) }}
       role="img" aria-label={`Evolução da sessão: ${assinado(pontos[pontos.length - 1])}`}>
       {d && (
         <svg width={d.w} height={d.h} viewBox={`0 0 ${d.w} ${d.h}`} aria-hidden="true">
