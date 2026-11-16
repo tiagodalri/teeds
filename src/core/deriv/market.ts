@@ -288,3 +288,48 @@ export async function fetchServerTime(socket: TeedsSocket = publicSocket): Promi
   const res = await socket.send({ time: 1 })
   return res.time as number
 }
+
+/*
+  O preço da TELA (16/11/2026). O que o cliente vê (gráfico, preço da boleta, dígitos, cabines) assina por
+  estas três funções; os motores (robôs de verdade, palco das I.A. simuladas) continuam no preço cru da
+  Deriv. Sem filtro ligado, são idênticas às de cima. O único filtro é o do roteiro da manual no modo
+  simulado (core/teeds/precoSimulado.ts), só de administradores: nada aqui compra ou decide na Deriv.
+*/
+export interface FiltroDaTela {
+  /** O tick como a tela mostra (o mesmo epoch devolve sempre o mesmo preço, em qualquer assinatura). */
+  tick(t: Tick): Tick
+  /** O histórico de ticks com os preços que a tela já mostrou. */
+  historico(symbol: string, ticks: Tick[]): Tick[]
+  /** A vela com os preços que a tela já mostrou dentro dela; `aoVivo` para a vela que está se formando. */
+  vela(symbol: string, granularidade: number, vela: Candle, aoVivo: boolean): Candle
+}
+let filtroDaTela: FiltroDaTela | null = null
+export function definirFiltroDaTela(f: FiltroDaTela | null): void { filtroDaTela = f }
+
+/** subscribeTicks com o preço da tela. */
+export function subscribeTicksDaTela(symbol: string, onTick: Ouvinte, socket: TeedsSocket = publicSocket): () => void {
+  return subscribeTicks(symbol, (t) => onTick(filtroDaTela ? filtroDaTela.tick(t) : t), socket)
+}
+
+/** fetchTickHistory com o preço da tela. */
+export async function fetchTickHistoryDaTela(symbol: string, count = 500, socket: TeedsSocket = publicSocket): Promise<Tick[]> {
+  const ticks = await fetchTickHistory(symbol, count, socket)
+  return filtroDaTela ? filtroDaTela.historico(symbol, ticks) : ticks
+}
+
+/** subscribeCandles com o preço da tela. */
+export function subscribeCandlesDaTela(
+  symbol: string,
+  granularity: Granularity,
+  onHistory: (candles: Candle[]) => void,
+  onUpdate: (candle: Candle) => void,
+  count = 1000,
+  socket: TeedsSocket = publicSocket,
+): () => void {
+  return subscribeCandles(
+    symbol, granularity,
+    (h) => onHistory(filtroDaTela ? h.map((c, i) => filtroDaTela!.vela(symbol, granularity, c, i === h.length - 1)) : h),
+    (c) => onUpdate(filtroDaTela ? filtroDaTela.vela(symbol, granularity, c, true) : c),
+    count, socket,
+  )
+}

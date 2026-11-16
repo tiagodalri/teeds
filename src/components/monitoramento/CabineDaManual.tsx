@@ -12,7 +12,7 @@
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { publicSocket, type TeedsSocket } from '../../core/deriv/client'
-import { subscribeTicks } from '../../core/deriv/market'
+import { subscribeTicksDaTela as subscribeTicks } from '../../core/deriv/market'
 import { casasDecimais } from '../../core/deriv/types'
 import { nomeDoSimbolo as nomeDoAtivo } from '../../core/deriv/simbolos'
 import { nomeDaOperacao } from '../PositionCard'

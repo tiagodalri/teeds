@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { publicSocket, TeedsSocket } from '../core/deriv/client'
 import {
-  fetchActiveSymbols, fetchLimitesSubirDescer, LIMITES_PADRAO, subscribeCandles, subscribeTicks,
+  fetchActiveSymbols, fetchLimitesSubirDescer, LIMITES_PADRAO,
+  // o gráfico e o preço da tela: com o roteiro da manual no modo simulado, o preço que a tela mostra
+  subscribeCandlesDaTela as subscribeCandles, subscribeTicksDaTela as subscribeTicks,
   type LimitesDuracao,
 } from '../core/deriv/market'
 import type { ActiveSymbol, Candle, ConnectionState, Granularity, Tick } from '../core/deriv/types'

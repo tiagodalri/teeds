@@ -10,6 +10,24 @@ import type { OpenContract } from '../../../core/deriv/trading'
 import { Multitela } from './Multitela'
 import { useMultitela, type Quadros } from './estado'
 import type { ContaDaMultitela } from './Quadro'
+import { comprarSimulado, useContratosSimulados } from '../../../core/teeds/corretoraSimulada'
+import { definirSaldoSimulado, ligarModoSimulado, permitirModoSimulado, useModoSimulado } from '../../../core/teeds/modoSimulado'
+import { permitirRoteiroManual } from '../../../core/teeds/roteiroManual'
+import { ControleDaManual } from '../../roteiroManual/ControleDaManual'
+import { contratosSimuladosAgora } from '../../../core/teeds/corretoraSimulada'
+import { desvioAgora } from '../../../core/teeds/precoSimulado'
+
+/*
+  &simulado=1 (16/11/2026): o modo simulado do admin com o roteiro da manual. As compras passam pela
+  corretora simulada de verdade (cotação da Deriv pela linha pública, ticks reais, preço da tela ajustado
+  pelo roteiro), com o controle em cima da grade. Nada é comprado na Deriv.
+*/
+const SIMULADO = new URLSearchParams(location.search).has('simulado')
+if (SIMULADO) {
+  permitirModoSimulado(true); ligarModoSimulado(); permitirRoteiroManual(true)
+  // para testar os dígitos pelo console: __comprarSimulado({ simbolo: 'R_75', tipo: 'DIGITOVER', valor: 10, moeda: 'USD', duration: 1, durationUnit: 't', barrier: '4' })
+  Object.assign(window, { __comprarSimulado: comprarSimulado, __contratos: contratosSimuladosAgora, __desvio: desvioAgora })
+}
 
 const agoraS = () => Math.floor(Date.now() / 1000)
 const PAGA = 0.92
@@ -64,6 +82,14 @@ export default function LabMultitela() {
     return () => window.clearInterval(t)
   }, [])
 
+  const sim = useModoSimulado()
+  const simulados = useContratosSimulados()
+  const [fechadosSim, setFechadosSim] = useState<OpenContract[]>([])
+  useEffect(() => {
+    const fechados = simulados.filter((c) => c.status !== 'open')
+    if (fechados.length) setFechadosSim((l) => [...fechados.filter((c) => !l.some((x) => x.contractId === c.contractId)), ...l].slice(0, 8))
+  }, [simulados])
+  useEffect(() => { if (SIMULADO && (sim?.saldo ?? 0) < 50) definirSaldoSimulado(1000) }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const semDeriv = q.has('sem-deriv')
   const conta: ContaDaMultitela = {
     pronta: !semDeriv, conectando: false, aoConectar: () => undefined,
@@ -94,9 +120,15 @@ export default function LabMultitela() {
     vendendo: null,
     aviso: null,
   }
+  const contaSim: ContaDaMultitela = {
+    ...conta, real: false, tipoNaTela: 'real', saldo: sim?.saldo ?? 0,
+    contratos: simulados.filter((c) => c.status === 'open'), encerradas: fechadosSim,
+    comprar: async (simbolo, tipo, valor, duracao, unidade) => comprarSimulado({ simbolo, tipo, valor, moeda: 'USD', duration: duracao, durationUnit: unidade }),
+  }
   return (
     <div className="app workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))', background: 'var(--bg)' }}>
-      <Multitela conta={conta} ativos={symbols} sessao={null} ativoInicial="R_75" />
+      {SIMULADO && <div style={{ padding: '10px 16px 0' }}><ControleDaManual compacto /></div>}
+      <Multitela conta={SIMULADO ? contaSim : conta} ativos={symbols} sessao={null} ativoInicial="R_75" />
     </div>
   )
 }

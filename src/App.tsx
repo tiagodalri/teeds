@@ -70,6 +70,8 @@ import { RelogioTopo } from './components/RelogioTopo'
 import { ModoSimuladoTopo, abrirPainelSimulado } from './components/modoSimulado/ModoSimuladoTopo'
 import { permitirModoSimulado, useLivroSimulado, useModoSimulado } from './core/teeds/modoSimulado'
 import { comprarSimulado, limparContratosSimulados, useContratosSimulados } from './core/teeds/corretoraSimulada'
+import { permitirRoteiroManual, roteiroLiberadoPara, useRoteiroManual } from './core/teeds/roteiroManual'
+import { ControleDaManual } from './components/roteiroManual/ControleDaManual'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { LimiteDoSimulador } from './components/plano/LimiteDoSimulador'
 import { TravaDaConta } from './components/plano/TravaDaConta'
@@ -873,6 +875,16 @@ export default function App() {
   marcarPainel(admin === true && (tela === 'gestao' || tela === 'monitoramento' || tela === 'insights'))
   // o olhinho do menu do avatar: ao ocultar os itens de admin, quem está numa tela de admin vai para a de cliente
   const menuAdminOculto = useMenuAdminOculto()
+  /*
+    O roteiro da manual no modo simulado (16/11/2026): com ele, o resultado de cada operação manual segue o
+    roteiro e o preço da tela se ajusta para isso. O gráfico do TradingView mostra só o preço real da Deriv,
+    então, com roteiro, a tela usa o gráfico GlobalFly (o mesmo preço da operação).
+  */
+  const roteiroManual = useRoteiroManual()
+  // por enquanto só no usuário do Tiago (16/11/2026); os outros admins seguem com o modo simulado de antes
+  const podeRoteiro = !!sim && roteiroLiberadoPara(teeds.sessao?.usuario.email)
+  useEffect(() => { permitirRoteiroManual(podeRoteiro) }, [podeRoteiro])
+  const roteiroNaTela = podeRoteiro && (roteiroManual.itens.length > 0 || roteiroManual.livre !== 'mercado')
   useEffect(() => {
     if (admin === true && menuAdminOculto && (TELAS_DE_ADMIN as readonly string[]).includes(tela)) setTela(MARCA.inicio ? 'inicio' : 'operar')
   }, [menuAdminOculto]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1873,6 +1885,7 @@ export default function App() {
               <DerivDesconectada compacto acao="Para comprar, conecte a sua conta da Deriv." entrando={conta.status === 'entrando'} onConectar={conta.login} />
             </div>
           )}
+          {podeRoteiro && !menuAdminOculto && <ControleDaManual compacto />}
           <Suspense fallback={telaAbrindo('Abrindo os quadros…')}>
             <Multitela conta={contaDaMultitela} ativos={symbols} sessao={teeds.sessao} ativoInicial={symbolCode}
               extraNaBarra={<BotaoJanelaSolta qual="manual" />} />
@@ -1968,7 +1981,7 @@ export default function App() {
             <div className="chart">
               <Suspense fallback={<div className="gp-carregando-pagina">Abrindo o gráfico…</div>}>
                 {/* GlobalFly | TradingView (30/10/2026): o nosso é o padrão; o do TradingView fica ao lado, por escolha */}
-                {qualGrafico === 'tradingview' ? (
+                {qualGrafico === 'tradingview' && !roteiroNaTela ? (
                   <GraficoTradingView symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''} granularity={granularity} mode={mode}
                     barra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />}
                     painel={naTelaMult ? undefined : <PainelDeComando nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''}
@@ -1984,7 +1997,7 @@ export default function App() {
                   <GraficoPro candles={candles} mode={mode} pipSize={pipSize} symbol={symbolCode ?? ''} symbolName={activeSymbol?.name ?? ''}
                     granularity={granularity} loading={loadingCandles} markers={marcadores} sessao={teeds.sessao} moeda={moeda}
                     sinalLiberado={sinalGF} key={sinalGF ? 'com-sinal' : 'sem-sinal'}
-                    barraExtra={<SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />} />
+                    barraExtra={roteiroNaTela ? undefined : <SeletorDeGrafico valor={qualGrafico} aoTrocar={trocarGrafico} />} />
                 )}
               </Suspense>
             </div>
@@ -2036,6 +2049,7 @@ export default function App() {
           ) : (
           <>
           <section className="bl" aria-label="Boleta de operação">
+            {podeRoteiro && !menuAdminOculto && <ControleDaManual aoDefinirEntrada={(v) => { setStake(v); setStakeTexto(null) }} />}
             <BoletaAtivo nome={activeSymbol ? nomeDoAtivo(activeSymbol.name) : ''} preco={tick?.quote ?? null} pipSize={pipSize}
               direcao={direction} sintetico={sintetico} aberto={mercadoAberto} />
             <div className="bl-abas" role="tablist" aria-label="Tipo de operação">

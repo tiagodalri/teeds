@@ -1,0 +1,82 @@
+/* Roteiro da manual no modo simulado (16/11/2026). Prefixo rmn-. O laranja é o do modo simulado. */
+
+.rmn-controle { --rmn: #FB923C; display: grid; gap: 8px; margin: 0 0 10px; padding: 10px 12px; border: 1px dashed color-mix(in srgb, var(--rmn) 45%, var(--border));
+  border-radius: 12px; background: color-mix(in srgb, var(--rmn) 5%, var(--surface)); font-size: 12px; color: var(--text); }
+.rmn-controle.compacto { grid-template-columns: auto 1fr; align-items: center; gap: 6px 14px; margin: 0 0 8px; }
+.rmn-topo, .rmn-proxima { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.rmn-topo b { font-weight: 700; white-space: nowrap; }
+.rmn-ponto { width: 7px; height: 7px; border-radius: 50%; background: var(--rmn); flex: none; animation: rmn-pisca 2.4s ease-in-out infinite; }
+@keyframes rmn-pisca { 50% { opacity: .35; } }
+.rmn-placar { color: var(--muted); white-space: nowrap; }
+.rmn-placar em { font-style: normal; font-weight: 700; }
+.rmn-controle .sobe, .rmn-janela .sobe { color: var(--up); }
+.rmn-controle .cai, .rmn-janela .cai { color: var(--down); }
+.rmn-link { margin-left: auto; padding: 4px 6px; border: 0; background: transparent; color: var(--rmn, #FB923C); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 6px; white-space: nowrap; }
+.rmn-link:hover { background: color-mix(in srgb, #FB923C 12%, transparent); }
+.rmn-link.perigo { color: var(--down); margin-left: 0; }
+.rmn-proxima > span { color: var(--muted); }
+.rmn-seg { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); }
+.rmn-seg button { min-height: 26px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.rmn-seg button.on.ganha { background: color-mix(in srgb, var(--up) 18%, transparent); color: var(--up); }
+.rmn-seg button.on.perde { background: color-mix(in srgb, var(--down) 18%, transparent); color: var(--down); }
+.rmn-seg button.on.mercado { background: color-mix(in srgb, var(--text) 10%, transparent); color: var(--text); }
+.rmn-controle button:focus-visible, .rmn-janela button:focus-visible, .rmn-janela input:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
+
+/* a janela de montar */
+.rmn-fundo { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 16px; background: rgba(5, 8, 15, .62); backdrop-filter: blur(3px); }
+.rmn-janela { width: min(860px, 100%); max-height: calc(100dvh - 32px); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--text); box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
+.rmn-cab { display: flex; gap: 16px; align-items: flex-start; padding: 18px 20px 12px; border-bottom: 1px solid var(--border); }
+.rmn-cab h2 { margin: 6px 0 4px; font-size: 20px; }
+.rmn-cab p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.45; max-width: 640px; }
+.rmn-selo { display: inline-flex; align-items: center; gap: 6px; color: #FB923C; font-size: 11px; font-weight: 800; letter-spacing: .02em; }
+.rmn-selo i { width: 7px; height: 7px; border-radius: 50%; background: #FB923C; }
+.rmn-fechar { margin-left: auto; width: 34px; height: 34px; flex: none; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; }
+.rmn-montar, .rmn-lista { padding: 14px 20px; }
+.rmn-montar { border-bottom: 1px solid var(--border); display: grid; gap: 8px; }
+.rmn-montar h3, .rmn-lista h3 { margin: 0; font-size: 13px; font-weight: 800; }
+.rmn-montar small { color: var(--muted); font-size: 12px; }
+.rmn-campos { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.rmn-campos label { display: grid; gap: 4px; font-size: 11px; color: var(--muted); font-weight: 700; }
+.rmn-campos input, .rmn-entrada { width: 120px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 14px; font-variant-numeric: tabular-nums; }
+.rmn-entrada { width: 92px; height: 30px; font-size: 13px; }
+.rmn-botao { height: 36px; padding: 0 16px; border: 1px solid color-mix(in srgb, #FB923C 55%, var(--border)); border-radius: 10px; background: transparent; color: #FB923C; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.rmn-botao.forte { background: #FB923C; color: #1a1206; border-color: #FB923C; }
+.rmn-botao:disabled { opacity: .5; cursor: default; }
+.rmn-lista { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 8px; min-height: 0; }
+.rmn-lista-topo { display: flex; align-items: center; gap: 8px; }
+.rmn-acoes { margin-left: auto; display: flex; gap: 4px; }
+.rmn-acoes .rmn-link { margin-left: 0; }
+.rmn-tabela-rolo { overflow: auto; min-height: 0; border: 1px solid var(--border); border-radius: 12px; overscroll-behavior: contain; }
+.rmn-tabela { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rmn-tabela th { position: sticky; top: 0; z-index: 1; padding: 8px 10px; background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 800; text-align: left; border-bottom: 1px solid var(--border); }
+.rmn-tabela td { padding: 6px 10px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); white-space: nowrap; }
+.rmn-tabela tr.feita td { opacity: .5; }
+.rmn-tabela td.neutro { color: var(--muted); }
+.rmn-info td { color: var(--muted); font-size: 12px; }
+.rmn-chip { min-width: 78px; height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: transparent; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; color: var(--muted); }
+.rmn-chip.ganha { color: var(--up); border-color: color-mix(in srgb, var(--up) 45%, var(--border)); background: color-mix(in srgb, var(--up) 10%, transparent); }
+.rmn-chip.perde { color: var(--down); border-color: color-mix(in srgb, var(--down) 45%, var(--border)); background: color-mix(in srgb, var(--down) 10%, transparent); }
+.rmn-tirar { width: 26px; height: 26px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
+.rmn-tirar:hover { color: var(--down); background: color-mix(in srgb, var(--down) 10%, transparent); }
+.rmn-rodape { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 12px 20px 16px; border-top: 1px solid var(--border); }
+.rmn-resumo { display: grid; gap: 3px; font-size: 13px; min-width: 0; flex: 1 1 320px; }
+.rmn-alerta { color: var(--down); font-size: 12px; }
+.rmn-nota { color: var(--muted); font-size: 12px; }
+.rmn-botoes { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+
+@media (max-width: 700px) {
+  .rmn-fundo { padding: 0; place-items: end stretch; }
+  /* no celular a janela inteira rola (a lista não fica espremida entre o topo e o rodapé) */
+  .rmn-janela { max-height: 92dvh; border-radius: 18px 18px 0 0; display: block; overflow: auto; overscroll-behavior: contain; }
+  .rmn-cab p { display: none; }
+  .rmn-tabela-rolo { overflow: visible; }
+  .rmn-tabela th:nth-child(5), .rmn-tabela td:nth-child(5) { display: none; }
+  .rmn-tabela td, .rmn-tabela th { padding: 6px 6px; }
+  .rmn-rodape { position: sticky; bottom: 0; background: var(--surface); }
+  .rmn-cab, .rmn-montar, .rmn-lista, .rmn-rodape { padding-left: 16px; padding-right: 16px; }
+  .rmn-campos input { width: calc(50vw - 28px); }
+  .rmn-tabela th:nth-child(6), .rmn-tabela td:nth-child(6) { display: none; }
+  .rmn-controle.compacto { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .rmn-ponto { animation: none; } }

@@ -16,12 +16,13 @@
 import { useSyncExternalStore } from 'react'
 import { publicSocket } from '../deriv/client'
 import { requestProposal, type OpenContract } from '../deriv/trading'
-import { subscribeTicks } from '../deriv/market'
+import { subscribeTicksDaTela as subscribeTicks } from '../deriv/market'
 import { contratoManual, entradaManual, operacaoTerminou } from '../som'
 import { modoSimuladoAtivo, saldoSimuladoAgora, somarAoSaldoSimulado, somarNoLivro } from './modoSimulado'
+// o roteiro da manual (16/11/2026): o resultado pedido de cada operação, e o preço da tela que o cumpre
+import { barreiraDe as barreiraDoPedido, esquecerContrato, ganha, limparPrecoSimulado, planejarContrato, TIPOS_DE_DIGITO, TIPOS_DE_DIRECAO } from './precoSimulado'
+import { anotarResultado, usarNaCompra } from './roteiroManual'
 
-const TIPOS_DE_DIGITO = ['DIGITMATCH', 'DIGITDIFF', 'DIGITOVER', 'DIGITUNDER', 'DIGITEVEN', 'DIGITODD']
-const TIPOS_DE_DIRECAO = ['CALL', 'PUT', 'CALLE', 'PUTE']
 export const tipoSimulavel = (tipo: string) => TIPOS_DE_DIGITO.includes(tipo) || TIPOS_DE_DIRECAO.includes(tipo)
 
 const SEGUNDOS: Record<string, number> = { s: 1, m: 60, h: 3600, d: 86400 }
@@ -60,33 +61,11 @@ export function limparContratosSimulados(): void {
   andamento.forEach((a) => a.parar())
   andamento.clear()
   contratos.clear()
+  limparPrecoSimulado()
   avisar()
 }
 
-const digitoDe = (preco: number, casas: number) => { const t = preco.toFixed(casas); return Number(t[t.length - 1]) }
-function ganha(tipo: string, saida: number, barreira: number, casas: number): boolean {
-  const d = digitoDe(saida, casas)
-  switch (tipo) {
-    case 'CALL': return saida > barreira
-    case 'PUT': return saida < barreira
-    case 'CALLE': return saida >= barreira
-    case 'PUTE': return saida <= barreira
-    case 'DIGITMATCH': return d === barreira
-    case 'DIGITDIFF': return d !== barreira
-    case 'DIGITOVER': return d > barreira
-    case 'DIGITUNDER': return d < barreira
-    case 'DIGITEVEN': return d % 2 === 0
-    case 'DIGITODD': return d % 2 === 1
-    default: return false
-  }
-}
-function barreiraDe(a: EmAndamento, entrada: number): number {
-  const tipo = a.c.contractType
-  const b = a.barreiraPedida
-  if (TIPOS_DE_DIGITO.includes(tipo)) return Number(b ?? 0)
-  if (b === undefined || b === '') return entrada
-  return /^[+-]/.test(b) ? entrada + Number(b) : Number(b)
-}
+const barreiraDe = (a: EmAndamento, entrada: number) => barreiraDoPedido(a.c.contractType, a.barreiraPedida, entrada)
 /** Chance de ganhar daqui até o fim, só para o "quanto vale agora" da posição. */
 function chanceAgora(a: EmAndamento, spot: number, agora: number): number {
   const c = a.c
@@ -110,6 +89,8 @@ function liquidar(a: EmAndamento, saida: number, epoch: number) {
   const venceu = ganha(c.contractType, saida, c.barrier ?? (c.entrySpot ?? saida), c.pipSize)
   const lucro = venceu ? r2(c.payout - c.buyPrice) : -c.buyPrice
   if (venceu) somarAoSaldoSimulado(c.payout)
+  esquecerContrato(c.contractId)
+  anotarResultado(c.contractId, venceu, lucro)
   const final: OpenContract = {
     ...c, status: venceu ? 'won' : 'lost', isExpired: true, isValidToSell: false, exitSpot: saida, currentSpot: saida,
     profit: lucro, bidPrice: venceu ? c.payout : 0, profitPercentage: r2((lucro / c.buyPrice) * 100),
@@ -165,6 +146,12 @@ export async function comprarSimulado(pedido: {
   const a: EmAndamento = { c, duracao: pedido.duration, unidade: pedido.durationUnit, barreiraPedida: pedido.barrier, ticksDesdeEntrada: 0, ultimo: null, passos: [], parar: () => {} }
   contratos.set(id, c)
   andamento.set(id, a)
+  // o roteiro da manual: a próxima operação dele diz o resultado; "Mercado" deixa o preço de verdade decidir
+  const doRoteiro = usarNaCompra(id)
+  if (doRoteiro !== 'mercado') planejarContrato({
+    id, simbolo: pedido.simbolo, tipo: pedido.tipo, duracao: pedido.duration, unidade: pedido.durationUnit, barreiraPedida: pedido.barrier,
+    compradoEm: agora, expiraEm: c.expiryTime, desejo: doRoteiro,
+  })
   contratoManual(id)
   entradaManual()
   avisar()

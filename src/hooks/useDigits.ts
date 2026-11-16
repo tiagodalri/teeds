@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { publicSocket } from '../core/deriv/client'
-import { fetchTickHistory } from '../core/deriv/market'
-import { subscribeTicks } from '../core/deriv/market'
+import { fetchTickHistoryDaTela as fetchTickHistory, subscribeTicksDaTela as subscribeTicks } from '../core/deriv/market'
 import { distribuicao, ultimoDigito } from '../core/deriv/digits'
 
 /**
