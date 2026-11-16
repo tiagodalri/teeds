@@ -72,6 +72,14 @@ const SENTIDO: Record<Param, 1 | -1> = { entrada: 1, resultado: 1, tempo: -1, ri
 const ZONAS = ['Conservador', 'Equilibrado', 'Intenso', 'Agressivo'] as const
 const zonaDe = (f: number) => ZONAS[Math.min(3, Math.max(0, Math.ceil(f * 4) - 1))]
 
+/** O que a mesa guarda para reabrir igual (nesta aba do navegador). */
+interface Mesa { ia: string; modo: Modo; saldo: number; conta: 'real' | 'demo'; sinal: 'lucro' | 'prejuizo'; momento: Momento; semente: number; mestre: number; elos: Record<Param, Elo> }
+const CHAVE_DA_MESA = 'simulacao.mesa'
+function lerMesa(): Mesa | null {
+  try { const x = JSON.parse(sessionStorage.getItem(CHAVE_DA_MESA) ?? 'null') as Mesa | null; return x && typeof x.ia === 'string' && x.elos ? x : null } catch { return null }
+}
+function guardarMesa(m: Mesa) { try { sessionStorage.setItem(CHAVE_DA_MESA, JSON.stringify(m)) } catch { /* só nesta abertura */ } }
+
 /* ------------------------------------------------------------ as peças */
 
 /** O número do termômetro: tocar para digitar o valor exato. */
@@ -125,29 +133,32 @@ function Termometro({ id, rotulo, f, ligado, aoArrastar, aoAlternarElo, valor, d
 
 /* ============================================================== a mesa */
 
-export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: contaInicial, aoDarPlay, aoAbrirEstudio, aoFechar }: {
+export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: contaInicial, aoDarPlay, aoFechar }: {
   ia: string | null
   saldo: number | null
   conta: 'real' | 'demo'
   aoDarPlay: (r: Roteiro) => void
-  /** Ajuste fino: abre o estúdio completo com a sessão da mesa (ou vazio). */
-  aoAbrirEstudio: (r: Roteiro | null) => void
   aoFechar: () => void
 }) {
   const versao = definirRegrasDaSessao(useCatalogoCompleto())
-  const [ia, setIa] = useState<string>(iaInicial && (IAS_DA_SESSAO as readonly string[]).includes(iaInicial) ? iaInicial : IAS_DA_SESSAO[0])
-  const [modo, setModo] = useState<Modo>('conservador')
-  const [saldo, setSaldo] = useState<number>(saldoInicial && saldoInicial >= 10 ? r2(saldoInicial) : 500)
-  const [conta, setConta] = useState<'real' | 'demo'>(contaInicial)
-  const [sinal, setSinal] = useState<'lucro' | 'prejuizo'>('lucro')
-  const [momento, setMomento] = useState<Momento>('meio')
-  const [semente, setSemente] = useState(1)
-  const [mestre, setMestre] = useState(0.4)
+  // a mesa reabre como foi deixada (16/11/2026: o "Editar" da sessão volta para ela); a I.A. pedida na vitrine entra no lugar
+  const lembrada = useRef(lerMesa()).current
+  const iaPedida = iaInicial && (IAS_DA_SESSAO as readonly string[]).includes(iaInicial) ? iaInicial : null
+  const trocouIa = !!iaPedida && !!lembrada && iaPedida !== lembrada.ia
+  const [ia, setIa] = useState<string>(iaPedida ?? lembrada?.ia ?? IAS_DA_SESSAO[0])
+  const [modo, setModo] = useState<Modo>(trocouIa ? 'conservador' : lembrada?.modo ?? 'conservador')
+  const [saldo, setSaldo] = useState<number>(lembrada?.saldo ?? (saldoInicial && saldoInicial >= 10 ? r2(saldoInicial) : 500))
+  const [conta, setConta] = useState<'real' | 'demo'>(lembrada?.conta ?? contaInicial)
+  const [sinal, setSinal] = useState<'lucro' | 'prejuizo'>(lembrada?.sinal ?? 'lucro')
+  const [momento, setMomento] = useState<Momento>(lembrada?.momento ?? 'meio')
+  const [semente, setSemente] = useState(lembrada?.semente ?? 1)
+  const [mestre, setMestre] = useState(lembrada?.mestre ?? 0.4)
   // o loss virtual começa solto, no padrão do painel: é regra da I.A., não intensidade (a corrente prende se quiser)
-  const [elos, setElos] = useState<Record<Param, Elo>>({
+  const [elos, setElos] = useState<Record<Param, Elo>>(lembrada && !trocouIa ? lembrada.elos : {
     entrada: { ligado: true, fixo: null }, resultado: { ligado: true, fixo: null }, tempo: { ligado: true, fixo: null },
     risco: { ligado: true, fixo: null }, lv: { ligado: false, fixo: null },
   })
+  useEffect(() => { guardarMesa({ ia, modo, saldo, conta, sinal, momento, semente, mestre, elos }) }, [ia, modo, saldo, conta, sinal, momento, semente, mestre, elos])
   const [partida, setPartida] = useState<PontoDePartida>(PARTIDA_FIXA)
   const t0 = useRef(Math.floor(Date.now() / 1000) * 1000)
   useEffect(() => { let vivo = true; void pontoDePartida().then((p) => { if (vivo) setPartida(p) }); return () => { vivo = false } }, [])
@@ -268,9 +279,6 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
       <header className="est-topo">
         <div className="est-marca"><i aria-hidden="true" /><div><b>Nova simulação</b><small>Regule os termômetros, confira a prévia e dê o play</small></div></div>
         <div className="est-topo-acoes">
-          <button type="button" className="asi-estudio" onClick={() => aoAbrirEstudio(c ? roteiroDaMesa(c) : null)}>
-            {c ? 'Ajuste fino no estúdio' : 'Estúdio completo'}
-          </button>
           <button type="button" className="est-fechar" onClick={aoFechar} aria-label="Fechar">×</button>
         </div>
       </header>

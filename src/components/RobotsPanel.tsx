@@ -28,17 +28,16 @@ import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
 import { NomeDoRobo } from './NomeDoRobo'
-import { lerPreparo, modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
+import { modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
 import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
-import { roteiroEmBranco, sugerirTrecho, type Roteiro } from '../core/teeds/sessaoSimulada'
+import type { Roteiro } from '../core/teeds/sessaoSimulada'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { modoSimuladoAtivo, useModoSimulado } from '../core/teeds/modoSimulado'
 import { definirContaSimulada, definirSaldoSimulado } from '../core/teeds/modoSimulado'
 import { esquecerSessao, guardarSessao, lerSessaoGuardada } from '../core/teeds/sessaoGuardada'
 // Sessão simulada (12/11/2026): só no modo simulado (administradores); o código só desce quando abre
-const EstudioDaSessao = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.EstudioDaSessao })))
-const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/EstudioDaSessao').then((m) => ({ default: m.BotaoSessaoSimulada })))
+const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/BotaoSessaoSimulada').then((m) => ({ default: m.BotaoSessaoSimulada })))
 const PalcoDaSessao = lazy(() => import('./sessaoSimulada/PalcoDaSessao').then((m) => ({ default: m.PalcoDaSessao })))
 const AssistenteDaSessao = lazy(() => import('./sessaoSimulada/AssistenteDaSessao').then((m) => ({ default: m.AssistenteDaSessao })))
 
@@ -176,15 +175,14 @@ export function RobotsPanel({
   // com os itens de admin ocultos (o olhinho), os controles da simulação somem da tela
   const menuAdminOculto = useMenuAdminOculto()
   const [simulada, setSimuladaAgora] = useState<Roteiro | null>(null)
+  /** A mesa de termômetros aberta (com a I.A. pedida pela vitrine, quando veio de lá). */
+  const [assistente, setAssistente] = useState<{ ia: string | null } | null>(null)
   // a sessão aberta fica guardada no navegador: recarregar ou sair da aba volta nela, no mesmo ponto
   const setSimulada = (r: Roteiro | null) => { if (r) guardarSessao(r); else esquecerSessao(); setSimuladaAgora(r) }
-  const [editandoSimulada, setEditandoSimulada] = useState(false)
-  const [roteiroEmEdicao, setRoteiroEmEdicao] = useState<Roteiro | null>(null)
   useEffect(() => {
-    if (!modoSim) { setSimuladaAgora(null); setEditandoSimulada(false) }
+    if (!modoSim) { setSimuladaAgora(null); setAssistente(null) }
     else setSimuladaAgora((atual) => atual ?? lerSessaoGuardada())
   }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
-  const contadorSim = useRef(1)
   useEffect(() => {
     const abrir = () => abrirAssistenteRef.current?.()
     window.addEventListener('simulado:estudio', abrir)
@@ -416,33 +414,14 @@ export function RobotsPanel({
 
   /* ------------------------------------------------ modo simulado (admin) */
   /*
-    Uma sessão nova do modo simulado: a I.A. pedida pela vitrine (ou a do último preparo), o saldo e a
-    conta do modo, a entrada e os limites do último preparo deste aparelho. O estúdio faz o resto.
+    16/11/2026 (Tiago: "o painel com os termômetros ficou bem melhor, vamos deixar ele como padrão"): a
+    mesa de termômetros é a única tela da simulação. Sessão nova, o ícone laranja e o "Editar" da sessão
+    abrem a mesa, que reabre como foi deixada (a I.A. pedida na vitrine, quando houver, entra no lugar).
+    O estúdio antigo saiu.
   */
-  const novaSessaoSim = (): Roteiro => {
-    const prep = lerPreparo()
-    const ia = modeloPedidoDaVitrine() ?? prep.modelo ?? 'superior5'
-    pedirModeloDaVitrine(null)
-    const entrada = Math.max(0.35, Number(prep.cfg?.valorAoVencer) || 1)
-    const meta = Number(prep.cfg?.takeProfit) || 10, stop = Number(prep.cfg?.stopLoss) || 30
-    const r: Roteiro = {
-      ...roteiroEmBranco(), id: `simulada-${Date.now()}-${contadorSim.current++}`, nome: 'Sessão', ia, entrada,
-      saldo: modoSim?.saldo ?? 100, conta: modoSim?.conta ?? 'real', modo: prep.modo ?? 'conservador', lossVirtual: null, valorMaximo: 0, ritmo: null,
-      trechos: [{ meta, stop, fim: 'meta', resultado: 0, operacoes: 30, sequencia: 3, momento: 'meio', acerto: null }],
-    }
-    const sug = sugerirTrecho(r, 0, 'meta', r.semente)
-    return sug ? { ...r, trechos: [{ ...r.trechos[0], ...sug }] } : r
-  }
-  const abrirEstudio = (r?: Roteiro) => { setAssistente(null); setRoteiroEmEdicao(r ?? novaSessaoSim()); setEditandoSimulada(true) }
-  /*
-    13/11/2026: sessão nova começa pelas perguntas (I.A., modo, saldo, entrada, resultado, tempo) e os
-    4 cenários com prévia; o estúdio completo fica para o ajuste fino e para editar a sessão que está no ar.
-  */
-  const [assistente, setAssistente] = useState<{ ia: string | null } | null>(null)
   const abrirAssistente = () => {
     const ia = modeloPedidoDaVitrine()
     pedirModeloDaVitrine(null)
-    setEditandoSimulada(false)
     setAssistente({ ia })
   }
   const abrirAssistenteRef = useRef(abrirAssistente)
@@ -458,7 +437,7 @@ export function RobotsPanel({
           </>}
         </div>
         <div className="rob-workspace-actions">
-          {!menuAdminOculto && <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => (simulada ? abrirEstudio(simulada) : abrirAssistente())} /></Suspense>}
+          {!menuAdminOculto && <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => abrirAssistente()} /></Suspense>}
           <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
             onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
@@ -470,7 +449,7 @@ export function RobotsPanel({
       {simulada ? (
         <Suspense fallback={<div className="robot-session-loading" role="status"><b>Sessão</b><span>Abrindo…</span></div>}>
           <PalcoDaSessao roteiro={simulada} mostrarMarkup={admin && mostrarMarkup}
-            aoEditar={() => abrirEstudio(simulada)} aoSair={() => setSimulada(null)} />
+            aoEditar={() => abrirAssistente()} aoSair={() => setSimulada(null)} />
         </Suspense>
       ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirAssistente()} /> : (
         <section className="robot-workspace-empty">
@@ -487,19 +466,7 @@ export function RobotsPanel({
               definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
               setSimulada(r); setAssistente(null)
             }}
-            aoAbrirEstudio={(r) => abrirEstudio(r ? { ...r, id: r.id ?? `simulada-${Date.now()}-${contadorSim.current++}` } : undefined)}
             aoFechar={() => setAssistente(null)} />
-        </Suspense>
-      )}
-      {editandoSimulada && roteiroEmEdicao && (
-        <Suspense fallback={null}>
-          <EstudioDaSessao inicial={roteiroEmEdicao}
-            aoDarPlay={(r) => {
-              // o topo começa a sessão com o saldo e a conta do estúdio
-              definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
-              setSimulada(r); setEditandoSimulada(false)
-            }}
-            aoFechar={() => setEditandoSimulada(false)} />
         </Suspense>
       )}
     </>

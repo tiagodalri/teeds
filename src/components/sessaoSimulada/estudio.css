@@ -3,6 +3,12 @@
 .est { --est-l: #FB923C; --est-ouro: var(--gf-ouro, var(--primary)); --est-dados: var(--fonte-dados, ui-monospace, Menlo, monospace);
   position: fixed; inset: 0; z-index: 320; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); max-width: none !important; width: auto !important; background: var(--bg); color: var(--text); }
 body.est-aberto { overflow: hidden; }
+/*
+  16/11/2026 (Tiago: "sempre que vou clicar ali acabo clicando no suporte sem querer"): com a tela da
+  simulação aberta (mesa de termômetros ou estúdio), os botões flutuantes do suporte e do chat da equipe
+  saem de cima do "Dar o play". Voltam ao fechar a tela.
+*/
+body.est-aberto .sp-lancador-area, body.est-aberto .eq-lancador-area { display: none !important; }
 
 /* topo */
 .est-topo { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface); }

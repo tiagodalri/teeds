@@ -105,10 +105,16 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
 
   const montar = useCallback((ateOperacao: number) => {
     if (!partida) return
-    const e = ateOperacao > 0 ? ensaioAte(roteiro, plano, partida, t0, ateOperacao) : new Ensaio(roteiro, plano, partida, t0)
+    // 16/11/2026 (Tiago: "quando bate a meta não vejo o cardzinho de meta batida ou do stop"): chegar ao fim
+    // pulando, ou voltar para uma sessão que já terminou, também mostra o cartão (o som só toca uma vez)
+    let fimNoCaminho: FimDoTrecho['tipo'] | null = null
+    const e = ateOperacao > 0
+      ? ensaioAte(roteiro, plano, partida, t0, ateOperacao, (f) => { fimNoCaminho = f.tipo })
+      : new Ensaio(roteiro, plano, partida, t0)
     e.aoFimDoTrecho = aoFim
     ensaio.current = e
-    setLimite(null)
+    const parouNoLimite = e.fase !== 'rodando' && (fimNoCaminho === 'meta' || fimNoCaminho === 'stop')
+    setLimite(parouNoLimite ? fimNoCaminho : null)
     mostrar()
   }, [partida, roteiro, plano, aoFim, mostrar])
 
@@ -264,7 +270,14 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
         <div className="ssim-vel" role="group" aria-label="Velocidade">
           {VELOCIDADES.map((v) => <button key={v} type="button" className={vel === v ? 'on' : ''} onClick={() => setVel(v)}>{v}×</button>)}
         </div>
-        <select className="ssim-marcas" aria-label="Pular para" value="" onChange={(ev) => { const op = Number(ev.target.value); if (Number.isFinite(op)) irPara(op) }}>
+        <select className="ssim-marcas" aria-label="Pular para" value="" onChange={(ev) => {
+          const op = Number(ev.target.value)
+          if (!Number.isFinite(op)) return
+          irPara(op)
+          // o marcador da meta (ou do stop) para um pouco antes: segue tocando até chegar lá e o cartão aparecer
+          const m = marcadores.find((x) => x.op === op)
+          if (m && /^Bateu/.test(m.rotulo)) play()
+        }}>
           <option value="">Pular para…</option>
           {marcadores.map((m) => <option key={`${m.rotulo}-${m.op}`} value={m.op}>{m.rotulo} · op. {m.op}</option>)}
         </select>
