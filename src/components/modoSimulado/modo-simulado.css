@@ -6,12 +6,11 @@
 .msim-ligar:hover { background: color-mix(in srgb, #FB923C 12%, transparent); }
 .msim-ligar:focus-visible, .msim-tag:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
 
-/* a tag única do modo, sempre à vista */
-.msim-tag { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border: 0; border-radius: 999px; background: #FB923C; color: #2A1F10;
-  font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .02em; cursor: pointer; white-space: nowrap; flex: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, #FB923C 28%, transparent); }
-.msim-tag i { width: 8px; height: 8px; border-radius: 50%; background: #2A1F10; animation: msim-pulso 1.6s ease-in-out infinite; }
-.msim-tag.aberta { box-shadow: 0 0 0 3px color-mix(in srgb, #FB923C 55%, transparent); }
+/* a marca do modo, sempre à vista: só uma bolinha laranja discreta, piscando (16/11/2026) */
+.msim-tag { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; flex: none; }
+.msim-tag i { width: 8px; height: 8px; border-radius: 50%; background: #FB923C; animation: msim-pulso 1.8s ease-in-out infinite; }
+.msim-tag:hover { background: color-mix(in srgb, #FB923C 14%, transparent); }
+.msim-tag.aberta { background: color-mix(in srgb, #FB923C 20%, transparent); }
 @keyframes msim-pulso { 50% { opacity: .25; } }
 
 /* o painel */
@@ -46,7 +45,6 @@
 @media (max-width: 900px) {
   .msim-ligar span { display: none; }
   .msim-ligar { width: 34px; padding: 0; justify-content: center; }
-  .msim-tag { height: 30px; padding: 0 11px; font-size: 12px; }
   .msim-painel { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-height: 88dvh; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) { .msim-tag i { animation: none; } }

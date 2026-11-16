@@ -44,20 +44,16 @@
 .ssim-quadro { padding-top: 14px; }
 .ssim-tag { top: -12px; }
 
-/* a pílula de controle */
-.ssim-pilula { position: fixed; z-index: 170; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
-  display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px); padding: 6px 8px 6px 6px; border: 1px solid color-mix(in srgb, #FB923C 45%, var(--border));
-  border-radius: 999px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); box-shadow: 0 14px 40px -12px #000a;
-  color: var(--text); font-size: 12.5px; transition: opacity .35s, transform .35s; flex-wrap: nowrap; width: max-content; box-sizing: border-box; }
-.ssim-pilula.escondida { opacity: 0; transform: translate(-50%, 12px); pointer-events: none; }
-/* a aba das I.A. estica todo filho direto (.workspace-app .ger.robot-workspace > *): a pílula não */
-.workspace-app .ger.robot-workspace > .ssim-pilula { width: max-content; max-width: calc(100vw - 32px); }
+/* a barra de controle: presa em cima da operação, sempre à vista (acompanha a rolagem) */
+.ssim-pilula { position: sticky; top: 8px; z-index: 30; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 10px 6px 6px;
+  border: 1px solid color-mix(in srgb, #FB923C 45%, var(--border)); border-radius: 16px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(10px);
+  box-shadow: 0 10px 28px -16px #000a; color: var(--text); font-size: 12.5px; box-sizing: border-box; min-width: 0; }
 .ssim-play { display: grid; place-items: center; flex: none; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 50%; background: #FB923C; color: #2A1F10; cursor: pointer; }
 .ssim-play svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .ssim-play svg path[d^="M8 5l"] { fill: currentColor; }
 .ssim-play:focus-visible, .ssim-pilula button:focus-visible, .ssim-marcas:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
 .ssim-rotulo { flex: none; min-width: 128px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.ssim-barra { flex: none; width: 90px; height: 4px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.ssim-barra { flex: 1 1 90px; min-width: 60px; height: 4px; border-radius: 4px; background: var(--border); overflow: hidden; }
 .ssim-barra i { display: block; height: 100%; background: #FB923C; transition: width .2s; }
 .ssim-vel { display: inline-flex; flex: none; gap: 2px; padding: 2px; border-radius: 999px; background: var(--bg); }
 .ssim-vel button { min-width: 34px; height: 30px; padding: 0 6px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-weight: 700; cursor: pointer; font-variant-numeric: tabular-nums; }
@@ -66,11 +62,10 @@
 .ssim-texto { flex: none; height: 32px; padding: 0 11px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text); font: inherit; font-weight: 650; cursor: pointer; white-space: nowrap; }
 .ssim-texto:disabled { opacity: .45; cursor: default; }
 .ssim-texto.sair { color: var(--down); }
-.ssim-aviso { position: absolute; left: 12px; right: 12px; bottom: calc(100% + 8px); padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--down); font-size: 12px; }
+.ssim-aviso { position: absolute; left: 12px; right: 12px; top: calc(100% + 8px); padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--down); font-size: 12px; }
 
 @media (max-width: 900px) {
-  .ssim-pilula, .workspace-app .ger.robot-workspace > .ssim-pilula { left: 16px; right: 16px; width: auto; transform: none; max-width: none; flex-wrap: wrap; justify-content: center; border-radius: 18px; padding: 8px; }
-  .ssim-pilula.escondida { transform: translateY(12px); }
+  .ssim-pilula { justify-content: center; padding: 8px; }
   .ssim-rotulo { min-width: 0; }
   .ssim-barra { width: 60px; }
 }
@@ -102,3 +97,6 @@
 .ssim-linha-info td { text-align: left !important; font-family: inherit !important; font-size: 12px; color: var(--muted); background: color-mix(in srgb, #FB923C 6%, transparent); }
 
 .ssim-sugerir { justify-self: start; }
+
+/* com os itens de admin ocultos (o olhinho), a barra de controle da sessão some (16/11/2026) */
+.ssim-pilula.sem-admin { display: none !important; }

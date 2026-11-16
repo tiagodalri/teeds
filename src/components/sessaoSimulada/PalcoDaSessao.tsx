@@ -11,6 +11,7 @@ import type { EstadoMotor } from '../../core/deriv/engine'
 import { identidade } from '../../core/deriv/branding'
 import { ATIVO_DOS_ROBOS } from '../../core/deriv/config'
 import { fetchTickHistory, subscribeTicks } from '../../core/deriv/market'
+import { useMenuAdminOculto } from '../../core/menuDeAdmin'
 import { publicSocket } from '../../core/deriv/client'
 import { roboLigou, sessaoBateuLimite } from '../../core/som'
 import { definirSaldoSimulado, escreverNoLivro } from '../../core/teeds/modoSimulado'
@@ -50,6 +51,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   aoEditar: () => void
   aoSair: () => void
 }) {
+  const adminOculto = useMenuAdminOculto()
   const previa = useMemo(() => previaDoRoteiro(roteiro), [roteiro])
   const plano = previa.resultados
   const ident = useMemo(() => {
@@ -203,17 +205,6 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     return m.sort((a, b) => a.op - b.op)
   }, [previa])
 
-  // a pílula some sozinha enquanto roda; o mouse mexeu, ela volta
-  const [pilulaVisivel, setPilulaVisivel] = useState(true)
-  useEffect(() => {
-    if (!tocando) { setPilulaVisivel(true); return }
-    let t = setTimeout(() => setPilulaVisivel(false), 2500)
-    const mexeu = () => { setPilulaVisivel(true); clearTimeout(t); t = setTimeout(() => setPilulaVisivel(false), 2500) }
-    window.addEventListener('mousemove', mexeu)
-    window.addEventListener('touchstart', mexeu)
-    return () => { clearTimeout(t); window.removeEventListener('mousemove', mexeu); window.removeEventListener('touchstart', mexeu) }
-  }, [tocando])
-
   // atalhos
   useEffect(() => {
     const tecla = (ev: KeyboardEvent) => {
@@ -253,18 +244,13 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   return (
     <>
       <RobotOverview sessoes={[]} paineis={[resumoDeEstudo(estado, { id: idSessao, nome: ident.nome, cor: ident.cor, numero: '#1', modo: null, demo })]} moeda="USD" demoDaTela={demo} />
-      <div className="rob-workspace-board modo-lista ssim-quadro">
-        <div className="rob-board-slot aberta">
-          <CabineDaSessao roteiro={roteiro} estado={estadoNaCabine} trecho={trecho} inicio={t0} mostrarMarkup={mostrarMarkup}
-            onDesligar={desligar} onLigarDeNovo={fase !== 'fim' ? play : undefined}>
-            {limite && <LimiteAtingido tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor} moeda="USD"
-              onFechar={() => setLimite(null)} onLigarDeNovo={fase === 'entre' ? () => { setLimite(null); play() } : undefined} />}
-          </CabineDaSessao>
-        </div>
-      </div>
-
-      <div className={`ssim-pilula ${pilulaVisivel ? '' : 'escondida'}`} role="toolbar" aria-label="Controle da sessão simulada"
-        onMouseEnter={() => setPilulaVisivel(true)}>
+      {/*
+        16/11/2026 (Tiago: "cadê o botão do play na operação, o pause? Estou sentindo falta"): a barra de
+        controle fica presa em cima da operação e não some mais sozinha (antes flutuava no rodapé da tela e
+        sumia depois de 2,5 s sem mexer o mouse).
+      */}
+      {/* 16/11/2026 (Tiago): com os itens de admin ocultos (o olhinho), a barra de controle some junto; a sessão segue rodando */}
+      <div className={`ssim-pilula ${adminOculto ? 'sem-admin' : ''}`} role="toolbar" aria-label="Controle da sessão simulada" aria-hidden={adminOculto || undefined}>
         <button type="button" className="ssim-play" onClick={tocando ? pausar : play}
           aria-label={tocando ? 'Pausar' : fase === 'entre' ? 'Religar' : fase === 'fim' ? 'Recomeçar' : 'Começar'}>
           {tocando ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
@@ -287,6 +273,16 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
         <button type="button" className="ssim-texto sair" onClick={() => { setTocando(false); aoSair() }}>Encerrar</button>
         {aviso && <small className="ssim-aviso" role="alert">{aviso}</small>}
       </div>
+      <div className="rob-workspace-board modo-lista ssim-quadro">
+        <div className="rob-board-slot aberta">
+          <CabineDaSessao roteiro={roteiro} estado={estadoNaCabine} trecho={trecho} inicio={t0} mostrarMarkup={mostrarMarkup}
+            onDesligar={desligar} onLigarDeNovo={play}>
+            {limite && <LimiteAtingido tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor} moeda="USD"
+              onFechar={() => setLimite(null)} onLigarDeNovo={fase === 'entre' ? () => { setLimite(null); play() } : undefined} />}
+          </CabineDaSessao>
+        </div>
+      </div>
+
     </>
   )
 }

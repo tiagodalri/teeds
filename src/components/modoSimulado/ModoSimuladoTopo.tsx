@@ -49,8 +49,9 @@ export function ModoSimuladoTopo({ ocultarBotao = false }: { ocultarBotao?: bool
   return (
     <>
       <button type="button" className={`msim-tag ${aberto ? 'aberta' : ''}`} onClick={() => setAberto((a) => !a)} aria-expanded={aberto} aria-haspopup="dialog"
-        title="Modo simulado: toque para o saldo e para sair">
-        <i aria-hidden="true" />Simulado
+        title="Modo simulado: toque para o saldo e para sair" aria-label="Modo simulado: abrir o saldo e sair">
+        {/* 16/11/2026 (Tiago: "precisa ficar mais discreto; apenas uma bolinha laranja bem discretinha piscando") */}
+        <i aria-hidden="true" />
       </button>
       {aberto && createPortal(<Painel aoFechar={() => setAberto(false)} />, document.body)}
     </>

@@ -441,3 +441,10 @@ button.mes-valor:hover { border-color: color-mix(in srgb, var(--est-ouro) 60%, v
   .mes-universal-topo strong { font-size: 19px; }
   .mes-valor { min-width: 84px; font-size: 15px; }
 }
+
+/* a prévia diz se o número da cabine é o final ou um momento do meio (16/11/2026) */
+.asi-parcial { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.45;
+  background: color-mix(in srgb, var(--est-l) 12%, transparent); border: 1px solid color-mix(in srgb, var(--est-l) 45%, transparent); }
+.asi-parcial.final { background: color-mix(in srgb, var(--up) 9%, transparent); border-color: color-mix(in srgb, var(--up) 35%, transparent); }
+.asi-parcial b.sobe { color: var(--up); } .asi-parcial b.cai { color: var(--down); }
+.asi-parcial button { height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--est-l); color: #2A1F10; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }

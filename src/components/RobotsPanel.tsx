@@ -29,6 +29,7 @@ import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
 import { NomeDoRobo } from './NomeDoRobo'
 import { lerPreparo, modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
+import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
 import { roteiroEmBranco, sugerirTrecho, type Roteiro } from '../core/teeds/sessaoSimulada'
 import type { ConfigEstrategia } from '../core/deriv/engine'
@@ -172,6 +173,8 @@ export function RobotsPanel({
     escondidas, montadas e operando, e voltam quando o modo desliga.
   */
   const modoSim = useModoSimulado()
+  // com os itens de admin ocultos (o olhinho), os controles da simulação somem da tela
+  const menuAdminOculto = useMenuAdminOculto()
   const [simulada, setSimuladaAgora] = useState<Roteiro | null>(null)
   // a sessão aberta fica guardada no navegador: recarregar ou sair da aba volta nela, no mesmo ponto
   const setSimulada = (r: Roteiro | null) => { if (r) guardarSessao(r); else esquecerSessao(); setSimuladaAgora(r) }
@@ -455,7 +458,7 @@ export function RobotsPanel({
           </>}
         </div>
         <div className="rob-workspace-actions">
-          <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => (simulada ? abrirEstudio(simulada) : abrirAssistente())} /></Suspense>
+          {!menuAdminOculto && <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => (simulada ? abrirEstudio(simulada) : abrirAssistente())} /></Suspense>}
           <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
             onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>

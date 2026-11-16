@@ -30,7 +30,9 @@ export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, 
   const ops = previa.corrida.ops
   const total = ops.length
   const [opVista, setOpVista] = useState<number | null>(null)
-  const [foco, setFoco] = useState<'sequencia' | 'fim'>('sequencia')
+  // abre no fim: é o resultado pedido (16/11/2026, Tiago: "o preview não está respeitando o resultado que eu
+  // pedi" — a cabine abria parada no meio da sessão, na maior sequência, com o resultado parcial negativo)
+  const [foco, setFoco] = useState<'sequencia' | 'fim'>('fim')
   useEffect(() => { setOpVista(null) }, [previa])
   const naSequencia = Math.min(total, previa.maiorSequencia.desde + previa.maiorSequencia.n)
   const n = Math.min(opVista ?? (comFoco && foco === 'sequencia' ? naSequencia : total), total)
@@ -55,12 +57,24 @@ export function PreviaDaSessao({ roteiro, previa, partida, inicio, segundosAte, 
     <div className={`asi-previa ${ladoALado ? 'lado' : ''}`}>
       {comFoco && (
         <div className="asi-foco">
-          <span>A cabine para</span>
+          <span>A cabine mostra</span>
           <div className="est-seg" role="radiogroup" aria-label="Momento da prévia">
-            <button type="button" role="radio" aria-checked={opVista === null && foco === 'sequencia'} className={opVista === null && foco === 'sequencia' ? 'on' : ''} onClick={() => { setFoco('sequencia'); setOpVista(null) }}><b>Na maior sequência</b></button>
-            <button type="button" role="radio" aria-checked={opVista === null && foco === 'fim'} className={opVista === null && foco === 'fim' ? 'on' : ''} onClick={() => { setFoco('fim'); setOpVista(null) }}><b>No fim</b></button>
+            <button type="button" role="radio" aria-checked={opVista === null && foco === 'fim'} className={opVista === null && foco === 'fim' ? 'on' : ''} onClick={() => { setFoco('fim'); setOpVista(null) }}><b>O fim da sessão</b></button>
+            <button type="button" role="radio" aria-checked={opVista === null && foco === 'sequencia'} className={opVista === null && foco === 'sequencia' ? 'on' : ''} onClick={() => { setFoco('sequencia'); setOpVista(null) }}><b>O pior momento</b></button>
           </div>
         </div>
+      )}
+      {comFoco && (
+        n < total ? (
+          <div className="asi-parcial" role="status">
+            <span>Você está vendo o <b>meio da sessão</b> (operação {n} de {total}): o resultado parcial é <b className={(opSel?.resultado ?? 0) < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(opSel?.resultado ?? 0, 'USD')}</b>. A sessão termina em <b className={previa.resultado < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(previa.resultado, 'USD')}</b>.</span>
+            <button type="button" onClick={() => { setFoco('fim'); setOpVista(null) }}>Ver o fim</button>
+          </div>
+        ) : (
+          <div className="asi-parcial final" role="status">
+            <span>Fim da sessão: resultado final <b className={previa.resultado < 0 ? 'cai' : 'sobe'}>{dinheiroComSinal(previa.resultado, 'USD')}</b> em {total} operações.</span>
+          </div>
+        )
       )}
       <div className="est-linha">
         <div className="est-linha-topo">
