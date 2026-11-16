@@ -12,6 +12,7 @@ import { naPagina } from '../core/escala'
 import { simboloMoeda } from '../core/dinheiro'
 import { DERIV } from '../core/deriv/config'
 import { motivoLegivel } from './RobotResumo'
+import { CurvaDaSessao, useNumeroAnimado } from './CurvaDaSessao'
 
 /** 08/11/2026 (Tiago): "por enquanto" a tabela de operações da GF sem a hora. Para voltar, troque para true. */
 // 09/11/2026 (Tiago): a coluna Hora das operações volta também na GlobalFly
@@ -69,45 +70,6 @@ const assinado = (v: number) => `${v >= 0 ? '+' : '−'}${num(v)}`
 const relogio = (ms: number) =>
   new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-/* ------------------------------------------------------------------ curva */
-
-function Curva({ pontos, positivo }: { pontos: number[]; positivo: boolean }) {
-  const d = useMemo(() => {
-    if (pontos.length < 2) return null
-    const min = Math.min(...pontos, 0)
-    const max = Math.max(...pontos, 0)
-    const faixa = max - min || 1
-    const L = 100, A = 34
-    const px = (i: number) => (i / (pontos.length - 1)) * L
-    const py = (v: number) => A - ((v - min) / faixa) * A
-    const linha = pontos.map((v, i) => `${i === 0 ? 'M' : 'L'} ${px(i).toFixed(2)} ${py(v).toFixed(2)}`).join(' ')
-    return {
-      linha,
-      area: `${linha} L ${L} ${A} L 0 ${A} Z`,
-      zero: py(0),
-      temZero: min < 0 && max > 0,
-      fimX: px(pontos.length - 1),
-      fimY: py(pontos[pontos.length - 1]),
-    }
-  }, [pontos])
-
-  if (!d) return <div className="tv-curva-vazia">A curva aparece na primeira operação.</div>
-
-  const cor = positivo ? 'var(--tv-up)' : 'var(--tv-down)'
-  return (
-    <svg className="tv-curva" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
-      <path d={d.area} fill={cor} opacity="0.14" />
-      {d.temZero && (
-        <line x1="0" x2="100" y1={d.zero} y2={d.zero}
-          stroke="var(--tv-linha)" strokeWidth="0.4" strokeDasharray="2 2" />
-      )}
-      <path d={d.linha} fill="none" stroke={cor} strokeWidth="1.5"
-        strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <circle cx={d.fimX} cy={d.fimY} r="1.6" fill={cor} vectorEffect="non-scaling-stroke" />
-    </svg>
-  )
-}
-
 /* -------------------------------------------------------------- principal */
 
 /**
@@ -158,6 +120,8 @@ export function RobotLive({
   const quantasAntes = useRef(estado.historico.length)
   const alturaAntes = useRef(0)
   const positivo = estado.resultado >= 0
+  // o número do topo corre junto com a linha (16/11/2026)
+  const resultadoNaTela = useNumeroAnimado(estado.resultado)
   const historicoVisivel = estado.historico.filter(o => filtroHistorico === 'todas' || (filtroHistorico === 'ganhos' ? o.lucro > 0 : o.lucro < 0))
   const fita = estado.digitos.slice(-30)
   /*
@@ -405,8 +369,8 @@ export function RobotLive({
 
       <section className="tv-curva-painel">
         <div className="tv-curva-caixa">
-          <div className="tv-curva-legenda"><span>Evolução da sessão</span><b className={positivo ? 'up' : 'down'}>{assinado(estado.resultado)} {moeda}</b></div>
-          <Curva pontos={estado.curva} positivo={positivo} />
+          <div className="tv-curva-legenda"><span>Evolução da sessão</span><b className={resultadoNaTela >= 0 ? 'up' : 'down'}>{assinado(resultadoNaTela)} {moeda}</b></div>
+          <CurvaDaSessao pontos={estado.curva} historico={estado.historico} operacoes={estado.operacoes} />
           {config.takeProfit > 0 && <div className="tv-curva-meta"><span>Meta de ganho {simboloMoeda(moeda)} {num(config.takeProfit)}</span><span>Faltam <b>{num(Math.max(0, config.takeProfit - estado.resultado))}</b></span></div>}
           <div className="tv-trilho">
             <span className="down">{config.stopLoss > 0 ? `−${num(config.stopLoss)}` : 'Sem limite'}</span>

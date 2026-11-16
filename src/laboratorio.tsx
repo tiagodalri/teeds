@@ -507,6 +507,30 @@ function SemDeriv() {
   )
 }
 
+/**
+ * ?tela=curva-viva (&cockpit=1) — 16/11/2026: a Evolução da sessão recebendo uma
+ * operação nova a cada 2,2 s, passando para o negativo e voltando (animação da curva).
+ */
+function LabCurvaViva() {
+  const cockpit = new URLSearchParams(location.search).has('cockpit')
+  const [estado, setEstado] = useState<EstadoMotor>(estadoRodando)
+  useEffect(() => {
+    const seq = [-0.75, -0.75, -1.03, 0.95, 0.94, -0.75, 0.95, 0.95, 0.17, -0.75, -1.03, -1.1, 0.95, 0.95, 0.95, 0.94]
+    let i = 0
+    const id = setInterval(() => {
+      setEstado((e) => {
+        const lucro = seq[i++ % seq.length]
+        const resultado = +(e.resultado + lucro).toFixed(2)
+        const n = (e.operacoes ?? 0) + 1
+        const op = { ...e.historico[0], n, contractId: 29200000 + n, lucro, ganhou: lucro > 0, quando: Date.now() }
+        return { ...e, operacoes: n, resultado, curva: [...e.curva, resultado].slice(-200), historico: [op, ...e.historico] }
+      })
+    }, 2200)
+    return () => clearInterval(id)
+  }, [])
+  return <div className="rob-workspace-board modo-lista"><Cabine estado={estado} expandido={cockpit} titulo="Robô 1" /></div>
+}
+
 function Laboratorio() {
   const qual = new URLSearchParams(location.search).get('tela') ?? 'cabine'
   // a home vem com a casca inteira da plataforma: fora da moldura do laboratório
@@ -723,6 +747,7 @@ function Laboratorio() {
         {qual === 'espera' && <div className="rob-workspace-board modo-lista"><CabineEspera /></div>}
         {qual === 'espera-mosaico' && <div className="rob-workspace-board modo-mosaico"><CabineEspera mosaico /></div>}
         {qual === 'meta-de-novo' && <LabMetaDeNovo />}
+        {qual === 'curva-viva' && <LabCurvaViva />}
         {qual === 'parado' && <div className="rob-workspace-board modo-lista"><Cabine estado={estadoParado} expandido={false} titulo="Robô 1" /></div>}
         {qual === 'preparo' && (
           <CatalogoDeExemplo itens={CATALOGO_LAB.map((i) => ({ id: i.id, ativo: true, parametros: parametrosPadrao(i.id), lossVirtualAjustavel: true }))}>
