@@ -6,7 +6,7 @@ import { useDigits } from '../hooks/useDigits'
 import { IconeFechar } from './IconeFechar'
 import { MARCA } from '../marca'
 import { naPagina } from '../core/escala'
-import './digitos-flutuante.css'
+import './probabilistica.css'
 
 /**
  * Painel flutuante "Dígitos ao vivo" da área dos robôs.
@@ -232,88 +232,124 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
   }, [aoFechar])
 
   const trocarJanela = (j: number) => { setJanela(j); guardar(CHAVE_JANELA, j) }
-  const maxPct = Math.max(...estat.pct, 1)
+  // ---------------------------------------------------- 16/11/2026: Probabilística
+  // A faixa normal: onde cada dígito costuma ficar só pelo acaso nesta quantidade de
+  // ticks (10% ± ACENDE desvios). Acima dela é exatamente quem acende em verde.
+  const sigma = estat.total ? Math.sqrt((0.1 * 0.9) / estat.total) * 100 : 0
+  const faixaBaixo = Math.max(0, ESPERADO - ACENDE * sigma)
+  const faixaAlto = ESPERADO + ACENDE * sigma
+  const topo = Math.max(...estat.pct, faixaAlto, 12) * 1.08
+  const alturaDe = (pct: number) => `${(pct / topo) * 100}%`
+  // há quantos ticks cada dígito não sai (a memória guarda os últimos 1000)
+  const semSair = Array.from({ length: 10 }, (_, d) => {
+    const i = estat.digitos.lastIndexOf(d)
+    return i < 0 ? null : estat.digitos.length - 1 - i
+  })
+  const maiorAusencia = semSair.reduce<number>((m, v) => (v == null ? 1000 : Math.max(m, v)), 0)
+  const quemMaisDemora = semSair.findIndex((v) => (v == null ? 1000 : v) === maiorAusencia)
+  const textoSemSair = (v: number | null) => (v == null ? 'há 1000+' : v === 0 ? 'agora' : `há ${v}`)
+  const [foco, setFoco] = useState<number | null>(null)
+  const vezes = (n: number) => `${n} ${n === 1 ? 'vez' : 'vezes'}`
   // nunca o código da corretora (R_75): enquanto a lista de ativos não chega, o nome sai do código
   const nomeCompleto = nomeDoAtivo(nomeAtivo ?? `Volatility ${ATIVO_DOS_ROBOS.replace(/^R_/, '')} Index`)
   const ativoCurto = MARCA.ativosSemVolatility ? nomeCompleto : nomeCompleto.replace(/\s*Index$/i, '')
+  const fita = estat.digitos.slice(-16)
 
   const painel = (
-    <div ref={caixa} className={`pd ${movel ? 'pd-movel' : ''}`} role="dialog" aria-label="Dígitos ao vivo"
+    <div ref={caixa} className={`pd pb ${movel ? 'pd-movel' : ''}`} role="dialog" aria-label="Probabilística"
       style={movel ? undefined : { left: pos.x, top: pos.y, width: largura, ['--pd-escala' as string]: escala }}>
-      <div className="pd-topo" onPointerDown={comecar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}>
-        {!movel && <span className="pd-grip" aria-hidden="true">⋮⋮</span>}
-        <span className="pd-titulo"><b>Dígitos ao vivo</b><span className="pd-ativo"><i className="pd-vivo" aria-hidden="true" />{ativoCurto}</span></span>
-        <span className="pd-ultimo-caixa"><small>Último</small><span key={ticks.current} className="pd-ultimo" title="Último dígito que chegou">{estat.ultimo ?? '—'}</span></span>
-        <button className="pd-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
+      <div className="pb-topo" onPointerDown={comecar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}>
+        {!movel && <span className="pb-grip" aria-hidden="true"><i /><i /><i /><i /><i /><i /></span>}
+        <span className="pb-titulo">
+          <b>Probabilística</b>
+          <span className="pb-ativo"><i className="pb-vivo" aria-hidden="true" />{ativoCurto} · {janela} dígitos</span>
+        </span>
+        <span className="pb-ultimo-caixa">
+          <small>Último</small>
+          <span key={ticks.current} className="pb-ultimo" title="Último dígito que chegou">{estat.ultimo ?? '—'}</span>
+        </span>
+        <button className="pb-fechar" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
       </div>
 
-      <div className="pd-janela">
-        <span>Últimos</span>
-        <div className="segmented mini" role="group" aria-label="Quantos dígitos contar">
-          {JANELAS.map((j) => (
-            <button key={j} type="button" className={janela === j ? 'on' : ''} onClick={() => trocarJanela(j)}>{j}</button>
-          ))}
-        </div>
-        <span>dígitos</span>
+      <div className="pb-janela" role="group" aria-label="Quantos dígitos contar">
+        {JANELAS.map((j) => (
+          <button key={j} type="button" className={janela === j ? 'on' : ''} aria-pressed={janela === j} onClick={() => trocarJanela(j)}>{j}</button>
+        ))}
       </div>
 
-      <div className="pd-grafico" aria-label="Frequência de cada dígito">
-        {/* A área das barras é a régua: barras e o tracejado dos 10% usam a
-            mesma altura, então a linha cai exatamente no 10% das barras. */}
-        <div className="pd-area">
+      <div className="pb-grafico" aria-label="Frequência de cada dígito" onPointerLeave={() => setFoco(null)}>
+        <div className="pb-area">
           {estat.total > 0 && (
-            <span className="pd-esperado" style={{ bottom: `${Math.min(100, (ESPERADO / maxPct) * 100)}%` }}
-              title={`Esperado: ${ESPERADO}% para cada dígito`} aria-hidden="true"><small>10%</small></span>
+            <span className="pb-faixa" aria-hidden="true"
+              style={{ bottom: alturaDe(faixaBaixo), height: `${((faixaAlto - faixaBaixo) / topo) * 100}%` }} />
           )}
           {estat.pct.map((pct, d) => {
             const z = desvios[d]
             const estado = z >= ACENDE ? 'alta' : z <= -ACENDE ? 'baixa' : ''
             return (
-              <div key={d} className={`pd-barra ${estado} ${d === lider ? 'lider' : ''}`}
-                style={{ ['--brilho' as string]: brilho(z).toFixed(2), ['--h' as string]: `${Math.max(2, (pct / maxPct) * 100)}%` }}
-                title={`${estat.conta[d]} vezes em ${estat.total} · esperado ${ESPERADO}%`}>
+              <div key={d} className={`pb-barra ${estado} ${estat.ultimo === d ? 'ultimo' : ''} ${foco === d ? 'pb-foco' : ''}`}
+                style={{ ['--brilho' as string]: brilho(z).toFixed(2), ['--h' as string]: `max(3px, ${alturaDe(pct)})` }}
+                onPointerEnter={() => setFoco(d)} onPointerDown={() => setFoco(d)}
+                title={`Dígito ${d}: saiu ${vezes(estat.conta[d])} em ${estat.total}`}>
                 <em>{pct.toFixed(0)}%</em>
                 <i />
               </div>
             )
           })}
+          {foco != null && estat.total > 0 && (
+            <span className="pb-dica" style={{ left: `${Math.min(80, Math.max(20, foco * 10 + 5))}%` }}>
+              Dígito <b>{foco}</b>: saiu {vezes(estat.conta[foco])} em {estat.total} · {textoSemSair(semSair[foco])}
+            </span>
+          )}
         </div>
-        <div className="pd-eixo" aria-hidden="true">
+        <div className="pb-eixo">
           {estat.pct.map((_, d) => (
-            <b key={d} className={`${desvios[d] >= ACENDE ? 'alta' : ''} ${estat.ultimo === d ? 'ultimo' : ''}`}
-              style={{ ['--brilho' as string]: brilho(desvios[d]).toFixed(2) }}>{d}</b>
+            <span key={d} className={`${desvios[d] >= ACENDE ? 'alta' : ''} ${estat.ultimo === d ? 'ultimo' : ''}`}>
+              <b>{d}</b>
+              <small className={d === quemMaisDemora && maiorAusencia >= 15 ? 'demora' : ''}>{semSair[d] == null ? '1000+' : textoSemSair(semSair[d])}</small>
+            </span>
           ))}
+        </div>
+        <div className="pb-legenda" aria-hidden="true">
+          <span><i className="pb-l-faixa" />Faixa normal</span>
+          <span><i className="pb-l-alta" />Acima do normal</span>
+          <span><i className="pb-l-ultimo" />Último</span>
         </div>
       </div>
 
-      <span className="pd-secao">Últimos 12 que saíram</span>
-      <div className="pd-fita" aria-label="Últimos dígitos">
-        {estat.recentes.slice(-12).map((d, i, arr) => (
-          <span key={ticks.current - (arr.length - 1 - i)} className={`${desvios[d] >= ACENDE ? 'alta' : ''} ${i === arr.length - 1 ? 'ultimo' : ''}`}>{d}</span>
+      <div className="pb-cartoes">
+        <div className="pb-cartao">
+          <small>Acima da faixa normal</small>
+          {lendo ? <em>Lendo o mercado</em>
+            : emAlta.length === 0 ? <em>Nenhum agora</em>
+            : <b>{emAlta.slice(0, 4).map(({ d, z }) => (
+                <span key={d} className="pb-chip" style={{ ['--brilho' as string]: brilho(z).toFixed(2) }}>{d}</span>
+              ))}{emAlta.length === 1 && <em>{estat.pct[emAlta[0].d].toFixed(0)}%</em>}</b>}
+        </div>
+        <div className="pb-cartao">
+          <small>Mais tempo sem sair</small>
+          {lendo || quemMaisDemora < 0 ? <em>Lendo o mercado</em>
+            : <b><span className="pb-chip ouro">{quemMaisDemora}</span><em>{textoSemSair(semSair[quemMaisDemora])} ticks</em></b>}
+        </div>
+      </div>
+
+      <div className="pb-divisao">
+        <div><span>0 a 4 <b>{metadeDeBaixo.toFixed(0)}%</b></span><span><b>{(100 - metadeDeBaixo).toFixed(0)}%</b> 5 a 9</span></div>
+        <i aria-hidden="true"><u style={{ width: `${metadeDeBaixo}%` }} /></i>
+      </div>
+
+      <div className="pb-secao"><span>Últimos que saíram</span></div>
+      <div className="pb-fita" aria-label="Últimos dígitos">
+        {fita.map((d, i) => (
+          <span key={ticks.current - (fita.length - 1 - i)} className={`${desvios[d] >= ACENDE ? 'alta' : ''} ${i === fita.length - 1 ? 'ultimo' : ''}`}>{d}</span>
         ))}
       </div>
 
-      <div className="pd-resumo">
-        <div className="pd-alta">
-          <span>Acima de 10%</span>
-          {lendo ? <small>Lendo o mercado</small>
-            : emAlta.length === 0 ? <small>Nenhum dígito acima de 10%</small>
-            : <div className="pd-chips">
-                {emAlta.slice(0, 5).map(({ d, z }) => (
-                  <b key={d} style={{ ['--brilho' as string]: brilho(z).toFixed(2) }}
-                    title={`${estat.pct[d].toFixed(0)}% contra os ${ESPERADO}% esperados`}>{d}</b>
-                ))}
-              </div>}
-        </div>
-        <div className="pd-divisao">
-          <span>0 a 4 <b>{metadeDeBaixo.toFixed(0)}%</b></span>
-          <i aria-hidden="true"><u style={{ width: `${metadeDeBaixo}%` }} /></i>
-          <span><b>{(100 - metadeDeBaixo).toFixed(0)}%</b> 5 a 9</span>
-        </div>
-      </div>
-
       {/* o painel descreve o que já saiu; não é indicação do próximo dígito (29/10/2026) */}
-      <small className="pd-nota">Cada tick é independente: isto mostra o que já saiu, não o próximo dígito.</small>
+      <p className="pb-nota">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+        <span>Cada tick é independente: isto mostra o que já saiu, não o próximo dígito. A faixa normal é onde cada dígito costuma ficar só pelo acaso, nesta quantidade de ticks.</span>
+      </p>
 
       {!movel && (
         <button type="button" className="pd-alca" aria-label={`Redimensionar o painel (largura ${largura}px). Setas ajustam; Home volta ao padrão.`}

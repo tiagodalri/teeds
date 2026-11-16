@@ -211,8 +211,8 @@ export const PERGUNTAS: Pergunta[] = [
   },
   {
     id: 'ampliar-digitos', categoria: 'manual', pergunta: 'Como vejo os dígitos maiores?',
-    termos: 'dígitos digitos ampliar aumentar zoom letra pequena',
-    resposta: ['Toque em "Ampliar dígitos": eles abrem numa janela que você arrasta e redimensiona, inclusive enquanto a I.A. opera.'],
+    termos: 'dígitos digitos ampliar aumentar zoom letra pequena probabilística probabilistica frequência',
+    resposta: ['Toque em "Probabilística": os dígitos abrem numa janela que você arrasta e redimensiona, inclusive enquanto a I.A. opera. Ela mostra quanto cada dígito saiu, há quantos ticks ele não sai e a faixa normal do acaso.'],
   },
 
   // ------------------------------------------------ treino e aulas

@@ -1,0 +1,205 @@
+/* ------------------------------------------------------------------
+   16/11/2026 (Tiago: "ta muito feio! não tem um trabalho elaborado de
+   design top"): o painel Dígitos ao vivo vira a Probabilística.
+   Faixa normal SEM linhas (só um fundo suave), barras com acabamento,
+   "há N" embaixo de cada dígito, dois cartões de resumo, 0 a 4 x 5 a 9
+   e a fita. Prefixo pb-. Tudo escala com --pd-escala (largura / 300).
+   O .pd do app.css continua cuidando de posição, arrastar e gaveta.
+   ------------------------------------------------------------------ */
+.pd.pb {
+  --e: var(--pd-escala, 1);
+  --pb-ouro: var(--gf-ouro, var(--primary));
+  --pb-verde: var(--pd-verde, var(--up));
+  --pb-cartao: color-mix(in srgb, var(--surface) 70%, var(--bg));
+  --pb-linha: color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: calc(18px * var(--e));
+  border: 1px solid var(--pb-linha);
+  background: var(--bg);
+  box-shadow: 0 30px 70px -30px rgba(10, 14, 28, .45), 0 8px 24px -12px rgba(10, 14, 28, .22);
+  color: var(--text);
+  font-size: calc(11.5px * var(--e));
+}
+
+/* ------------------------------------------------------------ topo */
+.pb-topo {
+  display: flex; align-items: center; gap: calc(10px * var(--e));
+  padding: calc(14px * var(--e)) calc(10px * var(--e)) calc(12px * var(--e)) calc(14px * var(--e));
+  cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
+}
+.pb-topo:active { cursor: grabbing; }
+.pd-movel .pb-topo { cursor: default; touch-action: auto; position: sticky; top: 0; z-index: 2; background: var(--bg); }
+.pb-grip { display: grid; grid-template-columns: repeat(2, 3px); gap: 3px; opacity: .45; }
+.pb-grip i { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
+.pb-titulo { flex: 1; min-width: 0; display: grid; gap: calc(3px * var(--e)); }
+.pb-titulo > b { font-size: calc(15px * var(--e)); font-weight: 700; letter-spacing: -.015em; line-height: 1.1; white-space: nowrap; }
+.pb-ativo { display: flex; align-items: center; gap: calc(6px * var(--e)); min-width: 0; color: var(--muted); font-size: calc(10.5px * var(--e)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.pb-vivo { flex: none; width: calc(7px * var(--e)); height: calc(7px * var(--e)); border-radius: 50%; background: var(--pb-verde); animation: pb-vivo 1.8s ease-out infinite; }
+@keyframes pb-vivo {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pb-verde) 55%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 calc(6px * var(--e)) transparent; }
+}
+.pb-ultimo-caixa { display: grid; justify-items: center; gap: calc(3px * var(--e)); }
+.pb-ultimo-caixa small { font-size: calc(8.5px * var(--e)); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); line-height: 1; }
+.pb-ultimo {
+  display: grid; place-items: center;
+  width: calc(40px * var(--e)); height: calc(40px * var(--e)); border-radius: calc(12px * var(--e));
+  background: #141a2b; color: #e8cb82; font-size: calc(21px * var(--e)); font-weight: 700; font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 6px 14px -8px rgba(10, 14, 28, .7);
+  animation: pb-tick .5s cubic-bezier(.2, .9, .3, 1.25);
+}
+:root[data-tema='escuro'] .pb-ultimo { background: #0b0d14; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pb-ouro) 35%, transparent); }
+@keyframes pb-tick {
+  0% { transform: scale(.78); color: #fff; box-shadow: 0 0 0 0 color-mix(in srgb, var(--pb-ouro) 60%, transparent); }
+  60% { transform: scale(1.06); }
+  100% { transform: none; box-shadow: 0 0 0 calc(7px * var(--e)) transparent; }
+}
+.pb-fechar {
+  display: grid; place-items: center; flex: none;
+  width: calc(28px * var(--e)); height: calc(28px * var(--e)); border: 0; border-radius: calc(8px * var(--e));
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.pb-fechar svg { width: calc(14px * var(--e)); height: calc(14px * var(--e)); }
+.pb-fechar:hover { background: var(--surface-alt); color: var(--text); }
+
+/* ------------------------------------------------- quantos dígitos */
+.pb-janela {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0 calc(14px * var(--e)); padding: calc(3px * var(--e));
+  border-radius: calc(11px * var(--e)); background: var(--pb-cartao);
+  box-shadow: inset 0 0 0 1px var(--pb-linha);
+}
+.pb-janela button {
+  height: calc(26px * var(--e)); border: 0; border-radius: calc(8px * var(--e)); background: transparent;
+  color: var(--muted); font: inherit; font-size: calc(11.5px * var(--e)); font-weight: 600; font-variant-numeric: tabular-nums;
+  cursor: pointer; transition: background .2s, color .2s;
+}
+.pb-janela button:hover { color: var(--text); }
+.pb-janela button.on {
+  background: var(--bg); color: var(--text);
+  box-shadow: 0 1px 2px rgba(10, 14, 28, .12), 0 0 0 1px color-mix(in srgb, var(--pb-ouro) 45%, transparent);
+}
+
+/* ------------------------------------------------------------ barras */
+.pb-grafico { position: relative; padding: calc(26px * var(--e)) calc(14px * var(--e)) 0; }
+.pb-area {
+  position: relative; height: calc(118px * var(--e));
+  display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: calc(6px * var(--e)); align-items: end;
+}
+/* a faixa normal: só um fundo suave, sem linha nenhuma */
+.pb-faixa {
+  position: absolute; left: calc(-6px * var(--e)); right: calc(-6px * var(--e)); z-index: 0; pointer-events: none;
+  border-radius: calc(6px * var(--e));
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--pb-ouro) 4%, transparent),
+    color-mix(in srgb, var(--pb-ouro) 15%, transparent) 50%,
+    color-mix(in srgb, var(--pb-ouro) 4%, transparent));
+  transition: bottom .6s cubic-bezier(.2, .8, .2, 1), height .6s cubic-bezier(.2, .8, .2, 1);
+}
+.pb-barra { position: relative; z-index: 1; height: 100%; min-width: 0; cursor: default; }
+.pb-barra i {
+  position: absolute; left: 0; right: 0; bottom: 0; height: var(--h);
+  border-radius: calc(7px * var(--e)) calc(7px * var(--e)) calc(3px * var(--e)) calc(3px * var(--e));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--trilho) 82%, var(--muted)), color-mix(in srgb, var(--trilho) 92%, var(--bg)));
+  transition: height .55s cubic-bezier(.2, .8, .2, 1), background .3s, box-shadow .3s, opacity .2s;
+}
+.pb-barra.baixa i { background: color-mix(in srgb, var(--trilho) 60%, var(--bg)); }
+.pb-barra.alta i {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--pb-verde) calc(70% + var(--brilho, 0) * 30%), #fff),
+    color-mix(in srgb, var(--pb-verde) calc(80% + var(--brilho, 0) * 20%), #000 4%));
+  box-shadow: 0 calc(6px * var(--e)) calc(16px * var(--e)) calc(-6px * var(--e)) color-mix(in srgb, var(--pb-verde) calc(30% + var(--brilho, 0) * 40%), transparent);
+}
+.pb-barra.ultimo i::after {
+  content: ''; position: absolute; left: 18%; right: 18%; top: calc(-5px * var(--e)); height: calc(3px * var(--e));
+  border-radius: 99px; background: var(--pb-ouro);
+}
+.pb-area:has(.pb-barra.pb-foco) .pb-barra:not(.pb-foco) i { opacity: .55; }
+.pb-barra em {
+  position: absolute; left: 50%; bottom: calc(var(--h) + 7px * var(--e)); transform: translateX(-50%);
+  font-style: normal; font-size: calc(10.5px * var(--e)); font-weight: 650; color: var(--muted);
+  font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1;
+  transition: bottom .55s cubic-bezier(.2, .8, .2, 1), color .3s;
+}
+.pb-barra.alta em { color: var(--pb-verde); }
+.pb-barra.baixa em { color: color-mix(in srgb, var(--muted) 60%, var(--bg)); }
+.pb-dica {
+  position: absolute; z-index: 4; top: calc(-26px * var(--e)); transform: translateX(-50%);
+  padding: calc(4px * var(--e)) calc(9px * var(--e)); border-radius: calc(8px * var(--e));
+  background: #141a2b; color: #f3f1ea; font-size: calc(10.5px * var(--e)); white-space: nowrap; pointer-events: none;
+  box-shadow: 0 8px 20px -10px rgba(10, 14, 28, .6); animation: pb-aparece .15s ease-out;
+}
+.pb-dica b { color: #e8cb82; }
+@keyframes pb-aparece { from { opacity: 0; transform: translate(-50%, 3px); } }
+
+.pb-eixo { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: calc(6px * var(--e)); padding-top: calc(8px * var(--e)); }
+.pb-eixo span { display: grid; justify-items: center; gap: calc(3px * var(--e)); min-width: 0; }
+.pb-eixo b {
+  display: grid; place-items: center; width: 100%; max-width: calc(26px * var(--e)); height: calc(24px * var(--e));
+  border-radius: calc(7px * var(--e)); font-size: calc(13px * var(--e)); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums;
+  transition: background .25s, color .25s;
+}
+.pb-eixo .alta b { color: var(--pb-verde); }
+.pb-eixo .ultimo b { background: #141a2b; color: #e8cb82; }
+.pb-eixo small { font-size: calc(8.5px * var(--e)); letter-spacing: -.02em; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; opacity: .85; }
+.pb-eixo small.demora { color: var(--pb-ouro); font-weight: 700; opacity: 1; }
+.pb-legenda { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(4px * var(--e)) calc(12px * var(--e)); padding-top: calc(10px * var(--e)); color: var(--muted); font-size: calc(9.5px * var(--e)); }
+.pb-legenda span { display: inline-flex; align-items: center; gap: calc(5px * var(--e)); }
+.pb-legenda i { width: calc(9px * var(--e)); height: calc(9px * var(--e)); border-radius: calc(3px * var(--e)); }
+.pb-legenda i.pb-l-faixa { background: color-mix(in srgb, var(--pb-ouro) 26%, transparent); }
+.pb-legenda i.pb-l-alta { background: var(--pb-verde); }
+.pb-legenda i.pb-l-ultimo { background: #141a2b; box-shadow: inset 0 -2px 0 var(--pb-ouro); }
+
+/* ------------------------------------------------------------ resumo */
+.pb-cartoes { display: grid; grid-template-columns: 1fr 1fr; gap: calc(8px * var(--e)); margin: calc(14px * var(--e)) calc(14px * var(--e)) 0; }
+.pb-cartao {
+  display: grid; align-content: start; gap: calc(6px * var(--e)); min-width: 0;
+  padding: calc(10px * var(--e)) calc(11px * var(--e)); border-radius: calc(12px * var(--e));
+  background: var(--pb-cartao); box-shadow: inset 0 0 0 1px var(--pb-linha);
+}
+.pb-cartao small { font-size: calc(9.5px * var(--e)); color: var(--muted); }
+.pb-cartao b { display: flex; flex-wrap: wrap; align-items: center; gap: calc(5px * var(--e)); min-height: calc(24px * var(--e)); }
+.pb-cartao em { font-style: normal; font-size: calc(10.5px * var(--e)); color: var(--muted); align-self: center; min-height: calc(24px * var(--e)); display: inline-flex; align-items: center; }
+.pb-chip {
+  display: grid; place-items: center; min-width: calc(24px * var(--e)); height: calc(24px * var(--e)); padding: 0 calc(6px * var(--e));
+  border-radius: calc(7px * var(--e)); font-size: calc(13px * var(--e)); font-weight: 700; font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--pb-verde) calc(14% + var(--brilho, 0) * 20%), transparent); color: var(--pb-verde);
+}
+.pb-chip.ouro { background: color-mix(in srgb, var(--pb-ouro) 20%, transparent); color: color-mix(in srgb, var(--pb-ouro) 75%, var(--text)); }
+
+.pb-divisao { margin: calc(8px * var(--e)) calc(14px * var(--e)) 0; padding: calc(10px * var(--e)) calc(11px * var(--e)); border-radius: calc(12px * var(--e)); background: var(--pb-cartao); box-shadow: inset 0 0 0 1px var(--pb-linha); }
+.pb-divisao > div { display: flex; justify-content: space-between; font-size: calc(10.5px * var(--e)); color: var(--muted); }
+.pb-divisao b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pb-divisao > i { position: relative; display: block; height: calc(7px * var(--e)); margin-top: calc(7px * var(--e)); border-radius: 99px; background: var(--trilho); overflow: hidden; }
+.pb-divisao > i::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--bg); }
+.pb-divisao u { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, color-mix(in srgb, var(--pb-ouro) 55%, var(--trilho)), var(--pb-ouro)); transition: width .55s cubic-bezier(.2, .8, .2, 1); }
+
+/* ------------------------------------------------------------ fita */
+.pb-secao { display: flex; justify-content: space-between; margin: calc(14px * var(--e)) calc(14px * var(--e)) 0; font-size: calc(9px * var(--e)); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pb-fita {
+  display: grid; grid-template-columns: repeat(16, minmax(0, 1fr)); gap: calc(4px * var(--e));
+  margin: calc(7px * var(--e)) calc(14px * var(--e)) 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%); mask-image: linear-gradient(90deg, transparent, #000 22%);
+}
+.pb-fita span {
+  display: grid; place-items: center; height: calc(26px * var(--e)); border-radius: calc(7px * var(--e));
+  background: var(--pb-cartao); box-shadow: inset 0 0 0 1px var(--pb-linha);
+  font-size: calc(12px * var(--e)); font-weight: 650; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.pb-fita span.alta { color: var(--pb-verde); background: color-mix(in srgb, var(--pb-verde) 10%, var(--bg)); box-shadow: none; }
+.pb-fita span.ultimo { background: #141a2b; color: #e8cb82; box-shadow: none; animation: pb-entra .45s cubic-bezier(.2, .8, .2, 1); }
+@keyframes pb-entra { from { transform: translateX(70%); opacity: 0; } }
+
+.pb-nota {
+  display: flex; gap: calc(7px * var(--e)); margin: calc(14px * var(--e)) calc(14px * var(--e)) calc(16px * var(--e));
+  font-size: calc(9.5px * var(--e)); line-height: 1.5; color: var(--muted);
+}
+.pb-nota svg { flex: none; width: calc(13px * var(--e)); height: calc(13px * var(--e)); margin-top: 1px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-ultimo, .pb-fita span.ultimo, .pb-vivo, .pb-dica { animation: none; }
+  .pb-barra i, .pb-barra em, .pb-faixa, .pb-divisao u { transition: none; }
+}
+/* no tema escuro o último ganha o contorno dourado (o fundo escuro some no painel escuro) */
+:root[data-tema='escuro'] .pb-eixo .ultimo b,
+:root[data-tema='escuro'] .pb-fita span.ultimo,
+:root[data-tema='escuro'] .pb-legenda i.pb-l-ultimo { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pb-ouro) 70%, transparent); background: #0b0d14; }

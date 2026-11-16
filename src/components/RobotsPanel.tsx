@@ -464,8 +464,8 @@ export function RobotsPanel({
           {!menuAdminOculto && <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => abrirAssistente()} /></Suspense>}
           <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
             onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
-            {digitosDe ? 'Fechar dígitos' : 'Ver dígitos'}
+            <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M5 20V13M10 20V8M15 20V11M20 20V5" />}</svg>
+            {digitosDe ? 'Fechar Probabilística' : 'Probabilística'}
           </button>
           <button className="rob-new-button" onClick={() => abrirAssistente()}>+ Novo robô</button>
         </div>
@@ -569,8 +569,8 @@ export function RobotsPanel({
           {!temAcompanhamento && (
             <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
               onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
-              {digitosDe ? 'Fechar dígitos' : 'Ver dígitos'}
+              <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M5 20V13M10 20V8M15 20V11M20 20V5" />}</svg>
+              {digitosDe ? 'Fechar Probabilística' : 'Probabilística'}
             </button>
           )}
           <button className="rob-new-button" onClick={abrirBloco} disabled={blocos.length >= MAX_BLOCOS && !temPreparoDisponivel}
@@ -590,8 +590,8 @@ export function RobotsPanel({
               sem precisar abrir a cabine de um robô. O painel é o mesmo dos blocos. */}
           <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
             onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M10.5 4a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13zM15.5 15.5L20 20M10.5 7.5v6M7.5 10.5h6" />}</svg>
-            {digitosDe ? 'Fechar dígitos' : 'Ampliar dígitos'}
+            <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M5 20V13M10 20V8M15 20V11M20 20V5" />}</svg>
+            {digitosDe ? 'Fechar Probabilística' : 'Probabilística'}
           </button>
           <div className="rob-view-options" role="group" aria-label="Vista dos robôs">
             <button aria-pressed={disposicao === 'lista'} onClick={() => trocarVista('lista')}>☰ Em lista</button>
