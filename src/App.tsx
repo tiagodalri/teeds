@@ -1127,6 +1127,30 @@ export default function App() {
   // só as de hoje: virou meia-noite, a lista zera
   const ultimasDeHoje = useMemo(() => ultimasManuais.filter((u) => u.startTime * 1000 >= inicioDoDia), [ultimasManuais, inicioDoDia])
   /*
+    No modo simulado (só admin) as entradas nunca vão ao banco: o dia fica guardado neste
+    aparelho, uma lista para a conta real simulada e outra para a demo (16/11/2026, a mesma
+    regra: volta ao recarregar e zera à meia-noite de Brasília).
+  */
+  const contaSimulada = sim ? sim.conta : null
+  const chaveSimulada = contaSimulada ? `${MARCA.id}.simulacao.ultimas.${contaSimulada}` : null
+  // de qual lista guardada veio o que está na tela: só regrava a mesma (trocar real ↔ demo nunca copia uma na outra)
+  const [listaSimuladaDe, setListaSimuladaDe] = useState<string | null>(null)
+  useEffect(() => {
+    if (!chaveSimulada) return
+    let guardadas: Array<(typeof minhas)[number]> = []
+    try {
+      const v = JSON.parse(localStorage.getItem(chaveSimulada) ?? 'null')
+      if (v && v.dia === inicioDoDia && Array.isArray(v.itens)) guardadas = v.itens.filter((c: any) => c && typeof c.contractId === 'number' && typeof c.startTime === 'number')
+    } catch { /* sem armazenamento: a lista segue só com o que acontecer agora */ }
+    setUltimasManuais(guardadas.sort((a, b) => b.startTime - a.startTime))
+    setListaSimuladaDe(chaveSimulada)
+    // conta.accountId: a troca de conta zera a lista (efeito acima); aqui ela volta logo em seguida
+  }, [chaveSimulada, inicioDoDia, conta.accountId])
+  useEffect(() => {
+    if (!chaveSimulada || listaSimuladaDe !== chaveSimulada || !ultimasDeHoje.length) return
+    try { localStorage.setItem(chaveSimulada, JSON.stringify({ dia: inicioDoDia, itens: ultimasDeHoje.slice(0, 300) })) } catch { /* cheio ou bloqueado */ }
+  }, [chaveSimulada, listaSimuladaDe, ultimasDeHoje, inicioDoDia])
+  /*
     O markup das operações manuais (23/10/2026, modo CEO): o oficial da Deriv
     quando a proposta informa; senão, 3% do pagamento potencial (a regra da
     Deriv para opções, conferida contra o total oficial do dia). Cada operação
