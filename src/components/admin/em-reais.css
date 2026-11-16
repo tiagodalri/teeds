@@ -1,0 +1,26 @@
+/* O valor em reais embaixo dos números em dólar da Visão geral (16/11/2026). Ver EmReais.tsx. Prefixo vbr-. */
+.vbr { display: inline-flex; flex-direction: column; align-items: flex-start; vertical-align: baseline; white-space: nowrap; }
+.vbr-brl {
+  display: inline-flex; align-items: center; gap: .28em; margin-top: 1px;
+  font-size: max(.82em, 10.5px); line-height: 1.25; font-weight: 700; letter-spacing: 0; white-space: nowrap;
+  color: var(--up); font-variant-numeric: tabular-nums; font-style: normal; text-transform: none;
+}
+.vbr-brl svg, .vbr-cotacao svg { width: .82em; height: .82em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+/* a linha solta embaixo de um número grande */
+.vbr-brl.vbr-bloco { display: flex; margin-top: 0; font-size: 14.5px; line-height: 1.2; }
+
+/* na frase do topo (Ao vivo) */
+.vg-agora h2 .vbr-brl.vbr-bloco { margin-top: 8px; font-size: max(.5em, 14px); }
+
+/* onde o valor fica encostado à direita, os reais também */
+.vg-fluxo-barras .vbr, .vg-top li .vbr, .vgm-dia-valor .vbr, .vgd-lista-valor .vbr, .vgd-pessoas li > strong .vbr { align-items: flex-end; }
+
+/* a cotação em uso */
+.vbr-cotacao { display: flex; align-items: center; gap: 6px; margin: -4px 2px 0; font-size: 12px; color: var(--muted); }
+.vbr-cotacao svg { color: var(--up); }
+.vbr-cotacao b { color: var(--up); font-weight: 750; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 720px) {
+  .vbr-brl.vbr-bloco { font-size: 13.5px; }
+}

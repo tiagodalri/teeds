@@ -19,6 +19,7 @@ import { dinheiro } from '../../core/dinheiro'
 import { useMarkupDesde } from '../../core/teeds/markupAoVivo'
 import { diaDeBrasilia, instanteEmBrasilia, somarDias, ddmm, lerPeriodo, type AtalhoDoPeriodo, type PainelPeriodo } from './PeriodoDaVisaoGeral'
 import './metas-visao-geral.css'
+import { Reais, Usd } from './EmReais'
 
 export type Horizonte = 'dia' | 'semana' | 'mes'
 interface Meta { deposito: number | null; markup: number | null; atualizado_em?: string }
@@ -153,13 +154,14 @@ function Anel({ tipo, rotulo, feito, meta, frac, resta }: {
       <div className="vmt-txt">
         <span className="vmt-rot">{rotulo}</span>
         <strong className="vmt-feito"><Contador valor={feito} formato={usd} /></strong>
+        <Reais v={feito} bloco animado />
         {meta ? <>
-          <small>de <b>{usd(meta)}</b></small>
+          <small>de <b><Usd v={meta} /></b></small>
           {batida
-            ? <p className="vmt-falta ok"><i aria-hidden="true">✦</i> Meta batida{feito > meta ? <> · <b>{usd(feito - meta)}</b> acima</> : null}</p>
-            : <p className="vmt-falta">Faltam <b>{usd(meta - feito)}</b></p>}
+            ? <p className="vmt-falta ok"><i aria-hidden="true">✦</i> Meta batida{feito > meta ? <> · <b><Usd v={feito - meta} /></b> acima</> : null}</p>
+            : <p className="vmt-falta">Faltam <b><Usd v={meta - feito} /></b></p>}
           {!batida && projecao != null && (
-            <small className={`vmt-ritmo ${projecao >= meta ? 'bom' : ''}`}>No ritmo de agora, fecha em <b>{usd(projecao)}</b> {resta}{projecao >= meta ? ': bate a meta' : ''}</small>
+            <small className={`vmt-ritmo ${projecao >= meta ? 'bom' : ''}`}>No ritmo de agora, fecha em <b><Usd v={projecao} /></b> {resta}{projecao >= meta ? ': bate a meta' : ''}</small>
           )}
         </> : <small>Sem meta para este período</small>}
       </div>

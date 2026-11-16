@@ -24,6 +24,7 @@ import { maisRecente, useMarkupDesde, type MarkupNovo } from '../../core/teeds/m
 import { PERIODO_AGORA, SeletorDePeriodo, janelaDoPeriodo, ddmm, lerPeriodo, type PeriodoDaVisao, type PainelPeriodo } from './PeriodoDaVisaoGeral'
 import { MapaDoMarkup } from './MapaDoMarkup'
 import { MetasDaVisaoGeral } from './MetasDaVisaoGeral'
+import { CotacaoDoDolar, Reais, Usd } from './EmReais'
 import './visao-geral.css'
 import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
@@ -193,6 +194,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
   const seletor = (
     <>
       <SeletorDePeriodo valor={periodo} onTrocar={setPeriodo} janela={janela} />
+      <CotacaoDoDolar />
       {janela && erroPeriodo && <p className="vg-erro" role="alert">{erroPeriodo}</p>}
     </>
   )
@@ -249,7 +251,8 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
           <span className="vg-vivo"><i aria-hidden="true" />Ao vivo · {lidoEm ? `lido ${haQuanto(lidoEm, agora)}` : 'lendo'}</span>
           {a.operando_real > 0 ? (
             <h2><b><Contador valor={a.operando_real} formato={(v) => pessoas(Math.round(v))} /></b> operando em conta real agora,
-              {' '}somando <em><Contador valor={Number(a.banca_operando_real)} formato={usd} /></em> de banca.</h2>
+              {' '}somando <em><Contador valor={Number(a.banca_operando_real)} formato={usd} /></em> de banca.
+              <Reais v={Number(a.banca_operando_real)} bloco animado /></h2>
           ) : (
             <h2>Ninguém operando em conta real neste minuto. <span>Hoje, <b>{pessoas(p.hoje.operaram)}</b> já operaram em real.</span></h2>
           )}
@@ -279,7 +282,8 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
         <button type="button" className="vg-card vg-banca" onClick={() => aoIr('clientes')}>
           <span className="vg-rot">Dinheiro dos clientes em conta real{chipAgora}</span>
           <strong className="vg-grande"><Contador valor={Number(p.banca.total)} formato={usd} /></strong>
-          <small>em <b>{pessoas(p.banca.clientes_com_saldo)}</b> com saldo · maior banca <b>{usd(p.banca.maior)}</b></small>
+          <Reais v={Number(p.banca.total)} bloco animado />
+          <small>em <b>{pessoas(p.banca.clientes_com_saldo)}</b> com saldo · maior banca <b><Usd v={p.banca.maior} /></b></small>
           <div className="vg-faixas" role="img" aria-label="Clientes por faixa de banca">
             {p.banca.faixas.map((x) => (
               <div key={x.rotulo} className="vg-faixa">
@@ -296,7 +300,8 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
             <span className="vg-rot">Markup em conta real · {janela.curto}</span>
             {dp ? <>
               <strong className="vg-grande ouro"><Contador valor={Number(dp.markup.total)} formato={usd} /></strong>
-              <small>{nomeIA} <b>{usd(dp.markup.ia)}</b> · manual <b>{usd(dp.markup.manual)}</b> · <b>{int(dp.operacoes.total)}</b> operações</small>
+              <Reais v={Number(dp.markup.total)} bloco animado />
+              <small>{nomeIA} <b><Usd v={dp.markup.ia} /></b> · manual <b><Usd v={dp.markup.manual} /></b> · <b>{int(dp.operacoes.total)}</b> operações</small>
               <div className="vg-barras" onMouseLeave={() => setDiaFoco(null)} role="img" aria-label={`Markup de cada ${dp.escala} do período`}>
                 {serieP.map((d, i) => (
                   <span key={d.ini} className={janela.aoVivo && i === serieP.length - 1 ? 'hoje' : ''} onMouseEnter={() => setDiaFoco(i)}
@@ -304,8 +309,8 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
                 ))}
               </div>
               <small className="vg-barras-leg">{focoP
-                ? <>{balde(focoP)}: <b>{usd(focoP.markup)}</b> · {int(focoP.operacoes)} operações</>
-                : <>Cada barra é {dp.escala === 'hora' ? '1 hora' : '1 dia'}{melhorP ? <> · melhor {dp.escala}: <b>{balde(melhorP)}</b> ({usd(melhorP.markup)})</> : ' · nenhum markup no período'}</>}</small>
+                ? <>{balde(focoP)}: <b><Usd v={focoP.markup} /></b> · {int(focoP.operacoes)} operações</>
+                : <>Cada barra é {dp.escala === 'hora' ? '1 hora' : '1 dia'}{melhorP ? <> · melhor {dp.escala}: <b>{balde(melhorP)}</b> (<Usd v={melhorP.markup} />)</> : ' · nenhum markup no período'}</>}</small>
               <small className="vg-barras-leg">Horário de Brasília · I.A. e manual · última operação {dp.markup.ultima_em ? (janela.aoVivo ? haQuantoTempo(Date.parse(dp.markup.ultima_em), agora) : quandoEmBrasilia(dp.markup.ultima_em)) : '—'}</small>
             </> : esqueleto}
           </button>
@@ -313,7 +318,8 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
           <button type="button" className="vg-card vg-markup" onClick={() => aoIr('comissoes')}>
             <span className="vg-rot">Markup em conta real</span>
             <strong className="vg-grande ouro"><Contador valor={Number(p.markup.hoje)} formato={usd} /></strong>
-            <small>hoje ({diaMes(serie[serie.length - 1]?.dia)}) · <b>{usd(p.markup.d7)}</b> em 7 dias · <b>{usd(p.markup.d30)}</b> em 30 dias ({diaMes(serie[0]?.dia)} a {diaMes(serie[serie.length - 1]?.dia)})</small>
+            <Reais v={Number(p.markup.hoje)} bloco animado />
+            <small>hoje ({diaMes(serie[serie.length - 1]?.dia)}) · <b><Usd v={p.markup.d7} /></b> em 7 dias · <b><Usd v={p.markup.d30} /></b> em 30 dias ({diaMes(serie[0]?.dia)} a {diaMes(serie[serie.length - 1]?.dia)})</small>
             <div className="vg-barras" onMouseLeave={() => setDiaFoco(null)} role="img" aria-label="Markup de cada dia, últimos 30 dias">
               {serie.map((d, i) => (
                 <span key={d.dia} className={i === serie.length - 1 ? 'hoje' : ''} onMouseEnter={() => setDiaFoco(i)}
@@ -321,8 +327,8 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
               ))}
             </div>
             <small className="vg-barras-leg">{focoDia
-              ? <>{new Date(`${focoDia.dia}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}: <b>{usd(focoDia.markup)}</b> · {int(focoDia.operacoes)} operações</>
-              : <>{mesAtual} até hoje: <b>{usd(p.markup.mes)}</b> · ritmo do mês <b>{ritmo != null ? usd(ritmo) : '—'}</b></>}</small>
+              ? <>{new Date(`${focoDia.dia}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}: <b><Usd v={focoDia.markup} /></b> · {int(focoDia.operacoes)} operações</>
+              : <>{mesAtual} até hoje: <b><Usd v={p.markup.mes} /></b> · ritmo do mês <b>{ritmo != null ? <Usd v={ritmo} /> : '—'}</b></>}</small>
             <small className="vg-barras-leg">Horário de Brasília · I.A. e manual · última operação {p.markup.ultima_em ? haQuantoTempo(Date.parse(p.markup.ultima_em), agora) : '—'}</small>
           </button>
         )}
@@ -333,10 +339,10 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
             {dp ? <>
               <strong className="vg-grande"><Contador valor={dp.operacoes.total} formato={(v) => int(Math.round(v))} /> <span>operações</span></strong>
               <dl>
-                <div><dt>Movimentado</dt><dd>{usd(dp.operacoes.volume)}</dd></div>
+                <div><dt>Movimentado</dt><dd><Usd v={dp.operacoes.volume} /></dd></div>
                 <div><dt>Pessoas que operaram</dt><dd>{int(dp.operacoes.operaram)}</dd></div>
-                <div><dt>Resultado dos clientes</dt><dd className={Number(dp.operacoes.resultado) >= 0 ? 'sobe' : 'cai'}>{comSinal(Number(dp.operacoes.resultado))}</dd></div>
-                <div><dt>Markup por operação</dt><dd>{dp.operacoes.total ? usd(Number(dp.markup.total) / dp.operacoes.total) : '—'}</dd></div>
+                <div><dt>Resultado dos clientes</dt><dd className={Number(dp.operacoes.resultado) >= 0 ? 'sobe' : 'cai'}><Usd v={Number(dp.operacoes.resultado)} formato={comSinal} /></dd></div>
+                <div><dt>Markup por operação</dt><dd>{dp.operacoes.total ? <Usd v={Number(dp.markup.total) / dp.operacoes.total} /> : '—'}</dd></div>
               </dl>
             </> : esqueleto}
           </div>
@@ -345,10 +351,10 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
             <span className="vg-rot">Hoje em conta real</span>
             <strong className="vg-grande"><Contador valor={p.hoje.operacoes} formato={(v) => int(Math.round(v))} /> <span>operações</span></strong>
             <dl>
-              <div><dt>Movimentado</dt><dd>{usd(p.hoje.volume)}</dd></div>
+              <div><dt>Movimentado</dt><dd><Usd v={p.hoje.volume} /></dd></div>
               <div><dt>Pessoas que operaram</dt><dd>{int(p.hoje.operaram)}</dd></div>
-              <div><dt>Resultado dos clientes</dt><dd className={Number(p.hoje.resultado) >= 0 ? 'sobe' : 'cai'}>{comSinal(Number(p.hoje.resultado))}</dd></div>
-              <div><dt>Markup por operação</dt><dd>{p.hoje.operacoes ? usd(Number(p.markup.hoje) / p.hoje.operacoes) : '—'}</dd></div>
+              <div><dt>Resultado dos clientes</dt><dd className={Number(p.hoje.resultado) >= 0 ? 'sobe' : 'cai'}><Usd v={Number(p.hoje.resultado)} formato={comSinal} /></dd></div>
+              <div><dt>Markup por operação</dt><dd>{p.hoje.operacoes ? <Usd v={Number(p.markup.hoje) / p.hoje.operacoes} /> : '—'}</dd></div>
             </dl>
           </div>
         )}
@@ -364,15 +370,16 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
             <span className="vg-rot">Dinheiro entrando · {janela.curto}</span>
             {dp ? <>
               <strong className={`vg-grande ${liquidoP >= 0 ? 'sobe' : 'cai'}`}><Contador valor={liquidoP} formato={comSinal} /></strong>
+              <Reais v={liquidoP} bloco animado />
               <small>líquido nas contas reais · <b>{pessoas(dp.dinheiro.depositantes)}</b> {dp.dinheiro.depositantes === 1 ? 'depositou' : 'depositaram'} no período</small>
               <div className="vg-fluxo-barras">
-                <div><span>Depósitos</span><i><u className="sobe" style={{ width: `${(entrouP / maxFluxoP) * 100}%` }} /></i><b>{usd(entrouP)}</b></div>
+                <div><span>Depósitos</span><i><u className="sobe" style={{ width: `${(entrouP / maxFluxoP) * 100}%` }} /></i><b><Usd v={entrouP} /></b></div>
                 <div><span>Saques</span><i><u className="cai" style={{ width: `${(saiuP / maxFluxoP) * 100}%` }} /></i><b>{usd(saiuP)}</b></div>
               </div>
               <small className="vg-pe">{int(dp.dinheiro.qtd_depositos)} {dp.dinheiro.qtd_depositos === 1 ? 'depósito' : 'depósitos'} · {int(dp.dinheiro.qtd_saques)} {dp.dinheiro.qtd_saques === 1 ? 'saque' : 'saques'} de {pessoas(dp.dinheiro.sacaram)}</small>
               <div className="vg-mini">
-                <div><span>Depósito médio · no período</span><b>{dp.dinheiro.depositantes ? usd(entrouP / dp.dinheiro.depositantes) : '—'}</b><small>por pessoa que depositou</small></div>
-                <div><span>Banca média · agora</span><b>{p.banca.clientes_com_saldo ? usd(Number(p.banca.total) / p.banca.clientes_com_saldo) : '—'}</b><small>de quem tem saldo real</small></div>
+                <div><span>Depósito médio · no período</span><b>{dp.dinheiro.depositantes ? <Usd v={entrouP / dp.dinheiro.depositantes} /> : '—'}</b><small>por pessoa que depositou</small></div>
+                <div><span>Banca média · agora</span><b>{p.banca.clientes_com_saldo ? <Usd v={Number(p.banca.total) / p.banca.clientes_com_saldo} /> : '—'}</b><small>de quem tem saldo real</small></div>
               </div>
             </> : esqueleto}
           </button>
@@ -380,15 +387,16 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
           <button type="button" className="vg-card vg-fluxo" onClick={() => aoIr('movimentacoes')}>
             <span className="vg-rot">Dinheiro entrando · 7 dias</span>
             <strong className={`vg-grande ${liquido >= 0 ? 'sobe' : 'cai'}`}><Contador valor={liquido} formato={comSinal} /></strong>
+            <Reais v={liquido} bloco animado />
             <small>líquido nas contas reais · <b>{pessoas(p.dinheiro.depositantes_30d)}</b> depositaram em 30 dias</small>
             <div className="vg-fluxo-barras">
-              <div><span>Depósitos</span><i><u className="sobe" style={{ width: `${(entrou / maxFluxo) * 100}%` }} /></i><b>{usd(entrou)}</b></div>
+              <div><span>Depósitos</span><i><u className="sobe" style={{ width: `${(entrou / maxFluxo) * 100}%` }} /></i><b><Usd v={entrou} /></b></div>
               <div><span>Saques</span><i><u className="cai" style={{ width: `${(saiu / maxFluxo) * 100}%` }} /></i><b>{usd(saiu)}</b></div>
             </div>
-            <small className="vg-pe">30 dias: {usd(p.dinheiro.depositos_30d)} entraram · {usd(p.dinheiro.saques_30d)} saíram</small>
+            <small className="vg-pe">30 dias: <Usd v={p.dinheiro.depositos_30d} /> entraram · {usd(p.dinheiro.saques_30d)} saíram</small>
             <div className="vg-mini">
-              <div><span>Depósito médio · 30 dias</span><b>{p.dinheiro.depositantes_30d ? usd(Number(p.dinheiro.depositos_30d) / p.dinheiro.depositantes_30d) : '—'}</b><small>por pessoa que depositou</small></div>
-              <div><span>Banca média</span><b>{p.banca.clientes_com_saldo ? usd(Number(p.banca.total) / p.banca.clientes_com_saldo) : '—'}</b><small>de quem tem saldo real</small></div>
+              <div><span>Depósito médio · 30 dias</span><b>{p.dinheiro.depositantes_30d ? <Usd v={Number(p.dinheiro.depositos_30d) / p.dinheiro.depositantes_30d} /> : '—'}</b><small>por pessoa que depositou</small></div>
+              <div><span>Banca média</span><b>{p.banca.clientes_com_saldo ? <Usd v={Number(p.banca.total) / p.banca.clientes_com_saldo} /> : '—'}</b><small>de quem tem saldo real</small></div>
             </div>
           </button>
         )}
@@ -402,7 +410,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
                   <span className="vg-pos">{i + 1}</span>
                   <span className={`vg-av${c.online ? ' online' : ''}`} aria-hidden="true">{c.foto_url ? <img src={c.foto_url} alt="" loading="lazy" /> : iniciais(c.nome)}</span>
                   <span className="vg-top-nome"><b>{c.nome || 'Cliente'}</b><small><SeloDoParceiro codigo={c.parceiro} nome={PARCEIRO[c.parceiro ?? '']} />{c.operando ? ' · operando agora' : c.online ? ' · online' : ''}</small></span>
-                  <strong>{usdCurto(c.saldo)}</strong>
+                  <strong><Usd v={c.saldo} formato={usdCurto} curto /></strong>
                 </li>
               ))}
             </ol>

@@ -19,6 +19,7 @@ import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
 import { MARCA } from '../../marca'
 import './detalhe-do-markup.css'
+import { Usd } from './EmReais'
 import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
 export type Recorte = { tipo: 'dia'; i: number } | { tipo: 'hora'; i: number }
@@ -70,7 +71,7 @@ function Lista({ itens, max, vazio }: { itens: Array<{ chave: string; nome: Reac
         <li key={x.chave} className={x.destaque ? 'destaque' : ''}>
           <span className="vgd-lista-nome">{x.nome}</span>
           <span className="vgd-lista-trilho"><u style={{ width: `${x.valor > 0 ? Math.max(2, (x.valor / Math.max(max, 0.0001)) * 100) : 0}%` }} /></span>
-          <span className="vgd-lista-valor"><b>{x.valor > 0 ? usd(x.valor) : '—'}</b>{x.nota && <small>{x.nota}</small>}</span>
+          <span className="vgd-lista-valor"><b>{x.valor > 0 ? <Usd v={x.valor} /> : '—'}</b>{x.nota && <small>{x.nota}</small>}</span>
         </li>
       ))}
     </ol>
@@ -197,21 +198,21 @@ export function DetalheDoMarkup({ sessao, marca, parceiro, de, ate, rotulo, reco
           <div className="vgd-kpis">
             <div className="vgd-kpi principal">
               <span>Markup</span>
-              <b>{usd(mostra.markup)}</b>
+              <b><Usd v={mostra.markup} /></b>
               <small><em>{pctTxt(pct(Number(mostra.markup), Number(mostra.total_periodo)))}</em> do markup do período</small>
             </div>
-            <div className="vgd-kpi"><span>Média</span><b>{usd(media)}</b><small>{textoMedia}</small></div>
-            <div className="vgd-kpi"><span>Operações</span><b>{int(mostra.operacoes)}</b><small>{usd(Number(mostra.markup) / Math.max(1, Number(mostra.operacoes)))} de markup por operação</small></div>
-            <div className="vgd-kpi"><span>Pessoas que operaram</span><b>{int(mostra.clientes)}</b><small>{Number(mostra.clientes) ? usd(Number(mostra.markup) / Number(mostra.clientes)) : '—'} de markup por pessoa</small></div>
-            <div className="vgd-kpi"><span>Movimentado</span><b>{usd(mostra.volume)}</b><small>soma das entradas</small></div>
-            <div className="vgd-kpi"><span>Resultado dos clientes</span><b className={Number(mostra.resultado) >= 0 ? 'sobe' : 'cai'}>{comSinal(Number(mostra.resultado))}</b><small>ganhos menos perdas</small></div>
+            <div className="vgd-kpi"><span>Média</span><b><Usd v={media} /></b><small>{textoMedia}</small></div>
+            <div className="vgd-kpi"><span>Operações</span><b>{int(mostra.operacoes)}</b><small><Usd v={Number(mostra.markup) / Math.max(1, Number(mostra.operacoes))} /> de markup por operação</small></div>
+            <div className="vgd-kpi"><span>Pessoas que operaram</span><b>{int(mostra.clientes)}</b><small>{Number(mostra.clientes) ? <Usd v={Number(mostra.markup) / Number(mostra.clientes)} /> : '—'} de markup por pessoa</small></div>
+            <div className="vgd-kpi"><span>Movimentado</span><b><Usd v={mostra.volume} /></b><small>soma das entradas</small></div>
+            <div className="vgd-kpi"><span>Resultado dos clientes</span><b className={Number(mostra.resultado) >= 0 ? 'sobe' : 'cai'}><Usd v={Number(mostra.resultado)} formato={comSinal} /></b><small>ganhos menos perdas</small></div>
           </div>
 
           <div className="vgd-divisao" role="img" aria-label={`${nomeIA} ${pctTxt(fatiaIA)} e manual ${pctTxt(100 - fatiaIA)} do markup`}>
             <div className="vgd-divisao-barra"><u className="ia" style={{ width: `${fatiaIA}%` }} /><u className="manual" style={{ width: `${100 - fatiaIA}%` }} /></div>
             <div className="vgd-divisao-leg">
-              <span><i className="ia" />{nomeIA} <b>{usd(ia)}</b> · {pctTxt(fatiaIA)}</span>
-              <span><i className="manual" />Manual <b>{usd(man)}</b> · {pctTxt(ia + man > 0 ? 100 - fatiaIA : 0)}</span>
+              <span><i className="ia" />{nomeIA} <b><Usd v={ia} /></b> · {pctTxt(fatiaIA)}</span>
+              <span><i className="manual" />Manual <b><Usd v={man} /></b> · {pctTxt(ia + man > 0 ? 100 - fatiaIA : 0)}</span>
             </div>
           </div>
 
@@ -229,7 +230,7 @@ export function DetalheDoMarkup({ sessao, marca, parceiro, de, ate, rotulo, reco
                       <span className="vgd-pos">{i + 1}</span>
                       <span className="vgd-av" aria-hidden="true">{c.foto_url ? <img src={c.foto_url} alt="" loading="lazy" /> : iniciais(c.nome)}</span>
                       <span className="vgd-pessoa"><b>{c.nome || 'Cliente'}<SeloDoParceiro codigo={c.parceiro} nome={PARCEIRO[c.parceiro ?? '']} /></b><small>{int(c.operacoes)} op. · <span className={Number(c.resultado) >= 0 ? 'sobe' : 'cai'}>{comSinal(Number(c.resultado))}</span></small></span>
-                      <strong>{usd(c.markup)}</strong>
+                      <strong><Usd v={c.markup} /></strong>
                     </li>
                   ))}
                 </ol>
@@ -240,7 +241,7 @@ export function DetalheDoMarkup({ sessao, marca, parceiro, de, ate, rotulo, reco
           <div className="vgd-colunas">
             <div className="vgd-bloco">
               <h5>{recorte.tipo === 'dia' ? `Cada ${DIAS[recorte.i].toLowerCase()} do período` : 'Dia a dia nesse horário'}
-                {melhorData && Number(melhorData.markup) > 0 && <small>melhor: {ddmm(melhorData.dia)} ({usd(melhorData.markup)})</small>}</h5>
+                {melhorData && Number(melhorData.markup) > 0 && <small>melhor: {ddmm(melhorData.dia)} (<Usd v={melhorData.markup} />)</small>}</h5>
               <Lista max={maxData} vazio="Sem datas no período."
                 itens={datas.map((x) => ({ chave: x.dia, nome: <>{recorte.tipo === 'hora' && <em>{diaDaSemana(x.dia)}</em>}{ddmm(x.dia)}</>, valor: Number(x.markup),
                   nota: Number(x.operacoes) ? <>{int(x.operacoes)} op.</> : undefined, destaque: x === melhorData }))} />
@@ -263,7 +264,7 @@ export function DetalheDoMarkup({ sessao, marca, parceiro, de, ate, rotulo, reco
                 })}
               </div>
               <small className="vgd-cruz-leg">{fc
-                ? <><b>{recorte.tipo === 'dia' ? `Das ${hh(focoCruz!)} às ${hh(focoCruz! + 1)}` : DIAS[focoCruz!]}</b>: {usd(fc.markup)} · {int(fc.operacoes)} op. · clique para abrir</>
+                ? <><b>{recorte.tipo === 'dia' ? `Das ${hh(focoCruz!)} às ${hh(focoCruz! + 1)}` : DIAS[focoCruz!]}</b>: <Usd v={fc.markup} /> · {int(fc.operacoes)} op. · clique para abrir</>
                 : focoCruz != null ? <>Sem markup · clique para abrir</>
                 : <>Clique numa barra para abrir o detalhe {recorte.tipo === 'dia' ? 'daquele horário' : 'daquele dia'}</>}</small>
             </div>

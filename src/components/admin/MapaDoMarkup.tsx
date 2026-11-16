@@ -23,6 +23,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { SUPABASE } from '../../core/teeds/config'
 import { dinheiro } from '../../core/dinheiro'
 import type { JanelaDoPeriodo } from './PeriodoDaVisaoGeral'
+import { Usd } from './EmReais'
 import { DetalheDoMarkup, type Recorte } from './DetalheDoMarkup'
 import './mapa-do-markup.css'
 
@@ -139,12 +140,12 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
   const legenda = (() => {
     if (foco?.tipo === 'dia') {
       const d = foco.i, c = conta.dia[d]
-      return <><b>{DIAS[d]}</b>: {usd(c.markup)} em {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'} · {pct(c.markup, Number(dados?.total))}% do markup
-        {' · '}média <b>{usd(c.markup / conta.vezes(d))}</b> por {DIAS[d].toLowerCase()} ({conta.vezes(d)} no período)</>
+      return <><b>{DIAS[d]}</b>: <Usd v={c.markup} /> em {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'} · {pct(c.markup, Number(dados?.total))}% do markup
+        {' · '}média <b><Usd v={c.markup / conta.vezes(d)} /></b> por {DIAS[d].toLowerCase()} ({conta.vezes(d)} no período)</>
     }
     if (foco?.tipo === 'hora') {
       const h = foco.i, c = conta.hora[h]
-      return <><b>Das {hh(h)} às {hh(h + 1)}</b>: {usd(c.markup)}{sufixo} · {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'} · {pct(c.markup, conta.totalHoras)}% do markup</>
+      return <><b>Das {hh(h)} às {hh(h + 1)}</b>: <Usd v={c.markup} />{sufixo} · {int(c.operacoes)} {c.operacoes === 1 ? 'operação' : 'operações'} · {pct(c.markup, conta.totalHoras)}% do markup</>
     }
     return <><b>Clique numa barra</b> para ver o detalhe: quem operou, cada I.A., o dia a dia · Horário de Brasília · só conta real</>
   })()
@@ -167,10 +168,10 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
         <>
           {/* a conclusão, escrita: o que se lê de primeira */}
           <p className="vgm-frase">
-            {conta.melhorDia != null && <><b>{DIAS[conta.melhorDia]}</b> é o dia mais forte ({usd(conta.valoresDia[conta.melhorDia])}{sufixo})</>}
+            {conta.melhorDia != null && <><b>{DIAS[conta.melhorDia]}</b> é o dia mais forte (<Usd v={conta.valoresDia[conta.melhorDia]} />{sufixo})</>}
             {conta.melhorDia != null && conta.faixa.soma > 0 && ' e '}
             {conta.faixa.soma > 0 && <>o markup se concentra <b>das {hh(conta.faixa.ini)} às {hh(conta.faixa.ini + 3)}</b> ({pct(conta.faixa.soma, conta.totalHoras)}% do total)</>}.
-            <span className="vgm-total">Total no período <b>{usd(dados.total)}</b> · {int(dados.operacoes)} operações</span>
+            <span className="vgm-total">Total no período <b><Usd v={dados.total} /></b> · {int(dados.operacoes)} operações</span>
           </p>
 
           <div className="vgm-dois">
@@ -186,7 +187,7 @@ export function MapaDoMarkup({ sessao, marca, parceiro, janela }: { sessao: Sess
                         aria-expanded={estaAberto('dia', d)} aria-label={`${nome}: ${usd(v)}${sufixo}. Abrir o detalhe`}>
                         <span className="vgm-dia-nome">{nome}</span>
                         <span className="vgm-dia-trilho"><u style={{ width: `${v > 0 ? Math.max(2, (v / conta.maxDia) * 100) : 0}%` }} /></span>
-                        <span className="vgm-dia-valor">{v > 0 ? <>{usd(v)}<small>{v > 0 && pct(v, conta.totalDias) < 1 ? '<1' : pct(v, conta.totalDias)}% · {int(conta.dia[d].operacoes)} op.</small></> : '—'}</span>
+                        <span className="vgm-dia-valor">{v > 0 ? <><Usd v={v} /><small>{v > 0 && pct(v, conta.totalDias) < 1 ? '<1' : pct(v, conta.totalDias)}% · {int(conta.dia[d].operacoes)} op.</small></> : '—'}</span>
                       </button>
                     </li>
                   )
