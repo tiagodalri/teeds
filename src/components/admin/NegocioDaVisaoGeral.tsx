@@ -115,6 +115,32 @@ function Empilhado({ itens, titulo, legenda, marcas }: {
   )
 }
 
+/** Uma resposta direta: a pergunta, quem ganha, o número e a comparação numa linha (16/11/2026, Tiago: "que poluição... quero algo mais intuitivo"). */
+function Resposta({ pergunta, quem, lado, valor, nota }: { pergunta: string; quem: string; lado: Lado; valor: ReactNode; nota: ReactNode }) {
+  return (
+    <div className={`ngc-resp ${lado}`}>
+      <span>{pergunta}</span>
+      <b><i className={lado} aria-hidden="true" />{quem}</b>
+      <strong>{valor}</strong>
+      <small>{nota}</small>
+    </div>
+  )
+}
+
+/** O detalhe fica recolhido: a linha mostra a conclusão e abre a tabela só para quem quiser. */
+function Gaveta({ titulo, resumo, children }: { titulo: string; resumo: ReactNode; children: ReactNode }) {
+  const [aberta, setAberta] = useState(false)
+  return (
+    <div className={`ngc-gaveta${aberta ? ' aberta' : ''}`}>
+      <button type="button" className="ngc-gaveta-cab" aria-expanded={aberta} onClick={() => setAberta((a) => !a)}>
+        <span><b>{titulo}</b><small>{resumo}</small></span>
+        <em>{aberta ? 'Fechar' : 'Ver detalhe'}</em>
+      </button>
+      {aberta && <div className="ngc-gaveta-corpo">{children}</div>}
+    </div>
+  )
+}
+
 export function NegocioDaVisaoGeral({ sessao, marca, parceiro, janela }: { sessao: SessaoTeeds; marca: string; parceiro: string; janela: JanelaDoPeriodo | null }) {
   const sessaoRef = useRef(sessao)
   sessaoRef.current = sessao
@@ -211,70 +237,147 @@ export function NegocioDaVisaoGeral({ sessao, marca, parceiro, janela }: { sessa
   }
 
   const { ia, man } = c
-  const maisPorOp: Lado = c.porOp.man >= c.porOp.ia ? 'manual' : 'ia'
-  const razaoOp = div(Math.max(c.porOp.ia, c.porOp.man), Math.min(c.porOp.ia, c.porOp.man))
   const maiorFatia: Lado = c.fatiaIA >= 50 ? 'ia' : 'manual'
-  const nome = (l: Lado) => (l === 'ia' ? `a ${umaIA}` : 'a manual')
   const Nome = (l: Lado) => (l === 'ia' ? `A ${umaIA}` : 'A manual')
+  const rot = (l: Lado) => (l === 'ia' ? nomeIA : 'Manual')
+  const outro = (l: Lado): Lado => (l === 'ia' ? 'manual' : 'ia')
   const perfil = (p: PerfilDoCliente) => (p === 'ia' ? `Só ${umaIA}` : p === 'manual' ? 'Só manual' : `${nomeIA} e manual`)
   const maxRot = Math.max(...d.rotulos.map((r) => Number(r.markup)), 0.000001)
   const maxFaixa = Math.max(...d.faixas.map((f) => Number(f.markup)), 0.000001)
   const cli = d.clientes
   const pessoasTotal = cli.lucrando.pessoas + cli.perdendo.pessoas + cli.zerados
-  const melhorLive = c.lives.reduce<(typeof c.lives)[number] | null>((m, l) => (Number(l.markup) > Number(m?.markup ?? 0) ? l : m), null)
   const quandoLive = (l: LiveDoNegocio) => `${fmtDiaLive.format(Date.parse(l.inicio)).replace('.', '')}, ${l.estimada ? '≈ ' : ''}${fmtHora.format(Date.parse(l.inicio))} às ${fmtHora.format(Date.parse(l.fim))}`
+  // as quatro respostas: quem ganha em cada pergunta e por quanto
+  const de2 = (a: number, b: number) => ({ ia: a, manual: b, vence: (a >= b ? 'ia' : 'manual') as Lado, razao: div(Math.max(a, b), Math.min(a, b)) })
+  const rMarkup = de2(Number(ia.markup), Number(man.markup))
+  const rOp = de2(c.porOp.ia, c.porOp.man)
+  const rPessoa = de2(div(ia.markup, ia.pessoas), div(man.markup, man.pessoas))
+  const rVolta = de2(Number(ia.dias_media), Number(man.dias_media))
+  const oOutro = (l: Lado) => (outro(l) === 'manual' ? 'a manual' : MARCA.vocabularioIA ? 'a I.A.' : 'os robôs')
+  const mais = (r: { razao: number; vence: Lado }) => (r.razao >= 1.15 && Number.isFinite(r.razao) ? <><b>{vezes(r.razao)}</b> {oOutro(r.vence)}</> : <>Quase igual {oOutro(r.vence) === 'os robôs' ? 'aos robôs' : `à ${oOutro(r.vence).slice(2)}`}</>)
+  const podio = [...c.lives].filter((l) => Number(l.markup) > 0).sort((a, b) => Number(b.markup) - Number(a.markup)).slice(0, 3)
+  const melhorIA = d.rotulos.find((r) => r.origem === 'ia')
+  const faixaForte = d.faixas.reduce<(typeof d.faixas)[number] | null>((m, f) => (Number(f.markup) > Number(m?.markup ?? 0) ? f : m), null)
+  const duas = d.perfis.find((p) => p.perfil === 'duas'), soIA = d.perfis.find((p) => p.perfil === 'ia')
+  const markupTop = d.top.reduce((a, t) => a + Number(t.markup), 0)
 
   return (
     <section className={`vg-card ngc${lendo ? ' vg-lendo' : ''}`} aria-busy={lendo}>
       {cab}
 
-      {/* ------------------------------------------------ a conclusão, escrita */}
+      {/* ------------------------------------------------ a conclusão: uma frase e uma barra */}
       <p className="ngc-frase">
-        <b>{Nome(maiorFatia)}</b> gerou <b>{pctTxt(maiorFatia === 'ia' ? c.fatiaIA : 100 - c.fatiaIA)}</b> do markup do período
-        {' '}({usd(maiorFatia === 'ia' ? ia.markup : man.markup)} de {usd(c.total)}).
-        {c.porOp.ia > 0 && c.porOp.man > 0 && razaoOp >= 1.15 && <>
-          {' '}Cada operação d{nome(maisPorOp)} rende <b>{vezes(razaoOp)}</b> mais markup
-          {' '}({usd(maisPorOp === 'manual' ? c.porOp.man : c.porOp.ia)} contra {usd(maisPorOp === 'manual' ? c.porOp.ia : c.porOp.man)})
-          {maisPorOp !== maiorFatia && <>, mas {nome(maiorFatia)} faz <b>{vezes(div(maiorFatia === 'ia' ? ia.operacoes : man.operacoes, Math.max(1, maiorFatia === 'ia' ? man.operacoes : ia.operacoes)))}</b> mais operações</>}.
-        </>}
-        {c.multLives != null && c.lives.length > 0 && <> Em live, o markup por hora foi <b>{vezes(c.multLives)}</b> o do mesmo horário sem live.</>}
+        <b>{Nome(maiorFatia)}</b> gerou <b>{pctTxt(maiorFatia === 'ia' ? c.fatiaIA : 100 - c.fatiaIA)}</b> do markup do período:
+        {' '}<b>{usd(maiorFatia === 'ia' ? ia.markup : man.markup)}</b> de {usd(c.total)}.
       </p>
       <Fatia ia={Number(ia.markup)} manual={Number(man.markup)} alto />
 
-      {/* ------------------------------------------------ frente a frente */}
-      <div className="ngc-bloco">
+      {/* ------------------------------------------------ as quatro respostas */}
+      <div className="ngc-respostas">
+        <Resposta pergunta="Quem gera mais markup" lado={rMarkup.vence} quem={rot(rMarkup.vence)}
+          valor={<Usd v={rMarkup[rMarkup.vence]} />}
+          nota={<>{pctTxt(div(rMarkup[rMarkup.vence], c.total) * 100)} do total · {rot(outro(rMarkup.vence))}: {usd(rMarkup[outro(rMarkup.vence)])}</>} />
+        <Resposta pergunta="Onde cada operação rende mais" lado={rOp.vence} quem={rot(rOp.vence)}
+          valor={<Usd v={rOp[rOp.vence]} />}
+          nota={<>Por operação · {mais(rOp)} ({usd(rOp[outro(rOp.vence)])})</>} />
+        <Resposta pergunta="Onde cada pessoa rende mais" lado={rPessoa.vence} quem={rot(rPessoa.vence)}
+          valor={<Usd v={rPessoa[rPessoa.vence]} />}
+          nota={<>Por pessoa · {mais(rPessoa)} ({usd(rPessoa[outro(rPessoa.vence)])})</>} />
+        <Resposta pergunta="Onde a pessoa volta mais" lado={rVolta.vence} quem={rot(rVolta.vence)}
+          valor={<>{num(rVolta[rVolta.vence], 1)} <small>dias</small></>}
+          nota={<>Dias ativos por pessoa · {rot(outro(rVolta.vence))}: {num(rVolta[outro(rVolta.vence)], 1)} dias</>} />
+      </div>
+
+      <Gaveta titulo="Todos os números, lado a lado"
+        resumo={<>Operações, pessoas, movimentado, depósitos, banca, ganhos e perdas dos clientes</>}>
         <div className="ngc-duelo-topo" aria-hidden="true">
           <b className="ia"><i />{nomeIA}</b>
           <span>Frente a frente</span>
           <b className="manual">Manual<i /></b>
         </div>
         <div role="table" aria-label={`${nomeIA} e manual, frente a frente`}>
-          <Duelo rotulo="Markup gerado" ia={Number(ia.markup)} manual={Number(man.markup)} mostra={(v) => <Usd v={v} />} />
+          <Duelo rotulo="Markup gerado" ia={Number(ia.markup)} manual={Number(man.markup)} mostra={(v) => usd(v)} />
           <Duelo rotulo="Operações" ia={ia.operacoes} manual={man.operacoes} mostra={(v) => int(v)} />
           <Duelo rotulo="Pessoas que operaram" dica="Quem usa os dois conta nos dois lados" ia={ia.pessoas} manual={man.pessoas} mostra={(v) => int(v)} />
-          <Duelo rotulo="Movimentado" dica="Soma das entradas" ia={Number(ia.volume)} manual={Number(man.volume)} mostra={(v) => <Usd v={v} />} />
-          <Duelo rotulo="Markup por operação" ia={c.porOp.ia} manual={c.porOp.man} mostra={(v) => <Usd v={v} />} />
-          <Duelo rotulo="Markup por pessoa" ia={div(ia.markup, ia.pessoas)} manual={div(man.markup, man.pessoas)} mostra={(v) => <Usd v={v} />} />
-          <Duelo rotulo="Markup a cada US$ 100 movimentados" ia={div(ia.markup, ia.volume) * 100} manual={div(man.markup, man.volume) * 100} mostra={(v) => <Usd v={v} />} />
-          <Duelo rotulo="Entrada média por operação" ia={div(ia.volume, ia.operacoes)} manual={div(man.volume, man.operacoes)} mostra={(v) => <Usd v={v} />} />
-          <Duelo rotulo="Dias ativos por pessoa" dica="Quantos dias a pessoa voltou a operar" ia={Number(ia.dias_media)} manual={Number(man.dias_media)} mostra={(v) => num(v, 1)} />
-          <Duelo rotulo="Depósitos no período" dica="De quem operou assim" ia={Number(ia.depositos)} manual={Number(man.depositos)} mostra={(v) => <Usd v={v} />} />
-          <Duelo rotulo="Banca hoje" dica="Saldo real de quem operou assim" ia={Number(ia.banca)} manual={Number(man.banca)} mostra={(v) => <Usd v={v} />} />
-          <Duelo rotulo="Banca média por pessoa" ia={div(ia.banca, ia.pessoas)} manual={div(man.banca, man.pessoas)} mostra={(v) => <Usd v={v} />} />
+          <Duelo rotulo="Movimentado" dica="Soma das entradas" ia={Number(ia.volume)} manual={Number(man.volume)} mostra={(v) => usd(v)} />
+          <Duelo rotulo="Markup a cada US$ 100 movimentados" ia={div(ia.markup, ia.volume) * 100} manual={div(man.markup, man.volume) * 100} mostra={(v) => usd(v)} />
+          <Duelo rotulo="Entrada média por operação" ia={div(ia.volume, ia.operacoes)} manual={div(man.volume, man.operacoes)} mostra={(v) => usd(v)} />
+          <Duelo rotulo="Depósitos no período" dica="De quem operou assim" ia={Number(ia.depositos)} manual={Number(man.depositos)} mostra={(v) => usd(v)} />
+          <Duelo rotulo="Banca hoje" dica="Saldo real de quem operou assim" ia={Number(ia.banca)} manual={Number(man.banca)} mostra={(v) => usd(v)} />
+          <Duelo rotulo="Banca média por pessoa" ia={div(ia.banca, ia.pessoas)} manual={div(man.banca, man.pessoas)} mostra={(v) => usd(v)} />
           <Duelo rotulo="Operações com ganho" semVencedor ia={div(ia.ganhas, ia.operacoes) * 100} manual={div(man.ganhas, man.operacoes) * 100} mostra={(v) => pctTxt(v)} />
-          <Duelo rotulo="Ganhos dos clientes" dica="Soma das operações com ganho" semVencedor ia={Number(ia.ganhos)} manual={Number(man.ganhos)} mostra={(v) => <Usd v={v} />} />
+          <Duelo rotulo="Ganhos dos clientes" dica="Soma das operações com ganho" semVencedor ia={Number(ia.ganhos)} manual={Number(man.ganhos)} mostra={(v) => usd(v)} />
           <Duelo rotulo="Perdas dos clientes" dica="Soma das operações com perda" semVencedor ia={Math.abs(Number(ia.perdas))} manual={Math.abs(Number(man.perdas))} mostra={(v) => (v > 0 ? `−${usd(v)}` : usd(0))} />
           <Duelo rotulo="Resultado dos clientes" dica="Ganhos menos perdas" semVencedor ia={Number(ia.resultado)} manual={Number(man.resultado)}
-            mostra={(v) => <span className={v >= 0 ? 'sobe' : 'cai'}><Usd v={v} formato={comSinal} /></span>} />
+            mostra={(v) => <span className={v >= 0 ? 'sobe' : 'cai'}>{comSinal(v)}</span>} />
           <Duelo rotulo="Pessoas no lucro" dica="Terminaram o período no azul" semVencedor ia={ia.lucrando} manual={man.lucrando}
             mostra={(v, l) => <>{int(v)} <small>de {int(l === 'ia' ? ia.pessoas : man.pessoas)}</small></>} />
           <Duelo rotulo="Pessoas no prejuízo" semVencedor ia={ia.perdendo} manual={man.perdendo}
             mostra={(v, l) => <>{int(v)} <small>de {int(l === 'ia' ? ia.pessoas : man.pessoas)}</small></>} />
         </div>
-      </div>
+      </Gaveta>
 
       {/* ------------------------------------------------ as recomendações da I.A. */}
       <RecomendacoesDoNegocio sessao={sessao} marca={marca} parceiro={parceiro} periodo={periodo} de={de} ate={lido?.fim ?? ate} rotulo={rotulo} />
+
+      {/* ------------------------------------------------ as lives: o pódio e os quatro números */}
+      <div className="ngc-bloco ngc-lives">
+        <h4>Lives que mais renderam <small>o markup em conta real durante cada transmissão</small></h4>
+        {c.lives.length === 0 ? (
+          <p className="vg-vazio">Nenhuma live neste período. Cada transmissão iniciada em Administração › Transmissão ao vivo passa a aparecer aqui, com o markup que rendeu.</p>
+        ) : <>
+          {podio.length > 0 && (
+            <ol className="ngc-podio">
+              {podio.map((l, i) => (
+                <li key={l.inicio} className={i === 0 ? 'primeira' : ''}>
+                  <span className="ngc-podio-n">{i + 1}º</span>
+                  <span className="ngc-podio-quando">{quandoLive(l)}<small>{duracao(l.min)}{l.estimada ? ' · horário estimado' : ''}</small></span>
+                  <strong><Usd v={l.markup} /></strong>
+                  <small>{l.mult != null && l.mult >= 1.15 ? <><b>{vezes(l.mult)}</b> o normal desse horário</> : 'Perto do normal desse horário'} · {int(l.pessoas)} pessoas operando</small>
+                </li>
+              ))}
+            </ol>
+          )}
+          <div className="ngc-lives-kpis">
+            <div><span>Lives no período</span><b>{int(c.lives.length)}</b><small>{duracao(Number(d.lives_resumo.horas_live) * 60)} no ar</small></div>
+            <div><span>Markup em live</span><b><Usd v={d.lives_resumo.markup_live} /></b><small>{pctTxt(div(Number(d.lives_resumo.markup_live), c.total) * 100)} do markup do período</small></div>
+            <div><span>Por hora em live</span><b><Usd v={c.porHoraLive} /></b><small>Sem live: {usd(c.porHoraFora)} por hora</small></div>
+            <div className={c.multLives != null && c.multLives >= 1.15 ? 'destaque' : ''}><span>Contra o mesmo horário sem live</span><b>{c.multLives != null ? vezes(c.multLives) : '—'}</b><small>O que as lives renderam a mais</small></div>
+          </div>
+          <Gaveta titulo="Todas as lives" resumo={<>{int(c.lives.length)} {c.lives.length === 1 ? 'transmissão' : 'transmissões'}, com operações, pessoas, movimentado e depósitos</>}>
+            {c.lives.length > 1 && (
+              <div className="vgm-modo" role="group" aria-label="Ordem das lives">
+                <button type="button" className={ordemLives === 'markup' ? 'ativo' : ''} aria-pressed={ordemLives === 'markup'} onClick={() => setOrdemLives('markup')}>Mais markup</button>
+                <button type="button" className={ordemLives === 'hora' ? 'ativo' : ''} aria-pressed={ordemLives === 'hora'} onClick={() => setOrdemLives('hora')}>Por hora</button>
+                <button type="button" className={ordemLives === 'recentes' ? 'ativo' : ''} aria-pressed={ordemLives === 'recentes'} onClick={() => setOrdemLives('recentes')}>Mais recentes</button>
+              </div>
+            )}
+            <div className="ngc-tabela lives" role="table">
+              <div className="ngc-linha cabeca" role="row">
+                <span role="columnheader">Quando</span><span role="columnheader">Markup</span><span role="columnheader">Contra o normal</span>
+                <span role="columnheader">Por hora</span><span role="columnheader">Operações</span><span role="columnheader">Pessoas operando</span>
+                <span role="columnheader">Movimentado</span><span role="columnheader">Depósitos</span><span role="columnheader">Entraram</span>
+              </div>
+              {livesOrdenadas.map((l) => (
+                <div key={l.inicio} className="ngc-linha" role="row">
+                  <span className="ngc-nome" role="rowheader">{quandoLive(l)}
+                    <small>{duracao(l.min)}{l.origem === 'lancamento' ? ' · live de lançamento' : l.origem === 'plataforma' ? ' · dentro da plataforma' : ''}{l.estimada ? ' · horário estimado' : ''}</small></span>
+                  <span role="cell" data-rot="Markup"><b>{Number(l.markup) > 0 ? usd(l.markup) : '—'}</b></span>
+                  <span role="cell" data-rot="Contra o normal">{l.mult != null && Number(l.markup) > 0 ? <b className={l.mult >= 1.15 ? 'sobe' : ''}>{vezes(l.mult)}</b> : '—'}</span>
+                  <span role="cell" data-rot="Por hora">{Number(l.markup) > 0 ? usd(l.porHora) : '—'}</span>
+                  <span role="cell" data-rot="Operações">{int(l.operacoes)}</span>
+                  <span role="cell" data-rot="Pessoas operando">{int(l.pessoas)}</span>
+                  <span role="cell" data-rot="Movimentado">{Number(l.volume) > 0 ? usd(l.volume) : '—'}</span>
+                  <span role="cell" data-rot="Depósitos">{Number(l.depositos) > 0 ? usd(l.depositos) : '—'}</span>
+                  <span role="cell" data-rot="Entraram">{l.entraram > 0 ? int(l.entraram) : '—'}</span>
+                </div>
+              ))}
+            </div>
+            <small className="ngc-leg">"Contra o normal" compara com o que o mesmo horário rende nos dias sem live. "Entraram" são as pessoas que clicaram no aviso da transmissão.
+              {c.lives.some((l) => l.estimada) ? ' As lives com "≈" são de antes de o histórico existir: o horário foi reconstruído pelos cliques no aviso e é aproximado.' : ''}</small>
+          </Gaveta>
+        </>}
+      </div>
 
       {/* ------------------------------------------------ por dia e por horário */}
       <div className="ngc-dois">
@@ -286,7 +389,7 @@ export function NegocioDaVisaoGeral({ sessao, marca, parceiro, janela }: { sessa
               return { chave: x.dia, eixo: `${x.dia.slice(8, 10)}/${x.dia.slice(5, 7)}`, rotulo: `${x.dia.slice(8, 10)}/${x.dia.slice(5, 7)} (${DIAS_CURTOS[quando.getUTCDay()]})`,
                 ia: Number(x.ia), manual: Number(x.manual), nota: `${int(x.ia_ops + x.manual_ops)} operações` }
             })}
-            legenda={<>Passe o mouse numa barra para ver o dia · {int(d.dias.length)} {d.dias.length === 1 ? 'dia' : 'dias'} com operação em conta real</>} />
+            legenda={<>Passe o mouse numa barra para ver o dia</>} />
         </div>
         <div className="ngc-bloco">
           <h4>Markup por horário <small>Brasília · soma do período</small></h4>
@@ -298,172 +401,117 @@ export function NegocioDaVisaoGeral({ sessao, marca, parceiro, janela }: { sessa
             legenda={(() => {
               const melhor = (l: Lado) => d.horas.reduce<{ hora: number; v: number } | null>((m, x) => (Number(x[l]) > (m?.v ?? 0) ? { hora: x.hora, v: Number(x[l]) } : m), null)
               const a = melhor('ia'), b = melhor('manual')
-              return <>Melhor hora d{nome('ia')}: <b>{a ? `${a.hora}h` : '—'}</b> · da manual: <b>{b ? `${b.hora}h` : '—'}</b></>
+              return <>Melhor hora da {umaIA}: <b>{a ? `${a.hora}h` : '—'}</b> · da manual: <b>{b ? `${b.hora}h` : '—'}</b></>
             })()} />
         </div>
       </div>
 
-      {/* ------------------------------------------------ quem opera como */}
-      <div className="ngc-bloco">
-        <h4>Quem opera como <small>cada pessoa num grupo só</small></h4>
-        <div className="ngc-perfis">
-          {(['duas', 'ia', 'manual'] as PerfilDoCliente[]).map((p) => {
-            const x = d.perfis.find((y) => y.perfil === p)
-            if (!x) return <div key={p} className="ngc-perfil vazio"><span>{perfil(p)}</span><b>Ninguém</b><small>no período</small></div>
-            return (
-              <div key={p} className="ngc-perfil">
-                <span>{perfil(p)}</span>
-                <b>{int(x.pessoas)} <small>{x.pessoas === 1 ? 'pessoa' : 'pessoas'}</small></b>
-                <Fatia ia={Number(x.markup_ia)} manual={Number(x.markup_manual)} />
-                <dl>
-                  <div><dt>Markup</dt><dd><Usd v={x.markup} /></dd></div>
-                  <div><dt>Markup por pessoa</dt><dd><Usd v={div(x.markup, x.pessoas)} /></dd></div>
-                  <div><dt>Banca média hoje</dt><dd><Usd v={div(x.banca, x.pessoas)} /></dd></div>
-                  <div><dt>Depósitos no período</dt><dd><Usd v={x.depositos} /></dd></div>
-                  <div><dt>Dias ativos por pessoa</dt><dd>{num(x.dias_media, 1)}</dd></div>
-                  <div><dt>No lucro · no prejuízo</dt><dd>{int(x.lucrando)} · {int(x.perdendo)}</dd></div>
-                </dl>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ------------------------------------------------ cada I.A. e cada tipo de contrato */}
-      <div className="ngc-bloco">
-        <h4>{MARCA.vocabularioIA ? 'Cada I.A. e cada tipo de operação manual' : 'Cada robô e cada tipo de operação manual'} <small>do que mais gerou markup para o que menos gerou</small></h4>
-        <div className="ngc-tabela" role="table">
-          <div className="ngc-linha cabeca" role="row">
-            <span role="columnheader">Estratégia</span><span role="columnheader" aria-hidden="true" /><span role="columnheader">Markup</span>
-            <span role="columnheader">Operações</span><span role="columnheader">Pessoas</span><span role="columnheader">Por operação</span>
-            <span role="columnheader">Com ganho</span><span role="columnheader">Resultado dos clientes</span>
-          </div>
-          {d.rotulos.map((r) => (
-            <div key={`${r.origem}-${r.nome}`} className="ngc-linha" role="row">
-              <span className="ngc-nome" role="rowheader"><i className={r.origem} />{r.nome}<small>{r.origem === 'ia' ? umaIA : 'Manual'}</small></span>
-              <span className="ngc-trilho" aria-hidden="true"><u className={r.origem} style={{ width: `${Math.max(2, (Number(r.markup) / maxRot) * 100)}%` }} /></span>
-              <span role="cell" data-rot="Markup"><b><Usd v={r.markup} /></b></span>
-              <span role="cell" data-rot="Operações">{int(r.operacoes)}</span>
-              <span role="cell" data-rot="Pessoas">{int(r.pessoas)}</span>
-              <span role="cell" data-rot="Por operação"><Usd v={div(r.markup, r.operacoes)} /></span>
-              <span role="cell" data-rot="Com ganho">{pctTxt(div(r.ganhas, r.operacoes) * 100)}</span>
-              <span role="cell" data-rot="Resultado dos clientes" className={Number(r.resultado) >= 0 ? 'sobe' : 'cai'}><Usd v={Number(r.resultado)} formato={comSinal} /></span>
+      {/* ------------------------------------------------ o resto, recolhido: a conclusão na linha, a tabela só para quem abrir */}
+      <div className="ngc-gavetas">
+        <Gaveta titulo={MARCA.vocabularioIA ? 'Cada I.A. e cada tipo de operação manual' : 'Cada robô e cada tipo de operação manual'}
+          resumo={melhorIA ? <><b>{melhorIA.nome}</b> é a que mais gera: {usd(melhorIA.markup)}, {pctTxt(div(Number(melhorIA.markup), c.total) * 100)} do markup</> : <>Sem operação no período</>}>
+          <div className="ngc-tabela" role="table">
+            <div className="ngc-linha cabeca" role="row">
+              <span role="columnheader">Estratégia</span><span role="columnheader" aria-hidden="true" /><span role="columnheader">Markup</span>
+              <span role="columnheader">Operações</span><span role="columnheader">Pessoas</span><span role="columnheader">Por operação</span>
+              <span role="columnheader">Com ganho</span><span role="columnheader">Resultado dos clientes</span>
             </div>
-          ))}
-        </div>
-      </div>
+            {d.rotulos.map((r) => (
+              <div key={`${r.origem}-${r.nome}`} className="ngc-linha" role="row">
+                <span className="ngc-nome" role="rowheader"><i className={r.origem} />{r.nome}<small>{r.origem === 'ia' ? umaIA : 'Manual'}</small></span>
+                <span className="ngc-trilho" aria-hidden="true"><u className={r.origem} style={{ width: `${Math.max(2, (Number(r.markup) / maxRot) * 100)}%` }} /></span>
+                <span role="cell" data-rot="Markup"><b><Usd v={r.markup} /></b></span>
+                <span role="cell" data-rot="Operações">{int(r.operacoes)}</span>
+                <span role="cell" data-rot="Pessoas">{int(r.pessoas)}</span>
+                <span role="cell" data-rot="Por operação">{usd(div(r.markup, r.operacoes))}</span>
+                <span role="cell" data-rot="Com ganho">{pctTxt(div(r.ganhas, r.operacoes) * 100)}</span>
+                <span role="cell" data-rot="Resultado dos clientes" className={Number(r.resultado) >= 0 ? 'sobe' : 'cai'}>{comSinal(Number(r.resultado))}</span>
+              </div>
+            ))}
+          </div>
+        </Gaveta>
 
-      {/* ------------------------------------------------ banca x markup · clientes */}
-      <div className="ngc-dois">
-        <div className="ngc-bloco">
-          <h4>Tamanho da conta x markup <small>pela banca real de hoje</small></h4>
+        <Gaveta titulo="Quem opera como"
+          resumo={duas ? <><b>{int(duas.pessoas)} pessoas</b> usam os dois jeitos e rendem {usd(div(duas.markup, duas.pessoas))} cada{soIA ? <>; quem só usa a {umaIA} rende {usd(div(soIA.markup, soIA.pessoas))}</> : null}</> : <>Cada pessoa num grupo só</>}>
+          <div className="ngc-perfis">
+            {(['duas', 'ia', 'manual'] as PerfilDoCliente[]).map((p) => {
+              const x = d.perfis.find((y) => y.perfil === p)
+              if (!x) return <div key={p} className="ngc-perfil vazio"><span>{perfil(p)}</span><b>Ninguém</b><small>no período</small></div>
+              return (
+                <div key={p} className="ngc-perfil">
+                  <span>{perfil(p)}</span>
+                  <b>{int(x.pessoas)} <small>{x.pessoas === 1 ? 'pessoa' : 'pessoas'}</small></b>
+                  <Fatia ia={Number(x.markup_ia)} manual={Number(x.markup_manual)} />
+                  <dl>
+                    <div><dt>Markup por pessoa</dt><dd><Usd v={div(x.markup, x.pessoas)} /></dd></div>
+                    <div><dt>Markup do grupo</dt><dd>{usd(x.markup)}</dd></div>
+                    <div><dt>Banca média hoje</dt><dd>{usd(div(x.banca, x.pessoas))}</dd></div>
+                    <div><dt>Dias ativos por pessoa</dt><dd>{num(x.dias_media, 1)}</dd></div>
+                  </dl>
+                </div>
+              )
+            })}
+          </div>
+        </Gaveta>
+
+        <Gaveta titulo="Lucro e prejuízo dos clientes"
+          resumo={<><b>{pctTxt(div(cli.perdendo.pessoas, pessoasTotal) * 100)}</b> terminaram no prejuízo · quem voltou 3 dias ou mais gerou {pctTxt(div(Number(cli.markup_tres_dias), c.total) * 100)} do markup</>}>
+          <div className="ngc-clientes">
+            <div>
+              <span>No lucro</span>
+              <b className="sobe">{int(cli.lucrando.pessoas)} <small>{pctTxt(div(cli.lucrando.pessoas, pessoasTotal) * 100)} das pessoas</small></b>
+              <small>Ganharam {usd(cli.lucrando.resultado)} e geraram {usd(cli.lucrando.markup)} de markup</small>
+            </div>
+            <div>
+              <span>No prejuízo</span>
+              <b className="cai">{int(cli.perdendo.pessoas)} <small>{pctTxt(div(cli.perdendo.pessoas, pessoasTotal) * 100)} das pessoas</small></b>
+              <small>Perderam {usd(Math.abs(Number(cli.perdendo.resultado)))} e geraram {usd(cli.perdendo.markup)} de markup</small>
+            </div>
+            <div>
+              <span>Voltaram 3 dias ou mais</span>
+              <b>{int(cli.tres_dias_ou_mais)} <small>{pctTxt(div(cli.tres_dias_ou_mais, pessoasTotal) * 100)} das pessoas</small></b>
+              <small>Geraram {usd(cli.markup_tres_dias)}: {pctTxt(div(Number(cli.markup_tres_dias), c.total) * 100)} do markup</small>
+            </div>
+            <div>
+              <span>Operaram um dia só</span>
+              <b>{int(cli.um_dia_so)} <small>{pctTxt(div(cli.um_dia_so, pessoasTotal) * 100)} das pessoas</small></b>
+              <small>{int(cli.sem_saldo)} {cli.sem_saldo === 1 ? 'pessoa está' : 'pessoas estão'} sem saldo hoje e geraram {usd(cli.markup_sem_saldo)}</small>
+            </div>
+          </div>
+        </Gaveta>
+
+        <Gaveta titulo="Tamanho da conta x markup"
+          resumo={faixaForte ? <>Quem tem <b>{(FAIXAS[faixaForte.faixa] ?? '').toLowerCase().replace('us$', 'US$')}</b> gera {pctTxt(div(Number(faixaForte.markup), c.total) * 100)} do markup</> : <>Pela banca real de hoje</>}>
           <ol className="ngc-faixas">
             {d.faixas.map((f) => (
               <li key={f.faixa}>
                 <span className="ngc-faixa-nome">{FAIXAS[f.faixa] ?? 'Outra faixa'}<small>{int(f.pessoas)} {f.pessoas === 1 ? 'pessoa' : 'pessoas'}</small></span>
                 <span className="ngc-faixa-barra" style={{ width: `${Math.max(3, (Number(f.markup) / maxFaixa) * 100)}%` }}><Fatia ia={Number(f.markup_ia)} manual={Number(f.markup_manual)} /></span>
-                <span className="ngc-faixa-valor"><b><Usd v={f.markup} /></b><small>{usd(div(f.markup, f.pessoas))} por pessoa</small></span>
+                <span className="ngc-faixa-valor"><b>{usd(f.markup)}</b><small>{usd(div(f.markup, f.pessoas))} por pessoa</small></span>
               </li>
             ))}
           </ol>
-          <small className="ngc-leg">Quem aparece em "Sem saldo agora" operou no período e hoje está com a conta zerada.</small>
-        </div>
-        <div className="ngc-bloco">
-          <h4>Lucro e prejuízo dos clientes <small>no período, somando tudo o que cada um operou</small></h4>
-          <div className="ngc-clientes">
-            <div>
-              <span>No lucro</span>
-              <b className="sobe">{int(cli.lucrando.pessoas)} <small>{pctTxt(div(cli.lucrando.pessoas, pessoasTotal) * 100)} das pessoas</small></b>
-              <small>Ganharam <b><Usd v={cli.lucrando.resultado} /></b> e geraram <b><Usd v={cli.lucrando.markup} /></b> de markup</small>
-            </div>
-            <div>
-              <span>No prejuízo</span>
-              <b className="cai">{int(cli.perdendo.pessoas)} <small>{pctTxt(div(cli.perdendo.pessoas, pessoasTotal) * 100)} das pessoas</small></b>
-              <small>Perderam <b>{usd(Math.abs(Number(cli.perdendo.resultado)))}</b> e geraram <b><Usd v={cli.perdendo.markup} /></b> de markup</small>
-            </div>
-            <div>
-              <span>Voltaram 3 dias ou mais</span>
-              <b>{int(cli.tres_dias_ou_mais)} <small>{pctTxt(div(cli.tres_dias_ou_mais, pessoasTotal) * 100)} das pessoas</small></b>
-              <small>Geraram <b><Usd v={cli.markup_tres_dias} /></b>: {pctTxt(div(Number(cli.markup_tres_dias), c.total) * 100)} do markup</small>
-            </div>
-            <div>
-              <span>Operaram um dia só</span>
-              <b>{int(cli.um_dia_so)} <small>{pctTxt(div(cli.um_dia_so, pessoasTotal) * 100)} das pessoas</small></b>
-              <small>{int(cli.sem_saldo)} {cli.sem_saldo === 1 ? 'pessoa está' : 'pessoas estão'} sem saldo hoje e geraram <b><Usd v={cli.markup_sem_saldo} /></b></small>
-            </div>
-          </div>
-        </div>
-      </div>
+          <small className="ngc-leg">Pela banca real de hoje. Quem aparece em "Sem saldo agora" operou no período e hoje está com a conta zerada.</small>
+        </Gaveta>
 
-      {/* ------------------------------------------------ quem mais gerou */}
-      {d.top.length > 0 && (
-        <div className="ngc-bloco">
-          <h4>Quem mais gerou markup <small>com o jeito de operar, o resultado e a banca de cada um</small></h4>
-          <ol className="ngc-top">
-            {d.top.map((t, i) => (
-              <li key={t.user_id}>
-                <span className="ngc-pos">{i + 1}</span>
-                <span className="ngc-av" aria-hidden="true">{t.foto_url ? <img src={t.foto_url} alt="" loading="lazy" /> : iniciais(t.nome)}</span>
-                <span className="ngc-top-nome"><b>{t.nome || 'Cliente'}</b><small><SeloDoParceiro codigo={t.parceiro} nome={PARCEIRO[t.parceiro ?? '']} /> · {perfil(t.perfil)} · {int(t.operacoes)} op. em {int(t.dias)} {t.dias === 1 ? 'dia' : 'dias'}</small></span>
-                <span className="ngc-top-fatia"><Fatia ia={Number(t.markup_ia)} manual={Number(t.markup_manual)} /></span>
-                <span className="ngc-top-num" data-rot="Markup"><b><Usd v={t.markup} /></b></span>
-                <span className={`ngc-top-num ${Number(t.resultado) >= 0 ? 'sobe' : 'cai'}`} data-rot="Resultado"><Usd v={Number(t.resultado)} formato={comSinal} /></span>
-                <span className="ngc-top-num" data-rot="Banca hoje"><Usd v={t.saldo} /></span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {/* ------------------------------------------------ as lives */}
-      <div className="ngc-bloco ngc-lives">
-        <div className="ngc-lives-cab">
-          <h4>Lives: quais renderam mais <small>o markup em conta real durante cada transmissão</small></h4>
-          {c.lives.length > 1 && (
-            <div className="vgm-modo" role="group" aria-label="Ordem das lives">
-              <button type="button" className={ordemLives === 'markup' ? 'ativo' : ''} aria-pressed={ordemLives === 'markup'} onClick={() => setOrdemLives('markup')}>Mais markup</button>
-              <button type="button" className={ordemLives === 'hora' ? 'ativo' : ''} aria-pressed={ordemLives === 'hora'} onClick={() => setOrdemLives('hora')}>Por hora</button>
-              <button type="button" className={ordemLives === 'recentes' ? 'ativo' : ''} aria-pressed={ordemLives === 'recentes'} onClick={() => setOrdemLives('recentes')}>Mais recentes</button>
-            </div>
-          )}
-        </div>
-        {c.lives.length === 0 ? (
-          <p className="vg-vazio">Nenhuma live neste período. Cada transmissão iniciada em Administração › Transmissão ao vivo passa a aparecer aqui, com o markup que rendeu.</p>
-        ) : <>
-          <div className="ngc-lives-kpis">
-            <div><span>Lives no período</span><b>{int(c.lives.length)}</b><small>{duracao(Number(d.lives_resumo.horas_live) * 60)} no ar</small></div>
-            <div><span>Markup em live</span><b><Usd v={d.lives_resumo.markup_live} /></b><small>{pctTxt(div(Number(d.lives_resumo.markup_live), c.total) * 100)} do markup do período</small></div>
-            <div><span>Por hora em live</span><b><Usd v={c.porHoraLive} /></b><small>Sem live: {usd(c.porHoraFora)} por hora</small></div>
-            <div className={c.multLives != null && c.multLives >= 1.15 ? 'destaque' : ''}><span>Contra o mesmo horário sem live</span><b>{c.multLives != null ? vezes(c.multLives) : '—'}</b><small>O que as lives renderam a mais</small></div>
-          </div>
-          {melhorLive && Number(melhorLive.markup) > 0 && (
-            <p className="ngc-frase menor">A live que mais rendeu foi a de <b>{quandoLive(melhorLive)}</b>: <b><Usd v={melhorLive.markup} /></b> em {duracao(melhorLive.min)}
-              {melhorLive.mult != null && melhorLive.mult >= 1.15 ? <>, <b>{vezes(melhorLive.mult)}</b> o que aquele horário costuma render</> : null}.</p>
-          )}
-          <div className="ngc-tabela lives" role="table">
-            <div className="ngc-linha cabeca" role="row">
-              <span role="columnheader">Quando</span><span role="columnheader">Markup</span><span role="columnheader">Contra o típico</span>
-              <span role="columnheader">Por hora</span><span role="columnheader">Operações</span><span role="columnheader">Pessoas operando</span>
-              <span role="columnheader">Movimentado</span><span role="columnheader">Depósitos</span><span role="columnheader">Entraram</span>
-            </div>
-            {livesOrdenadas.map((l, i) => (
-              <div key={l.inicio} className={`ngc-linha${ordemLives !== 'recentes' && i === 0 && Number(l.markup) > 0 ? ' melhor' : ''}`} role="row">
-                <span className="ngc-nome" role="rowheader">{quandoLive(l)}
-                  <small>{duracao(l.min)}{l.origem === 'lancamento' ? ' · live de lançamento' : l.origem === 'plataforma' ? ' · dentro da plataforma' : ''}{l.estimada ? ' · horário estimado' : ''}</small></span>
-                <span role="cell" data-rot="Markup"><b>{Number(l.markup) > 0 ? <Usd v={l.markup} /> : '—'}</b>{Number(l.markup) > 0 && <Fatia ia={Number(l.markup_ia)} manual={Number(l.markup_manual)} />}</span>
-                <span role="cell" data-rot="Contra o típico">{l.mult != null && Number(l.markup) > 0 ? <b className={l.mult >= 1.15 ? 'sobe' : ''}>{vezes(l.mult)}</b> : '—'}</span>
-                <span role="cell" data-rot="Por hora">{Number(l.markup) > 0 ? <Usd v={l.porHora} /> : '—'}</span>
-                <span role="cell" data-rot="Operações">{int(l.operacoes)}</span>
-                <span role="cell" data-rot="Pessoas operando">{int(l.pessoas)}</span>
-                <span role="cell" data-rot="Movimentado">{Number(l.volume) > 0 ? <Usd v={l.volume} /> : '—'}</span>
-                <span role="cell" data-rot="Depósitos">{Number(l.depositos) > 0 ? <Usd v={l.depositos} /> : '—'}</span>
-                <span role="cell" data-rot="Entraram">{l.entraram > 0 ? int(l.entraram) : '—'}</span>
-              </div>
-            ))}
-          </div>
-          <small className="ngc-leg">"Contra o típico" compara com o que o mesmo horário rende nos dias sem live. "Entraram" são as pessoas que clicaram no aviso da transmissão.
-            {c.lives.some((l) => l.estimada) ? ' As lives com "≈" são de antes de o histórico existir: o horário foi reconstruído pelos cliques no aviso e é aproximado.' : ''}</small>
-        </>}
+        {d.top.length > 0 && (
+          <Gaveta titulo="Quem mais gerou markup"
+            resumo={<>Os {int(d.top.length)} maiores geraram <b>{usd(markupTop)}</b>, {pctTxt(div(markupTop, c.total) * 100)} do markup</>}>
+            <ol className="ngc-top">
+              {d.top.map((t, i) => (
+                <li key={t.user_id}>
+                  <span className="ngc-pos">{i + 1}</span>
+                  <span className="ngc-av" aria-hidden="true">{t.foto_url ? <img src={t.foto_url} alt="" loading="lazy" /> : iniciais(t.nome)}</span>
+                  <span className="ngc-top-nome"><b>{t.nome || 'Cliente'}</b><small><SeloDoParceiro codigo={t.parceiro} nome={PARCEIRO[t.parceiro ?? '']} /> · {perfil(t.perfil)} · {int(t.operacoes)} op. em {int(t.dias)} {t.dias === 1 ? 'dia' : 'dias'}</small></span>
+                  <span className="ngc-top-fatia"><Fatia ia={Number(t.markup_ia)} manual={Number(t.markup_manual)} /></span>
+                  <span className="ngc-top-num" data-rot="Markup"><b><Usd v={t.markup} /></b></span>
+                  <span className={`ngc-top-num ${Number(t.resultado) >= 0 ? 'sobe' : 'cai'}`} data-rot="Resultado">{comSinal(Number(t.resultado))}</span>
+                  <span className="ngc-top-num" data-rot="Banca hoje">{usd(t.saldo)}</span>
+                </li>
+              ))}
+            </ol>
+          </Gaveta>
+        )}
       </div>
 
       <p className="ngc-pe">Só conta real · equipe fora · horário de Brasília · mesma contagem de markup do resto da tela{aoVivo ? ' · relido a cada 5 minutos' : ''}</p>

@@ -33,6 +33,45 @@
 .ngc-bloco h4 small { margin-left: 6px; font-size: 11.5px; font-weight: 500; color: var(--muted); }
 .ngc-dois { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 
+/* ------------------------------------------------ as quatro respostas (16/11/2026: "quero algo mais intuitivo") */
+.ngc-respostas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.ngc-resp { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+.ngc-resp.ia { border-top: 3px solid var(--ngc-ia); } .ngc-resp.manual { border-top: 3px solid var(--ngc-manual); }
+.ngc-resp > span { font-size: 12.5px; font-weight: 650; color: var(--muted); }
+.ngc-resp > b { display: inline-flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+.ngc-resp > b i { width: 12px; height: 12px; border-radius: 4px; flex: none; }
+.ngc-resp > strong { font-size: 26px; line-height: 1.15; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.ngc-resp > strong small { font-size: 14px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.ngc-resp > strong .vbr-brl { font-size: 14px; }
+.ngc-resp > small { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.ngc-resp > small b { color: var(--text); font-weight: 750; }
+
+/* ------------------------------------------------ o detalhe recolhido */
+.ngc-gavetas { display: grid; gap: 8px; }
+.ngc-gaveta { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.ngc .ngc-gaveta-cab { display: flex; align-items: center; justify-content: space-between; gap: 14px; width: 100%; min-height: 56px; padding: 10px 16px; border: 0; border-radius: 14px; background: transparent; text-align: left; cursor: pointer; }
+.ngc .ngc-gaveta-cab:hover { background: color-mix(in srgb, var(--vg-ouro) 6%, transparent); }
+.ngc .ngc-gaveta-cab:focus-visible { outline: 2px solid var(--vg-ouro); outline-offset: 2px; }
+.ngc-gaveta-cab > span { display: grid; gap: 2px; min-width: 0; }
+.ngc-gaveta-cab > span > b { font-size: 14px; font-weight: 750; }
+.ngc-gaveta-cab > span > small { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.ngc-gaveta-cab > span > small b { color: var(--text); font-weight: 700; }
+.ngc-gaveta-cab > em { flex: none; padding: 6px 12px; border: 1px solid color-mix(in srgb, var(--vg-ouro) 45%, var(--border)); border-radius: 999px; font-style: normal; font-size: 12px; font-weight: 750; color: var(--vg-ouro); white-space: nowrap; }
+.ngc-gaveta-corpo { display: grid; gap: 12px; padding: 4px 16px 16px; }
+
+/* ------------------------------------------------ o pódio das lives */
+.ngc-podio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.ngc-podio li { display: grid; align-content: start; gap: 6px; min-width: 0; padding: 14px 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); background: color-mix(in srgb, var(--surface-alt) 70%, transparent); }
+.ngc-podio li.primeira { border-color: color-mix(in srgb, var(--vg-ouro) 55%, var(--border)); background: color-mix(in srgb, var(--vg-ouro) 9%, var(--surface)); }
+.ngc-podio-n { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: var(--muted); }
+.ngc-podio li.primeira .ngc-podio-n { color: var(--vg-ouro); }
+.ngc-podio-quando { font-size: 14.5px; font-weight: 750; line-height: 1.3; }
+.ngc-podio-quando small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); }
+.ngc-podio strong { font-size: 24px; line-height: 1.15; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.ngc-podio strong .vbr-brl { font-size: 13.5px; }
+.ngc-podio li > small { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.ngc-podio li > small b { color: var(--text); font-weight: 750; }
+
 /* ------------------------------------------------ frente a frente */
 .ngc-duelo-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 4px; }
 .ngc-duelo-topo b { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 800; }
@@ -169,6 +208,7 @@
 @media (max-width: 1100px) {
   .ngc-dois { grid-template-columns: minmax(0, 1fr); }
   .ngc-lives-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ngc-respostas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ngc-ia-lista { grid-template-columns: minmax(0, 1fr); }
   /* as tabelas largas viram fichas: cada número com o nome em cima */
   .ngc-linha.cabeca { display: none; }
@@ -182,6 +222,10 @@
 }
 @media (max-width: 720px) {
   .ngc-bloco { padding: 14px 12px; }
+  .ngc-respostas, .ngc-podio { grid-template-columns: minmax(0, 1fr); }
+  .ngc-resp { padding: 14px; } .ngc-resp > strong { font-size: 24px; }
+  .ngc .ngc-gaveta-cab { padding: 10px 12px; } .ngc-gaveta-corpo { padding: 4px 12px 14px; }
+  .ngc-gaveta-cab > em { padding: 6px 10px; }
   .ngc-perfis, .ngc-clientes { grid-template-columns: minmax(0, 1fr); }
   .ngc-duelo { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: 'rot rot rot rot' 'vi bi bm vm'; gap: 6px 8px; padding: 10px 0; }
   .ngc-duelo-rot { grid-area: rot; text-align: left; }
