@@ -19,6 +19,7 @@ import { SUPABASE } from './config'
 import { vitrine } from './parceiro'
 import { origemDoVisitante, visitante } from './visitas'
 import { eventoDoPixel } from './pixelDoParceiro'
+import { paginaDeVenda } from './entradaInicial'
 
 const LOCAL = typeof location !== 'undefined' && /^(localhost|127\.|\[::1\])/.test(location.hostname)
 const UA = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
@@ -37,8 +38,8 @@ function toque() {
   }
 }
 
-/** O endereço que a central mostra: o do parceiro, como na landing antiga. */
-const pagina = (sufixo = '') => { const v = vitrine(); return `/${v ? `${v}/` : ''}cadastro${sufixo}` }
+/** O endereço que a central mostra: o do parceiro, como na landing antiga (/n/cadastro, ou /n/trafego quando veio do anúncio). */
+const pagina = (sufixo = '') => { const v = vitrine(); return `/${v ? `${v}/` : ''}${paginaDeVenda}${sufixo}` }
 
 export function rastroDoCadastro(evento: string, detalhe?: Record<string, unknown>, email?: string, sufixo = ''): void {
   if (LOCAL || MARCA.id !== 'globalfly') return

@@ -14,6 +14,7 @@
  * também vai pelo servidor (supabase/functions/meta-conversoes), com o mesmo código.
  */
 import { MARCA } from '../../marca'
+import { paginaDeVenda } from './entradaInicial'
 import { SUPABASE } from './config'
 import { vitrine } from './parceiro'
 
@@ -85,6 +86,8 @@ export function idDaPessoa(email: string): string {
 }
 
 export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, umaVez = false, email?: string): void {
+  // 16/11/2026: quem chegou pela /trafego (anúncios) leva a marca da página em todo evento da visita
+  if (paginaDeVenda === 'trafego') dados = { ...dados, pagina_de_venda: 'trafego' }
   naJornada(nome, dados)
   try {
     if (!carregar() || !window.fbq) return

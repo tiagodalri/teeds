@@ -35,3 +35,29 @@ function decidir(): boolean {
 }
 
 export const abrirNoCadastro: boolean = typeof location === 'undefined' ? false : decidir()
+
+/**
+ * Qual página de venda abriu o cadastro (16/11/2026, Tiago: "duplicar a /cadastro com outra
+ * especificação na URL, /trafego, para a gente saber que é o que vai usar no tráfego pago").
+ *
+ *  - 'cadastro': /cadastro, /n/cadastro, /v/cadastro (orgânico, bio, stories...);
+ *  - 'trafego':  /n/trafego, /v/trafego (anúncios). Começa igual à /cadastro e vai ganhar a VSL
+ *    com o botão liberado depois de um tempo.
+ *
+ * O encaminhamento (captura-globalfly/trafego/) manda `?pagina=trafego`; como o `cadastro=1`,
+ * é lido uma vez, no carregamento, e sai da barra logo em seguida.
+ */
+export type PaginaDeVenda = 'cadastro' | 'trafego'
+
+function decidirPagina(): PaginaDeVenda {
+  try {
+    const u = new URL(location.href)
+    const p = u.searchParams.get('pagina')
+    if (!u.searchParams.has('pagina')) return 'cadastro'
+    u.searchParams.delete('pagina')
+    history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash)
+    return p === 'trafego' ? 'trafego' : 'cadastro'
+  } catch { return 'cadastro' }
+}
+
+export const paginaDeVenda: PaginaDeVenda = typeof location === 'undefined' ? 'cadastro' : decidirPagina()

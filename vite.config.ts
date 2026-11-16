@@ -449,6 +449,13 @@ export default defineConfig({
           // A landing do lançamento também mora no endereço do parceiro (/n/cadastro/): o /n fica
           // na barra do começo ao fim (Tiago, 27/10/2026). A página lê o parceiro do próprio caminho.
           if (existsSync(join(SAIDA, 'cadastro'))) cpSync(join(SAIDA, 'cadastro'), join(pasta, 'cadastro'), { recursive: true })
+          // 16/11/2026 (Tiago): /n/trafego e /v/trafego são a página de venda do tráfego pago. Abre o mesmo
+          // cadastro com planos, marcada como 'trafego' (entradaInicial.ts: paginaDeVenda), para ganhar a VSL
+          // e ser medida à parte; a /n/cadastro continua como está.
+          if (MARCA.planosNoCadastro) {
+            mkdirSync(join(pasta, 'trafego'), { recursive: true })
+            writeFileSync(join(pasta, 'trafego', 'index.html'), `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="robots" content="noindex"><meta name="theme-color" content="#030A15"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><style>html,body{margin:0;height:100%;background:#030A15}</style><script>(function(){var q=new URLSearchParams(location.search);q.set('cadastro','1');q.set('pagina','trafego');if(!q.has('parceiro'))q.set('parceiro','${codigo}');location.replace('/?'+q.toString()+location.hash)})()</script><noscript><meta http-equiv="refresh" content="0; url=/?cadastro=1&amp;pagina=trafego&amp;parceiro=${codigo}"></noscript></head><body></body></html>`)
+          }
         }
         // O CNAME e o que diz ao GitHub Pages qual dominio serve esta pasta.
         // Sai da tabela de marcas, nao de um arquivo escrito a mao: dominio

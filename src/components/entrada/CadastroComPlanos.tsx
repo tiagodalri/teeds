@@ -35,6 +35,8 @@ import '../../casca/globalfly/styles/cadastro-iphone.css'
 import { ComoFunciona, MiniCartao, SimuladorDoLucro, useRevelar } from './SecoesDoCadastro'
 import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 import { acompanharCadastro, rastroDoCadastro } from '../../core/teeds/rastroDoCadastro'
+// 16/11/2026: /n/trafego e /v/trafego (anúncios) abrem esta mesma página; o que muda nela vem por aqui
+import { paginaDeVenda } from '../../core/teeds/entradaInicial'
 
 interface Props {
   ocupado: boolean
@@ -398,7 +400,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
   const continuarCom = (p: PlanoDoCadastro) => (p.preco ? `Continuar com o ${p.nome}` : 'Começar no Gold')
 
   return (
-    <div className={`cpl cpl-sel-${sel}`} ref={raiz} style={{ ['--cpl-mono' as string]: `url(${import.meta.env.BASE_URL}globalfly-gf-escuro.png)` }}>
+    <div className={`cpl cpl-sel-${sel}`} ref={raiz} data-pagina={paginaDeVenda} style={{ ['--cpl-mono' as string]: `url(${import.meta.env.BASE_URL}globalfly-gf-escuro.png)` }}>
       <canvas className="cpl-ceu" ref={canvas} aria-hidden="true" />
       <div className="cpl-veu" aria-hidden="true" />
       <div className="cpl-ambiente" aria-hidden="true" />

@@ -63,7 +63,7 @@ const PARCEIROS = [{ id: 'n', nome: 'Naor /n' }, { id: 'v', nome: 'Victor /v' },
 
 // ------------------------------------------------------------------ como cada passo aparece
 const CAMPO: Record<string, string> = { nome: 'o nome', email: 'o e-mail', telefone: 'o WhatsApp', cliente: 'a resposta', produto: 'um produto', outro: 'o “outro”' }
-const PAGINA = (p: string | null) => !p ? 'a página' : /obrigado/.test(p) ? 'a página de obrigado' : /questionario/.test(p) ? 'o questionário' : /cadastro/.test(p) ? 'a página de cadastro' : p
+const PAGINA = (p: string | null) => !p ? 'a página' : /obrigado/.test(p) ? 'a página de obrigado' : /questionario/.test(p) ? 'o questionário' : /trafego/.test(p) ? 'a página de tráfego' : /cadastro/.test(p) ? 'a página de cadastro' : p
 const segundos = (s: number) => s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, '0')} s`
 /** O que a pessoa fez, numa frase. */
 function frase(e: { evento: string; pagina: string | null; detalhe: Record<string, unknown> | null }): string {
