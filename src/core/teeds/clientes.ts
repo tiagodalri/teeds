@@ -709,6 +709,44 @@ export async function registrarOperacaoManual(sessao: SessaoTeeds, op: OperacaoM
     })
   } catch (e) { console.warn('[teeds] registro da operação manual indisponível:', (e as Error).message) }
 }
+/** Uma manual encerrada, como o banco guardou (para refazer "Suas últimas entradas" ao abrir a página). */
+export interface ManualDoDia {
+  contractId: number; ativo: string; tipoContrato: string; moeda: string
+  entrada: number; pagamento: number; resultado: number; markup: number | null
+  situacao: string; compradaEm: string; encerradaEm: string | null; expiraEm: string | null
+  precoEntrada: number | null; precoSaida: number | null; barreira: number | null
+}
+/** O começo do dia de hoje em Brasília (sem horário de verão desde 2019: sempre -03:00). */
+export function inicioDoDiaBrasilia(agora = new Date()): Date {
+  const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(agora)
+  return new Date(`${dia}T00:00:00-03:00`)
+}
+/*
+  16/11/2026 (Victor Cordeiro: "sai da tela, quando voltei sumiu todo histórico"): a lista
+  "Suas últimas entradas" ficava só na memória da página. Agora, ao abrir, ela volta com as
+  manuais encerradas de HOJE (dia de Brasília) desta conta, lidas de operacoes_manuais.
+  Só as do próprio cliente (user_id), mesmo para administradores. Falha em silêncio: a lista
+  segue com o que acontecer a partir de agora.
+*/
+export async function manuaisEncerradasDoDia(sessao: SessaoTeeds, contaId: string): Promise<ManualDoDia[]> {
+  const desde = inicioDoDiaBrasilia().toISOString()
+  const n = (v: unknown) => (v === null || v === undefined || v === '' ? null : Number(v))
+  try {
+    const linhas = await rest<any[]>(
+      `/operacoes_manuais?user_id=eq.${sessao.usuario.id}&marca=eq.${encodeURIComponent(MARCA.id)}&conta_id=eq.${encodeURIComponent(contaId)}`
+      + `&comprada_em=gte.${encodeURIComponent(desde)}&situacao=in.(ganhou,perdeu,vendida,encerrada)`
+      + `&select=contract_id,ativo,tipo_contrato,moeda,entrada,pagamento,resultado,markup,situacao,comprada_em,encerrada_em,expira_em,preco_entrada,preco_saida,barreira`
+      + `&order=comprada_em.desc&limit=5000`,
+      sessao.token, { signal: comPrazo(15_000) },
+    )
+    return (linhas ?? []).map((l) => ({
+      contractId: Number(l.contract_id), ativo: String(l.ativo ?? ''), tipoContrato: String(l.tipo_contrato ?? ''), moeda: String(l.moeda ?? 'USD'),
+      entrada: Number(l.entrada ?? 0), pagamento: Number(l.pagamento ?? 0), resultado: Number(l.resultado ?? 0), markup: n(l.markup),
+      situacao: String(l.situacao ?? ''), compradaEm: l.comprada_em, encerradaEm: l.encerrada_em ?? null, expiraEm: l.expira_em ?? null,
+      precoEntrada: n(l.preco_entrada), precoSaida: n(l.preco_saida), barreira: n(l.barreira),
+    })).filter((m) => Number.isFinite(m.contractId) && m.compradaEm)
+  } catch (e) { console.warn('[teeds] entradas do dia indisponíveis:', (e as Error).message); return [] }
+}
 /*
   Os preços da operação manual (10/11/2026): a cabine ao vivo do Monitoramento desenha o preço pela
   cotação pública da Deriv e precisa da entrada, da barreira e, no fim, da saída. Vai num PATCH à

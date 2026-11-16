@@ -97,7 +97,7 @@ import { BotaoJanelaSolta } from './components/janela/BotaoJanelaSolta'
 import { SeletorDeQuadros } from './components/operar/multitela/SeletorDeQuadros'
 import { comAtivoNaFrente, useMultitela } from './components/operar/multitela/estado'
 import type { ContaDaMultitela } from './components/operar/multitela/Quadro'
-import { registrarOperacaoManual, registrarPrecosDaManual } from './core/teeds/clientes'
+import { registrarOperacaoManual, registrarPrecosDaManual, manuaisEncerradasDoDia, inicioDoDiaBrasilia } from './core/teeds/clientes'
 import { caminhoDaTela, telaDoCaminho, telaDoNome } from './core/rotas'
 import { carregarRobosBloqueados } from './core/teeds/robosLiberados'
 import { ehCelular } from './core/celular'
@@ -1070,6 +1070,63 @@ export default function App() {
   // trocar o modo simulado também começa outro placar (as simuladas não se misturam com as de verdade)
   useEffect(() => { setUltimasManuais([]); setEncerradas([]) }, [conta.accountId, !!sim]) // eslint-disable-line react-hooks/exhaustive-deps
   /*
+    16/11/2026 (Victor Cordeiro: "sai da tela, quando voltei sumiu todo histórico. Precisa
+    permanecer o dia"; Tiago: "só vai zerar quando virar meia-noite"): "Suas últimas entradas"
+    mostra as manuais encerradas de HOJE (dia de Brasília) desta conta. Ao abrir a página ou
+    trocar de conta, as do dia voltam do banco (operacoes_manuais); as novas entram como antes.
+    À meia-noite a lista zera sozinha. O modo simulado não lê nada (as simuladas não vão ao banco).
+  */
+  const [inicioDoDia, setInicioDoDia] = useState(() => inicioDoDiaBrasilia().getTime())
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const agora = inicioDoDiaBrasilia().getTime()
+      setInicioDoDia((antes) => (antes === agora ? antes : agora))
+    }, 30_000)
+    return () => window.clearInterval(t)
+  }, [])
+  const temAtivos = symbols.length > 0
+  const usuarioId = teeds.sessao?.usuario.id ?? null
+  // nas telas do painel o banco esconde as linhas próprias do admin (x-teeds-painel): lê fora delas
+  const telaDoPainel = admin === true && (tela === 'gestao' || tela === 'monitoramento' || tela === 'insights')
+  useEffect(() => {
+    if (sim || !teeds.sessao || !conta.accountId || !temAtivos || telaDoPainel) return
+    let valendo = true
+    const contaId = conta.accountId
+    void manuaisEncerradasDoDia(teeds.sessao, contaId).then((linhas) => {
+      if (!valendo || !linhas.length) return
+      const casasDe = (simbolo: string, preco: number | null) => {
+        const doAtivo = symbols.find((s) => s.symbol === simbolo)?.pipSize
+        if (doAtivo != null) return doAtivo
+        const txt = preco != null ? String(preco) : ''
+        return Math.max(2, txt.includes('.') ? txt.split('.')[1].length : 2)
+      }
+      const situacao: Record<string, string> = { ganhou: 'won', perdeu: 'lost', vendida: 'sold', encerrada: 'sold' }
+      const segundos = (iso: string | null) => (iso ? Math.floor(new Date(iso).getTime() / 1000) : 0)
+      const doBanco = linhas.map((m) => {
+        if (m.markup != null && Number.isFinite(m.markup)) markupGravado.current.set(m.contractId, m.markup)
+        const inicio = segundos(m.compradaEm)
+        return {
+          contractId: m.contractId, symbol: m.ativo, contractType: m.tipoContrato,
+          buyPrice: m.entrada, bidPrice: 0, payout: m.pagamento, profit: m.resultado,
+          profitPercentage: m.entrada > 0 ? (m.resultado / m.entrada) * 100 : 0,
+          status: situacao[m.situacao] ?? 'sold', isValidToSell: false, motivoSemVenda: null, isExpired: true,
+          entrySpot: m.precoEntrada, currentSpot: null, exitSpot: m.precoSaida, barrier: m.barreira,
+          longcode: '', shortcode: '', currency: m.moeda,
+          purchaseTime: inicio, startTime: inicio, expiryTime: segundos(m.expiraEm ?? m.encerradaEm) || inicio,
+          pipSize: casasDe(m.ativo, m.precoSaida), appMarkup: null,
+        } as (typeof minhas)[number]
+      })
+      // as que já estão na tela (vivas desta página) valem mais do que a cópia do banco
+      setUltimasManuais((antes) => {
+        const ja = new Set(antes.map((u) => u.contractId))
+        return [...antes, ...doBanco.filter((d) => !ja.has(d.contractId))].sort((a, b) => b.startTime - a.startTime).slice(0, 5000)
+      })
+    })
+    return () => { valendo = false }
+  }, [conta.accountId, !!sim, usuarioId, temAtivos, inicioDoDia, telaDoPainel]) // eslint-disable-line react-hooks/exhaustive-deps
+  // só as de hoje: virou meia-noite, a lista zera
+  const ultimasDeHoje = useMemo(() => ultimasManuais.filter((u) => u.startTime * 1000 >= inicioDoDia), [ultimasManuais, inicioDoDia])
+  /*
     O markup das operações manuais (23/10/2026, modo CEO): o oficial da Deriv
     quando a proposta informa; senão, 3% do pagamento potencial (a regra da
     Deriv para opções, conferida contra o total oficial do dia). Cada operação
@@ -1077,7 +1134,9 @@ export default function App() {
   */
   const markupOficial = useRef(new Map<number, number>())
   const manuaisRegistradas = useRef(new Set<number>())
-  const markupDaManual = (c: { contractId: number; payout: number }) => markupOficial.current.get(c.contractId) ?? Number((c.payout * 0.03).toFixed(4))
+  // o markup que o banco guardou das entradas que voltaram ao abrir a página (16/11/2026)
+  const markupGravado = useRef(new Map<number, number>())
+  const markupDaManual = (c: { contractId: number; payout: number }) => markupOficial.current.get(c.contractId) ?? markupGravado.current.get(c.contractId) ?? Number((c.payout * 0.03).toFixed(4))
   /*
     Os preços de cada manual para a cabine ao vivo do Monitoramento (10/11/2026): a entrada e a
     barreira uma vez, assim que a Deriv informa; a saída uma vez, no fim. Dois envios por operação.
@@ -2128,8 +2187,8 @@ export default function App() {
             ))}
           </section>
 
-          {ultimasManuais.length > 0 && (
-            <UltimasEntradas operacoes={ultimasManuais} markupDe={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual : undefined}
+          {ultimasDeHoje.length > 0 && (
+            <UltimasEntradas operacoes={ultimasDeHoje} markupDe={adminConfirmado && mostrarColuna && !menuAdminOculto ? markupDaManual : undefined}
               nomeDoAtivo={(simbolo) => nomeDoAtivo(symbols.find((s) => s.symbol === simbolo)?.name ?? simbolo)} />
           )}
           </>
