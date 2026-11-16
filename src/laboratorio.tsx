@@ -583,7 +583,8 @@ function LabUltimas() {
   const nomes: Record<string, string> = { R_75: '75 Index', '1HZ100V': '100 (1s) Index' }
   return (
     <div className="layout-operar" style={{ padding: 16, display: 'flex', justifyContent: 'center' }}>
-      <div className="trade" style={{ width: Number(q.get('w') ?? 272), flex: 'none' }}>
+      <div className="trade" style={{ width: Number(q.get('w') ?? 272), flex: 'none', ...(q.has('cheia') ? { height: 520 } : {}) }}>
+        {q.has('cheia') && <div className="bl" style={{ height: 420, borderRadius: 18, background: 'var(--surface)', border: '1px solid var(--border)' }}>Boleta + posição aberta (de mentira)</div>}
         <UltimasEntradas operacoes={ops} nomeDoAtivo={(s) => nomes[s] ?? s} markupDe={q.has('markup') ? (c) => +(c.payout * 0.03).toFixed(2) : undefined} />
       </div>
     </div>
