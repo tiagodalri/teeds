@@ -157,8 +157,17 @@ async function analisar(id: string, cab: Record<string, string>, marca: string, 
     const dados = JSON.parse(texto)
     await mudar({ situacao: 'pronta', dados, modelo: resposta.model, pronta_em: new Date().toISOString(), uso: { entrada: resposta.usage?.input_tokens, saida: resposta.usage?.output_tokens } })
   } catch (e) {
-    await mudar({ situacao: 'erro', erro: (e as Error).message.slice(0, 600) })
+    await mudar({ situacao: 'erro', erro: erroParaTela(e) })
   }
+}
+
+/** O erro da Anthropic em palavras de quem usa o painel (o texto cru vem em inglês e com código). */
+function erroParaTela(e: unknown): string {
+  const m = String((e as Error)?.message ?? e)
+  if (/credit balance is too low/i.test(m)) return 'A conta da I.A. está sem crédito. Coloque crédito na conta da Anthropic (Plans & Billing) e gere de novo.'
+  if (/authentication_error|invalid x-api-key/i.test(m)) return 'A chave da I.A. foi recusada. Cole uma chave nova em Administração › Anúncios › Leitura da I.A.'
+  if (/rate_limit|overloaded/i.test(m)) return 'A I.A. está ocupada agora. Tente de novo em alguns minutos.'
+  return m.slice(0, 600)
 }
 
 Deno.serve(async (req) => {
