@@ -84,8 +84,23 @@ export function definirSaldoSimulado(valor: number): void {
   estado = { ...estado, saldo: v }
   guardar(); avisar()
 }
-/** Compra e liquidação das operações simuladas mexem no saldo por aqui. */
-export function somarAoSaldoSimulado(delta: number): void { definirSaldoSimulado(estado.saldo + delta) }
+/**
+ * Compra e liquidação das operações simuladas mexem no saldo por aqui. Soma sobre o saldo mais recente
+ * gravado (outra janela ou aba pode ter mexido nele): nenhuma operação apaga a de outra (revisão 16/11/2026).
+ */
+export function somarAoSaldoSimulado(delta: number): void {
+  if (!Number.isFinite(delta) || delta === 0) return
+  estado = { ...estado, saldo: ler().saldo }
+  definirSaldoSimulado(estado.saldo + delta)
+}
+// outra janela (a janela solta da manual) ou aba mexeu no modo ou no saldo: esta acompanha
+if (typeof window !== 'undefined') window.addEventListener('storage', (ev) => {
+  if (ev.key !== CHAVE) return
+  const novo = ler()
+  if (novo.ligado === estado.ligado && novo.saldo === estado.saldo && novo.conta === estado.conta) return
+  estado = novo
+  avisar()
+})
 export function definirContaSimulada(conta: 'real' | 'demo'): void {
   if (conta === estado.conta) return
   estado = { ...estado, conta }

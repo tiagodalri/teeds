@@ -11,6 +11,9 @@ import './roteiro-manual.css'
 
 const RoteiroDaManual = lazy(() => import('./RoteiroDaManual').then((m) => ({ default: m.RoteiroDaManual })))
 
+/** A operação do roteiro cuja entrada já foi para a boleta (remontar o controle não sobrescreve o valor digitado). */
+let entradaJaAplicada: string | null = null
+
 const NOMES: Record<Resultado, string> = { ganha: 'Ganha', perde: 'Perde', mercado: 'Mercado' }
 const DICAS: Record<Resultado, string> = {
   ganha: 'A próxima operação ganha',
@@ -36,7 +39,11 @@ export function ControleDaManual({ aoDefinirEntrada, compacto = false }: {
 
   // a entrada da próxima do roteiro já vem na boleta (uma vez por operação)
   useEffect(() => {
-    if (prox.indice !== null && prox.entrada !== null && prox.entrada > 0) aoDefinirEntrada?.(prox.entrada)
+    if (prox.indice === null || prox.entrada === null || prox.entrada <= 0) return
+    const chave = `${r.itens.length}:${prox.indice}:${prox.entrada}`
+    if (chave === entradaJaAplicada) return
+    entradaJaAplicada = chave
+    aoDefinirEntrada?.(prox.entrada)
   }, [prox.indice, prox.entrada]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

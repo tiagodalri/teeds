@@ -46,10 +46,12 @@ export function ganha(tipo: string, saida: number, barreira: number, casas: numb
   }
 }
 /** A barreira do contrato a partir do preço de entrada ("+0.25" relativa, "1234.5" absoluta, ou o dígito). */
-export function barreiraDe(tipo: string, pedida: string | undefined, entrada: number): number {
+export function barreiraDe(tipo: string, pedida: string | undefined, entrada: number, casas?: number): number {
   if (TIPOS_DE_DIGITO.includes(tipo)) return Number(pedida ?? 0)
   if (pedida === undefined || pedida === '') return entrada
-  return /^[+-]/.test(pedida) ? entrada + Number(pedida) : Number(pedida)
+  const b = /^[+-]/.test(pedida) ? entrada + Number(pedida) : Number(pedida)
+  // nas casas do ativo: 1234.81 + 0.25 não vira 1235.0600000000001 (o empate decide errado)
+  return casas !== undefined ? Number(b.toFixed(casas)) : b
 }
 
 export type Desejo = 'ganha' | 'perde'
@@ -65,11 +67,13 @@ export interface ContratoPlanejado {
   compradoEm: number
   /** Epoch (s) do vencimento, nos contratos por tempo. */
   expiraEm: number
-  desejo: Desejo
+  /** O resultado pedido; "mercado": só acompanha (a entrada e a saída saem daqui, o preço não é mexido). */
+  desejo: Desejo | 'mercado'
 }
 
 interface Acompanhado extends ContratoPlanejado {
   entrada: number | null
+  epochEntrada: number | null
   barreira: number | null
   ticks: number
   /** Ticks que o contrato deve durar (por tempo: estimado pelo ritmo do ativo). */
@@ -77,6 +81,26 @@ interface Acompanhado extends ContratoPlanejado {
   /** Folga natural da saída para o lado pedido (preço). */
   folga: number
   saiu: boolean
+  /** A saída (o preço que a tela mostrou no tick de saída) e o epoch dela. */
+  saida: number | null
+  epochSaida: number | null
+  /** O último tick mostrado depois da entrada (nos por tempo, a saída é o último tick até o vencimento). */
+  ultimoVisto: number | null
+  ultimoVistoEpoch: number | null
+}
+
+/**
+ * Onde a operação está, pelas regras da Deriv (conferidas em 16/11/2026 com operações reais do banco e o
+ * histórico de ticks da Deriv): a entrada é o 1º tick depois da compra; Comprar/Vender de N ticks sai no
+ * N-ésimo tick depois da entrada; dígitos de N ticks contam a entrada como o 1º (o de 1 tick sai na própria
+ * entrada); por tempo, a saída é o último tick até o vencimento. A corretora simulada lê daqui (uma fonte
+ * só: o tick que a tela ajustou é o mesmo que decide).
+ */
+export interface SituacaoDoContrato { entrada: number | null; epochEntrada: number | null; barreira: number | null; saida: number | null; epochSaida: number | null; saiu: boolean }
+export function situacaoDoContrato(id: number): SituacaoDoContrato | null {
+  const c = acompanhados.get(id)
+  if (!c) return null
+  return { entrada: c.entrada, epochEntrada: c.epochEntrada, barreira: c.barreira, saida: c.saida, epochSaida: c.epochSaida, saiu: c.saiu }
 }
 
 interface EstadoDoAtivo {
@@ -88,6 +112,8 @@ interface EstadoDoAtivo {
   casas: number
   /** O preço que a tela mostrou em cada epoch (enquanto houve roteiro no ativo). */
   mostrados: Map<number, number>
+  /** Os ticks que passaram aqui, em ordem: epoch, real e mostrado (para as velas baixadas depois). */
+  linha: { epoch: number[]; real: number[]; tela: number[] }
   /** Os ticks que a tela mostrou diferentes do real (para velas e histórico baixados depois). */
   alterados: { epoch: number; quote: number }[]
   /** A vela de agora em cada tempo do gráfico: onde começou e a abertura real e a mostrada. */
@@ -106,16 +132,17 @@ function buscarAbertura(simbolo: string, g: number, inicio: number): void {
   void fetchCandles(simbolo, g as never, 1).then((vs) => {
     const v = vs[vs.length - 1]
     const e = estados.get(simbolo)
-    if (!v || !e || v.epoch !== inicio || e.velas.get(g)?.inicio === inicio) return
+    if (!v || !e || v.epoch !== inicio || e.velas.get(g)?.inicio === inicio) { buscando.delete(chave); return }
     const primeiro = e.alterados.find((a) => a.epoch >= inicio && a.epoch < inicio + g)
     const mostrada = primeiro && primeiro.epoch <= inicio + Math.max(1, e.intervalo) * 1.5 ? primeiro.quote : v.open
     e.velas.set(g, { inicio, abertaReal: v.open, abertaMostrada: mostrada })
-  }).catch(() => { /* sem a abertura, esta vela fica sem a trava de cor */ })
+  }).catch(() => { buscando.delete(chave) /* tenta de novo no próximo tick dessa vela */ })
 }
 
 const estados = new Map<string, EstadoDoAtivo>()
 const acompanhados = new Map<number, Acompanhado>()
-const LIMITE_MEMORIA = 4000
+// ~5 h de ticks de 1 s (números só): numa gravação longa, as velas antigas seguem com o preço que a tela mostrou
+const LIMITE_MEMORIA = 20000
 let rnd = Math.random
 
 /** Para as provas: um sorteio repetível. */
@@ -127,7 +154,7 @@ const pipDe = (casas: number) => Math.pow(10, -casas)
 function estadoDe(simbolo: string, casas = 2): EstadoDoAtivo {
   let e = estados.get(simbolo)
   if (!e) {
-    e = { desvio: 0, ultimoEpoch: 0, ultimoReal: null, passos: [], intervalo: 2, casas, mostrados: new Map(), alterados: [], velas: new Map() }
+    e = { desvio: 0, ultimoEpoch: 0, ultimoReal: null, passos: [], intervalo: 2, casas, mostrados: new Map(), linha: { epoch: [], real: [], tela: [] }, alterados: [], velas: new Map() }
     estados.set(simbolo, e)
   }
   return e
@@ -155,11 +182,15 @@ export function planejarContrato(c: ContratoPlanejado): void {
     const inicio = Math.floor(agora / g) * g
     if (e.velas.get(g)?.inicio !== inicio) buscarAbertura(c.simbolo, g, inicio)
   }
-  acompanhados.set(c.id, { ...c, entrada: null, barreira: null, ticks: 0, total: c.unidade === 't' ? c.duracao : 1, folga: 0, saiu: false })
+  // nos dígitos a barreira é o dígito escolhido, já na compra (o de 1 tick sai no tick da entrada)
+  const barreira = TIPOS_DE_DIGITO.includes(c.tipo) ? Number(c.barreiraPedida ?? 0) : null
+  acompanhados.set(c.id, { ...c, entrada: null, epochEntrada: null, barreira, ticks: 0, total: c.unidade === 't' ? c.duracao : 1, folga: 0, saiu: false, saida: null, epochSaida: null, ultimoVisto: null, ultimoVistoEpoch: null })
   if (e.passos.length < 20) {
     void fetchTickHistory(c.simbolo, 120).then((ts) => {
       if (ts.length < 3) return
-      const est = estadoDe(c.simbolo)
+      // (o modo pode ter desligado nesse meio-tempo: não recria o estado)
+      const est = estados.get(c.simbolo)
+      if (!est) return
       const passos: number[] = []
       for (let i = 1; i < ts.length; i++) passos.push(ts[i].quote - ts[i - 1].quote)
       est.passos = [...passos, ...est.passos].slice(-80)
@@ -177,6 +208,12 @@ export function esquecerContrato(id: number): void { acompanhados.delete(id) }
 export function limparPrecoSimulado(): void {
   acompanhados.clear()
   estados.clear()
+  buscando.clear()
+}
+
+/** Quem está na tela perdeu o roteiro (trocou de usuário): as operações abertas seguem pelo mercado. */
+export function abandonarPlanos(): void {
+  for (const c of acompanhados.values()) c.desejo = 'mercado'
 }
 
 /** Para as provas: o desvio de agora. */
@@ -184,6 +221,7 @@ export const desvioAgora = (simbolo: string) => estados.get(simbolo)?.desvio ?? 
 
 /** De que lado da barreira a saída tem que ficar: +1 acima, −1 abaixo. */
 function ladoPedido(c: Acompanhado): 1 | -1 {
+  // (só chamado nas planejadas: "mercado" não entra nas faixas)
   const sobe = c.tipo === 'CALL' || c.tipo === 'CALLE'
   return (sobe === (c.desejo === 'ganha')) ? 1 : -1
 }
@@ -201,7 +239,8 @@ function processar(t: Tick): Tick {
   e.casas = casas
   const pip = pipDe(casas)
   const real = t.quote
-  if (e.ultimoReal !== null) e.passos = [...e.passos, real - e.ultimoReal].slice(-80)
+  // o tamanho do tick só com ticks seguidos (voltar ao ativo depois de minutos não vira um "tick" gigante)
+  if (e.ultimoReal !== null && t.epoch - e.ultimoEpoch <= 3 * Math.max(1, e.intervalo)) e.passos = [...e.passos, real - e.ultimoReal].slice(-80)
   if (e.ultimoEpoch > 0) {
     const g = t.epoch - e.ultimoEpoch
     if (g > 0 && g <= 10) e.intervalo = e.intervalo * 0.8 + g * 0.2
@@ -214,16 +253,26 @@ function processar(t: Tick): Tick {
   const direcao: { c: Acompanhado; restantes: number; exige: boolean }[] = []
   const digitosSaindo: Acompanhado[] = []
   for (const c of doAtivo) {
+    const porTempo = c.unidade !== 't'
+    const digito = TIPOS_DE_DIGITO.includes(c.tipo)
+    const planejado = c.desejo !== 'mercado'
     if (c.entrada === null) {
-      if (t.epoch > c.compradoEm) entrando.push(c)
+      if (t.epoch > c.compradoEm) {
+        entrando.push(c)
+        // dígito de 1 tick: a entrada já é a saída
+        if (planejado && digito && !porTempo && c.duracao <= 1) digitosSaindo.push(c)
+      }
       continue
     }
+    // por tempo, depois do vencimento: a saída foi o tick anterior (passo 5)
+    if (porTempo && t.epoch > c.expiraEm) continue
     c.ticks += 1
-    const porTempo = c.unidade !== 't'
-    const restantes = porTempo ? Math.max(0, Math.floor((c.expiraEm - t.epoch) / Math.max(1, e.intervalo))) : c.duracao - c.ticks
+    const fim = digito ? c.duracao - 1 : c.duracao
+    const restantes = porTempo ? Math.max(0, Math.floor((c.expiraEm - t.epoch) / Math.max(1, e.intervalo))) : fim - c.ticks
     // por tempo: qualquer tick perto do vencimento pode ser o último (um tick pode faltar): todos já do lado certo
     const exige = porTempo ? t.epoch >= c.expiraEm - 4 * Math.max(1, e.intervalo) : restantes <= 0
-    if (TIPOS_DE_DIGITO.includes(c.tipo)) { if (!porTempo && restantes <= 0) digitosSaindo.push(c) }
+    if (!planejado) continue
+    if (digito) { if (!porTempo && restantes <= 0) digitosSaindo.push(c) }
     else direcao.push({ c, restantes, exige })
   }
 
@@ -287,7 +336,8 @@ function processar(t: Tick): Tick {
     // espera o mercado: enquanto o que falta cabe folgado nos ticks que restam, não mexe (ele costuma
     // corrigir sozinho); quando aperta, anda no tamanho de um tick normal (um pouco sorteado, sem rampa)
     if (Math.abs(passo) < sigma * 0.3 && restantes > 1) passo = 0
-    const teto = sigma * (0.55 + 0.5 * rnd())
+    // (se o que falta não cabe em passos de um tick normal, espalha pelos ticks que restam: sem salto no fim)
+    const teto = Math.max(sigma * (0.55 + 0.5 * rnd()), Math.abs(alvo - e.desvio) / restantes)
     if (Math.abs(passo) > teto) passo = Math.sign(passo) * teto
     novo = e.desvio + passo
   } else if (e.desvio !== 0) {
@@ -334,25 +384,40 @@ function processar(t: Tick): Tick {
       .sort((a, b) => a.dist - b.dist)
     // não pode estragar outro contrato que sai neste mesmo tick; e, sempre que der, nem a cor da vela
     const candidatos = opcoes.map(({ d }) => r(mostrado + (d - atual) * pip, casas))
-      .filter((x) => saidaCerta(x) && jaCertos.every((o) => ganha(o.tipo, x, o.barreira as number, casas) === (o.desejo === 'ganha')))
-    const escolhido = candidatos.find((x) => corCerta(x)) ?? candidatos[0]
+      .filter((x) => jaCertos.every((o) => ganha(o.tipo, x, o.barreira as number, casas) === (o.desejo === 'ganha')))
+    // o dígito pedido sempre; depois, sem estragar um Comprar/Vender que sai junto; depois, a cor da vela
+    const escolhido = candidatos.find((x) => saidaCerta(x) && corCerta(x)) ?? candidatos.find((x) => saidaCerta(x)) ?? candidatos[0]
     if (escolhido !== undefined) mostrado = escolhido
   }
 
   // 4) quem entra neste tick: a entrada é o preço que a tela mostra; a folga natural é sorteada agora
   for (const c of entrando) {
     c.entrada = mostrado
-    c.barreira = barreiraDe(c.tipo, c.barreiraPedida, mostrado)
+    c.epochEntrada = t.epoch
+    c.barreira = barreiraDe(c.tipo, c.barreiraPedida, mostrado, casas)
     c.total = c.unidade === 't' ? c.duracao : Math.max(1, Math.round((c.expiraEm - t.epoch) / Math.max(1, e.intervalo)))
     // quanto o preço costuma andar nesse prazo: a saída fica a uma distância parecida da barreira
     // (pequena: quando precisa entortar, para pouco além da barreira, como uma saída apertada de verdade)
     c.folga = Math.max(pip * 2, sigma * Math.sqrt(c.total) * (0.08 + 0.32 * rnd()))
   }
   // 5) quem sai neste tick
+  const sair = (c: Acompanhado, preco: number | null, epoch: number | null) => { c.saiu = true; c.saida = preco; c.epochSaida = epoch }
   for (const c of doAtivo) {
-    if (c.entrada === null || entrando.includes(c)) continue
+    if (c.entrada === null) continue
     const porTempo = c.unidade !== 't'
-    if ((!porTempo && c.ticks >= c.duracao) || (porTempo && t.epoch >= c.expiraEm)) c.saiu = true
+    const digito = TIPOS_DE_DIGITO.includes(c.tipo)
+    if (entrando.includes(c)) {
+      if (digito && !porTempo && c.duracao <= 1) sair(c, mostrado, t.epoch)
+      else { c.ultimoVisto = mostrado; c.ultimoVistoEpoch = t.epoch }
+      continue
+    }
+    if (porTempo) {
+      if (t.epoch === c.expiraEm) sair(c, mostrado, t.epoch)
+      // passou do vencimento sem um tick nele: a saída é o último até o vencimento
+      else if (t.epoch > c.expiraEm) sair(c, c.ultimoVisto, c.ultimoVistoEpoch)
+      else { c.ultimoVisto = mostrado; c.ultimoVistoEpoch = t.epoch }
+    } else if (c.ticks >= (digito ? c.duracao - 1 : c.duracao)) sair(c, mostrado, t.epoch)
+    else { c.ultimoVisto = mostrado; c.ultimoVistoEpoch = t.epoch }
   }
   for (const [id, c] of acompanhados) if (c.saiu && t.epoch - c.compradoEm > 3600) acompanhados.delete(id)
 
@@ -364,6 +429,8 @@ function processar(t: Tick): Tick {
   e.ultimoReal = real
   e.mostrados.set(t.epoch, mostrado)
   if (e.mostrados.size > LIMITE_MEMORIA) e.mostrados.delete(e.mostrados.keys().next().value as number)
+  e.linha.epoch.push(t.epoch); e.linha.real.push(real); e.linha.tela.push(mostrado)
+  if (e.linha.epoch.length > LIMITE_MEMORIA) { e.linha.epoch.shift(); e.linha.real.shift(); e.linha.tela.shift() }
   if (mostrado !== real) {
     e.alterados.push({ epoch: t.epoch, quote: mostrado })
     if (e.alterados.length > LIMITE_MEMORIA) e.alterados.shift()
@@ -383,28 +450,48 @@ function historico(simbolo: string, ticks: Tick[]): Tick[] {
   return ticks.map((t) => { const q = e.mostrados.get(t.epoch); return q === undefined ? t : comPreco(t, q) })
 }
 
-function vela(simbolo: string, granularidade: number, c: Candle, aoVivo: boolean): Candle {
+/** O 1º índice da linha com epoch >= x (busca binária). */
+function indiceDe(ep: number[], x: number): number {
+  let a = 0, b = ep.length
+  while (a < b) { const m = (a + b) >> 1; if (ep[m] < x) a = m + 1; else b = m }
+  return a
+}
+
+/**
+ * A vela com os preços que a tela mostrou: os ticks que passaram aqui dentro dela trocam o real pelo mostrado.
+ * Abertura e fechamento exatos quando o 1º e o último tick da vela passaram aqui; máxima e mínima: o extremo da
+ * Deriv só vale se não foi de um tick que a tela mostrou diferente (o pavio nunca vai a um preço que não apareceu).
+ */
+function vela(simbolo: string, granularidade: number, c: Candle & { tickEpoch?: number }, aoVivo: boolean): Candle {
   const e = estados.get(simbolo)
-  if (!e || (!e.alterados.length && e.desvio === 0)) return c
+  if (!e || !e.linha.epoch.length) return c
+  // a vela ao vivo da Deriv traz o tick que a atualizou: passa pelo filtro (o mesmo preço do canal de ticks)
+  if (aoVivo && c.tickEpoch) processar({ symbol: simbolo, epoch: c.tickEpoch, quote: c.close, pipSize: e.casas })
+  const { epoch: ep, real, tela } = e.linha
   const fim = c.epoch + granularidade
+  const i0 = indiceDe(ep, c.epoch), i1 = indiceDe(ep, fim)
+  if (i0 >= i1) return c
+  let mexeu = false
+  for (let i = i0; i < i1; i++) if (tela[i] !== real[i]) { mexeu = true; break }
+  if (!mexeu) return c
+  const casas = e.casas, meio = Math.pow(10, -casas) / 2
+  const passo = Math.max(1, e.intervalo)
   let { open, high, low, close } = c
-  let primeiro: { epoch: number; quote: number } | null = null
-  let ultimo: { epoch: number; quote: number } | null = null
-  for (const a of e.alterados) {
-    if (a.epoch < c.epoch || a.epoch >= fim) continue
-    if (!primeiro) primeiro = a
-    ultimo = a
-    if (a.quote > high) high = a.quote
-    if (a.quote < low) low = a.quote
+  // abertura: o 1º tick da vela passou aqui (ele é o 1º da vela e o preço bate com o da Deriv)
+  if (ep[i0] < c.epoch + 1.5 * passo && Math.abs(real[i0] - c.open) < meio) open = tela[i0]
+  // fechamento: o último tick que passou aqui é o último da vela (ao vivo: o mais recente; fechada: perto do fim)
+  const iu = i1 - 1
+  if ((aoVivo || ep[iu] >= fim - 1.5 * passo) && Math.abs(real[iu] - c.close) < meio) close = tela[iu]
+  let altoTela = -Infinity, baixoTela = Infinity, altoReal = -Infinity, baixoReal = Infinity
+  for (let i = i0; i < i1; i++) {
+    if (tela[i] > altoTela) altoTela = tela[i]
+    if (tela[i] < baixoTela) baixoTela = tela[i]
+    if (real[i] > altoReal) altoReal = real[i]
+    if (real[i] < baixoReal) baixoReal = real[i]
   }
-  if (aoVivo) {
-    // a vela que está se formando fecha no último preço que a tela mostrou
-    if (e.ultimoEpoch >= c.epoch && e.ultimoEpoch < fim) {
-      const q = e.mostrados.get(e.ultimoEpoch)
-      if (q !== undefined) close = q
-    }
-  } else if (ultimo && ultimo.epoch >= fim - 2 * Math.max(1, e.intervalo)) close = ultimo.quote
-  if (primeiro && primeiro.epoch <= c.epoch + Math.max(1, e.intervalo)) open = primeiro.quote
+  // a máxima da Deriv veio de um tick que passou aqui: vale a máxima mostrada; senão, as duas juntas
+  high = Math.abs(c.high - altoReal) < meio ? altoTela : Math.max(c.high, altoTela)
+  low = Math.abs(c.low - baixoReal) < meio ? baixoTela : Math.min(c.low, baixoTela)
   high = Math.max(high, open, close)
   low = Math.min(low, open, close)
   return { ...c, open, high, low, close }

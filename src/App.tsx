@@ -70,7 +70,8 @@ import { RelogioTopo } from './components/RelogioTopo'
 import { ModoSimuladoTopo, abrirPainelSimulado } from './components/modoSimulado/ModoSimuladoTopo'
 import { permitirModoSimulado, useLivroSimulado, useModoSimulado } from './core/teeds/modoSimulado'
 import { comprarSimulado, encerrarSimulado, limparContratosSimulados, useContratosSimulados } from './core/teeds/corretoraSimulada'
-import { permitirRoteiroManual, roteiroLiberadoPara, useRoteiroManual } from './core/teeds/roteiroManual'
+import { permitirRoteiroManual } from './core/teeds/roteiroManual'
+import { abandonarPlanos } from './core/teeds/precoSimulado'
 import { ControleDaManual } from './components/roteiroManual/ControleDaManual'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
 import { LimiteDoSimulador } from './components/plano/LimiteDoSimulador'
@@ -880,11 +881,14 @@ export default function App() {
     roteiro e o preço da tela se ajusta para isso. O gráfico do TradingView mostra só o preço real da Deriv,
     então, com roteiro, a tela usa o gráfico GlobalFly (o mesmo preço da operação).
   */
-  const roteiroManual = useRoteiroManual()
   // por enquanto só no usuário do Tiago (16/11/2026); os outros admins seguem com o modo simulado de antes
-  const podeRoteiro = !!sim && roteiroLiberadoPara(teeds.sessao?.usuario.email)
-  useEffect(() => { permitirRoteiroManual(podeRoteiro) }, [podeRoteiro])
-  const roteiroNaTela = podeRoteiro && (roteiroManual.itens.length > 0 || roteiroManual.livre !== 'mercado')
+  // todos os administradores no modo simulado (16/11/2026; antes só o Tiago)
+  const podeRoteiro = !!sim
+  // sem o roteiro (saiu do modo), as operações que ainda estão abertas seguem pelo mercado
+  useEffect(() => { permitirRoteiroManual(podeRoteiro); if (!podeRoteiro) abandonarPlanos() }, [podeRoteiro])
+  // no modo simulado, o gráfico é sempre o GlobalFly: o do TradingView mostra só o preço real e, com o roteiro ou
+  // com o preço ainda voltando ao real depois de uma operação, não bateria com a operação (revisão 16/11/2026)
+  const roteiroNaTela = podeRoteiro
   useEffect(() => {
     if (admin === true && menuAdminOculto && (TELAS_DE_ADMIN as readonly string[]).includes(tela)) setTela(MARCA.inicio ? 'inicio' : 'operar')
   }, [menuAdminOculto]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1160,7 +1164,8 @@ export default function App() {
   const manuaisRegistradas = useRef(new Set<number>())
   // o markup que o banco guardou das entradas que voltaram ao abrir a página (16/11/2026)
   const markupGravado = useRef(new Map<number, number>())
-  const markupDaManual = (c: { contractId: number; payout: number }) => markupOficial.current.get(c.contractId) ?? markupGravado.current.get(c.contractId) ?? Number((c.payout * 0.03).toFixed(4))
+  // (no modo simulado a cotação vem pela conta e traz o markup oficial no próprio contrato: appMarkup)
+  const markupDaManual = (c: { contractId: number; payout: number; appMarkup?: number | null }) => markupOficial.current.get(c.contractId) ?? markupGravado.current.get(c.contractId) ?? (sim ? c.appMarkup : null) ?? Number((c.payout * 0.03).toFixed(4))
   /*
     Os preços de cada manual para a cabine ao vivo do Monitoramento (10/11/2026): a entrada e a
     barreira uma vez, assim que a Deriv informa; a saída uma vez, no fim. Dois envios por operação.
@@ -1329,7 +1334,7 @@ export default function App() {
   ) {
     // modo simulado: cotação e preço reais, dinheiro simulado; nada é comprado na Deriv nem vai ao banco
     // (cotada pela conexão da conta, como a boleta: com o markup da plataforma, o mesmo pagamento do aluno)
-    if (sim) return comprarSimulado({ simbolo, tipo, valor, moeda: 'USD', socket: conta.socket, ...extra })
+    if (sim) return comprarSimulado({ simbolo, tipo, valor, moeda: conta.socket ? moeda : 'USD', socket: conta.socket, ...extra })
     if (!conta.socket) throw new Error('[LinhaFechada] sem conexão da conta')
     const p = await requestProposal(conta.socket, {
       symbol: simbolo, contractType: tipo, amount: valor, currency: moeda, ...extra,

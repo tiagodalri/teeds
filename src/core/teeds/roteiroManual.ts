@@ -12,15 +12,13 @@
  */
 import { useSyncExternalStore } from 'react'
 import { MARCA } from '../../marca'
-import { emailReal } from './emailDaConta'
 
 /*
-  Liberado só para o Tiago por enquanto (16/11/2026: "por enquanto libere somente no meu usuário; depois de
-  testar e ajustar tudo certinho liberamos para os outros admins"). Para liberar a todos os admins do modo
-  simulado, troque `roteiroLiberadoPara` para devolver true.
+  Liberado para todos os administradores (16/11/2026, Tiago: "libera essa modalidade de operações simuladas
+  para todos os administradores, tanto das I.A. quanto da manual"). Antes, só o e-mail do Tiago. Quem pode
+  é quem está no modo simulado (que já só existe para administradores confirmados).
 */
-const LIBERADO_PARA = ['tiagodalri1@live.com']
-export const roteiroLiberadoPara = (email?: string | null) => !!email && LIBERADO_PARA.includes(emailReal(email).trim().toLowerCase())
+export const roteiroLiberadoPara = (_email?: string | null) => true
 let liberado = false
 /** O App diz se quem está na tela pode usar o roteiro (sem isso, toda compra simulada fica com o mercado). */
 export function permitirRoteiroManual(pode: boolean): void { liberado = pode }

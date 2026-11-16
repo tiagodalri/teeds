@@ -17,7 +17,8 @@ import {
 } from '../../core/teeds/roteiroManual'
 
 const NOMES: Record<Resultado, string> = { ganha: 'Ganha', perde: 'Perde', mercado: 'Mercado' }
-const ler = (t: string) => Number(String(t).replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'))
+// a mesma leitura da boleta: vírgula decimal; ponto é milhar só em "1.000" ou "12.500.000" ("0.350" é 0,35)
+const ler = (t: string) => { const x = String(t).replace(/\s/g, ''); return Number(x.includes(',') || /^[1-9]\d{0,2}(\.\d{3})+$/.test(x) ? x.replace(/\./g, '').replace(',', '.') : x) }
 const virgula = (v: number) => String(v).replace('.', ',')
 
 export function RoteiroDaManual({ aoFechar }: { aoFechar: () => void }) {

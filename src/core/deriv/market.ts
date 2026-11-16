@@ -225,7 +225,9 @@ export function subscribeCandles(
           high: Number(o.high),
           low: Number(o.low),
           close: Number(o.close),
-        })
+          // o tick que atualizou a vela (o preço da tela usa o mesmo tick do canal de ticks)
+          ...(o.open_time !== undefined && o.epoch !== undefined ? { tickEpoch: Number(o.epoch) } : {}),
+        } as Candle)
       }
     },
   )

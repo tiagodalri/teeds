@@ -16,7 +16,7 @@ import { publicarSessaoSimulada } from '../../core/teeds/sessaoSimuladaAoVivo'
 import { MARCA } from '../../marca'
 import { publicSocket } from '../../core/deriv/client'
 import { roboLigou, sessaoBateuLimite } from '../../core/som'
-import { definirSaldoSimulado, escreverNoLivro } from '../../core/teeds/modoSimulado'
+import { definirSaldoSimulado, escreverNoLivro, somarAoSaldoSimulado } from '../../core/teeds/modoSimulado'
 import { resumoDeEstudo } from '../../core/teeds/estudoDoDono'
 import { guardarPonto, lerPontoGuardado } from '../../core/teeds/sessaoGuardada'
 import {
@@ -104,6 +104,18 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   const limiteRef = useRef<TipoDeLimite | null>(null); limiteRef.current = limite
   const desligadoRef = useRef(false); desligadoRef.current = desligadoNoRobo
 
+  /*
+    O saldo do topo (revisão 16/11/2026): a sessão soma ao saldo só a diferença de cada passo dela. Antes
+    gravava o valor inteiro, e uma operação manual simulada feita no meio da sessão sumia no passo seguinte.
+    No começo (ou ao voltar à sessão), o saldo vira o da sessão, como antes.
+  */
+  const saldoPublicado = useRef<number | null>(null)
+  const publicarSaldo = useCallback((v: number) => {
+    if (saldoPublicado.current === null) definirSaldoSimulado(v)
+    else if (v !== saldoPublicado.current) somarAoSaldoSimulado(v - saldoPublicado.current)
+    saldoPublicado.current = v
+  }, [])
+
   /** As operações da sessão no relatório do modo simulado (cada aba guarda o dela). */
   const registrar = useCallback((historico: EstadoMotor['historico']) => {
     const agora = Date.now()
@@ -135,10 +147,10 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     // onde a sessão está, para editar, sair ou recarregar e voltar no mesmo ponto
     if (roteiro.id) guardarPonto({ id: roteiro.id, operacoes: e.operacoes, t0 })
     // o saldo do topo anda com a sessão, e as operações dela vão para o relatório do modo simulado
-    definirSaldoSimulado(e.saldo)
+    publicarSaldo(e.saldo)
     registrar(e.foto().historico)
     anunciar()
-  }, [roteiro.id, t0, registrar, anunciar])
+  }, [roteiro.id, t0, registrar, anunciar, publicarSaldo])
 
   /** O fim de cada trecho: pausa ali e, se foi meta ou stop, o aviso e o som de verdade. */
   const aoFim = useCallback((f: FimDoTrecho, k: number) => {
@@ -206,7 +218,8 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       espelho.current = { ops: m.ops, vistoEm: Date.now() }
       setSeguindo(true); setTocandoLa(!!m.tocando)
       setEstado(m.foto); setFase(m.fase); setTrecho(m.trecho); setVel(m.vel); setLimite(m.limite ?? null); setDesligadoNoRobo(!!m.desligado)
-      definirSaldoSimulado(m.saldo)
+      // a outra aba já gravou o saldo (ele chega aqui pelo armazenamento): esta só anota onde a sessão está
+      saldoPublicado.current = m.saldo
       registrar(m.foto?.historico ?? [])
     }
     // chegou agora: quem está rodando esta sessão?
