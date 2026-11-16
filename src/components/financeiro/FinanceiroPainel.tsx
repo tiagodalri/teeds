@@ -187,7 +187,7 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
         aoNovo={(t) => setEditor({ l: null, rascunho: { tipo: t, projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoIr={irPara} />}
       {aba === 'lancamentos' && <Lancamentos key={chaveLista} dados={visao!} periodo={periodo} rotuloPeriodo={rotuloPeriodo} filtroInicial={filtroInicial} podeEditar={podeEditar}
         aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoNovo={() => setEditor({ l: null, rascunho: { projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} />}
-      {aba === 'divisao' && <Divisao dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar} souDono={souDono}
+      {aba === 'divisao' && <Divisao api={api} aoMudar={depoisDeMudar} dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar} souDono={souDono}
         aoNovo={(r) => setEditor({ l: null, rascunho: r })} aoAbrir={(l) => setEditor({ l })} aoIr={() => setAba('cadastros')} />}
       {aba === 'cadastros' && <Cadastros api={api} dados={dados} podeEditar={podeEditar} souDono={souDono} aoMudar={depoisDeMudar} />}
       {aba === 'acessos' && souDono && <Acessos api={api} aoMudar={setAviso} />}

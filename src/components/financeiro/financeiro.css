@@ -670,3 +670,80 @@ button.fin-kpi:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(
   .fin-devolucoes li { flex-wrap: wrap; padding: 12px 16px; }
   .fin-devolucoes li > .fin-btn { width: 100%; }
 }
+
+/* ── divisão por projeto (16/11/2026) ───────────────────────────────────────── */
+.fin-partilha { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.fin-partilha-pessoas { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 16px 20px; }
+.fin-partilha-pessoa { position: relative; display: grid; align-content: start; gap: 10px; min-width: 0; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--fin-campo); overflow: hidden; }
+.fin-partilha-pessoa::before { content: ''; position: absolute; inset: 0 0 auto; height: 3px; background: var(--fin-cor); }
+.fin-partilha-quem { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.fin-partilha-quem > span { display: grid; gap: 1px; min-width: 0; }
+.fin-partilha-quem b { overflow: hidden; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+.fin-partilha-quem small { color: var(--muted); font-size: 11.5px; font-weight: 650; }
+.fin-partilha-pessoa > strong { font-size: 26px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; white-space: nowrap; }
+.fin-partilha-pessoa ul { display: grid; gap: 6px; margin: 0; padding: 10px 0 0; border-top: 1px dashed var(--border); list-style: none; }
+.fin-partilha-pessoa li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+.fin-partilha-pessoa li .fin-ponto { width: 8px; height: 8px; border-radius: 50%; }
+.fin-partilha-pessoa li span { flex: 1; min-width: 0; overflow: hidden; color: var(--muted); white-space: nowrap; text-overflow: ellipsis; }
+.fin-partilha-pessoa li b { white-space: nowrap; }
+.fin-partilha-nota { margin: 0; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+.fin-partilha-projeto > .fin-partilha-nota { padding: 0 20px 16px; }
+.fin-partilha-rodape { margin: 0; padding: 12px 20px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.fin-partilha-rodape b { font-weight: 800; }
+.fin-partilha-projetos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr)); gap: 16px; }
+.fin-partilha-projeto { border-top: 3px solid var(--fin-cor); }
+.fin-partilha-projeto > header h3 { display: flex; align-items: center; gap: 8px; }
+.fin-partilha-projeto > header h3 .fin-ponto { width: 10px; height: 10px; border-radius: 50%; }
+.fin-partilha-conta { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px 14px; padding: 16px 20px 4px; }
+.fin-partilha-conta > span { display: grid; gap: 2px; }
+.fin-partilha-conta small { color: var(--muted); font-size: 11px; font-weight: 700; }
+.fin-partilha-conta b { font-size: 15px; font-weight: 800; white-space: nowrap; }
+.fin-partilha-conta > i { padding-bottom: 2px; color: var(--muted); font-size: 16px; font-style: normal; font-weight: 800; }
+.fin-partilha-conta .lucro { margin-left: auto; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--fin-cor) 12%, var(--fin-campo)); }
+.fin-partilha-conta .lucro b { font-size: 18px; }
+.fin-partilha-barra { display: flex; gap: 3px; height: 40px; margin: 14px 20px 6px; }
+.fin-partilha-barra > span { flex-basis: 0; min-width: 44px; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 0 10px; border-radius: 9px; background: color-mix(in srgb, var(--fin-cor) 18%, var(--fin-cartao)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fin-cor) 45%, transparent); overflow: hidden; }
+.fin-partilha-barra b { overflow: hidden; font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; }
+.fin-partilha-barra small { flex-shrink: 0; color: var(--muted); font-size: 11.5px; font-weight: 800; }
+.fin-partilha-aviso { margin: 4px 20px 0; color: var(--fin-socio); font-size: 12px; font-weight: 700; }
+.fin-partilha-tabela { width: calc(100% - 40px); margin: 8px 20px 14px; border-collapse: collapse; font-size: 13px; }
+.fin-partilha-tabela th { padding: 8px 0 8px 12px; white-space: nowrap; color: var(--muted); font-size: 11px; font-weight: 700; text-align: right; border-bottom: 1px solid var(--border); }
+.fin-partilha-tabela th:first-child, .fin-partilha-tabela td:first-child { text-align: left; }
+.fin-partilha-tabela td { padding: 10px 0 10px 12px; text-align: right; white-space: nowrap; border-bottom: 1px dashed var(--border); font-variant-numeric: tabular-nums; }
+.fin-partilha-tabela tr:last-child td { border-bottom: 0; }
+.fin-partilha-tabela td b { font-size: 14px; font-weight: 800; }
+.fin-partilha-nome { display: inline-flex; align-items: center; gap: 8px; font-weight: 650; }
+.fin-partilha-nome .fin-ponto { width: 8px; height: 8px; border-radius: 50%; }
+.fin-partilha-nome em { padding: 2px 7px; border-radius: 999px; color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); font-size: 11px; font-style: normal; font-weight: 800; }
+.fin-partilha-editar { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.fin-partilha-editar li { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fin-partilha-editar .fin-input-sufixo { width: 120px; flex-shrink: 0; }
+.fin-partilha-editar .fin-input-sufixo input { width: 100%; height: 100%; padding: 0 0 0 12px; border: 0; outline: 0; color: var(--text); background: transparent; font: inherit; font-size: 15px; font-weight: 700; text-align: right; }
+.fin-partilha-soma { font-size: 13px; font-weight: 800; }
+.fin-partilha-soma.ok { color: var(--fin-entra, var(--up)); color: var(--up); }
+.fin-partilha-soma.falta { color: var(--fin-socio); }
+.fin-divisao-titulo { margin: 8px 0 -6px; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.fin-divisao-sub { margin: 0; color: var(--muted); font-size: 12.5px; }
+@media (max-width: 760px) {
+  .fin-partilha-pessoas { grid-template-columns: minmax(0, 1fr); padding: 14px 16px; }
+  .fin-partilha-projetos { grid-template-columns: minmax(0, 1fr); }
+  .fin-partilha-conta { padding: 14px 16px 4px; }
+  .fin-partilha-conta .lucro { margin-left: 0; width: 100%; }
+  .fin-partilha-barra { margin: 12px 16px 6px; }
+  .fin-partilha-tabela { width: calc(100% - 32px); margin: 8px 16px 12px; font-size: 12px; }
+  .fin-partilha-tabela th:nth-child(3), .fin-partilha-tabela td:nth-child(3) { display: none; }
+  .fin-partilha-projeto > .fin-partilha-nota, .fin-partilha-rodape { padding-left: 16px; padding-right: 16px; }
+}
+
+/* categoria do Resumo vira botão: abre os lançamentos dela (16/11/2026) */
+.fin-categorias li { display: block; }
+.fin-categorias-linha { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; width: 100%; margin: -6px -8px; padding: 6px 8px; border: 0; border-radius: 10px; color: inherit; background: none; text-align: left; cursor: pointer; box-sizing: content-box; }
+.fin-categorias-linha:hover:not(:disabled) { background: color-mix(in srgb, var(--fin-cor) 8%, transparent); }
+.fin-categorias-linha:hover:not(:disabled) .fin-categorias-nome b { text-decoration: underline; text-underline-offset: 3px; }
+.fin-categorias-linha:disabled { cursor: default; }
+.fin-partilha-tabela th:first-child, .fin-partilha-tabela td:first-child { padding-left: 0; }
+.fin-partilha-parados { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0; padding: 12px 16px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); font-size: 12.5px; }
+.fin-partilha-parados span { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-weight: 650; }
+.fin-partilha-parados .fin-ponto { width: 8px; height: 8px; border-radius: 50%; }
+.fin-partilha-volta { display: none; }
+@media (max-width: 760px) { .fin-partilha-volta { display: block; margin-top: 2px; color: var(--muted); font-size: 10.5px; font-weight: 650; } }

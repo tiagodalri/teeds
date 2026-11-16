@@ -42,7 +42,9 @@ export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; nest
 export type ResultadoEntrada = { token: string; expira_em: string; papel: Papel; marcas: string[]; trocar_senha: boolean } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' }
 export type ResultadoTroca = { ok: true } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' | 'fraca' | 'igual' }
 
-export interface DadosFin { categorias: Categoria[]; contas: Conta[]; socios: Socio[]; projetos: Projeto[]; lancamentos: Lancamento[] }
+/** Quem leva quanto do lucro de um projeto (projeto_id null = custo geral). quem = 's:<sócio>' ou 'p:<parceiro>'. */
+export interface Parte { marca: string; projeto_id: string | null; quem: string; percentual: number }
+export interface DadosFin { categorias: Categoria[]; contas: Conta[]; socios: Socio[]; projetos: Projeto[]; partes: Parte[]; lancamentos: Lancamento[] }
 
 /** Tudo o que a tela pede ao banco. O laboratório troca por uma versão em memória. */
 export interface FinApi {
@@ -64,6 +66,8 @@ export interface FinApi {
   salvarConta(c: Partial<Conta> & { nome: string }): Promise<Conta>
   salvarSocio(s: Partial<Socio> & { nome: string }): Promise<Socio>
   salvarProjeto(p: Partial<Projeto> & { nome: string }): Promise<Projeto>
+  /** troca a divisão de um projeto (null = custo geral); só o dono, somando 100% */
+  salvarPartes(projetoId: string | null, partes: Array<{ quem: string; percentual: number }>): Promise<void>
   historico(limite?: number): Promise<Historico[]>
   pessoas(ids: string[]): Promise<Pessoa[]>
   acessos(): Promise<Acesso[]>
@@ -176,14 +180,15 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
       if (!lerToken(sessao.usuario.id) || !(await rpc<string | null>('fin_sessao'))) { guardarToken(null); throw new FinTrancado() }
       // traz as vendas da Cakto e o markup da Deriv para os lançamentos antes de ler (falhou: lê o que já tem)
       try { await rpc('fin_sincronizar_receitas', { p_marca: marca, p_cotacao: await cotacaoDoDolar() }) } catch (e) { if (e instanceof FinTrancado) throw e }
-      const [categorias, contas, socios, projetos, lancamentos] = await Promise.all([
+      const [categorias, contas, socios, projetos, partes, lancamentos] = await Promise.all([
         get<Categoria[]>(`fin_categorias?marca=eq.${m}&order=tipo,ordem,nome`),
         get<Conta[]>(`fin_contas?marca=eq.${m}&order=ordem,nome`),
         get<Socio[]>(`fin_socios?marca=eq.${m}&order=ordem,nome`),
         get<Projeto[]>(`fin_projetos?marca=eq.${m}&order=ordem,nome`),
+        get<Parte[]>(`fin_partes?marca=eq.${m}&select=marca,projeto_id,quem,percentual`).catch(() => [] as Parte[]),
         getTodos<Lancamento>(`fin_lancamentos?marca=eq.${m}&order=vencimento.desc,criado_em.desc,id`),
       ])
-      return { categorias, contas: contas.map(num), socios: socios.map(num), projetos, lancamentos: lancamentos.map(num) }
+      return { categorias, contas: contas.map(num), socios: socios.map(num), projetos, partes: partes.map(num), lancamentos: lancamentos.map(num) }
     },
     salvarLancamentos: async (l) => (await escrever<Lancamento[]>('POST', 'fin_lancamentos', l.map((x) => ({ ...x, marca })))).map(num),
     atualizarLancamento: async (id, campos) => { exigirLinha(await escrever<Lancamento[]>('PATCH', `fin_lancamentos?id=eq.${id}`, campos)) },
@@ -201,6 +206,7 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
       if (s.id) { const { id, ...resto } = s; return num(exigirLinha(await escrever<Socio[]>('PATCH', `fin_socios?id=eq.${id}`, resto))[0]) }
       return num((await escrever<Socio[]>('POST', 'fin_socios', { ...s, marca }))[0])
     },
+    salvarPartes: async (projetoId, partes) => { await rpc('fin_salvar_partes', { p_marca: marca, p_projeto: projetoId, p_partes: partes }, 'Não foi possível salvar a divisão.') },
     salvarProjeto: async (p) => {
       if (p.id) { const { id, ...resto } = p; return exigirLinha(await escrever<Projeto[]>('PATCH', `fin_projetos?id=eq.${id}`, resto))[0] }
       return (await escrever<Projeto[]>('POST', 'fin_projetos', { ...p, marca }))[0]
@@ -391,30 +397,166 @@ export interface LinhaDivisao {
  * pessoal dele conta como dinheiro que ele já tirou.
  */
 export function dividir(d: DadosFin, p: Periodo): { resultadoPeriodo: number; resultadoTotal: number; somaPercentual: number; linhas: LinhaDivisao[] } {
-  let resultadoPeriodo = 0, resultadoTotal = 0
+  // 16/11/2026: a parte de cada sócio sai da divisão de cada projeto (partilhar), não mais de um percentual único
+  const noPeriodo = partilhar(d, p)
+  const total = partilhar(d, { de: '2000-01-01', ate: '2100-12-31' })
   const mov = new Map<string, { colocou: number; tirou: number }>()
   for (const l of d.lancamentos) {
-    if (!l.pago_em || l.pago_fora) continue
-    if (ehOperacional(l.tipo)) {
-      const v = l.tipo === 'receita' ? l.valor : -l.valor
-      resultadoTotal += v
-      if (l.pago_em >= p.de && l.pago_em <= p.ate) resultadoPeriodo += v
-    }
-    if (!l.socio_id) continue
+    if (!l.pago_em || !l.socio_id) continue
     const x = mov.get(l.socio_id) ?? { colocou: 0, tirou: 0 }
+    // colocou: aporte e despesa paga do bolso (o projeto devolve); tirou: retirada, receita na conta pessoal, devolução
     if (l.tipo === 'aporte' || l.tipo === 'despesa') x.colocou += l.valor
     else x.tirou += l.valor
     mov.set(l.socio_id, x)
   }
   const ativos = d.socios.filter((s) => s.ativo || mov.has(s.id))
   const somaPercentual = d.socios.filter((s) => s.ativo).reduce((s, x) => s + x.percentual, 0)
+  const parteDe = (r: Partilha, s: Socio) => r.pessoas.find((x) => x.quem === `s:${s.id}`)?.parte ?? 0
   const linhas = ativos.map((s) => {
     const x = mov.get(s.id) ?? { colocou: 0, tirou: 0 }
-    const pct = s.ativo ? s.percentual / 100 : 0
-    const parteTotal = resultadoTotal * pct
-    return { socio: s, parte: resultadoPeriodo * pct, parteTotal, colocou: x.colocou, tirou: x.tirou, saldo: parteTotal + x.colocou - x.tirou }
+    const parteTotal = parteDe(total, s)
+    return { socio: s, parte: parteDe(noPeriodo, s), parteTotal, colocou: x.colocou, tirou: x.tirou, saldo: parteTotal + x.colocou - x.tirou }
   })
-  return { resultadoPeriodo, resultadoTotal, somaPercentual, linhas }
+  return { resultadoPeriodo: noPeriodo.lucro, resultadoTotal: total.lucro, somaPercentual, linhas }
+}
+
+// ── Divisão por projeto (16/11/2026) ──────────────────────────────────────────────────────────────
+/*
+  Tiago: "no projeto dele, /v, ele tem 50% e eu tenho 50% (primeiro pagamos as despesas do projeto e depois dividimos
+  o resto). No projeto do Naor, o Naor tem 50%, eu tenho 25% e o Victor tem 25%... Precisava ter tipo uma previsão de
+  quanto vai sobrar pra cada". E: quem pagou uma despesa do projeto do próprio bolso recebe de volta do dinheiro do
+  projeto antes da divisão.
+
+  Por projeto: lucro = receitas − despesas (todas, inclusive as pagas do bolso). Cada pessoa recebe a parte dela do
+  lucro + o que pagou do bolso pelo projeto (reembolso). Previsão: o que já aconteceu + as contas em aberto até o fim
+  do período + o resto do período no mesmo ritmo dos dias que já passaram (só no período que está correndo).
+*/
+export interface PessoaDaPartilha { quem: string; nome: string; cor: string; socio: boolean }
+/** Os sócios e os parceiros (pelos projetos). O parceiro que também é sócio (Victor = 'v') vira o sócio. */
+export function pessoasDaPartilha(d: DadosFin): Map<string, PessoaDaPartilha> {
+  const m = new Map<string, PessoaDaPartilha>()
+  for (const s of d.socios) m.set(`s:${s.id}`, { quem: `s:${s.id}`, nome: s.nome, cor: s.cor, socio: true })
+  for (const p of d.projetos) {
+    if (!p.parceiro || d.socios.some((s) => s.parceiro === p.parceiro) || m.has(`p:${p.parceiro}`)) continue
+    m.set(`p:${p.parceiro}`, { quem: `p:${p.parceiro}`, nome: p.responsavel ?? p.nome, cor: p.cor, socio: false })
+  }
+  return m
+}
+/** 'p:v' do parceiro que também é sócio vira 's:<id do sócio>' (a mesma pessoa). */
+export function normalizarQuem(d: DadosFin, quem: string): string {
+  if (!quem.startsWith('p:')) return quem
+  const s = d.socios.find((x) => x.parceiro === quem.slice(2))
+  return s ? `s:${s.id}` : quem
+}
+/** A divisão de um projeto (ou do custo geral); sem nada cadastrado, vale o percentual dos sócios. */
+export function partesDe(d: DadosFin, projetoId: string | null): Array<{ quem: string; percentual: number }> {
+  const l = d.partes.filter((x) => (x.projeto_id ?? null) === projetoId).map((x) => ({ quem: normalizarQuem(d, x.quem), percentual: x.percentual }))
+  return l.length ? l : d.socios.filter((s) => s.ativo && s.percentual > 0).map((s) => ({ quem: `s:${s.id}`, percentual: s.percentual }))
+}
+/** Quem pagou do bolso uma despesa (e recebe de volta do projeto), ou null quando saiu do caixa. */
+export const quemPagou = (d: DadosFin, l: Lancamento): string | null =>
+  l.tipo !== 'despesa' ? null : l.pago_por ? normalizarQuem(d, `p:${l.pago_por}`) : l.socio_id ? `s:${l.socio_id}` : null
+
+export interface ParteDaPessoa { quem: string; percentual: number; parte: number; reembolso: number; total: number }
+export interface Numeros { receitas: number; despesas: number; lucro: number; pessoas: ParteDaPessoa[] }
+export interface ProjetoPartilhado {
+  projeto: Projeto | null
+  /** o que já aconteceu no período */
+  agora: Numeros
+  /** a previsão até o fim do período */
+  previsao: Numeros
+  /** em aberto até o fim do período (entra na previsão) */
+  aberto: { receitas: number; despesas: number }
+  /** o ritmo usado na previsão: dias que já passaram e os que faltam (null = período fechado ou curto demais) */
+  ritmo: { passados: number; faltam: number } | null
+  somaPercentual: number
+}
+export interface Partilha {
+  projetos: ProjetoPartilhado[]
+  /** por pessoa, somando todos os projetos */
+  pessoas: Array<ParteDaPessoa & { nome: string; cor: string; socio: boolean; previsto: number; porProjeto: Array<{ projeto: Projeto | null; total: number; previsto: number }> }>
+  lucro: number
+  lucroPrevisto: number
+}
+const r2 = (v: number) => Math.round(v * 100) / 100
+export function partilhar(d: DadosFin, p: Periodo, hojeDia = hoje()): Partilha {
+  const gente = pessoasDaPartilha(d)
+  const proj = new Map(d.projetos.map((x) => [x.id, x]))
+  type Acum = { r: number; dsp: number; reemb: Map<string, number>; abertoR: number; abertoD: number; primeiro: string | null }
+  const acum = new Map<string, Acum>()
+  const de = (chave: string): Acum => { let a = acum.get(chave); if (!a) { a = { r: 0, dsp: 0, reemb: new Map(), abertoR: 0, abertoD: 0, primeiro: null }; acum.set(chave, a) } return a }
+  for (const x of d.projetos.filter((y) => y.ativo)) de(x.id)
+  for (const l of d.lancamentos) {
+    if (!ehOperacional(l.tipo)) continue
+    const chave = l.projeto_id && proj.has(l.projeto_id) ? l.projeto_id : '-'
+    if (l.pago_em) {
+      if (l.pago_em < p.de || l.pago_em > p.ate) continue
+      const a = de(chave)
+      if (!a.primeiro || l.pago_em < a.primeiro) a.primeiro = l.pago_em
+      if (l.tipo === 'receita') a.r += l.valor
+      else {
+        a.dsp += l.valor
+        const q = quemPagou(d, l)
+        if (q) a.reemb.set(q, (a.reemb.get(q) ?? 0) + l.valor)
+      }
+    } else if (l.vencimento <= p.ate && l.vencimento >= p.de) {
+      const a = de(chave)
+      if (l.tipo === 'receita') a.abertoR += l.valor; else a.abertoD += l.valor
+    }
+  }
+  // só projeta no período que está correndo e que é um mês, um ano ou um intervalo escolhido (nunca o "Tudo")
+  const correndo = p.de <= hojeDia && hojeDia < p.ate && diasEntre(p.de, p.ate) <= 366
+  const projetos: ProjetoPartilhado[] = []
+  for (const [chave, a] of acum) {
+    const projeto = chave === '-' ? null : proj.get(chave)!
+    const partes = partesDe(d, projeto?.id ?? null)
+    const somaPercentual = partes.reduce((s, x) => s + x.percentual, 0)
+    // o ritmo: do primeiro movimento do projeto no período até hoje
+    let ritmo: ProjetoPartilhado['ritmo'] = null
+    if (correndo && a.primeiro) {
+      const passados = diasEntre(a.primeiro, hojeDia) + 1, faltam = diasEntre(hojeDia, p.ate)
+      if (passados >= 3 && faltam > 0) ritmo = { passados, faltam }
+    }
+    const fator = ritmo ? ritmo.faltam / ritmo.passados : 0
+    const numeros = (r: number, dsp: number, reemb: Map<string, number>): Numeros => {
+      const lucro = r - dsp
+      const quem = new Set([...partes.map((x) => x.quem), ...reemb.keys()])
+      const pessoas = [...quem].map((q) => {
+        const pct = partes.find((x) => x.quem === q)?.percentual ?? 0
+        const parte = r2(lucro * pct / 100), reembolso = r2(reemb.get(q) ?? 0)
+        return { quem: q, percentual: pct, parte, reembolso, total: r2(parte + reembolso) }
+      }).sort((x, y) => y.percentual - x.percentual || y.total - x.total)
+      return { receitas: r2(r), despesas: r2(dsp), lucro: r2(lucro), pessoas }
+    }
+    const agora = numeros(a.r, a.dsp, a.reemb)
+    // previsão: o realizado + o mesmo ritmo nos dias que faltam + o que está em aberto até o fim do período
+    const reembPrev = new Map([...a.reemb].map(([q, v]) => [q, v * (1 + fator)]))
+    const previsao = numeros(a.r * (1 + fator) + a.abertoR, a.dsp * (1 + fator) + a.abertoD, reembPrev)
+    if (!projeto && !a.r && !a.dsp && !a.abertoR && !a.abertoD) continue
+    projetos.push({ projeto, agora, previsao, aberto: { receitas: r2(a.abertoR), despesas: r2(a.abertoD) }, ritmo, somaPercentual })
+  }
+  projetos.sort((x, y) => (x.projeto ? 0 : 1) - (y.projeto ? 0 : 1) || y.agora.lucro - x.agora.lucro || (x.projeto?.ordem ?? 0) - (y.projeto?.ordem ?? 0))
+  const porPessoa = new Map<string, Partilha['pessoas'][number]>()
+  for (const pr of projetos) {
+    for (const x of pr.agora.pessoas) {
+      const g = gente.get(x.quem) ?? { quem: x.quem, nome: x.quem, cor: '#94A3B8', socio: false }
+      const t = porPessoa.get(x.quem) ?? { ...g, percentual: 0, parte: 0, reembolso: 0, total: 0, previsto: 0, porProjeto: [] }
+      t.parte = r2(t.parte + x.parte); t.reembolso = r2(t.reembolso + x.reembolso); t.total = r2(t.total + x.total)
+      const prev = pr.previsao.pessoas.find((y) => y.quem === x.quem)?.total ?? 0
+      t.previsto = r2(t.previsto + prev)
+      t.porProjeto.push({ projeto: pr.projeto, total: x.total, previsto: prev })
+      porPessoa.set(x.quem, t)
+    }
+    for (const x of pr.previsao.pessoas) {
+      if (porPessoa.get(x.quem)?.porProjeto.some((y) => y.projeto === pr.projeto)) continue
+      const g = gente.get(x.quem) ?? { quem: x.quem, nome: x.quem, cor: '#94A3B8', socio: false }
+      const t = porPessoa.get(x.quem) ?? { ...g, percentual: 0, parte: 0, reembolso: 0, total: 0, previsto: 0, porProjeto: [] }
+      t.previsto = r2(t.previsto + x.total); t.porProjeto.push({ projeto: pr.projeto, total: 0, previsto: x.total })
+      porPessoa.set(x.quem, t)
+    }
+  }
+  const pessoas = [...porPessoa.values()].sort((x, y) => Number(y.socio) - Number(x.socio) || y.previsto - x.previsto)
+  return { projetos, pessoas, lucro: r2(projetos.reduce((s, x) => s + x.agora.lucro, 0)), lucroPrevisto: r2(projetos.reduce((s, x) => s + x.previsao.lucro, 0)) }
 }
 
 // ── Fonte pagadora (11/11/2026) ───────────────────────────────────────────────────────────────────

@@ -14,7 +14,8 @@ const AUTOMATICO: Record<string, string> = {
   'markup-deriv': 'Markup da Deriv no mês, medido em cada conta real dos clientes deste parceiro. Atualiza até 5 dias depois do fim do mês.',
 }
 
-export type FiltroInicial = 'pagar' | 'receber' | 'vencidos' | null
+/** Abre a lista já filtrada: em aberto, ou por categoria (o clique numa categoria do Resumo, 16/11/2026). */
+export type FiltroInicial = 'pagar' | 'receber' | 'vencidos' | { categoria: string } | null
 type FTipo = 'todos' | 'receita' | 'despesa' | 'socios'
 type FSituacao = 'todas' | 'pago' | 'aberto' | 'vencido'
 
@@ -27,12 +28,13 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
   aoNovo: () => void
 }) {
   const [busca, setBusca] = useState('')
+  const emAberto = typeof filtroInicial === 'string'
   const [tipo, setTipo] = useState<FTipo>(filtroInicial === 'pagar' ? 'despesa' : filtroInicial === 'receber' ? 'receita' : 'todos')
-  const [situacao, setSituacao] = useState<FSituacao>(filtroInicial === 'vencidos' ? 'vencido' : filtroInicial ? 'aberto' : 'todas')
-  const [categoria, setCategoria] = useState('')
+  const [situacao, setSituacao] = useState<FSituacao>(filtroInicial === 'vencidos' ? 'vencido' : emAberto ? 'aberto' : 'todas')
+  const [categoria, setCategoria] = useState(filtroInicial && typeof filtroInicial === 'object' ? filtroInicial.categoria : '')
   const [conta, setConta] = useState('')
   // "Em aberto" e "Vencidos" olham todos os pendentes, não só os do período (a conta vencida em outubro ainda está para pagar)
-  const [todoPeriodo, setTodoPeriodo] = useState(!!filtroInicial)
+  const [todoPeriodo, setTodoPeriodo] = useState(emAberto)
   const hojeDia = hoje()
 
   const cat = useMemo(() => new Map(dados.categorias.map((c) => [c.id, c])), [dados.categorias])

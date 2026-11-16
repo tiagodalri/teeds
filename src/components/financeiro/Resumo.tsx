@@ -6,6 +6,7 @@ import {
 } from '../../core/teeds/financeiro'
 import { Icone } from '../Icone'
 import { Vazio } from './ui'
+import type { FiltroInicial } from './Lancamentos'
 
 /** O resultado do mês embaixo da barra, curto para caber: "1,1 mil", "−820", "12 mil". */
 const compacto = (v: number) => {
@@ -26,7 +27,7 @@ export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriod
   aoNovo: (tipo: 'despesa' | 'receita') => void
   aoAbrir: (l: Lancamento) => void
   aoPagar: (l: Lancamento) => void
-  aoIr: (aba: 'lancamentos' | 'divisao' | 'cadastros', filtro?: 'pagar' | 'receber' | 'vencidos') => void
+  aoIr: (aba: 'lancamentos' | 'divisao' | 'cadastros', filtro?: FiltroInicial) => void
 }) {
   // o saldo das contas é sempre o de todas as contas, com ou sem filtro de projeto
   const r = useMemo(() => ({ ...resumir(dados, periodo), saldoContas: resumir(todos, periodo).saldoContas }), [dados, todos, periodo])
@@ -129,9 +130,12 @@ export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriod
           <strong className={`fin-total ${t === 'despesa' ? 'fin-sai' : 'fin-entra'}`}>{reais(lista.reduce((s, x) => s + x.valor, 0))}</strong></header>
         {lista.length ? <ul className="fin-categorias">
           {lista.slice(0, 8).map((c) => <li key={c.id ?? '-'} style={{ ['--fin-cor' as string]: c.cor }}>
-            <span className="fin-categorias-nome"><i className="fin-ponto" /><b>{c.nome}</b><small>{c.n} {c.n === 1 ? 'lançamento' : 'lançamentos'}</small></span>
-            <span className="fin-categorias-valor"><b>{reais(c.valor)}</b><small>{pct(c.parte)}</small></span>
-            <span className="fin-categorias-barra"><i style={{ width: `${Math.max(2, c.parte * 100)}%` }} /></span>
+            {/* o clique abre os lançamentos da categoria, para conferir e corrigir */}
+            <button type="button" className="fin-categorias-linha" disabled={!c.id} onClick={() => c.id && aoIr('lancamentos', { categoria: c.id })} title={c.id ? `Ver os lançamentos de ${c.nome}` : undefined}>
+              <span className="fin-categorias-nome"><i className="fin-ponto" /><b>{c.nome}</b><small>{c.n} {c.n === 1 ? 'lançamento' : 'lançamentos'}</small></span>
+              <span className="fin-categorias-valor"><b>{reais(c.valor)}</b><small>{pct(c.parte)}</small></span>
+              <span className="fin-categorias-barra"><i style={{ width: `${Math.max(2, c.parte * 100)}%` }} /></span>
+            </button>
           </li>)}
           {lista.length > 8 && <li className="fin-categorias-mais">E mais {lista.length - 8} {lista.length - 8 === 1 ? 'categoria' : 'categorias'}, somando {reais(lista.slice(8).reduce((s, x) => s + x.valor, 0))}</li>}
         </ul> : <p className="fin-cartao-vazio">{t === 'despesa' ? 'Nenhuma despesa paga' : 'Nenhuma receita recebida'} no período.</p>}

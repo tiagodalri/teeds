@@ -183,11 +183,10 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
   const tom = !operacional ? 'socio' : entrada ? 'entrada' : 'saida'
   const titulo = novo ? (tipo === 'despesa' ? 'Nova despesa' : tipo === 'receita' ? 'Nova receita' : tipo === 'aporte' ? 'Novo aporte de sócio' : tipo === 'devolucao' ? 'Nova devolução de parceiro' : 'Nova retirada de sócio') : 'Editar lançamento'
   const v = valor ? reais(valor) : 'o valor'
+  const nomeDoProjeto = projeto ? dados.projetos.find((x) => x.id === projeto)?.nome ?? null : null
   const efeito = tipo !== 'despesa' ? null
     : regra.efeito === 'caixa' ? <>Sai do caixa da plataforma, pela conta escolhida abaixo.</>
-    : regra.efeito === 'plataforma-devolve' ? <>A plataforma devolve <b>{v}</b> a <b>{nomeDaFonte}</b>. Entra no resultado e no acerto entre os sócios, sem mexer no saldo das contas.</>
-    : regra.efeito === 'parceiro-devolve' ? <><b>{regra.parceiro!.nome}</b> devolve <b>{v}</b> a <b>{nomeDaFonte}</b>, porque o gasto é do projeto dele. Fica fora do caixa e do resultado da plataforma; entra no custo do projeto.</>
-    : <>Custo do bolso de <b>{nomeDaFonte}</b>: ninguém devolve. Entra só no custo do projeto, fora do caixa e do resultado da plataforma.</>
+    : <>{nomeDoProjeto ? <>O <b>{nomeDoProjeto}</b></> : <>A plataforma</>} devolve <b>{v}</b> a <b>{nomeDaFonte}</b> antes de dividir o lucro. Entra nas despesas{nomeDoProjeto ? ' do projeto' : ''}, sem mexer no saldo das contas.</>
   const somenteLeitura = !podeEditar
 
   return (
