@@ -15,7 +15,7 @@ import './liberar-conta.css'
 
 const ESTRELA = 'M8 1.2l1.55 4.1 4.25.35-3.25 2.75 1.02 4.15L8 10.25 4.43 12.55l1.02-4.15L2.2 5.65l4.25-.35z'
 
-export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprador, aoFechar, aoVerificar, aoConectar, aoSuporte }: {
+export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprador, aoFechar: fecharSemRegistro, aoVerificar, aoConectar, aoSuporte, aoRegistrar }: {
   planos: Subplano[]
   derivConectada: boolean
   saldoReal: number | null
@@ -25,18 +25,26 @@ export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprado
   aoVerificar?: () => Promise<boolean>
   aoConectar?: () => void
   aoSuporte?: () => void
+  /** cada botão tocado (painel Admin › Contas travadas) */
+  aoRegistrar?: (tipo: 'depositar' | 'conectar' | 'verificar' | 'black' | 'prestige' | 'suporte' | 'fechar', origem?: string) => void
 }) {
   const [conferindo, setConferindo] = useState(false)
   const [semSaldo, setSemSaldo] = useState(false)
   const verificar = async () => {
     if (!aoVerificar || conferindo) return
     setConferindo(true); setSemSaldo(false)
-    try { if (!await aoVerificar()) setSemSaldo(true) } catch { setSemSaldo(true) } finally { setConferindo(false) }
+    let liberou = false
+    try { liberou = await aoVerificar(); if (!liberou) setSemSaldo(true) } catch { setSemSaldo(true) } finally { setConferindo(false) }
+    aoRegistrar?.('verificar', liberou ? 'liberou' : 'sem-saldo')
   }
+  const aoFechar = () => { aoRegistrar?.('fechar'); fecharSemRegistro() }
   useEffect(() => { const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') aoFechar() }; addEventListener('keydown', esc); return () => removeEventListener('keydown', esc) }, [aoFechar])
   const acima = planos.filter((s) => (s.id === 'black' || s.id === 'prestige') && s.ativo)
-  const quero = (s: Subplano) => { if (s.checkoutUrl) window.open(comComprador(s.checkoutUrl, comprador), '_blank', 'noopener,noreferrer') }
-  const depositar = () => window.open(DERIV.deposito, '_blank', 'noopener,noreferrer')
+  const quero = (s: Subplano) => {
+    aoRegistrar?.(s.id === 'prestige' ? 'prestige' : 'black')
+    if (s.checkoutUrl) window.open(comComprador(s.checkoutUrl, comprador), '_blank', 'noopener,noreferrer')
+  }
+  const depositar = () => { aoRegistrar?.('depositar'); window.open(DERIV.deposito, '_blank', 'noopener,noreferrer') }
   const saldo = saldoReal == null ? '—' : `US$ ${saldoReal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   return (
     <div className="lbc-fundo" onMouseDown={aoFechar}>
@@ -81,7 +89,7 @@ export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprado
 
             {derivConectada
               ? <button type="button" className="lbc-cta" onClick={depositar}>Depositar na Deriv<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4h9v9M16 4L5 15" /></svg></button>
-              : <button type="button" className="lbc-cta" onClick={aoConectar}>Conectar a Deriv</button>}
+              : <button type="button" className="lbc-cta" onClick={() => { aoRegistrar?.('conectar'); aoConectar?.() }}>Conectar a Deriv</button>}
             {derivConectada && <button type="button" className="lbc-verificar" onClick={() => void verificar()} disabled={conferindo}>{conferindo ? 'Conferindo o seu saldo…' : 'Já depositei, verificar agora'}</button>}
             {semSaldo && <p className="lbc-recado" role="status">Ainda não encontramos saldo na sua conta real. O depósito pode levar alguns minutos para aparecer na Deriv. Tente de novo em instantes.</p>}
           </article>
@@ -114,7 +122,7 @@ export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprado
 
         <footer className="lbc-rodape">
           <span className="lbc-seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 7.9-7 9.5-4-1.6-7-5.1-7-9.5V6z" /></svg>O depósito é feito direto na Deriv. A GlobalFly não recebe nem movimenta o seu dinheiro.</span>
-          <button type="button" className="lbc-link" onClick={aoSuporte}>Falar com o suporte</button>
+          <button type="button" className="lbc-link" onClick={() => { aoRegistrar?.('suporte'); aoSuporte?.() }}>Falar com o suporte</button>
         </footer>
       </section>
     </div>

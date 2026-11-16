@@ -1,0 +1,49 @@
+/* Contas travadas (GlobalFly, 16/11/2026). Prefixo ctv-. Usa a base do painel de Vendas (vnd-). */
+.ctv-meio { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; }
+.ctv-meio .admin-card > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.ctv-meio .admin-card > header small { color: var(--muted); font-size: 10.5px; }
+
+.ctv-botoes ol, .ctv-funil ol { display: grid; gap: 10px; margin: 0; padding: 4px 20px 18px; list-style: none; }
+.ctv-botoes li { display: grid; grid-template-columns: minmax(120px, 1.1fr) minmax(0, 2fr) 44px 44px; align-items: center; gap: 12px; font-size: 12px; }
+.ctv-botoes li > span { font-weight: 650; }
+.ctv-botoes li > i, .ctv-funil li > i { display: block; height: 8px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 14%, transparent); overflow: hidden; }
+.ctv-botoes li > i b, .ctv-funil li > i b { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .4s ease; }
+.ctv-botoes li > strong { text-align: right; font-variant-numeric: tabular-nums; }
+.ctv-botoes li > small { text-align: right; color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.ctv-botoes li.ctv-b-abriu > i b { background: color-mix(in srgb, var(--muted) 60%, transparent); }
+.ctv-botoes li.ctv-b-depositar > i b, .ctv-botoes li.ctv-b-verificar > i b, .ctv-botoes li.ctv-b-conectar > i b { background: var(--up); }
+.ctv-botoes li.ctv-b-black > i b { background: #D9B465; }
+.ctv-botoes li.ctv-b-prestige > i b { background: #A98D5C; }
+.ctv-botoes li.ctv-b-fechar > i b { background: var(--down); }
+
+.ctv-funil li { display: grid; grid-template-columns: minmax(0, 1fr) auto 52px; align-items: baseline; gap: 4px 12px; font-size: 12px; }
+.ctv-funil li > span { font-weight: 650; }
+.ctv-funil li > strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.ctv-funil li > small { text-align: right; color: var(--muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.ctv-funil li > i { grid-column: 1 / -1; }
+.ctv-funil li:last-child > i b { background: var(--up); }
+.ctv-push { display: grid; gap: 6px; margin: 0 20px 18px; padding-top: 12px; border-top: 1px solid var(--border); }
+.ctv-push p { display: grid; gap: 2px; margin: 0; font-size: 12px; }
+.ctv-push small { color: var(--muted); font-size: 10.5px; }
+
+.rc-tabela.ctv-tab > * { min-width: 980px; grid-template-columns: 2.1fr 1.15fr .8fr 2fr 1fr .9fr; padding: 11px 20px; }
+.ctv .rc-tabela > .cab { text-transform: none; letter-spacing: .01em; font-size: 10px; }
+.ctv-tab > div > span small { display: block; color: var(--muted); font-size: 10px; }
+.rc-tabela.ctv-tab > div > span.ctv-chips { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; align-content: center; }
+.ctv-chip { padding: 3px 8px; border-radius: 999px; font-style: normal; font-size: 10.5px; font-weight: 700; white-space: nowrap; color: var(--text); background: color-mix(in srgb, var(--muted) 14%, transparent); }
+.ctv-chip.ctv-b-depositar, .ctv-chip.ctv-b-verificar, .ctv-chip.ctv-b-conectar { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
+.ctv-chip.ctv-b-black { color: #D9B465; background: #151516; }
+.ctv-chip.ctv-b-prestige { color: #3A2B16; background: #E3D3AE; }
+.ctv-chip.ctv-b-fechar { color: var(--muted); }
+.ctv-mais { display: block; margin: 12px auto 18px; padding: 9px 16px; border: 1px solid var(--border); border-radius: 10px; color: var(--primary); background: var(--bg); font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; }
+.ctv-mais:hover { border-color: var(--primary); }
+
+@media (max-width: 1100px) { .ctv-meio { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .ctv-botoes ol, .ctv-funil ol { padding: 4px 14px 14px; }
+  .ctv-botoes li { grid-template-columns: minmax(0, 1fr) 34px 34px; }
+  .ctv-botoes li > i { grid-column: 1 / -1; grid-row: 2; }
+  .ctv-push { margin: 0 14px 14px; }
+  .ctv-meio .admin-card > header { flex-direction: column; align-items: flex-start; text-align: left; gap: 4px; padding: 16px 14px 10px; }
+  .ctv-meio .admin-card > header > div { text-align: left; }
+}

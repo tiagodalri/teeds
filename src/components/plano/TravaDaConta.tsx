@@ -6,7 +6,7 @@ import type { CompradorDoCheckout } from '../../core/teeds/checkout'
 import type { SessaoViva } from '../../core/teeds/servidorRobos'
 import { registrarContaDeriv } from '../../core/teeds/clientes'
 import { abrirSuporte } from '../../core/teeds/suporte'
-import { EVENTO_LIBERAR, cliqueLivre, definirTravada, lerMinhaLiberacao, type Liberacao } from '../../core/teeds/liberacao'
+import { EVENTO_LIBERAR, cliqueLivre, definirTravada, lerMinhaLiberacao, registrarLiberacao, type Liberacao } from '../../core/teeds/liberacao'
 import { JanelaLiberarConta } from './LiberarConta'
 
 type ContaDaDeriv = { accountId: string; type: string; currency: string; balance: number }
@@ -35,7 +35,14 @@ export function TravaDaConta({ sessao, marca, tela, contas, derivConectada, viva
   aoAtualizarContas: () => Promise<void>
 }) {
   const [info, setInfo] = useState<Liberacao | null>(null)
-  const [aberta, setAberta] = useState(false)
+  const [aberta, setAbertaCru] = useState(false)
+  // cada abertura fica registrada com o motivo: entrada (1ª vez), clique (botão travado) ou tela (link/aba travada)
+  const abertaRef = useRef(false)
+  const setAberta = useCallback((v: boolean, origem?: 'entrada' | 'clique' | 'tela') => {
+    if (v && !abertaRef.current && origem) registrarLiberacao(sessaoRef.current, marca, 'abriu', origem)
+    abertaRef.current = v
+    setAbertaCru(v)
+  }, [marca])
   const sessaoRef = useRef(sessao)
   sessaoRef.current = sessao
 
@@ -81,14 +88,14 @@ export function TravaDaConta({ sessao, marca, tela, contas, derivConectada, viva
   // o aviso aparece uma vez ao entrar travado; depois, a cada clique travado
   const avisou = useRef(false)
   useEffect(() => {
-    if (travada && !avisou.current) { avisou.current = true; setAberta(true) }
+    if (travada && !avisou.current) { avisou.current = true; setAberta(true, 'entrada') }
     if (!travada) setAberta(false)
-  }, [travada])
+  }, [travada, setAberta])
   useEffect(() => {
-    const abrir = () => { if (travada) setAberta(true) }
+    const abrir = () => { if (travada) setAberta(true, 'tela') }
     window.addEventListener(EVENTO_LIBERAR, abrir)
     return () => window.removeEventListener(EVENTO_LIBERAR, abrir)
-  }, [travada])
+  }, [travada, setAberta])
 
   // os cliques: antes de qualquer componente (fase de captura na janela)
   const telaRef = useRef(tela)
@@ -101,11 +108,11 @@ export function TravaDaConta({ sessao, marca, tela, contas, derivConectada, viva
       e.preventDefault()
       e.stopPropagation()
       e.stopImmediatePropagation()
-      setAberta(true)
+      setAberta(true, 'clique')
     }
     window.addEventListener('click', segurar, true)
     return () => window.removeEventListener('click', segurar, true)
-  }, [travada])
+  }, [travada, setAberta])
 
   const verificar = useCallback(async () => {
     await aoAtualizarContas().catch(() => undefined)
@@ -120,7 +127,8 @@ export function TravaDaConta({ sessao, marca, tela, contas, derivConectada, viva
       aoFechar={() => setAberta(false)}
       aoVerificar={verificar}
       aoConectar={() => { setAberta(false); aoConectar() }}
-      aoSuporte={() => { setAberta(false); abrirSuporte() }} />,
+      aoSuporte={() => { setAberta(false); abrirSuporte() }}
+      aoRegistrar={(tipo, origem) => registrarLiberacao(sessaoRef.current, marca, tipo, origem)} />,
     document.body,
   )
 }

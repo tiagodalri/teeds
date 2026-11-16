@@ -33,6 +33,18 @@ export async function lerMinhaLiberacao(sessao: SessaoTeeds, marca: string): Pro
   } catch { return null }
 }
 
+/** O que a pessoa fez na janela (painel Admin › Contas travadas). Nunca atrapalha: erro é ignorado. */
+export type EventoDaLiberacao = 'abriu' | 'depositar' | 'conectar' | 'verificar' | 'black' | 'prestige' | 'suporte' | 'fechar'
+export function registrarLiberacao(sessao: SessaoTeeds, marca: string, tipo: EventoDaLiberacao, origem?: string) {
+  try {
+    void fetch(`${SUPABASE.url}/rest/v1/rpc/gf_registrar_liberacao`, {
+      method: 'POST', keepalive: true,
+      headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_marca: marca, p_tipo: tipo, p_origem: origem ?? null }),
+    }).catch(() => undefined)
+  } catch { /* sem registro, segue */ }
+}
+
 /* o estado "travada agora" que o App e a navegação leem */
 let travadaAgora = false
 const ouvintes = new Set<() => void>()

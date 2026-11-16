@@ -16,6 +16,7 @@ import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { createPortal } from 'react-dom'
 import { RelogioDoSimulador, JanelaSemTempo } from './components/plano/LimiteDoSimulador'
 import { JanelaLiberarConta } from './components/plano/LiberarConta'
+import { ContasTravadas } from './components/admin/ContasTravadas'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './styles/app.css'
@@ -655,6 +656,25 @@ function Laboratorio() {
         {!q.has('sem-janela') && createPortal(<JanelaSemTempo dados={dados} atual={atual} aoFechar={() => undefined} />, document.body)}
       </div>
     )
+  }
+  // ?tela=contas-travadas: o painel Admin › Contas travadas com pessoas de exemplo (16/11/2026)
+  if (qual === 'contas-travadas') {
+    const nomes = ['Ana Paula Souza', 'Bruno Lima', 'Carla Mendes', 'Diego Rocha', 'Elisa Prado', 'Fábio Nunes', 'Gabriela Reis', 'Hugo Alves', 'Isabela Costa', 'João Pedro Silva']
+    const agora = Date.now()
+    const pessoas = nomes.map((nome, i) => ({
+      user_id: `00000000-0000-4000-8000-0000000000${String(i).padStart(2, '0')}`, nome, email: `${nome.split(' ')[0].toLowerCase()}@exemplo.com`,
+      parceiro: i % 3 === 0 ? 'n' : 'v', parceiro_nome: i % 3 === 0 ? 'Naor' : 'Victor Cordeiro',
+      travada: i > 2, subplano: i === 1 ? 'black' : 'gold', saldo: i === 0 ? 50 : i === 2 ? 15 : 0, conta_real: i % 2 === 0, no_inicio: true,
+      cliques: i === 9 ? null : { abriu: 1 + (i % 4), ...(i % 2 === 0 ? { depositar: 1 } : {}), ...(i === 1 ? { black: 2 } : {}), ...(i === 4 ? { prestige: 1, suporte: 1 } : {}), ...(i > 5 ? { fechar: 1 } : {}), ...(i === 0 ? { verificar: 1 } : {}) },
+      primeiro: new Date(agora - (i + 1) * 9e5).toISOString(), ultimo: i === 9 ? null : new Date(agora - i * 6e5).toISOString(),
+      push_enviado: i < 8, push_recebeu: i < 6, push_clicou: i < 2,
+    }))
+    const exemplo = { agora: new Date().toISOString(), parceiro: null, inicio: '2026-11-16T13:50:00Z', travados_agora: 941, pessoas, dias: [],
+      push: [{ id: 'x', em: '2026-11-16T13:56:20Z', titulo: '🔒 Libere a sua conta GlobalFly', pessoas: 114, aparelhos: 120, receberam: 69, clicaram: 1 }] }
+    const original = window.fetch
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('gf_painel_liberacao') ? new Response(JSON.stringify(exemplo), { status: 200 }) : original(u, i)) as typeof fetch
+    const sessao = { token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never
+    return <div className="app workspace-app"><div className="admin-shell" style={{ gridTemplateColumns: '1fr' }}><main className="admin-main" style={{ padding: 16 }}><ContasTravadas sessao={sessao} marca="globalfly" parceiro={null} /></main></div></div>
   }
   // ?tela=liberar-conta(&sem-deriv): a janela do Gold sem saldo na conta real (16/11/2026)
   if (qual === 'liberar-conta') {
