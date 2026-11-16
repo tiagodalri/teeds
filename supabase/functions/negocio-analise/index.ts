@@ -8,6 +8,13 @@
 //   analisar { de, ate, periodo, rotulo, forcar? }  pede uma leitura nova; roda em segundo plano e a tela
 //                                              pergunta "ultima" até ficar pronta
 //
+//   chave_gemini { valor }                     guarda a chave gratuita do Gemini (só o admin geral), depois de testada
+//   remover_gemini                             tira a chave do Gemini: a leitura volta para a Anthropic
+//
+// Dois motores (16/11/2026, Tiago: "tem alguma API gratuita de IA...? estou apenas testando, não queria
+// gastar"): com a chave do Gemini guardada (GEMINI_API_KEY em config_servicos) a leitura sai pela faixa
+// gratuita do Google; sem ela, pela Anthropic. As instruções e o formato da resposta são os mesmos.
+//
 // Os números vêm da MESMA leitura da tela (teeds_painel_negocio), chamada com o token de quem pede: o banco
 // decide o que essa pessoa pode ver (parceiro forçado para admin de parceiro). Nome, foto e id de cliente
 // não vão para a I.A. A chave é a mesma das outras leituras: config_servicos (ANTHROPIC_API_KEY) ou o
@@ -30,10 +37,67 @@ const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}
   ...init, headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
 })
 
-async function chaveIA(): Promise<string> {
-  const r = await rest('config_servicos?chave=eq.ANTHROPIC_API_KEY&select=valor')
-  const v = r.ok ? ((await r.json())[0]?.valor as string | undefined) : undefined
-  return (v ?? '').trim() || (Deno.env.get('ANTHROPIC_API_KEY') ?? '')
+/** As chaves guardadas: a do Gemini (gratuita) tem a vez; sem ela, a da Anthropic. */
+async function chaves(): Promise<{ anthropic: string; gemini: string }> {
+  const r = await rest('config_servicos?chave=in.(ANTHROPIC_API_KEY,GEMINI_API_KEY)&select=chave,valor')
+  const linhas = (r.ok ? await r.json() : []) as Array<{ chave: string; valor: string | null }>
+  const de = (c: string) => (linhas.find((l) => l.chave === c)?.valor ?? '').trim()
+  return { anthropic: de('ANTHROPIC_API_KEY') || (Deno.env.get('ANTHROPIC_API_KEY') ?? ''), gemini: de('GEMINI_API_KEY') }
+}
+
+/* ------------------------------------------------------------------ o Gemini (faixa gratuita do Google) */
+const GEMINI = 'https://generativelanguage.googleapis.com/v1beta'
+// do mais capaz para o mais leve: se um estiver sem cota no dia (429) ou fora do ar para a chave (404), tenta o seguinte
+const MODELOS_GEMINI = ['gemini-3.8-flash', 'gemini-4-hydrogen', 'gemini-3.5-flash-lite']
+
+async function pedirAoGemini(chave: string, sistema: string, pergunta: string): Promise<{ texto: string; modelo: string; uso: Record<string, unknown> }> {
+  let ultimo = ''
+  for (const modelo of MODELOS_GEMINI) {
+    // 1ª tentativa com o formato travado pelo esquema; se o esquema for recusado (400), pede só "JSON" e descreve o formato no texto
+    for (const comEsquema of [true, false]) {
+      const r = await fetch(`${GEMINI}/interactions`, {
+        method: 'POST', headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelo, store: false,
+          system_instruction: comEsquema ? sistema : `${sistema}\n\nResponda SÓ com um objeto JSON neste formato (JSON Schema):\n${JSON.stringify(ESQUEMA)}`,
+          input: pergunta,
+          response_format: comEsquema ? { type: 'text', mime_type: 'application/json', schema: ESQUEMA } : { type: 'text', mime_type: 'application/json' },
+          generation_config: { max_output_tokens: 8000, thinking_level: 'medium' },
+        }),
+      })
+      const d = await r.json().catch(() => ({})) as Record<string, any>
+      if (r.ok) {
+        if (d.status && d.status !== 'completed') { ultimo = `gemini ${modelo}: ${d.status}`; break }
+        const texto = ((d.steps ?? []) as any[]).filter((p) => p?.type === 'model_output')
+          .flatMap((p) => (p.content ?? []) as any[]).filter((c) => c?.type === 'text').map((c) => String(c.text ?? '')).join('')
+        if (!texto.trim()) { ultimo = `gemini ${modelo}: resposta vazia`; break }
+        return { texto, modelo, uso: { entrada: d.usage?.total_input_tokens, saida: d.usage?.total_output_tokens } }
+      }
+      ultimo = `gemini ${r.status} ${String(d?.error?.status ?? '')}: ${String(d?.error?.message ?? '').slice(0, 300)}`
+      if (r.status === 400 && comEsquema) continue          // tenta sem o esquema
+      if (r.status === 401 || r.status === 403) throw new Error(ultimo)   // chave recusada: não adianta trocar de modelo
+      break                                                  // 404, 429, 5xx: tenta o próximo modelo
+    }
+  }
+  throw new Error(ultimo || 'gemini: sem resposta')
+}
+
+/** A resposta no formato que a tela espera, venha de onde vier (o Gemini sem esquema pode faltar com um campo). */
+function arrumar(d: any) {
+  const txt = (v: unknown, max = 2000) => String(v ?? '').trim().slice(0, max)
+  const um = <T extends string>(v: unknown, lista: readonly T[], padrao: T): T => (lista.includes(v as T) ? (v as T) : padrao)
+  const recs = (Array.isArray(d?.recomendacoes) ? d.recomendacoes : []).map((r: any) => ({
+    titulo: txt(r?.titulo, 200), porque: txt(r?.porque, 600), como: txt(r?.como, 600),
+    categoria: um(r?.categoria, ['horario', 'ia', 'manual', 'lives', 'clientes', 'banca'] as const, 'clientes'),
+    impacto: um(r?.impacto, ['alto', 'medio', 'baixo'] as const, 'medio'),
+  })).filter((r: any) => r.titulo).slice(0, 8)
+  if (!txt(d?.resumo) || !recs.length) throw new Error('A resposta da I.A. veio incompleta. Tente de novo.')
+  return {
+    resumo: txt(d.resumo),
+    veredito: { onde: um(d?.veredito?.onde, ['ia', 'manual', 'as_duas', 'cedo'] as const, 'cedo'), titulo: txt(d?.veredito?.titulo, 300), texto: txt(d?.veredito?.texto) },
+    recomendacoes: recs, lives: txt(d?.lives),
+    alertas: (Array.isArray(d?.alertas) ? d.alertas : []).map((a: unknown) => txt(a, 400)).filter(Boolean).slice(0, 6),
+  }
 }
 
 /** Quem pede: admin pleno da marca; para admin de parceiro, o banco devolve o parceiro a que ele fica preso. */
@@ -138,23 +202,30 @@ async function montarEntrada(cab: Record<string, string>, marca: string, parceir
   return d
 }
 
-async function analisar(id: string, cab: Record<string, string>, marca: string, parceiro: string, de: string, ate: string, rotulo: string, chave: string) {
+async function analisar(id: string, cab: Record<string, string>, marca: string, parceiro: string, de: string, ate: string, rotulo: string, chave: { anthropic: string; gemini: string }) {
   const mudar = (campos: Record<string, unknown>) => rest(`negocio_analises?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(campos) })
   try {
     const entrada = await montarEntrada(cab, marca, parceiro, de, ate)
     const operacoes = Number(entrada.origens?.ia?.operacoes ?? 0) + Number(entrada.origens?.manual?.operacoes ?? 0)
     if (!operacoes) throw new Error('Não houve operação em conta real neste período: não há o que analisar.')
-    const cliente = new Anthropic({ apiKey: chave })
+    const pergunta = `Os números do período, em JSON:\n${JSON.stringify(entrada)}\n\nEscreva a leitura e as recomendações no formato pedido.`
+    if (chave.gemini) {
+      const g = await pedirAoGemini(chave.gemini, instrucoes(marca, rotulo), pergunta)
+      const limpo = g.texto.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '')
+      await mudar({ situacao: 'pronta', dados: arrumar(JSON.parse(limpo)), modelo: g.modelo, pronta_em: new Date().toISOString(), uso: g.uso })
+      return
+    }
+    const cliente = new Anthropic({ apiKey: chave.anthropic })
     const resposta = await cliente.messages.create({
       model: MODELO, max_tokens: 16000,
       system: instrucoes(marca, rotulo),
       output_config: { effort: 'high', format: { type: 'json_schema', schema: ESQUEMA } },
-      messages: [{ role: 'user', content: `Os números do período, em JSON:\n${JSON.stringify(entrada)}\n\nEscreva a leitura e as recomendações no formato pedido.` }],
+      messages: [{ role: 'user', content: pergunta }],
     } as any)
     if (resposta.stop_reason === 'refusal') throw new Error('A I.A. não quis analisar este pedido. Tente de novo em instantes.')
     if (resposta.stop_reason === 'max_tokens') throw new Error('A resposta da I.A. veio cortada. Tente de novo.')
     const texto = resposta.content.map((b: any) => (b.type === 'text' ? b.text : '')).join('')
-    const dados = JSON.parse(texto)
+    const dados = arrumar(JSON.parse(texto))
     await mudar({ situacao: 'pronta', dados, modelo: resposta.model, pronta_em: new Date().toISOString(), uso: { entrada: resposta.usage?.input_tokens, saida: resposta.usage?.output_tokens } })
   } catch (e) {
     await mudar({ situacao: 'erro', erro: erroParaTela(e) })
@@ -167,6 +238,10 @@ function erroParaTela(e: unknown): string {
   if (/credit balance is too low/i.test(m)) return 'A conta da I.A. está sem crédito. Coloque crédito na conta da Anthropic (Plans & Billing) e gere de novo.'
   if (/authentication_error|invalid x-api-key/i.test(m)) return 'A chave da I.A. foi recusada. Cole uma chave nova em Administração › Anúncios › Leitura da I.A.'
   if (/rate_limit|overloaded/i.test(m)) return 'A I.A. está ocupada agora. Tente de novo em alguns minutos.'
+  if (/^gemini (401|403)|API_KEY_INVALID|PERMISSION_DENIED/i.test(m)) return 'A chave do Gemini foi recusada pelo Google. Cole uma chave nova no cartão.'
+  if (/^gemini 429|RESOURCE_EXHAUSTED/i.test(m)) return 'A cota gratuita do Gemini de hoje acabou. Ela volta amanhã; tente de novo depois.'
+  if (/^gemini/i.test(m)) return 'O Gemini não respondeu agora. Tente de novo em alguns minutos.'
+  if (/JSON|Unexpected token/i.test(m)) return 'A resposta da I.A. veio fora do formato. Tente de novo.'
   return m.slice(0, 600)
 }
 
@@ -191,35 +266,53 @@ Deno.serve(async (req) => {
   const parceiro = acesso.parceiro ?? pedido
   const meta = usuario?.user_metadata ?? {}
   const nomeDeQuem = String(meta.nome || meta.full_name || meta.name || String(usuario?.email ?? '').split('@')[0].split('+')[0] || 'Admin')
+  // a chave gratuita do Gemini é da plataforma inteira: só o admin geral cola ou tira
+  if (acao === 'chave_gemini' || acao === 'remover_gemini') {
+    if (acesso.parceiro) return json({ erro: 'Só o admin geral troca a chave da I.A.' }, 403)
+    if (acao === 'remover_gemini') {
+      const g = await rest('config_servicos?chave=eq.GEMINI_API_KEY', { method: 'DELETE' })
+      return g.ok ? json({ ok: true }) : json({ erro: 'Não consegui tirar a chave.' }, 500)
+    }
+    const valor = String(d.valor ?? '').trim()
+    if (!/^[A-Za-z0-9_-]{25,120}$/.test(valor)) return json({ erro: 'Isso não parece uma chave do Gemini. Copie a chave inteira no Google AI Studio.' }, 400)
+    const t = await fetch(`${GEMINI}/models`, { headers: { 'x-goog-api-key': valor } }).catch(() => null)
+    if (!t?.ok) return json({ erro: 'O Google não aceitou essa chave. Confira se copiou inteira e tente de novo.' }, 400)
+    const g = await rest('config_servicos?on_conflict=chave', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' }, body: JSON.stringify({ chave: 'GEMINI_API_KEY', valor, atualizado_em: new Date().toISOString() }) })
+    return g.ok ? json({ ok: true }) : json({ erro: 'Não consegui guardar a chave.' }, 500)
+  }
+
   const periodo = String(d.periodo ?? '').replace(/[^0-9a-zA-Z_:|T.+-]/g, '').slice(0, 80)
   if (!periodo) return json({ erro: 'Período inválido.' }, 400)
-  const paraTela = (a: any) => a && ({ id: a.id, situacao: a.situacao, dados: a.dados, erro: a.erro, criadoEm: a.criado_em, prontaEm: a.pronta_em, quem: a.quem_nome, de: a.de, ate: a.ate })
+  const paraTela = (a: any) => a && ({ id: a.id, situacao: a.situacao, dados: a.dados, erro: a.erro, criadoEm: a.criado_em, prontaEm: a.pronta_em, quem: a.quem_nome, de: a.de, ate: a.ate, motor: /^gemini/i.test(String(a.modelo ?? '')) ? 'gemini' : a.modelo ? 'anthropic' : null })
   const filtro = `marca=eq.${marca}&parceiro=eq.${encodeURIComponent(parceiro)}&periodo=eq.${encodeURIComponent(periodo)}`
 
   try {
-    const CHAVE_IA = await chaveIA()
+    const CHAVE = await chaves()
+    const CHAVE_IA = CHAVE.gemini || CHAVE.anthropic
+    // o que o cartão precisa saber: qual motor está valendo e se quem está na tela pode colar a chave
+    const motores = { motor: CHAVE.gemini ? 'gemini' : CHAVE.anthropic ? 'anthropic' : null, podeColar: !acesso.parceiro }
     if (acao === 'ultima') {
       const r = await rest(`negocio_analises?${filtro}&order=criado_em.desc&limit=1`)
       let a = r.ok ? (await r.json())[0] : null
       // uma leitura que ficou "analisando" por mais de 5 minutos morreu no caminho
       if (a?.situacao === 'analisando' && Date.now() - Date.parse(a.criado_em) > 5 * 60e3) a = { ...a, situacao: 'erro', erro: 'A leitura demorou demais. Tente de novo.' }
-      return json({ temIA: !!CHAVE_IA, analise: paraTela(a) ?? null })
+      return json({ temIA: !!CHAVE_IA, ...motores, analise: paraTela(a) ?? null })
     }
     if (acao === 'analisar') {
       const de = new Date(String(d.de ?? '')), ate = new Date(String(d.ate ?? ''))
       if (Number.isNaN(de.getTime()) || Number.isNaN(ate.getTime()) || de >= ate) return json({ erro: 'Período inválido.' }, 400)
-      if (!CHAVE_IA) return json({ semIA: true, erro: 'Falta a chave da I.A.: cole a chave em Administração › Anúncios › Leitura da I.A.' }, 409)
+      if (!CHAVE_IA) return json({ semIA: true, erro: 'Falta a chave da I.A.: cole a chave gratuita do Gemini no cartão.' }, 409)
       // a leitura de até 20 minutos atrás serve, a não ser que peçam de novo
       const recente = await rest(`negocio_analises?${filtro}&situacao=in.(pronta,analisando)&criado_em=gte.${new Date(Date.now() - (d.forcar ? 2 : 20) * 60e3).toISOString()}&order=criado_em.desc&limit=1`)
       const ja = recente.ok ? (await recente.json())[0] : null
-      if (ja && (!d.forcar || ja.situacao === 'analisando')) return json({ temIA: true, analise: paraTela(ja) })
+      if (ja && (!d.forcar || ja.situacao === 'analisando')) return json({ temIA: true, ...motores, analise: paraTela(ja) })
       const rotulo = String(d.rotulo ?? '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'o período escolhido'
       const ins = await rest('negocio_analises?select=*', { method: 'POST', headers: { Prefer: 'return=representation' },
         body: JSON.stringify({ marca, parceiro, periodo, de: de.toISOString(), ate: ate.toISOString(), situacao: 'analisando', quem: usuario?.id ?? null, quem_nome: nomeDeQuem }) })
       const linha = ins.ok ? (await ins.json())[0] : null
       if (!linha) return json({ erro: 'Não consegui guardar a leitura.' }, 500)
-      EdgeRuntime.waitUntil(analisar(linha.id, cab, marca, parceiro, de.toISOString(), ate.toISOString(), rotulo, CHAVE_IA))
-      return json({ temIA: true, analise: paraTela(linha) })
+      EdgeRuntime.waitUntil(analisar(linha.id, cab, marca, parceiro, de.toISOString(), ate.toISOString(), rotulo, CHAVE))
+      return json({ temIA: true, ...motores, analise: paraTela(linha) })
     }
     return json({ erro: 'Ação desconhecida.' }, 400)
   } catch (e) {

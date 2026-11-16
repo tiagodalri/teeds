@@ -7,11 +7,15 @@
  * A leitura é pedida no botão (cada pedido custa uma chamada à I.A.), roda em segundo plano na função
  * negocio-analise com os MESMOS números da tela, e fica guardada: quem abrir depois vê a última daquele
  * recorte (marca, parceiro e período), com quem pediu e quando.
+ *
+ * Dois motores (16/11/2026, Tiago: "tem alguma API gratuita de IA...? estou apenas testando, não queria
+ * gastar"): com a chave gratuita do Gemini colada aqui, a leitura sai pelo Google sem custo; sem ela, pela
+ * Anthropic. Só o admin geral cola ou tira a chave; ela vai para o servidor e nunca volta para a tela.
  */
 import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
-import { ErroSemIA, pedirLeitura, ultimaLeitura, type AnaliseDoNegocio, type CategoriaDaDica } from '../../core/teeds/negocio'
+import { ErroSemIA, pedirLeitura, salvarChaveDoGemini, tirarChaveDoGemini, ultimaLeitura, type AnaliseDoNegocio, type CategoriaDaDica, type EstadoDaLeitura, type MotorDaIA } from '../../core/teeds/negocio'
 
 const CATEGORIA: Record<CategoriaDaDica, string> = { horario: 'Horário', ia: 'Estratégia', manual: 'Manual', lives: 'Lives', clientes: 'Clientes', banca: 'Banca' }
 const IMPACTO = { alto: 'Impacto alto', medio: 'Impacto médio', baixo: 'Impacto baixo' } as const
@@ -30,6 +34,14 @@ export function RecomendacoesDoNegocio({ sessao, marca, parceiro, periodo, de, a
   const [carregando, setCarregando] = useState(true)
   const [pedindo, setPedindo] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [motor, setMotor] = useState<MotorDaIA>(null)
+  const [podeColar, setPodeColar] = useState(false)
+  // o campo da chave gratuita: aberto a pedido ou quando não há I.A. nenhuma ligada
+  const [colando, setColando] = useState(false)
+  const [valorDaChave, setValorDaChave] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const [erroDaChave, setErroDaChave] = useState<string | null>(null)
+  const guardar = (r: EstadoDaLeitura) => { setTemIA(r.temIA); setMotor(r.motor ?? null); setPodeColar(Boolean(r.podeColar)) }
   const chave = `${marca}|${parceiro}|${periodo}`
   const umaIA = MARCA.vocabularioIA ? 'I.A.' : 'robô'
 
@@ -38,7 +50,7 @@ export function RecomendacoesDoNegocio({ sessao, marca, parceiro, periodo, de, a
     let vivo = true
     setAnalise(null); setErro(null); setCarregando(true)
     void ultimaLeitura(sessaoRef.current, marca, parceiro, periodo)
-      .then((r) => { if (vivo) { setAnalise(r.analise); setTemIA(r.temIA) } })
+      .then((r) => { if (vivo) { setAnalise(r.analise); guardar(r) } })
       .catch(() => { /* sem a última, o cartão fica no convite */ })
       .finally(() => { if (vivo) setCarregando(false) })
     return () => { vivo = false }
@@ -60,9 +72,26 @@ export function RecomendacoesDoNegocio({ sessao, marca, parceiro, periodo, de, a
     if (pedindo) return
     setPedindo(true); setErro(null)
     void pedirLeitura(sessaoRef.current, marca, parceiro, periodo, de, ate, rotulo, forcar)
-      .then((r) => { setAnalise(r.analise); setTemIA(r.temIA) })
+      .then((r) => { setAnalise(r.analise); guardar(r) })
       .catch((e) => { if (e instanceof ErroSemIA) setTemIA(false); else setErro((e as Error).message) })
       .finally(() => setPedindo(false))
+  }
+
+  const salvarChave = () => {
+    if (salvando || !valorDaChave.trim()) return
+    setSalvando(true); setErroDaChave(null)
+    void salvarChaveDoGemini(sessaoRef.current, marca, valorDaChave.trim())
+      .then(() => { setValorDaChave(''); setColando(false); setTemIA(true); setMotor('gemini'); setErro(null); setAnalise((a) => (a?.situacao === 'erro' ? null : a)) })
+      .catch((e) => setErroDaChave((e as Error).message))
+      .finally(() => setSalvando(false))
+  }
+  const tirarChave = () => {
+    if (salvando) return
+    setSalvando(true)
+    void tirarChaveDoGemini(sessaoRef.current, marca)
+      .then(() => ultimaLeitura(sessaoRef.current, marca, parceiro, periodo)).then((r) => { setAnalise(r.analise); guardar(r) })
+      .catch((e) => setErro((e as Error).message))
+      .finally(() => setSalvando(false))
   }
 
   const analisando = analise?.situacao === 'analisando'
@@ -84,7 +113,7 @@ export function RecomendacoesDoNegocio({ sessao, marca, parceiro, periodo, de, a
       </div>
 
       {carregando ? <div className="ngc-esq"><i className="vg-esq" /><i className="vg-esq" /></div>
-        : !temIA ? <p className="ngc-ia-texto">Falta ligar a chave da I.A. nesta plataforma. Ela é colada uma vez só em <b>Administração › Anúncios › Leitura da I.A.</b> e passa a valer aqui também.</p>
+        : !temIA ? <p className="ngc-ia-texto">{podeColar ? 'Ainda não há I.A. ligada nesta plataforma. Cole abaixo a chave gratuita do Gemini para começar.' : 'Ainda não há I.A. ligada nesta plataforma. Peça ao administrador geral para colar a chave no cartão.'}</p>
         : analisando ? (
           <p className="ngc-ia-texto ngc-ia-pulso"><i aria-hidden="true" /> A I.A. está lendo os números do período: manual x {umaIA}, horários, clientes e lives. Leva cerca de um minuto; pode continuar usando o painel.</p>
         ) : pronta ? <>
@@ -115,6 +144,28 @@ export function RecomendacoesDoNegocio({ sessao, marca, parceiro, periodo, de, a
         </> : falhou ? <p className="vg-erro" role="alert">{falhou}</p>
         : <p className="ngc-ia-texto">A I.A. lê este painel inteiro e devolve um plano: em que lado investir, que horário e que estratégia divulgar, o que as lives ensinaram e o que fazer com os clientes parados.</p>}
       {erro && pronta && <p className="vg-erro" role="alert">{erro}</p>}
+
+      {/* qual I.A. está lendo, e a chave gratuita do Gemini (só o admin geral mexe) */}
+      {!carregando && podeColar && (colando || !temIA) ? (
+        <div className="ngc-ia-chave">
+          <b>Usar o Gemini, a I.A. gratuita do Google</b>
+          <p>Crie a chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">aistudio.google.com/apikey</a> com a sua conta do Google (não pede cartão) e cole aqui. A faixa gratuita tem limite de leituras por dia, e o Google pode usar o que recebe para melhorar os produtos dele: daqui só saem números do negócio, sem nome de cliente.</p>
+          <div>
+            <input type="password" autoComplete="off" spellCheck={false} placeholder="Cole a chave do Gemini" aria-label="Chave do Gemini"
+              value={valorDaChave} onChange={(e) => setValorDaChave(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') salvarChave() }} />
+            <button type="button" className="ngc-ia-botao" onClick={salvarChave} disabled={salvando || !valorDaChave.trim()}>{salvando ? 'Testando…' : 'Salvar chave'}</button>
+            {temIA && <button type="button" className="ngc-ia-link" onClick={() => { setColando(false); setErroDaChave(null) }}>Cancelar</button>}
+          </div>
+          {erroDaChave && <p className="vg-erro" role="alert">{erroDaChave}</p>}
+        </div>
+      ) : !carregando && temIA && (
+        <p className="ngc-ia-motor">
+          {motor === 'gemini' ? 'Leitura pelo Gemini, na faixa gratuita do Google.' : 'Leitura pela I.A. da Anthropic (paga por uso).'}
+          {podeColar && (motor === 'gemini'
+            ? <button type="button" className="ngc-ia-link" onClick={tirarChave} disabled={salvando}>Desligar o Gemini</button>
+            : <button type="button" className="ngc-ia-link" onClick={() => setColando(true)}>Usar o Gemini gratuito</button>)}
+        </p>
+      )}
     </div>
   )
 }

@@ -203,6 +203,16 @@
 .ngc-ia-nota { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--surface-alt) 70%, transparent); }
 .ngc-ia-nota > b { font-size: 12.5px; font-weight: 800; }
 .ngc-ia-nota ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.ngc-ia-motor { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; font-size: 12px; color: var(--muted); }
+.ngc .ngc-ia-link { padding: 4px 0; border: 0; background: transparent; color: var(--vg-ouro) !important; font-size: 12px; font-weight: 750; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ngc .ngc-ia-link:disabled { opacity: .6; cursor: progress; }
+.ngc-ia-chave { display: grid; gap: 8px; padding: 14px 16px; border-radius: 12px; border: 1px dashed color-mix(in srgb, var(--vg-ouro) 50%, var(--border)); background: color-mix(in srgb, var(--surface-alt) 70%, transparent); }
+.ngc-ia-chave > b { font-size: 13.5px; font-weight: 800; }
+.ngc-ia-chave > p { margin: 0; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+.ngc-ia-chave a { color: var(--vg-ouro); font-weight: 700; }
+.ngc-ia-chave > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.ngc-ia-chave input { flex: 1 1 260px; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 16px; }
+.ngc-ia-chave input:focus-visible { outline: 2px solid var(--vg-ouro); outline-offset: 1px; }
 .ngc-ia-nota.alerta { border: 1px solid color-mix(in srgb, var(--down) 30%, var(--border)); }
 
 @media (max-width: 1100px) {

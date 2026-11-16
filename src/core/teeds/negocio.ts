@@ -59,13 +59,20 @@ export interface LeituraDaIA {
 }
 export interface AnaliseDoNegocio {
   id: string; situacao: 'analisando' | 'pronta' | 'erro'; dados: LeituraDaIA | null; erro: string | null
-  criadoEm: string; prontaEm: string | null; quem: string | null; de: string; ate: string
+  criadoEm: string; prontaEm: string | null; quem: string | null; de: string; ate: string; motor?: MotorDaIA
 }
-export interface EstadoDaLeitura { temIA: boolean; analise: AnaliseDoNegocio | null }
+export type MotorDaIA = 'gemini' | 'anthropic' | null
+export interface EstadoDaLeitura {
+  temIA: boolean; analise: AnaliseDoNegocio | null
+  /** Qual I.A. está valendo: a faixa gratuita do Gemini (quando a chave dela está guardada) ou a Anthropic. */
+  motor?: MotorDaIA
+  /** Quem está na tela pode colar ou tirar a chave (só o admin geral). */
+  podeColar?: boolean
+}
 /** Falta a chave da I.A. no servidor: a tela explica onde colocar. */
 export class ErroSemIA extends Error {}
 
-async function funcao(sessao: SessaoTeeds, corpo: Record<string, unknown>): Promise<EstadoDaLeitura> {
+async function funcao<T = EstadoDaLeitura>(sessao: SessaoTeeds, corpo: Record<string, unknown>): Promise<T> {
   const r = await fetch(`${SUPABASE.url}/functions/v1/negocio-analise`, {
     method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(corpo),
@@ -75,10 +82,13 @@ async function funcao(sessao: SessaoTeeds, corpo: Record<string, unknown>): Prom
     if (d?.semIA) throw new ErroSemIA(String(d.erro))
     throw new Error(String(d?.erro || `Não consegui falar com a I.A. agora (${r.status}).`))
   }
-  return d as EstadoDaLeitura
+  return d as T
 }
 
 export const ultimaLeitura = (s: SessaoTeeds, marca: string, parceiro: string, periodo: string) =>
   funcao(s, { acao: 'ultima', marca, parceiro, periodo })
 export const pedirLeitura = (s: SessaoTeeds, marca: string, parceiro: string, periodo: string, de: number, ate: number, rotulo: string, forcar = false) =>
   funcao(s, { acao: 'analisar', marca, parceiro, periodo, de: new Date(de).toISOString(), ate: new Date(ate).toISOString(), rotulo, forcar })
+/** A chave gratuita do Gemini, colada no cartão: o servidor testa no Google, guarda e nunca devolve. */
+export const salvarChaveDoGemini = (s: SessaoTeeds, marca: string, valor: string) => funcao<{ ok: boolean }>(s, { acao: 'chave_gemini', marca, valor })
+export const tirarChaveDoGemini = (s: SessaoTeeds, marca: string) => funcao<{ ok: boolean }>(s, { acao: 'remover_gemini', marca })
