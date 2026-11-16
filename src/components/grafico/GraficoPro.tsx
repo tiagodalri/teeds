@@ -8,7 +8,7 @@
  * A Deriv manda só preço; tudo o que é indicador é calculado aqui.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { dispose, init, registerLocale, registerOverlay, type Chart, type DeepPartial, type KLineData, type Overlay, type OverlayCreate, type Styles } from 'klinecharts'
+import { dispose, init, registerFigure, registerLocale, registerOverlay, type Chart, type DeepPartial, type KLineData, type Overlay, type OverlayCreate, type Styles } from 'klinecharts'
 import type { Candle } from '../../core/deriv/types'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { CATALOGO as CATALOGO_COMPLETO, CATEGORIAS as CATEGORIAS_TODAS, definicao, quandoMonogramaCarregar, registrarIndicadores, type Categoria } from '../../core/grafico/indicadores'
@@ -74,34 +74,177 @@ function registrarTudo() {
     Cada operação ocupa 3 pontos: entrada, vencimento no preço de entrada e
     saída (ou o vencimento de novo, se ainda aberta).
   */
-  registerOverlay<MarcaDaOperacao[]>({
+  /*
+    16/11/2026 (Tiago: "marca só uma bolinha, com uma linhazinha tracejada toda picada... sem
+    design, sem padrão"): a marca da operação desenhada à mão no canvas (figura gfMarcaOp).
+      - aberta: farol na entrada (círculo com a seta da direção e um halo), linha contínua que
+        vai acendendo até agora e segue apagada até o vencimento, a ZONA entre o preço de
+        entrada e o preço de agora (verde a favor, vermelha contra, em degradê), o vencimento
+        numa linha dourada com o relógio que esvazia, e o preço de entrada no eixo;
+      - encerrada: rastro apagado na cor do resultado, ponto na saída e o resultado ao lado.
+    O que a operação é continua no cartão do canto (CartaoDaOperacao).
+  */
+  registerFigure<AtributosDaMarca>({ name: 'gfMarcaOp', draw: desenharMarcas, checkEventOn: () => false })
+  registerFigure<AtributosDaEtiqueta>({ name: 'gfEtiquetaEixo', draw: desenharEtiquetas, checkEventOn: () => false })
+  registerOverlay<DadosDasMarcas>({
     name: 'gfPosicoes', totalStep: 2, lock: true, needDefaultPointFigure: false, needDefaultXAxisFigure: false, needDefaultYAxisFigure: false,
-    createPointFigures: ({ coordinates, overlay, bounding }) => {
-      const marcas = overlay.extendData ?? []
-      const fundo = css('--surface', '#08172B')
-      const linhas: any[] = [], pontos: any[] = []
-      marcas.forEach((m, i) => {
+    createPointFigures: ({ chart, coordinates, overlay, bounding }) => {
+      const dados = overlay.extendData
+      if (!dados?.marcas.length) return []
+      const lista = chart.getDataList()
+      const ultima = lista[lista.length - 1]
+      const agoraPx = ultima ? chart.convertToPixel({ timestamp: ultima.timestamp, value: ultima.close }, { paneId: 'candle_pane' }) as { x?: number; y?: number } : null
+      const agora = Date.now() / 1000
+      const itens: ItemDaMarca[] = []
+      dados.marcas.forEach((m, i) => {
         const a = coordinates[i * 3], b = coordinates[i * 3 + 1], saida = coordinates[i * 3 + 2]
         if (!a || !Number.isFinite(a.y)) return
-        const fimX = b && Number.isFinite(b.x) ? b.x : bounding.width
-        if (!m.encerrada) {
-          linhas.push({ type: 'line', attrs: { coordinates: [a, { x: fimX, y: a.y }] }, styles: { color: m.cor, size: 1.4, style: 'dashed', dashedValue: [5, 4] }, ignoreEvent: true })
-          pontos.push({ type: 'circle', attrs: { x: a.x, y: a.y, r: 4.5 }, styles: { style: 'stroke_fill', color: m.cor, borderColor: fundo, borderSize: 2 }, ignoreEvent: true })
-        } else {
-          const fim = saida && Number.isFinite(saida.y) ? saida : (b ?? a)
-          linhas.push({ type: 'line', attrs: { coordinates: [a, { x: fimX, y: a.y }] }, styles: { color: comAlfa(m.cor, .4), size: 1, style: 'dashed', dashedValue: [3, 4] }, ignoreEvent: true })
-          if (saida && b) linhas.push({ type: 'line', attrs: { coordinates: [{ x: b.x, y: a.y }, saida] }, styles: { color: comAlfa(m.cor, .4), size: 1, style: 'solid' }, ignoreEvent: true })
-          pontos.push({ type: 'circle', attrs: { x: a.x, y: a.y, r: 3 }, styles: { style: 'stroke', borderColor: comAlfa(m.cor, .75), borderSize: 1.5 }, ignoreEvent: true })
-          pontos.push({ type: 'circle', attrs: { x: fim.x, y: fim.y, r: 3.5 }, styles: { style: 'stroke_fill', color: m.cor, borderColor: fundo, borderSize: 1.5 }, ignoreEvent: true })
-        }
+        const fx = b && Number.isFinite(b.x) ? b.x : bounding.width
+        const nx = agoraPx?.x != null && Number.isFinite(agoraPx.x) ? agoraPx.x : a.x
+        const ny = agoraPx?.y != null && Number.isFinite(agoraPx.y) ? agoraPx.y : a.y
+        const dura = Math.max(1, m.fim - m.inicio)
+        itens.push({
+          ...m, ex: a.x, ey: a.y, fx, nx, ny,
+          sx: saida && Number.isFinite(saida.x) ? saida.x : fx, sy: saida && Number.isFinite(saida.y) ? saida.y : a.y,
+          restante: Math.max(0, Math.ceil(m.fim - agora)), progresso: Math.min(1, Math.max(0, (agora - m.inicio) / dura)),
+        })
       })
-      return [...linhas, ...pontos]
+      return [{ type: 'gfMarcaOp', attrs: { itens, largura: bounding.width, altura: bounding.height, cores: dados.cores }, ignoreEvent: true }]
+    },
+    // o preço de entrada de cada operação aberta, numa etiqueta no eixo (contorno na cor da direção)
+    createYAxisFigures: ({ coordinates, overlay, bounding }) => {
+      const dados = overlay.extendData
+      if (!dados) return []
+      const itens = dados.marcas
+        .map((m, i) => ({ m, y: coordinates[i * 3]?.y }))
+        .filter((x): x is { m: MarcaDaOperacao; y: number } => !x.m.encerrada && x.y != null && Number.isFinite(x.y))
+        .map(({ m, y }) => ({ texto: m.precoTexto, y, cor: m.cor }))
+      return itens.length ? [{ type: 'gfEtiquetaEixo', attrs: { itens, largura: bounding.width, cores: dados.cores }, ignoreEvent: true }] : []
     },
   })
 }
 
 /** Uma operação (ou um grupo de operações iguais) como o gráfico desenha. */
-interface MarcaDaOperacao { cor: string; encerrada: boolean }
+interface MarcaDaOperacao {
+  /** 'sobe' / 'desce' nas de direção; null nas de dígito. */
+  direcao: 'sobe' | 'desce' | null
+  /** A cor da direção (a do resultado, se encerrada). */
+  cor: string
+  encerrada: boolean
+  lucro: number
+  inicio: number
+  fim: number
+  precoTexto: string
+}
+interface CoresDaMarca { up: string; down: string; ouro: string; fundo: string; texto: string; fonte: string; fonteEixo: string }
+interface DadosDasMarcas { marcas: MarcaDaOperacao[]; cores: CoresDaMarca }
+interface ItemDaMarca extends MarcaDaOperacao { ex: number; ey: number; fx: number; nx: number; ny: number; sx: number; sy: number; restante: number; progresso: number }
+interface AtributosDaMarca { itens: ItemDaMarca[]; largura: number; altura: number; cores: CoresDaMarca }
+interface AtributosDaEtiqueta { itens: Array<{ texto: string; y: number; cor: string }>; largura: number; cores: CoresDaMarca }
+
+/** A etiqueta do preço de entrada no eixo: fundo do gráfico, contorno e texto na cor da direção. */
+function desenharEtiquetas(ctx: CanvasRenderingContext2D, { itens, largura, cores }: AtributosDaEtiqueta) {
+  ctx.save()
+  ctx.font = `600 11.5px ${cores.fonteEixo}`
+  for (const e of itens) {
+    const w = Math.min(largura - 4, ctx.measureText(e.texto).width + 10), h = 18, x = 2, y = e.y - h / 2, r = 4
+    ctx.beginPath()
+    ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h - r)
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath()
+    ctx.fillStyle = cores.fundo; ctx.fill(); ctx.fillStyle = comAlfa(e.cor, .16); ctx.fill()
+    ctx.strokeStyle = e.cor; ctx.lineWidth = 1; ctx.stroke()
+    ctx.fillStyle = e.cor; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText(e.texto, x + 5, e.y + .5)
+  }
+  ctx.restore()
+}
+
+const relogioCurto = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+const resultadoCurto = (v: number) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+function pilula(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const r = h / 2
+  ctx.beginPath()
+  ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2)
+  ctx.lineTo(x + r, y + h); ctx.arc(x + r, y + r, r, Math.PI / 2, Math.PI * 1.5); ctx.closePath()
+}
+
+/** Desenha todas as marcas de uma vez: as encerradas por baixo, as abertas por cima. */
+function desenharMarcas(ctx: CanvasRenderingContext2D, { itens, largura, altura, cores }: AtributosDaMarca) {
+  ctx.save()
+  const fonte = (peso: number, tam: number) => `${peso} ${tam}px ${cores.fonte}`
+  for (const m of itens.filter((x) => x.encerrada)) {
+    const c = m.cor
+    // rastro: a linha da entrada até o vencimento e o degrau até a saída
+    ctx.strokeStyle = comAlfa(c, .5); ctx.lineWidth = 1.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+    ctx.beginPath(); ctx.moveTo(m.ex, m.ey); ctx.lineTo(m.sx, m.ey); ctx.lineTo(m.sx, m.sy); ctx.stroke()
+    ctx.fillStyle = cores.fundo; ctx.strokeStyle = comAlfa(c, .85); ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.arc(m.ex, m.ey, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    ctx.fillStyle = c; ctx.strokeStyle = cores.fundo; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.arc(m.sx, m.sy, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    // o resultado ao lado da saída
+    const txt = `${m.lucro >= 0 ? '✓' : '✕'} ${resultadoCurto(m.lucro)}`
+    ctx.font = fonte(700, 11)
+    const w = ctx.measureText(txt).width + 16, h = 19
+    let x = m.sx + 9
+    if (x + w > largura - 4) x = m.sx - 9 - w
+    const y = Math.min(Math.max(m.sy - h / 2, 4), altura - h - 4)
+    pilula(ctx, x, y, w, h); ctx.fillStyle = cores.fundo; ctx.fill()
+    ctx.fillStyle = comAlfa(c, .14); ctx.fill(); ctx.strokeStyle = comAlfa(c, .55); ctx.lineWidth = 1; ctx.stroke()
+    ctx.fillStyle = c; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText(txt, x + 8, y + h / 2 + .5)
+  }
+  for (const m of itens.filter((x) => !x.encerrada)) {
+    const c = m.cor
+    const ganhando = m.lucro >= 0
+    const cRes = ganhando ? cores.up : cores.down
+    const ateAgora = Math.min(Math.max(m.nx, m.ex), m.fx)
+    // a zona entre a entrada e o preço de agora, em degradê a partir do preço de agora
+    if (ateAgora > m.ex + 1 && Math.abs(m.ny - m.ey) > .5) {
+      const g = ctx.createLinearGradient(0, m.ny, 0, m.ey)
+      g.addColorStop(0, comAlfa(cRes, .34)); g.addColorStop(1, comAlfa(cRes, .05))
+      ctx.fillStyle = g
+      ctx.fillRect(m.ex, Math.min(m.ey, m.ny), ateAgora - m.ex, Math.abs(m.ny - m.ey))
+      ctx.strokeStyle = comAlfa(cRes, .55); ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(m.ex, m.ny); ctx.lineTo(ateAgora, m.ny); ctx.stroke()
+    }
+    // o vencimento: linha dourada fina de cima a baixo
+    ctx.strokeStyle = comAlfa(cores.ouro, .45); ctx.lineWidth = 1
+    ctx.beginPath(); ctx.moveTo(m.fx, 0); ctx.lineTo(m.fx, altura); ctx.stroke()
+    // a linha da operação: acesa até agora, apagada até o vencimento
+    ctx.lineCap = 'round'
+    ctx.strokeStyle = comAlfa(c, .35); ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(ateAgora, m.ey); ctx.lineTo(m.fx, m.ey); ctx.stroke()
+    ctx.strokeStyle = c; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(m.ex, m.ey); ctx.lineTo(ateAgora, m.ey); ctx.stroke()
+    ctx.fillStyle = cores.fundo; ctx.strokeStyle = comAlfa(c, .7); ctx.lineWidth = 1.5
+    ctx.beginPath(); ctx.arc(m.fx, m.ey, 3.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    // o relógio no alto do vencimento: um anel que esvazia e o tempo que falta
+    const txt = m.restante > 0 ? relogioCurto(m.restante) : 'Fim'
+    ctx.font = fonte(700, 11)
+    const w = ctx.measureText(txt).width + 32, h = 22
+    const x = Math.min(Math.max(m.fx - w / 2, 4), largura - w - 4), y = 8
+    pilula(ctx, x, y, w, h); ctx.fillStyle = cores.fundo; ctx.fill()
+    ctx.fillStyle = comAlfa(cores.ouro, .10); ctx.fill(); ctx.strokeStyle = comAlfa(cores.ouro, .55); ctx.lineWidth = 1; ctx.stroke()
+    const rx = x + 12, ry = y + h / 2
+    ctx.strokeStyle = comAlfa(cores.ouro, .25); ctx.lineWidth = 2
+    ctx.beginPath(); ctx.arc(rx, ry, 5.5, 0, Math.PI * 2); ctx.stroke()
+    ctx.strokeStyle = cores.ouro
+    ctx.beginPath(); ctx.arc(rx, ry, 5.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - m.progresso)); ctx.stroke()
+    ctx.fillStyle = cores.ouro; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText(txt, x + 22, ry + .5)
+    // o farol da entrada: halo, círculo cheio e a seta da direção
+    ctx.fillStyle = comAlfa(c, .18)
+    ctx.beginPath(); ctx.arc(m.ex, m.ey, 14, 0, Math.PI * 2); ctx.fill()
+    ctx.fillStyle = c; ctx.strokeStyle = cores.fundo; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.arc(m.ex, m.ey, 8.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke()
+    ctx.fillStyle = '#FFFFFF'
+    ctx.beginPath()
+    if (m.direcao === 'sobe') { ctx.moveTo(m.ex - 4, m.ey + 2.3); ctx.lineTo(m.ex + 4, m.ey + 2.3); ctx.lineTo(m.ex, m.ey - 3.3) }
+    else if (m.direcao === 'desce') { ctx.moveTo(m.ex - 4, m.ey - 2.3); ctx.lineTo(m.ex + 4, m.ey - 2.3); ctx.lineTo(m.ex, m.ey + 3.3) }
+    else ctx.arc(m.ex, m.ey, 2.2, 0, Math.PI * 2)
+    ctx.closePath(); ctx.fill()
+  }
+  ctx.restore()
+}
 
 /** A mesma cor com transparência (aceita #rgb, #rrggbb e rgb()). */
 function comAlfa(cor: string, alfa: number): string {
@@ -541,17 +684,19 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
     const lista = [...grupos.values()]
     const marcas: MarcaDaOperacao[] = []
     const points: Array<{ timestamp: number; value: number }> = []
+    const up = css('--up', '#16C784'), down = css('--down', '#EA3943')
     for (const grupo of lista) {
       const m = grupo[0]
-      const subir = /CALL|RISE|UP/i.test(m.type)
+      const direcao = /CALL|RISE|UP|HIGHER/i.test(m.type) ? 'sobe' : /PUT|FALL|DOWN|LOWER/i.test(m.type) ? 'desce' : null
       const encerrada = !!m.status && m.status !== 'open'
       const lucro = grupo.reduce((t, x) => t + x.profit, 0)
-      const cor = (encerrada ? lucro >= 0 : subir) ? css('--up', '#16C784') : css('--down', '#EA3943')
-      marcas.push({ cor, encerrada })
+      const cor = encerrada ? (lucro >= 0 ? up : down) : direcao === 'sobe' ? up : direcao === 'desce' ? down : css('--gf-ouro', '#C9A24A')
+      marcas.push({ direcao, cor, encerrada, lucro, inicio: m.entryEpoch, fim: m.expiryEpoch, precoTexto: textoBR(m.entryPrice!.toFixed(pipSize)) })
       points.push({ timestamp: m.entryEpoch * 1000, value: m.entryPrice! }, { timestamp: m.expiryEpoch * 1000, value: m.entryPrice! },
         { timestamp: m.expiryEpoch * 1000, value: encerrada && m.exitPrice != null ? m.exitPrice : m.entryPrice! })
     }
-    if (marcas.length) chart.createOverlay({ name: 'gfPosicoes', groupId: 'gf-posicao', lock: true, points, extendData: marcas } as OverlayCreate)
+    const cores: CoresDaMarca = { up, down, ouro: css('--gf-ouro', '#C9A24A'), fundo: css('--surface', '#08172B'), texto: css('--text', '#E6EAF1'), fonte: css('--fonte-dados', 'ui-monospace, Menlo, monospace') || 'ui-monospace, Menlo, monospace', fonteEixo: getComputedStyle(document.body).fontFamily || 'system-ui, sans-serif' }
+    if (marcas.length) chart.createOverlay({ name: 'gfPosicoes', groupId: 'gf-posicao', lock: true, points, extendData: { marcas, cores } } as OverlayCreate)
   }, [chaveMarcadores]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* --------------------------------------------------- Sinal GF */

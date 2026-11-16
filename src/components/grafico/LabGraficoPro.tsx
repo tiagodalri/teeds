@@ -52,6 +52,47 @@ export default function LabGraficoPro() {
     ...(FECHA ? [{ id: 8, type: 'PUT', entryEpoch: inicio, entryPrice: v(2).close, expiryEpoch: inicio + 10, profit: fechou ? -0.62 : -0.31, ...(fechou ? { status: 'lost', exitPrice: ult.close } : {}) }] : []),
     { id: 7, type: 'PUT', entryEpoch: v(33).epoch, entryPrice: v(33).close, expiryEpoch: v(30).epoch, profit: -1.07, status: 'lost', exitPrice: v(30).close - 0.5 },
   ]
+  /*
+    &cena=1 (16/11/2026): velas reais do 75 Index em 1 min e as operações em cima delas, como na
+    tela do Manual: uma Venda aberta (entrou há 4 velas, vence em 2 min) e duas encerradas.
+  */
+  const CENA = new URLSearchParams(location.search).has('cena')
+  const reais1m = useCandleSeries(CENA && REAL ? 'R_75' : null, 60)
+  // sem &real: velas no jeito do 75 Index (passeio aleatório com semente fixa), para a foto sair sem depender da rede
+  const [velasCena] = useState<Candle[]>(() => {
+    let x = 7, preco = 39480
+    const sorte = () => { x = (x * 9301 + 49297) % 233280; return x / 233280 }
+    const fim = Math.floor(Date.now() / 60000) * 60
+    return Array.from({ length: 160 }, (_, i) => {
+      const abre = preco
+      const fecha = abre + (sorte() - .5) * 46 + Math.sin(i / 14) * 6
+      const alta = Math.max(abre, fecha) + sorte() * 14, baixa = Math.min(abre, fecha) - sorte() * 14
+      preco = fecha
+      return { epoch: fim - (159 - i) * 60, open: abre, high: alta, low: baixa, close: fecha }
+    })
+  })
+  const [abriuEm] = useState(() => Math.floor(Date.now() / 60000) * 60 - 200)
+  const cena: ContractMarker[] = (() => {
+    const c = REAL ? reais1m.candles : velasCena
+    if (c.length < 40) return []
+    const u = c[c.length - 1], r = (i: number) => c[c.length - i]
+    const entrada = r(4).close
+    const lucro = Math.max(-9.6, Math.min(7.83, ((entrada - u.close) / entrada) * 40000))
+    return [
+      { id: 11, type: 'PUT', entryEpoch: abriuEm, entryPrice: entrada, expiryEpoch: abriuEm + 300, profit: +lucro.toFixed(2) },
+      { id: 12, type: 'CALL', entryEpoch: r(22).epoch, entryPrice: r(22).close, expiryEpoch: r(17).epoch, profit: 15.67, status: 'won', exitPrice: r(17).close },
+      { id: 13, type: 'PUT', entryEpoch: r(34).epoch, entryPrice: r(34).close, expiryEpoch: r(29).epoch, profit: -10, status: 'lost', exitPrice: r(29).close },
+    ]
+  })()
+  if (CENA) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
+        <div className="chart" style={{ flex: 1 }}>
+          <GraficoPro candles={REAL ? reais1m.candles : velasCena} mode="candles" pipSize={4} symbol="R_75" symbolName="75 Index" granularity={60} loading={REAL && reais1m.loading} markers={cena} sessao={null} sinalLiberado={false} />
+        </div>
+      </div>
+    )
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
       {/* o mesmo seletor do Operar (antes eram dois botões crus do navegador) */}
