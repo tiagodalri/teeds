@@ -257,7 +257,7 @@ export function DigitosFlutuante({ nomeAtivo, aoFechar }: Props) {
 
   const painel = (
     <div ref={caixa} className={`pd pb ${movel ? 'pd-movel' : ''}`} role="dialog" aria-label="Probabilística"
-      style={movel ? undefined : { left: pos.x, top: pos.y, width: largura, ['--pd-escala' as string]: escala }}>
+      style={movel ? undefined : { left: pos.x, top: pos.y, width: largura, maxHeight: Math.max(240, naPagina(window.innerHeight) - pos.y - 12), ['--pd-escala' as string]: escala }}>
       <div className="pb-topo" onPointerDown={comecar} onPointerMove={mover} onPointerUp={soltar} onPointerCancel={soltar}>
         {!movel && <span className="pb-grip" aria-hidden="true"><i /><i /><i /><i /><i /><i /></span>}
         <span className="pb-titulo">

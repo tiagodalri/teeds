@@ -7,7 +7,10 @@
    O .pd do app.css continua cuidando de posição, arrastar e gaveta.
    ------------------------------------------------------------------ */
 .pd.pb {
-  --e: var(--pd-escala, 1);
+  /* 16/11/2026 (Tiago: "gigante, totalmente desproporcional"): alargar o painel dá mais
+     espaço, mas o texto cresce só um pouco. Antes tudo crescia junto com a largura e a
+     600 px ficava o dobro. Agora: 300 px = 1; 680 px = 1,19. */
+  --e: min(1.2, calc(.85 + var(--pd-escala, 1) * .15));
   --pb-ouro: var(--gf-ouro, var(--primary));
   --pb-verde: var(--pd-verde, var(--up));
   --pb-cartao: color-mix(in srgb, var(--surface) 70%, var(--bg));
@@ -23,7 +26,7 @@
 /* ------------------------------------------------------------ topo */
 .pb-topo {
   display: flex; align-items: center; gap: calc(10px * var(--e));
-  padding: calc(14px * var(--e)) calc(10px * var(--e)) calc(12px * var(--e)) calc(14px * var(--e));
+  padding: calc(12px * var(--e)) calc(10px * var(--e)) calc(10px * var(--e)) calc(14px * var(--e));
   cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none;
 }
 .pb-topo:active { cursor: grabbing; }
@@ -31,7 +34,7 @@
 .pb-grip { display: grid; grid-template-columns: repeat(2, 3px); gap: 3px; opacity: .45; }
 .pb-grip i { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); }
 .pb-titulo { flex: 1; min-width: 0; display: grid; gap: calc(3px * var(--e)); }
-.pb-titulo > b { font-size: calc(15px * var(--e)); font-weight: 700; letter-spacing: -.015em; line-height: 1.1; white-space: nowrap; }
+.pb-titulo > b { font-size: calc(14px * var(--e)); font-weight: 700; letter-spacing: -.015em; line-height: 1.1; white-space: nowrap; }
 .pb-ativo { display: flex; align-items: center; gap: calc(6px * var(--e)); min-width: 0; color: var(--muted); font-size: calc(10.5px * var(--e)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
 .pb-vivo { flex: none; width: calc(7px * var(--e)); height: calc(7px * var(--e)); border-radius: 50%; background: var(--pb-verde); animation: pb-vivo 1.8s ease-out infinite; }
 @keyframes pb-vivo {
@@ -42,8 +45,8 @@
 .pb-ultimo-caixa small { font-size: calc(8.5px * var(--e)); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); line-height: 1; }
 .pb-ultimo {
   display: grid; place-items: center;
-  width: calc(40px * var(--e)); height: calc(40px * var(--e)); border-radius: calc(12px * var(--e));
-  background: #141a2b; color: #e8cb82; font-size: calc(21px * var(--e)); font-weight: 700; font-variant-numeric: tabular-nums;
+  width: calc(34px * var(--e)); height: calc(34px * var(--e)); border-radius: calc(10px * var(--e));
+  background: #141a2b; color: #e8cb82; font-size: calc(18px * var(--e)); font-weight: 700; font-variant-numeric: tabular-nums;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 6px 14px -8px rgba(10, 14, 28, .7);
   animation: pb-tick .5s cubic-bezier(.2, .9, .3, 1.25);
 }
@@ -80,9 +83,9 @@
 }
 
 /* ------------------------------------------------------------ barras */
-.pb-grafico { position: relative; padding: calc(26px * var(--e)) calc(14px * var(--e)) 0; }
+.pb-grafico { position: relative; padding: calc(22px * var(--e)) calc(14px * var(--e)) 0; }
 .pb-area {
-  position: relative; height: calc(118px * var(--e));
+  position: relative; height: calc(100px * var(--e));
   display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: calc(6px * var(--e)); align-items: end;
 }
 /* a faixa normal: só um fundo suave, sem linha nenhuma */
@@ -203,3 +206,8 @@
 :root[data-tema='escuro'] .pb-eixo .ultimo b,
 :root[data-tema='escuro'] .pb-fita span.ultimo,
 :root[data-tema='escuro'] .pb-legenda i.pb-l-ultimo { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pb-ouro) 70%, transparent); background: #0b0d14; }
+
+/* nunca maior que a tela: o que não couber rola dentro do painel */
+.pd.pb:not(.pd-movel) { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+/* painel largo: a barra não vira um bloco; fica com no máximo 34 px, centrada na coluna */
+.pb-barra i { left: 50%; right: auto; width: min(100%, calc(34px * var(--e))); transform: translateX(-50%); }
