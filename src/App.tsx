@@ -1328,7 +1328,8 @@ export default function App() {
     extra: { duration: number; durationUnit: string; barrier?: string },
   ) {
     // modo simulado: cotação e preço reais, dinheiro simulado; nada é comprado na Deriv nem vai ao banco
-    if (sim) return comprarSimulado({ simbolo, tipo, valor, moeda: 'USD', ...extra })
+    // (cotada pela conexão da conta, como a boleta: com o markup da plataforma, o mesmo pagamento do aluno)
+    if (sim) return comprarSimulado({ simbolo, tipo, valor, moeda: 'USD', socket: conta.socket, ...extra })
     if (!conta.socket) throw new Error('[LinhaFechada] sem conexão da conta')
     const p = await requestProposal(conta.socket, {
       symbol: simbolo, contractType: tipo, amount: valor, currency: moeda, ...extra,

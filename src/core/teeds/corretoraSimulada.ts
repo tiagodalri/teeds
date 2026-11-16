@@ -19,7 +19,7 @@
  * dígito vão até o fim. Encerrada antes, a operação sai do roteiro: o resultado é o parcial.
  */
 import { useSyncExternalStore } from 'react'
-import { publicSocket } from '../deriv/client'
+import { publicSocket, type TeedsSocket } from '../deriv/client'
 import { requestProposal, type OpenContract } from '../deriv/trading'
 import { subscribeTicksDaTela as subscribeTicks } from '../deriv/market'
 import { contratoManual, entradaManual, operacaoTerminou } from '../som'
@@ -51,8 +51,9 @@ interface EmAndamento {
    */
   cotacao: { valor: number; em: number; chance: number } | null
   pedindo: boolean
-  /** Meia diferença entre compra e venda da Deriv, em fração do pagamento (medida na compra, no preço justo). */
+  /** Meia diferença entre compra e venda da Deriv, em fração do pagamento (medida numa cotação no preço). */
   margem: number | null
+  margemMedida: boolean
 }
 
 const contratos = new Map<number, OpenContract>()
@@ -146,16 +147,17 @@ async function cotarVenda(a: EmAndamento, precoNaTela: number): Promise<void> {
     duration: restante, durationUnit: 's', ...(barreira !== undefined ? { barrier: barreira } : {}),
   })
   try {
-    // o desconto ao recomprar: na compra, o preço justo era metade do pagamento (no preço); o que passou disso
-    // é a margem da Deriv. Com barreira pedida, mede com uma cotação no preço de agora.
-    if (a.margem === null) {
-      const base = a.barreiraPedida ? (await pedir()).askPrice : c.buyPrice
+    // o desconto ao recomprar: numa cotação no preço de agora (linha pública, sem o markup da plataforma, que
+    // só entra na compra), o preço justo é metade do pagamento; o que passa disso é a margem da Deriv
+    if (!a.margemMedida) {
+      const base = (await pedir()).askPrice
       a.margem = Math.min(0.1, Math.max(0, base / c.payout - 0.5))
+      a.margemMedida = true
     }
     const d = Number((c.barrier - precoNaTela).toFixed(casas))
     const barreira = Math.abs(d) < Math.pow(10, -casas) ? undefined : `${d > 0 ? '+' : '-'}${Math.abs(d).toFixed(casas)}`
     const p = await pedir(barreira)
-    const valor = Math.min(c.payout, Math.max(0, r2(p.askPrice - 2 * a.margem * c.payout)))
+    const valor = Math.min(c.payout, Math.max(0, r2(p.askPrice - 2 * (a.margem ?? 0) * c.payout)))
     a.cotacao = { valor, em: Date.now(), chance: chanceNaHora }
   } catch { /* segue com o cálculo daqui até a próxima */ } finally { a.pedindo = false }
 }
@@ -201,10 +203,16 @@ export function encerrarSimulado(contractId: number): { soldFor: number } {
 export async function comprarSimulado(pedido: {
   simbolo: string; tipo: string; valor: number; moeda: string
   duration: number; durationUnit: string; barrier?: string
+  /**
+   * A conexão da conta Deriv de quem está na tela, quando houver (16/11/2026, Tiago: "na boleta aparece que
+   * se ganhar recebe 17,83, e na posição 19 e pouco"): a cotação pela conta inclui o markup da plataforma,
+   * como a boleta e como o aluno recebe; a linha pública não tem markup e pagava a mais.
+   */
+  socket?: TeedsSocket | null
 }): Promise<{ contractId: number; buyPrice: number; payout: number }> {
   if (!modoSimuladoAtivo()) throw new Error('O modo simulado está desligado.')
   if (!tipoSimulavel(pedido.tipo)) throw new Error('Este tipo de contrato ainda não tem operação simulada. Use Comprar/Vender ou os dígitos.')
-  const pedirCotacao = () => requestProposal(publicSocket, {
+  const pedirCotacao = () => requestProposal(pedido.socket ?? publicSocket, {
     symbol: pedido.simbolo, contractType: pedido.tipo, amount: pedido.valor, currency: pedido.moeda,
     duration: pedido.duration, durationUnit: pedido.durationUnit, ...(pedido.barrier !== undefined ? { barrier: pedido.barrier } : {}),
   })
@@ -233,7 +241,8 @@ export async function comprarSimulado(pedido: {
     pipSize: 2, pipSizeInformado: false, appMarkup: p.appMarkup,
   }
   const a: EmAndamento = { c, duracao: pedido.duration, unidade: pedido.durationUnit, barreiraPedida: pedido.barrier, ticksDesdeEntrada: 0, ultimo: null, passos: [], parar: () => {},
-    cotacao: null, pedindo: false, margem: pedido.barrier ? null : Math.min(0.1, Math.max(0, p.askPrice / p.payout - 0.5)) }
+    // até medir a margem da Deriv (na 1ª cotação de venda), a típica dos sintéticos
+    cotacao: null, pedindo: false, margem: 0.012, margemMedida: false }
   contratos.set(id, c)
   andamento.set(id, a)
   // o roteiro da manual: a próxima operação dele diz o resultado; "Mercado" deixa o preço de verdade decidir
