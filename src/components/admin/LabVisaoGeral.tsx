@@ -1,4 +1,4 @@
-/** Laboratório (?tela=visao-geral(&cenario=real|vazio)(&periodo=hoje|ontem|7|30|mes|personalizado)(&metas=nenhuma)): a Visão geral com números de exemplo, sem banco. */
+/** Laboratório (?tela=visao-geral(&cenario=real|vazio)(&periodo=hoje|ontem|7|30|mes|personalizado)(&metas=nenhuma)(&ia=vazia|pronta|sem-ia|erro)(&negocio=vazio)): a Visão geral com números de exemplo, sem banco. */
 import { VisaoGeralPainel } from './VisaoGeralPainel'
 import { PERIODO_AGORA, type AtalhoDoPeriodo } from './PeriodoDaVisaoGeral'
 
@@ -97,6 +97,107 @@ function exemploDoDetalhe(corpo: string, cenario: string) {
   }
 }
 
+/** O Inteligência do negócio de exemplo (16/11/2026): manual x I.A., clientes, lives. &negocio=vazio para o período sem operação. */
+function exemploDoNegocio(corpo: string) {
+  const { p_de, p_ate } = JSON.parse(corpo || '{}') as { p_de: string; p_ate: string }
+  if (new URLSearchParams(location.search).get('negocio') === 'vazio') {
+    return { de: p_de, ate: p_ate, origens: {}, perfis: [], faixas: [], rotulos: [], dias: [], horas: [], semana: [], top: [], lives: [],
+      clientes: { lucrando: { pessoas: 0, markup: 0, resultado: 0, banca: 0 }, perdendo: { pessoas: 0, markup: 0, resultado: 0, banca: 0 }, zerados: 0, sem_saldo: 0, markup_sem_saldo: 0, um_dia_so: 0, tres_dias_ou_mais: 0, markup_tres_dias: 0 },
+      lives_resumo: { lives: 0, horas_live: 0, horas_fora: 0, markup_live: 0, markup_fora: 0, tipico_live: 0 } }
+  }
+  const ate = Date.parse(p_ate) || Date.now()
+  const nDias = Math.max(2, Math.min(14, Math.round((ate - (Date.parse(p_de) || ate)) / 86_400_000)))
+  const diaBR = (n: number) => new Date(ate - n * 86_400_000 - 3 * 3_600_000).toISOString().slice(0, 10)
+  const dias = Array.from({ length: nDias }, (_, i) => {
+    const k = nDias - 1 - i, f = 0.55 + ((i * 7) % 5) / 6
+    return { dia: diaBR(k), ia: Math.round(262 * f * 100) / 100, manual: Math.round(82 * (1.5 - f / 2) * 100) / 100, ia_ops: Math.round(6500 * f), manual_ops: Math.round(360 * (1.5 - f / 2)), ia_pessoas: 60 + i * 3, manual_pessoas: 40 + i * 2 }
+  })
+  const horas = Array.from({ length: 24 }, (_, h) => {
+    const noite = Math.exp(-((h - 21) ** 2) / 5), tarde = 0.6 * Math.exp(-((h - 15) ** 2) / 4), manha = 0.45 * Math.exp(-((h - 10) ** 2) / 3)
+    return { hora: h, ia: Math.round((noite + tarde + manha + 0.04) * 520 * 100) / 100, manual: Math.round((noite * 0.9 + tarde * 1.1 + manha * 1.3 + 0.01) * 150 * 100) / 100 }
+  })
+  const live = (diasAtras: number, hIni: number, min: number, markup: number, tipico: number, estimada: boolean, extra: Record<string, unknown> = {}) => {
+    const ini = Date.parse(`${diaBR(diasAtras)}T${String(hIni).padStart(2, '0')}:10:00-03:00`)
+    return { inicio: new Date(ini).toISOString(), fim: new Date(ini + min * 60_000).toISOString(), origem: estimada ? 'estimada' : 'link', estimada, markup, markup_ia: markup * 0.62, markup_manual: markup * 0.38,
+      operacoes: Math.round(markup * 22), pessoas: Math.round(20 + markup / 4), volume: markup * 21, resultado: -markup * 1.4, tipico, depositos: Math.round(markup * 2.1), entraram: Math.round(12 + markup / 5), ...extra }
+  }
+  const nomes = ['Marcos Vinícius Andrade', 'Patrícia Lemos', 'Rafael Costa', 'Juliana Prado', 'Eduardo Nunes', 'Bruna Teixeira', 'Thiago Moreira', 'Camila Duarte', 'Leandro Pires', 'Sabrina Rocha']
+  return {
+    de: p_de, ate: p_ate, lido_em: new Date().toISOString(),
+    origens: {
+      ia: { operacoes: 71968, pessoas: 179, markup: 2883.49, volume: 60392.14, resultado: -4021.4, ganhos: 17060.58, perdas: -21081.98, ganhas: 49615, dias: 11, banca: 6971.55, com_saldo: 157, lucrando: 22, perdendo: 157, lucro: 100.98, prejuizo: -4122.38, depositos: 16292.52, dias_media: 2.49, markup_mediano: 6.91 },
+      manual: { operacoes: 3990, pessoas: 150, markup: 901.18, volume: 16847.06, resultado: -2957, ganhos: 4392.29, perdas: -7349.29, ganhas: 2237, dias: 7, banca: 6709.16, com_saldo: 132, lucrando: 20, perdendo: 129, lucro: 152.94, prejuizo: -3109.94, depositos: 14366.62, dias_media: 2.99, markup_mediano: 1.79 },
+    },
+    perfis: [
+      { perfil: 'duas', pessoas: 137, markup: 3377.42, markup_ia: 2490.25, markup_manual: 887.18, operacoes: 65366, volume: 68924.3, resultado: -6151.37, lucrando: 9, perdendo: 127, banca: 6074.2, depositos: 13624.77, saques: 1388.15, dias_media: 3.67 },
+      { perfil: 'ia', pessoas: 42, markup: 393.24, markup_ia: 393.24, markup_manual: 0, operacoes: 10436, volume: 8050.37, resultado: -712.77, lucrando: 7, perdendo: 35, banca: 897.35, depositos: 2667.75, saques: 765.54, dias_media: 2.02 },
+      { perfil: 'manual', pessoas: 13, markup: 14, markup_ia: 0, markup_manual: 14, operacoes: 156, volume: 264.53, resultado: -114.26, lucrando: 3, perdendo: 10, banca: 634.96, depositos: 741.85, saques: 0, dias_media: 1.85 },
+    ],
+    faixas: [
+      { faixa: 0, pessoas: 23, banca: 0, markup: 538.08, markup_ia: 367.3, markup_manual: 170.78, resultado: -1098.03, volume: 10653.81, operacoes: 10835 },
+      { faixa: 1, pessoas: 120, banca: 1525.6, markup: 2112.76, markup_ia: 1811.87, markup_manual: 300.9, resultado: -3379.68, volume: 44440.07, operacoes: 46732 },
+      { faixa: 2, pessoas: 45, banca: 4451.94, markup: 735.18, markup_ia: 593.66, markup_manual: 141.52, resultado: -1176.84, volume: 14712.08, operacoes: 16393 },
+      { faixa: 3, pessoas: 4, banca: 1628.97, markup: 398.64, markup_ia: 110.66, markup_manual: 287.98, resultado: -1323.85, volume: 7433.24, operacoes: 1998 },
+    ],
+    clientes: { lucrando: { pessoas: 19, markup: 122.09, resultado: 81.56, banca: 1043.99 }, perdendo: { pessoas: 172, markup: 3556.69, resultado: -7059.96, banca: 6562.52 },
+      zerados: 1, sem_saldo: 23, markup_sem_saldo: 538.08, um_dia_so: 35, tres_dias_ou_mais: 108, markup_tres_dias: 2894.97 },
+    rotulos: [
+      { origem: 'ia', nome: 'GF Raptor', operacoes: 38405, pessoas: 149, markup: 1254.13, volume: 25903.61, resultado: -1795.65, ganhas: 29560 },
+      { origem: 'ia', nome: 'GF Legacy', operacoes: 17777, pessoas: 145, markup: 912.12, volume: 19497.53, resultado: -1133.18, ganhas: 10656 },
+      { origem: 'manual', nome: 'Sobe ou Desce', operacoes: 3780, pessoas: 150, markup: 895.92, volume: 16758.16, resultado: -2943.36, ganhas: 2121 },
+      { origem: 'ia', nome: 'GF Falcon', operacoes: 15428, pessoas: 131, markup: 683.77, volume: 14609.33, resultado: -1088.31, ganhas: 9291 },
+      { origem: 'ia', nome: 'GF Phenom', operacoes: 242, pessoas: 5, markup: 25.9, volume: 295.38, resultado: -23.93, ganhas: 69 },
+      { origem: 'ia', nome: 'GF Gulf', operacoes: 116, pessoas: 4, markup: 7.56, volume: 86.29, resultado: 19.67, ganhas: 39 },
+      { origem: 'manual', nome: 'Dígitos', operacoes: 210, pessoas: 9, markup: 5.26, volume: 88.9, resultado: -13.64, ganhas: 116 },
+    ],
+    dias, horas,
+    semana: [1, 2, 3, 4, 5, 6, 7].map((dd) => ({ d: dd, ia: 420 - dd * 20, manual: 130 - dd * 6, vezes: 2 })),
+    top: nomes.map((nome, i) => ({ user_id: `n${i}`, nome, foto_url: null, parceiro: ['n', 'v', null, 'n', 'v', 'n', null, 'v', 'n', 'v'][i], perfil: ['duas', 'duas', 'ia', 'duas', 'manual', 'duas', 'ia', 'duas', 'duas', 'ia'][i],
+      markup: [412.3, 301.75, 188.4, 150.2, 131.9, 96.5, 80.1, 71.4, 60.3, 52.8][i], markup_ia: [300, 120.75, 188.4, 100.2, 0, 76.5, 80.1, 41.4, 30.3, 52.8][i], markup_manual: [112.3, 181, 0, 50, 131.9, 20, 0, 30, 30, 0][i],
+      resultado: [-820.4, -410.1, 96.3, -150, -488.2, -60.5, 12.4, -95, -41.2, -33][i], saldo: [625.4, 0, 310.2, 48.9, 1210, 22.1, 75, 0, 130.4, 12][i], operacoes: [9100, 5200, 4100, 2600, 310, 2100, 1900, 1500, 1200, 1100][i], dias: [9, 7, 6, 5, 4, 5, 3, 4, 3, 2][i], depositos: [1500, 800, 300, 250, 2000, 100, 0, 150, 120, 50][i] })),
+    lives: [
+      live(0, 15, 62, 74.72, 5.79, false),
+      live(0, 10, 73, 26.98, 8.04, true),
+      live(1, 10, 154, 81.4, 20.61, true),
+      live(2, 10, 96, 62.39, 11.16, true),
+      live(3, 21, 69, 55.44, 13.29, true),
+      live(3, 15, 104, 111.33, 9.75, true),
+      live(4, 21, 103, 151.95, 20.32, true),
+      live(6, 21, 221, 192.7, 25.33, true),
+      live(7, 20, 166, 0, 29.25, false, { origem: 'lancamento', operacoes: 0, pessoas: 0, volume: 0, resultado: 0, depositos: 0, entraram: 155 }),
+    ],
+    lives_resumo: { lives: 9, horas_live: 17.5, horas_fora: 236, markup_live: 756.91, markup_fora: 2705.49, tipico_live: 143.54 },
+  }
+}
+
+/** A leitura da I.A. de exemplo (&ia=vazia | pronta | sem-ia | erro): pedir leva 3 perguntas até ficar pronta. */
+const LEITURA_DO_LAB = {
+  resumo: 'Nos últimos 30 dias a plataforma gerou US$ 3.784,67 de markup em conta real: 76% vieram da I.A. (US$ 2.883,49) e 24% da manual (US$ 901,18). A manual faz 18 vezes menos operações, mas cada uma rende 5,6 vezes mais markup. Em live, o markup por hora foi mais de 5 vezes o do mesmo horário sem live.',
+  veredito: { onde: 'as_duas', titulo: 'A I.A. dá o volume; a manual, feita em live, dá o salto', texto: 'A I.A. sustenta o dia a dia: 179 pessoas e US$ 16,11 por pessoa. A manual rende US$ 0,23 por operação contra US$ 0,04 da I.A. e quem opera dos dois jeitos volta 3,7 dias, quase o dobro de quem só usa a I.A. O melhor retorno está em levar quem só usa a I.A. para operar na manual durante as lives.' },
+  recomendacoes: [
+    { titulo: 'Leve quem só usa a I.A. para a manual nas lives', porque: 'Quem opera dos dois jeitos gera US$ 24,65 por pessoa; quem só usa a I.A., US$ 9,36.', como: 'Em cada live, reserve 15 minutos de operação manual guiada e chame pelo nome quem está só com a I.A. ligada.', categoria: 'manual', impacto: 'alto' },
+    { titulo: 'Mantenha a live das 21h como a principal do dia', porque: 'As duas lives que mais renderam foram à noite: US$ 192,70 e US$ 151,95, cerca de 7 vezes o típico do horário.', como: 'Fixe 21h de segunda a quinta e avise às 20h30 por notificação e WhatsApp.', categoria: 'lives', impacto: 'alto' },
+    { titulo: 'Divulgue a GF Raptor como a porta de entrada', porque: 'Ela gerou US$ 1.254,13 com 149 pessoas, 43% do markup da I.A.', como: 'Abra as lives com a Raptor ligada na tela e use-a nos conteúdos da semana.', categoria: 'ia', impacto: 'medio' },
+    { titulo: 'Crie um horário forte à tarde', porque: 'Das 15h às 16h a manual rende quase o mesmo que à noite, e a live de sexta à tarde foi 11 vezes o típico.', como: 'Teste uma live fixa às 15h por duas semanas e compare o markup por hora.', categoria: 'horario', impacto: 'medio' },
+    { titulo: 'Reative quem está sem saldo', porque: '23 pessoas zeraram a conta e, mesmo assim, geraram US$ 538,08 no período.', como: 'Mande uma mensagem individual com o convite para a próxima live e o link de depósito.', categoria: 'clientes', impacto: 'medio' },
+  ],
+  lives: 'As lives da noite (por volta de 21h) foram as que mais renderam, com US$ 192,70 e US$ 151,95. A de sexta à tarde rendeu US$ 111,33, 11 vezes o típico do horário. As da manhã rendem menos em valor, mas ainda de 3 a 5 vezes o normal.',
+  alertas: ['O período tem só 11 dias com operação: as conclusões ainda podem mudar.', 'O horário de 7 das 9 lives é estimado pelos cliques no aviso.'],
+}
+let leituraDoLab: Record<string, unknown> | null = null
+let perguntas = 0
+function respostaDaIA(corpo: string) {
+  const modo = new URLSearchParams(location.search).get('ia') ?? 'vazia'
+  const { acao } = JSON.parse(corpo || '{}') as { acao: string }
+  if (modo === 'sem-ia') return { status: acao === 'analisar' ? 409 : 200, corpo: acao === 'analisar' ? { semIA: true, erro: 'Falta a chave da I.A.' } : { temIA: false, analise: null } }
+  const base = { id: 'lab', erro: null, criadoEm: new Date().toISOString(), prontaEm: null, quem: 'Tiago', de: '', ate: '' }
+  if (acao === 'analisar') { leituraDoLab = { ...base, situacao: 'analisando', dados: null }; perguntas = 0 }
+  else if (leituraDoLab?.situacao === 'analisando' && ++perguntas >= 2) {
+    leituraDoLab = modo === 'erro' ? { ...base, situacao: 'erro', dados: null, erro: 'A resposta da I.A. veio cortada. Tente de novo.' } : { ...base, situacao: 'pronta', dados: LEITURA_DO_LAB, prontaEm: new Date().toISOString() }
+  } else if (!leituraDoLab && modo === 'pronta') leituraDoLab = { ...base, situacao: 'pronta', dados: LEITURA_DO_LAB, prontaEm: new Date().toISOString() }
+  return { status: 200, corpo: { temIA: true, analise: leituraDoLab } }
+}
+
 /* &aovivo: uma operação em conta real a cada 1,5 s (US$ 0,04 de markup), para ver o markup subir a cada
    operação (markupAoVivo): as leituras grandes trazem lido_em e o que entrou até ali; teeds_markup_desde
    devolve o que entrou depois. */
@@ -132,6 +233,8 @@ export default function LabVisaoGeral() {
       return new Response(JSON.stringify({ parceiro: '', metas: metasDoLab }), { status: 200 })
     }
     if (url.includes('teeds_painel_periodo')) return new Response(JSON.stringify(aoVivo ? comAoVivo(exemploDoPeriodo(String(i?.body ?? ''), cenario) as any, ['total', 'ia']) : exemploDoPeriodo(String(i?.body ?? ''), cenario)), { status: 200 })
+    if (url.includes('teeds_painel_negocio')) return new Response(JSON.stringify(exemploDoNegocio(String(i?.body ?? ''))), { status: 200 })
+    if (url.includes('negocio-analise')) { const r = respostaDaIA(String(i?.body ?? '')); return new Response(JSON.stringify(r.corpo), { status: r.status }) }
     if (url.includes('teeds_markup_mapa_detalhe')) return new Response(JSON.stringify(exemploDoDetalhe(String(i?.body ?? ''), cenario)), { status: 200 })
     if (url.includes('teeds_markup_mapa')) return new Response(JSON.stringify(exemploDoMapa(cenario)), { status: 200 })
     return f(u, i)
