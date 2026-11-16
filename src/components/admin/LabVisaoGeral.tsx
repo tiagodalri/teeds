@@ -97,7 +97,7 @@ function exemploDoDetalhe(corpo: string, cenario: string) {
   }
 }
 
-/** O Inteligência do negócio de exemplo (16/11/2026): manual x I.A., clientes, lives. &negocio=vazio para o período sem operação. */
+/** O Inteligência do negócio de exemplo (16/11/2026): as quatro respostas, o pódio das lives e os detalhes nas gavetas. &negocio=vazio para o período sem operação. */
 function exemploDoNegocio(corpo: string) {
   const { p_de, p_ate } = JSON.parse(corpo || '{}') as { p_de: string; p_ate: string }
   if (new URLSearchParams(location.search).get('negocio') === 'vazio') {
