@@ -47,6 +47,11 @@ interface Props {
   onLigar: (cfg: ConfigEstrategia, symbol: string, modelo?: Identidade) => void
   ligando?: boolean
   erro?: string | null
+  /**
+   * Modo simulado (16/11/2026): a sessão planejada e guardada para esta I.A. Os valores dela abrem
+   * preenchidos (entrada, meta, limite, modo e loss virtual) e nada do preparo de verdade fica guardado.
+   */
+  planoDe?: (id: string) => { entrada: number; meta: number; stop: number; modo: Modo; lossVirtual: number | null } | null
 }
 const CHAVE = 'teeds.robo.preparo'
 // US$ em toda a tela (o mesmo símbolo dos mostradores)
@@ -221,7 +226,7 @@ function MostradorDeDigitos({ valor, mudar, max, padrao }: { valor: number; muda
   )
 }
 
-export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, demoComoReal = false, rotulosTrocados = false, saldo = null, metaDaSessao = null, escolherModelo = false, onCancelar, onLigar, ligando = false, erro }: Props) {
+export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, demoComoReal = false, rotulosTrocados = false, saldo = null, metaDaSessao = null, escolherModelo = false, onCancelar, onLigar, ligando = false, erro, planoDe }: Props) {
   const disponiveis = useRobosDisponiveis()
   // I.A. vendida à parte que a pessoa ainda não tem: cadeado já na escolha, não no fim do preparo
   const bloqueados = useRobosBloqueados()
@@ -264,11 +269,14 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const contaDemo = isDemo
   const sessaoContinuada = modelo.id === identidade.id ? metaDaSessao : null
   const [origem, setOrigem] = useState(() => metaEStopDoPreparo(modelo.id, contaDemo, sessaoContinuada))
-  const [valores, setValores] = useState(() => ({
-    valorAoVencer: n2(inicial.valorAoVencer),
-    takeProfit: n2(origem.meta),
-    stopLoss: n2(origem.limite),
-  }))
+  const planoInicial = planoDe?.(modelo.id) ?? null
+  const [valores, setValores] = useState(() => planoInicial
+    ? { valorAoVencer: n2(planoInicial.entrada), takeProfit: n2(planoInicial.meta), stopLoss: n2(planoInicial.stop) }
+    : {
+      valorAoVencer: n2(inicial.valorAoVencer),
+      takeProfit: n2(origem.meta),
+      stopLoss: n2(origem.limite),
+    })
   // a pessoa já mexeu na meta ou no limite aqui: nada de trocar por baixo dela
   const mexeuMetaOuLimite = useRef(false)
   const mudar = (k: keyof typeof valores) => (v: string) => {
@@ -276,6 +284,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     setValores((x) => ({ ...x, [k]: v }))
   }
   const aplicarMetaEStop = (id: string) => {
+    const p = planoDe?.(id)
+    if (p) { setValores({ valorAoVencer: n2(p.entrada), takeProfit: n2(p.meta), stopLoss: n2(p.stop) }); setModo(p.modo); return }
     const o = metaEStopDoPreparo(id, contaDemo, id === identidade.id ? metaDaSessao : null)
     setOrigem(o)
     setValores((x) => ({ ...x, takeProfit: n2(o.meta), stopLoss: n2(o.limite) }))
@@ -295,12 +305,13 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const passoAtual = useRef<Passo>('escolha')
   useEffect(() => {
     let vivo = true
+    if (planoDe) return
     void sincronizarParaOPreparo().then(() => { if (vivo && !mexeuMetaOuLimite.current && !submitted.current && passoAtual.current !== 'decolar') aplicarMetaEStop(modeloAtual.current) })
     return () => { vivo = false }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   // a etiqueta só enquanto o número na tela é o do plano do dia
   const doPlano = (k: 'takeProfit' | 'stopLoss') => origem.origem === 'plano' && ler(valores[k]) === (k === 'takeProfit' ? origem.meta : origem.limite)
-  const [modo, setModo] = useState<Modo>(() => lerPreparo().modo === 'agressivo' ? 'agressivo' : 'conservador')
+  const [modo, setModo] = useState<Modo>(() => planoInicial?.modo ?? (lerPreparo().modo === 'agressivo' ? 'agressivo' : 'conservador'))
   const [confirmaReal, setConfirmaReal] = useState(false)
   const submitted = useRef(false)
   const corpo = useRef<HTMLDivElement>(null)
@@ -320,6 +331,7 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   const [lvEscolhido, setLvEscolhido] = useState<Record<string, number>>(() => ({
     ...(lerPreparo().lossVirtual ?? {}),
     ...(configInicial.lossVirtualCliente !== undefined ? { [identidade.id]: configInicial.lossVirtualCliente } : {}),
+    ...(planoInicial?.lossVirtual != null ? { [modelo.id]: planoInicial.lossVirtual } : {}),
   }))
   const lv = Math.min(LOSS_VIRTUAL_MAXIMO, Math.max(0, Math.trunc(lvEscolhido[modelo.id] ?? lvDoPainel)))
   const escolherLv = (n: number) => setLvEscolhido((m) => ({ ...m, [modelo.id]: Math.min(LOSS_VIRTUAL_MAXIMO, Math.max(0, n)) }))
@@ -382,7 +394,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
     const cfg: ConfigEstrategia = comLV ? { ...semEscolha, lossVirtualCliente: lv } : semEscolha
     const { lossVirtualCliente: _lv, ...paraGuardar } = cfg
     void _lv
-    try { localStorage.setItem(CHAVE, JSON.stringify({ cfg: paraGuardar, symbol: ATIVO_DOS_ROBOS, modo, modelo: modelo.id, lossVirtual: lvEscolhido })) } catch { /* preferência do aparelho */ }
+    // no modo simulado, o preparo de verdade não guarda nada (a sessão é a planejada)
+    if (!planoDe) try { localStorage.setItem(CHAVE, JSON.stringify({ cfg: paraGuardar, symbol: ATIVO_DOS_ROBOS, modo, modelo: modelo.id, lossVirtual: lvEscolhido })) } catch { /* preferência do aparelho */ }
     onLigar(cfg, ATIVO_DOS_ROBOS, modelo)
   }
 

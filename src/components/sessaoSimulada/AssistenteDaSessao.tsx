@@ -27,6 +27,7 @@ import {
 } from '../../core/teeds/sessaoSimulada'
 import { cenarioDoNivel, esperaDoLossVirtual, faixaDoLucro, faixaDoPrejuizo, niveisDeRisco, type Cenario, type Pedido } from '../../core/teeds/cenariosDaSessao'
 import { PreviaDaSessao } from './PreviaDaSessao'
+import { apagarPlano, salvarPlano, usePlanosSalvos } from '../../core/teeds/planosSimulados'
 import { pontoDePartida } from './PalcoDaSessao'
 import { corDoNivel, Curva, duracao, EscadaDaSequencia, historia, Medidor, Mostrador, relogio } from './pecasDaCalibragem'
 import '../relatorios/relatorios.css'
@@ -270,6 +271,15 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
   const cor = corDoNivel(Math.min(1, parteDoSaldo * 1.15))
   const roteiroDaMesa = (x: Cenario): Roteiro => ({ ...x.roteiro, id: `simulada-${Date.now()}`, conta })
   const usar = () => { if (c) aoDarPlay(roteiroDaMesa(c)) }
+  /*
+    Salvar para a próxima (16/11/2026): a sessão da mesa fica guardada para esta I.A. Na próxima vez, pela
+    vitrine (Iniciar operações), o preparo de verdade abre com os números dela e o Iniciar roda esta sessão.
+  */
+  const planos = usePlanosSalvos()
+  const salvoDaIa = planos[ia] ?? null
+  const [acabouDeSalvar, setAcabouDeSalvar] = useState(false)
+  useEffect(() => { setAcabouDeSalvar(false) }, [chaveDaSessao])
+  const salvar = () => { if (!c || calibrando) return; salvarPlano(roteiroDaMesa(c)); setAcabouDeSalvar(true) }
   const trocarIa = (id: string) => { setIa(id); setModo('conservador'); setElos((x) => ({ ...x, lv: { ligado: false, fixo: null } })) }
   const presos = (Object.keys(elos) as Param[]).filter((p) => (p !== 'lv' || comLV) && elos[p].ligado).length
   const totalDeTermos = comLV ? 5 : 4
@@ -437,11 +447,24 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
         )}
       </div>
 
+      {(acabouDeSalvar || salvoDaIa) && (
+        <div className={`mes-salvo ${acabouDeSalvar ? 'agora' : ''}`} role="status">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+          <span>{acabouDeSalvar
+            ? <>Salvo para a próxima. Feche esta tela e, quando for gravar, vá em <b>{nomeDaIa(ia)} › Iniciar operações</b>: o preparo abre com estes números e o Iniciar roda esta sessão.</>
+            : <>A {nomeDaIa(ia)} tem uma sessão salva ({dinheiroComSinal(salvoDaIa!.roteiro.trechos[0].fim === 'stop' ? -salvoDaIa!.stop : salvoDaIa!.meta, 'USD')}, entrada {usd(salvoDaIa!.entrada)}). Ela abre pela vitrine em Iniciar operações.</>}</span>
+          {salvoDaIa && <button type="button" onClick={() => { apagarPlano(ia); setAcabouDeSalvar(false) }}>Apagar a salva</button>}
+        </div>
+      )}
       <footer className="mes-acoes">
         <span>{c ? <><b style={{ color: cor }}>{nomeDaIa(ia)}</b> · entrada {usd(entrada)} · {dinheiroComSinal(c.resultado, 'USD')} em {duracao(minutos)} · {c.maiorSequencia} {c.maiorSequencia === 1 ? 'perda' : 'perdas'} · exige {usd(exigido)} de saldo</> : 'Regule os termômetros até a sessão fechar.'}</span>
         <button type="button" className="asi-sortear" onClick={() => setSemente((s) => s + 1)} disabled={!c}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v6h6M20 20v-6h-6" /><path d="M20 10a8 8 0 0 0-14.3-4.3L4 8m16 8-1.7 2.3A8 8 0 0 1 4 14" /></svg>
           Outra sessão
+        </button>
+        <button type="button" className="mes-salvar" onClick={salvar} disabled={!c || calibrando}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h10l3 3v13H5V4z" /><path d="M8 4v5h7V4M8 20v-6h8v6" /></svg>
+          {salvoDaIa ? 'Salvar no lugar' : 'Salvar para a próxima'}
         </button>
         <button type="button" className="est-play" onClick={usar} disabled={!c || calibrando}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" /></svg>Dar o play

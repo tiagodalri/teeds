@@ -448,3 +448,16 @@ button.mes-valor:hover { border-color: color-mix(in srgb, var(--est-ouro) 60%, v
 .asi-parcial.final { background: color-mix(in srgb, var(--up) 9%, transparent); border-color: color-mix(in srgb, var(--up) 35%, transparent); }
 .asi-parcial b.sobe { color: var(--up); } .asi-parcial b.cai { color: var(--down); }
 .asi-parcial button { height: 34px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--est-l); color: #2A1F10; font: inherit; font-size: 12.5px; font-weight: 800; cursor: pointer; }
+
+/* salvar a sessão para a próxima (16/11/2026) */
+.mes-salvar { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 16px; border: 1px solid color-mix(in srgb, var(--est-ouro) 60%, var(--border)); border-radius: 12px;
+  background: var(--bg); color: var(--text); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.mes-salvar svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.mes-salvar:disabled { opacity: .5; cursor: default; }
+.mes-salvo { display: flex; align-items: center; gap: 10px; padding: 9px 20px; font-size: 12.5px; line-height: 1.45; border-top: 1px solid color-mix(in srgb, var(--up) 35%, var(--border));
+  background: color-mix(in srgb, var(--up) 8%, var(--surface)); }
+.mes-salvo svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--up); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.mes-salvo span { flex: 1; min-width: 0; }
+.mes-salvo button { flex: none; height: 30px; padding: 0 12px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--muted); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.mes-salvo.agora { animation: asi-entra .25s ease-out; }
+@media (max-width: 1000px) { .mes-salvo { padding: 8px 12px; } .mes-salvar { flex: 1; justify-content: center; } }

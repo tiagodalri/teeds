@@ -28,10 +28,11 @@ import { DigitosFlutuante } from './DigitosFlutuante'
 import { ATIVO_DOS_ROBOS, ehSintetico } from '../core/deriv/config'
 import './robot-workspace.css'
 import { NomeDoRobo } from './NomeDoRobo'
-import { modeloPedidoDaVitrine, pedirModeloDaVitrine } from './RobotSetup'
+import { modeloPedidoDaVitrine, pedirModeloDaVitrine, RobotSetup } from './RobotSetup'
 import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
-import type { Roteiro } from '../core/teeds/sessaoSimulada'
+import { configDoTrecho, type Roteiro } from '../core/teeds/sessaoSimulada'
+import { planoSalvo } from '../core/teeds/planosSimulados'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { modoSimuladoAtivo, useModoSimulado } from '../core/teeds/modoSimulado'
 import { definirContaSimulada, definirSaldoSimulado } from '../core/teeds/modoSimulado'
@@ -184,7 +185,7 @@ export function RobotsPanel({
     else setSimuladaAgora((atual) => atual ?? lerSessaoGuardada())
   }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const abrir = () => abrirAssistenteRef.current?.()
+    const abrir = () => abrirPreparoSimRef.current?.()
     window.addEventListener('simulado:estudio', abrir)
     return () => window.removeEventListener('simulado:estudio', abrir)
   }, [])
@@ -424,8 +425,31 @@ export function RobotsPanel({
     pedirModeloDaVitrine(null)
     setAssistente({ ia })
   }
-  const abrirAssistenteRef = useRef(abrirAssistente)
-  abrirAssistenteRef.current = abrirAssistente
+  /*
+    16/11/2026 (Tiago: "deixar salvo para a próxima; na próxima, com o modo simulado ativo, seleciono a
+    Raptor e os parâmetros já vêm preenchidos, e ao iniciar ele roda a operação planejada"): a vitrine (e o
+    preparo pedido pela home) abre o preparo de verdade quando a I.A. tem uma sessão salva, com os números
+    dela. Sem sessão salva, abre a mesa de termômetros, como antes.
+  */
+  const [preparoSim, setPreparoSim] = useState<string | null>(null)
+  const abrirPreparoSim = () => {
+    const ia = modeloPedidoDaVitrine()
+    const plano = planoSalvo(ia)
+    if (!ia || !plano) { abrirAssistente(); return }
+    pedirModeloDaVitrine(null)
+    // o topo já mostra o saldo com que a sessão foi planejada
+    definirSaldoSimulado(plano.roteiro.saldo); definirContaSimulada(plano.roteiro.conta)
+    setPreparoSim(ia)
+  }
+  const abrirPreparoSimRef = useRef(abrirPreparoSim)
+  abrirPreparoSimRef.current = abrirPreparoSim
+  const iniciarPlano = (id: string) => {
+    const plano = planoSalvo(id)
+    setPreparoSim(null)
+    if (!plano) { setAssistente({ ia: id }); return }
+    definirSaldoSimulado(plano.roteiro.saldo); definirContaSimulada(plano.roteiro.conta)
+    setSimulada({ ...plano.roteiro, id: `simulada-${Date.now()}` })
+  }
   const conteudoSimulado = modoSim && (
     <>
       <div className="ger-topo rob-workspace-header">
@@ -451,7 +475,7 @@ export function RobotsPanel({
           <PalcoDaSessao roteiro={simulada} mostrarMarkup={admin && mostrarMarkup}
             aoEditar={() => abrirAssistente()} aoSair={() => setSimulada(null)} />
         </Suspense>
-      ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirAssistente()} /> : (
+      ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirPreparoSim()} /> : (
         <section className="robot-workspace-empty">
           <span className="robot-empty-symbol" aria-hidden="true">▷</span>
           <h3>Um robô. Seus limites. Tudo aqui.</h3>
@@ -459,6 +483,19 @@ export function RobotsPanel({
           <button className="rob-new-button" onClick={() => abrirAssistente()}>Escolher e configurar →</button>
         </section>
       )}
+      {preparoSim && (() => {
+        const plano = planoSalvo(preparoSim)
+        if (!plano) return null
+        const ident = identidade(preparoSim)
+        return (
+          <RobotSetup identidade={ident} nomeEstrategia={ident.nome} symbols={symbols} symbolInicial={ATIVO_DOS_ROBOS}
+            configInicial={configDoTrecho(plano.roteiro, plano.roteiro.trechos[0])} moeda="USD"
+            isDemo={(modoSim?.conta ?? plano.roteiro.conta) === 'demo'} saldo={modoSim?.saldo ?? plano.roteiro.saldo}
+            planoDe={(id) => planoSalvo(id)}
+            onCancelar={() => setPreparoSim(null)}
+            onLigar={(_cfg, _symbol, modelo) => iniciarPlano(modelo?.id ?? preparoSim)} />
+        )
+      })()}
       {assistente && (
         <Suspense fallback={null}>
           <AssistenteDaSessao ia={assistente.ia} saldo={modoSim?.saldo ?? null} conta={modoSim?.conta ?? 'real'}
