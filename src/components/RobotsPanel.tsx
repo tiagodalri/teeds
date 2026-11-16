@@ -33,6 +33,8 @@ import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
 import { configDoTrecho, type Roteiro } from '../core/teeds/sessaoSimulada'
 import { planoSalvo } from '../core/teeds/planosSimulados'
+import { useSessaoSimuladaAoVivo } from '../core/teeds/sessaoSimuladaAoVivo'
+import { minutosDaSessao, remontarSessao } from '../core/teeds/cenariosDaSessao'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { modoSimuladoAtivo, useModoSimulado } from '../core/teeds/modoSimulado'
 import { definirContaSimulada, definirSaldoSimulado } from '../core/teeds/modoSimulado'
@@ -179,10 +181,27 @@ export function RobotsPanel({
   /** A mesa de termômetros aberta (com a I.A. pedida pela vitrine, quando veio de lá). */
   const [assistente, setAssistente] = useState<{ ia: string | null } | null>(null)
   // a sessão aberta fica guardada no navegador: recarregar ou sair da aba volta nela, no mesmo ponto
-  const setSimulada = (r: Roteiro | null) => { if (r) guardarSessao(r); else esquecerSessao(); setSimuladaAgora(r) }
+  /** A sessão aberta veio de outra aba (lá ela já está rodando): aqui ela espelha, sem dar o play sozinha. */
+  const [simuladaDeFora, setSimuladaDeFora] = useState(false)
+  const setSimulada = (r: Roteiro | null) => { if (r) guardarSessao(r); else esquecerSessao(); setSimuladaDeFora(false); setSimuladaAgora(r) }
   useEffect(() => {
     if (!modoSim) { setSimuladaAgora(null); setAssistente(null) }
     else setSimuladaAgora((atual) => atual ?? lerSessaoGuardada())
+  }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
+  // outra aba abriu, trocou ou fechou a sessão simulada: esta acompanha (16/11/2026)
+  useEffect(() => {
+    if (!modoSim) return
+    const mudou = (ev: StorageEvent) => {
+      if (ev.key !== null && ev.key !== 'teeds:sessao-simulada:roteiro') return
+      const r = lerSessaoGuardada()
+      setSimuladaAgora((atual) => {
+        if ((atual?.id ?? null) === (r?.id ?? null)) return atual
+        setSimuladaDeFora(!!r)
+        return r
+      })
+    }
+    window.addEventListener('storage', mudou)
+    return () => window.removeEventListener('storage', mudou)
   }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const abrir = () => abrirPreparoSimRef.current?.()
@@ -202,7 +221,9 @@ export function RobotsPanel({
     return acompanharVivas(sessaoTeeds, setVivasNoServidor)
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
   // no modo simulado a mini-cabine e o Início não mostram as sessões de verdade (gravação)
-  useEffect(() => { onSessoesVivas?.(modoSim ? [] : vivasNoServidor) }, [vivasNoServidor, !!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
+  // no modo simulado, a sessão simulada que está na tela vai para a mini cabine flutuante (16/11/2026)
+  const simuladaAoVivo = useSessaoSimuladaAoVivo()
+  useEffect(() => { onSessoesVivas?.(modoSim ? (simuladaAoVivo ? [simuladaAoVivo] : []) : vivasNoServidor) }, [vivasNoServidor, !!modoSim, simuladaAoVivo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /*
     Uma sessão que encerrou (meta, stop, desligada) NÃO some da tela.
@@ -443,12 +464,29 @@ export function RobotsPanel({
   }
   const abrirPreparoSimRef = useRef(abrirPreparoSim)
   abrirPreparoSimRef.current = abrirPreparoSim
-  const iniciarPlano = (id: string) => {
+  const [erroDoPreparoSim, setErroDoPreparoSim] = useState<string | null>(null)
+  const [remontando, setRemontando] = useState(false)
+  const iniciarPlano = (id: string, cfg: ConfigEstrategia) => {
     const plano = planoSalvo(id)
-    setPreparoSim(null)
-    if (!plano) { setAssistente({ ia: id }); return }
-    definirSaldoSimulado(plano.roteiro.saldo); definirContaSimulada(plano.roteiro.conta)
-    setSimulada({ ...plano.roteiro, id: `simulada-${Date.now()}` })
+    if (!plano) { setPreparoSim(null); setAssistente({ ia: id }); return }
+    const comecar = (r: Roteiro) => {
+      setPreparoSim(null); setErroDoPreparoSim(null)
+      definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
+      setSimulada({ ...r, id: `simulada-${Date.now()}` })
+    }
+    const lv = cfg.lossVirtualCliente ?? plano.lossVirtual ?? null
+    const igual = (a: number, b: number) => Math.abs(a - b) < 0.005
+    const mexeu = !igual(cfg.valorAoVencer, plano.entrada) || !igual(cfg.takeProfit, plano.meta) || !igual(cfg.stopLoss, plano.stop)
+      || (cfg.modo ?? 'conservador') !== plano.modo || (plano.lossVirtual != null && lv !== plano.lossVirtual)
+    if (!mexeu) { comecar(plano.roteiro); return }
+    // 16/11/2026 (opção 1 do Tiago): mudou no preparo, a sessão é remontada com esses números
+    setRemontando(true); setErroDoPreparoSim(null)
+    window.setTimeout(() => {
+      const r = remontarSessao(plano.roteiro, { entrada: cfg.valorAoVencer, meta: cfg.takeProfit, stop: cfg.stopLoss, modo: cfg.modo ?? plano.modo, lossVirtual: lv }, minutosDaSessao(plano.roteiro))
+      setRemontando(false)
+      if ('roteiro' in r) comecar(r.roteiro)
+      else setErroDoPreparoSim(r.erro)
+    }, 30)
   }
   const conteudoSimulado = modoSim && (
     <>
@@ -472,7 +510,7 @@ export function RobotsPanel({
       </div>
       {simulada ? (
         <Suspense fallback={<div className="robot-session-loading" role="status"><b>Sessão</b><span>Abrindo…</span></div>}>
-          <PalcoDaSessao roteiro={simulada} mostrarMarkup={admin && mostrarMarkup}
+          <PalcoDaSessao key={simulada.id ?? 'simulada'} roteiro={simulada} mostrarMarkup={admin && mostrarMarkup} daOutraAba={simuladaDeFora}
             aoEditar={() => abrirAssistente()} aoSair={() => setSimulada(null)} />
         </Suspense>
       ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirPreparoSim()} /> : (
@@ -492,8 +530,9 @@ export function RobotsPanel({
             configInicial={configDoTrecho(plano.roteiro, plano.roteiro.trechos[0])} moeda="USD"
             isDemo={(modoSim?.conta ?? plano.roteiro.conta) === 'demo'} saldo={modoSim?.saldo ?? plano.roteiro.saldo}
             planoDe={(id) => planoSalvo(id)}
-            onCancelar={() => setPreparoSim(null)}
-            onLigar={(_cfg, _symbol, modelo) => iniciarPlano(modelo?.id ?? preparoSim)} />
+            ligando={remontando} erro={erroDoPreparoSim}
+            onCancelar={() => { setPreparoSim(null); setErroDoPreparoSim(null) }}
+            onLigar={(cfg, _symbol, modelo) => iniciarPlano(modelo?.id ?? preparoSim, cfg)} />
         )
       })()}
       {assistente && (

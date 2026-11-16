@@ -1072,3 +1072,58 @@ export function diagnosticoDoPedido(p: Pedido): { problema: string; sugestoes: S
   const c = compassoDa(r)
   return diagnosticar(p, r, c, alvoDeOperacoes(p, c, r))
 }
+
+/* -------------------------------------- a sessão salva, com os números mexidos no preparo */
+
+/** Os números que o preparo de verdade mostra (e que a pessoa pode mexer antes do Iniciar). */
+export interface NumerosDoPreparo { entrada: number; meta: number; stop: number; modo: Modo; lossVirtual: number | null }
+
+/**
+ * Remonta uma sessão salva com os números que a pessoa mexeu no preparo (16/11/2026, Tiago escolheu:
+ * "mudou no preparo, o Iniciar monta uma sessão nova com esses números, no mesmo nível de risco").
+ * A I.A., o saldo, a conta, o tempo, se termina em lucro ou prejuízo e quando vem a maior sequência
+ * ficam os da sessão salva. Dos níveis que fecham, fica o de maior sequência mais perto da salva.
+ *  - no lucro: a meta é o resultado; o limite de perda digitado precisa cobrir a sessão (senão a
+ *    entrada seria aparada no meio): um nível que precise de mais limite fica de fora;
+ *  - no prejuízo: o limite é o resultado; a meta digitada precisa ficar acima do ponto mais alto da sessão.
+ * Cada sessão é conferida de novo na Caixa com os números digitados.
+ */
+export function remontarSessao(salva: Roteiro, n: NumerosDoPreparo, minutos: number): { roteiro: Roteiro } | { erro: string } {
+  const t0 = salva.trechos[0]
+  const lucro = t0.fim !== 'stop'
+  const p: Pedido = {
+    ia: salva.ia, modo: n.modo, saldo: salva.saldo, conta: salva.conta, entrada: n.entrada,
+    resultado: lucro ? n.meta : -n.stop, minutos, momento: t0.momento, semente: salva.semente,
+    lossVirtual: n.lossVirtual,
+  }
+  const erro = conferirPedido(p)
+  if (erro) return { erro }
+  if (lucro && !(n.meta > 0)) return { erro: 'Defina uma meta de ganho: a sessão salva termina batendo a meta.' }
+  if (!lucro && !(n.stop > 0)) return { erro: 'Defina um limite de perda: a sessão salva termina no stop.' }
+  const S0 = previaDoRoteiro(salva).maiorSequencia.n
+  const niveis = niveisDeRisco(p).filter((x) => !x.ordem).sort((a, b) => Math.abs(a.S - S0) - Math.abs(b.S - S0) || a.chave - b.chave)
+  const desde = performance.now()
+  for (const nivel of niveis) {
+    if (performance.now() - desde > 1500) break
+    const c = cenarioDoNivel(p, nivel)
+    if (!c) continue
+    const trecho: Trecho = { ...c.roteiro.trechos[0], meta: lucro ? n.meta : n.meta, stop: lucro ? n.stop : n.stop }
+    const roteiro: Roteiro = { ...c.roteiro, trechos: [trecho] }
+    // os números digitados no lugar dos redondos da mesa: a mesma sessão, operação por operação?
+    const conf = correr(roteiro, roteiro.fita!)
+    const fim = conf.trechos[0]
+    if (!fim || conf.ops.length !== c.operacoes || fim.tipo !== (lucro ? 'meta' : 'stop') || Math.abs(fim.resultado - c.resultado) > 0.001) continue
+    return { roteiro }
+  }
+  if (!lucro && n.meta > 0) return { erro: `Com esses números não fecha uma sessão da ${nomeDaIa(p.ia)} que termine em −US$ ${n.stop.toFixed(2).replace('.', ',')} em ${minutos} min. Volte aos números salvos ou ajuste na mesa.` }
+  const faixa = lucro ? faixaDoLucro(p) : null
+  if (lucro && faixa && (n.meta < faixa.min || n.meta > faixa.max)) {
+    return { erro: `Em ${minutos} min, com entrada de US$ ${n.entrada.toFixed(2).replace('.', ',')}, a ${nomeDaIa(p.ia)} faz de US$ ${faixa.min.toFixed(2).replace('.', ',')} a US$ ${faixa.max.toFixed(2).replace('.', ',')}. A meta de US$ ${n.meta.toFixed(2).replace('.', ',')} fica fora. Volte aos números salvos ou ajuste a entrada.` }
+  }
+  return { erro: `Com esses números não fecha uma sessão da ${nomeDaIa(p.ia)} em ${minutos} min${lucro ? ` com limite de perda de US$ ${n.stop.toFixed(2).replace('.', ',')} (a sequência de perdas pede mais)` : ''}. Volte aos números salvos ou ajuste na mesa.` }
+}
+
+/** O tempo da sessão salva, em minutos (o mesmo que a mesa pediu). */
+export function minutosDaSessao(r: Roteiro): number {
+  return Math.max(1, Math.round(tempoDaSessao(r, r.fita ?? previaDoRoteiro(r).resultados).segundos / 60))
+}

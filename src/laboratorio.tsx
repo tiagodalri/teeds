@@ -74,7 +74,10 @@ const VELAS = (() => {
     return { epoch: 1760000000 + i * 60, open, close, high: Math.max(open, close) + Math.abs(r()) * 3, low: Math.min(open, close) - Math.abs(r()) * 3 }
   })
 })()
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react'
+import type { SessaoViva } from './core/teeds/servidorRobos'
+import { MiniCabine } from './components/minicabine/MiniCabine'
+import { ehSessaoSimulada, pedirParadaDaSimulada } from './core/teeds/sessaoSimuladaAoVivo'
 import { CadastroEmAnalise } from './components/CadastroEmAnalise'
 import { PreAcesso } from './components/PreAcesso'
 import { AdminLancamento } from './components/lancamento/AdminLancamento'
@@ -385,6 +388,25 @@ function Cabine({ estado: estadoBase, expandido, titulo }: { estado: EstadoMotor
         onLigarDeNovo={!estado.rodando ? nada : undefined} onRemover={nada}
       />
     </div>
+  )
+}
+
+/**
+ * ?tela=sessao-simulada: o botão "Outra tela" esconde a aba das I.A. (como o app, que a mantém montada) e
+ * mostra a mini cabine flutuante com a sessão simulada que está rodando (16/11/2026).
+ */
+let vivasDoLab: SessaoViva[] = []
+const ouvintesDoLab = new Set<() => void>()
+function labVivas(l: SessaoViva[]) { vivasDoLab = l; ouvintesDoLab.forEach((f) => f()) }
+function LabOutraTela() {
+  const [fora, setFora] = useState(false)
+  const vivas = useSyncExternalStore((f) => { ouvintesDoLab.add(f); return () => { ouvintesDoLab.delete(f) } }, () => vivasDoLab)
+  useEffect(() => { const el = document.querySelector<HTMLElement>('.app[data-laboratorio="sessao-simulada"] > .rob, .app[data-laboratorio="sessao-simulada"] > section, .app[data-laboratorio="sessao-simulada"] > main'); if (el) el.style.display = fora ? 'none' : '' }, [fora])
+  return (
+    <>
+      <button type="button" className="lab-outra-tela" onClick={() => setFora((v) => !v)} style={{ position: 'fixed', left: 12, bottom: 12, zIndex: 50 }}>{fora ? 'Voltar às I.A.' : 'Outra tela'}</button>
+      {fora && <MiniCabine sessoes={vivas} aoAbrirCabine={() => setFora(false)} aoParar={(id) => { if (ehSessaoSimulada(id)) pedirParadaDaSimulada() }} />}
+    </>
   )
 }
 
@@ -736,7 +758,8 @@ function Laboratorio() {
           <AccountSwitcher contas={[]} selecionada="CR1234567" isDemo={false} saldo={1234.56} moeda="USD" conectando={false} onTrocar={nada} onRecarregar={nada} onSair={nada} />
         </div>
       </header>
-      <RobotsPanel socket={null} logado isDemo={false} moeda="USD" symbols={symbols} symbolPadrao="R_75" sessaoTeeds={null} admin onConectarDeriv={nada} />
+      <LabOutraTela />
+      <RobotsPanel socket={null} logado isDemo={false} moeda="USD" symbols={symbols} symbolPadrao="R_75" sessaoTeeds={null} admin onConectarDeriv={nada} onSessoesVivas={labVivas} />
     </div>
   )
   return (

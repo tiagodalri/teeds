@@ -12,6 +12,8 @@ import { identidade } from '../../core/deriv/branding'
 import { ATIVO_DOS_ROBOS } from '../../core/deriv/config'
 import { fetchTickHistory, subscribeTicks } from '../../core/deriv/market'
 import { useMenuAdminOculto } from '../../core/menuDeAdmin'
+import { publicarSessaoSimulada } from '../../core/teeds/sessaoSimuladaAoVivo'
+import { MARCA } from '../../marca'
 import { publicSocket } from '../../core/deriv/client'
 import { roboLigou, sessaoBateuLimite } from '../../core/som'
 import { definirSaldoSimulado, escreverNoLivro } from '../../core/teeds/modoSimulado'
@@ -45,9 +47,11 @@ export async function pontoDePartida(): Promise<PontoDePartida> {
 
 interface Marcador { rotulo: string; op: number }
 
-export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair }: {
+export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair, daOutraAba = false }: {
   roteiro: Roteiro
   mostrarMarkup?: boolean
+  /** A sessão chegou de outra aba (ela é quem está rodando): esta aba não dá o play sozinha, espelha. */
+  daOutraAba?: boolean
   aoEditar: () => void
   aoSair: () => void
 }) {
@@ -74,8 +78,53 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   const [desligadoNoRobo, setDesligadoNoRobo] = useState(false)
   // desligou com um contrato aberto: como o motor, conclui o contrato e só então para
   const pararAoLiquidar = useRef(false)
+  /** Quantas operações a sessão tinha quando foi desligada: a que estava aberta fecha, e ela para. */
+  const opsAoDesligar = useRef(0)
   const idSessao = useMemo(() => roteiro.id ?? `simulada:${roteiro.semente}:${Date.now()}`, [roteiro])
   const demo = roteiro.conta === 'demo'
+
+  /*
+    Várias abas (16/11/2026, Tiago: "quando abro outra aba da plataforma e vou em I.A., aparece como sessão
+    encerrada, quando na verdade a operação simulada ainda está rodando; precisa ficar sincronizado"). Uma
+    aba roda a sessão (a dona: a última que mexeu nela) e conta tudo pelo canal do navegador; as outras
+    espelham, operação por operação. Mexer em qualquer aba (play, pausa, velocidade, pular, desligar) faz
+    dela a dona, a partir do ponto em que a sessão está. A aba que você está olhando assume sozinha (as
+    de fundo têm o relógio freado pelo navegador), e se a dona sumir (fechada) outra continua.
+  */
+  const aba = useRef(Math.random().toString(36).slice(2)).current
+  const canal = useRef<BroadcastChannel | null>(null)
+  const souDono = useRef(false)
+  const donoDesde = useRef(0)
+  const [seguindo, setSeguindo] = useState(false)
+  const [tocandoLa, setTocandoLa] = useState(false)
+  const espelho = useRef<{ ops: number; vistoEm: number } | null>(null)
+  const seguindoRef = useRef(false); seguindoRef.current = seguindo
+  const tocandoRef = useRef(false); tocandoRef.current = tocando
+  const velRef = useRef(1); velRef.current = vel
+  const limiteRef = useRef<TipoDeLimite | null>(null); limiteRef.current = limite
+  const desligadoRef = useRef(false); desligadoRef.current = desligadoNoRobo
+
+  /** As operações da sessão no relatório do modo simulado (cada aba guarda o dela). */
+  const registrar = useCallback((historico: EstadoMotor['historico']) => {
+    const agora = Date.now()
+    escreverNoLivro(idSessao, historico.map((o) => ({
+      quando: new Date(Math.min(o.quando, agora)).toISOString(), origem: 'ia' as const, id: roteiro.ia, nome: nomeDaIa(roteiro.ia), ativo: ATIVO_DOS_ROBOS,
+      tipo: o.contractType, entrada: o.valor, pagamento: o.ganhou ? o.payout : 0, resultado: o.lucro, ganhou: o.ganhou,
+    })))
+  }, [idSessao, roteiro.ia])
+
+  /** A dona conta para as outras abas onde a sessão está. */
+  const anunciar = useCallback(() => {
+    const e = ensaio.current
+    if (!e || !souDono.current || !canal.current || !roteiro.id) return
+    try {
+      canal.current.postMessage({
+        t: 'estado', aba, id: roteiro.id, desde: donoDesde.current, ops: e.operacoes, tocando: tocandoRef.current, vel: velRef.current,
+        desligado: desligadoRef.current, fase: e.fase, trecho: e.trecho, limite: limiteRef.current, saldo: e.saldo, foto: e.foto(),
+      })
+    } catch { /* o navegador sem canal entre abas: cada aba segue a sua */ }
+  }, [aba, roteiro.id])
+  const anunciarRef = useRef(anunciar); anunciarRef.current = anunciar
 
   const mostrar = useCallback(() => {
     const e = ensaio.current
@@ -87,12 +136,9 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     if (roteiro.id) guardarPonto({ id: roteiro.id, operacoes: e.operacoes, t0 })
     // o saldo do topo anda com a sessão, e as operações dela vão para o relatório do modo simulado
     definirSaldoSimulado(e.saldo)
-    const agora = Date.now()
-    escreverNoLivro(idSessao, e.foto().historico.map((o) => ({
-      quando: new Date(Math.min(o.quando, agora)).toISOString(), origem: 'ia' as const, id: roteiro.ia, nome: nomeDaIa(roteiro.ia), ativo: ATIVO_DOS_ROBOS,
-      tipo: o.contractType, entrada: o.valor, pagamento: o.ganhou ? o.payout : 0, resultado: o.lucro, ganhou: o.ganhou,
-    })))
-  }, [idSessao, roteiro.ia, roteiro.id, t0])
+    registrar(e.foto().historico)
+    anunciar()
+  }, [roteiro.id, t0, registrar, anunciar])
 
   /** O fim de cada trecho: pausa ali e, se foi meta ou stop, o aviso e o som de verdade. */
   const aoFim = useCallback((f: FimDoTrecho, k: number) => {
@@ -118,6 +164,88 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     mostrar()
   }, [partida, roteiro, plano, aoFim, mostrar])
 
+  /** Esta aba passa a ser a dona, do ponto em que a sessão está (se espelhava, remonta ali). */
+  const assumir = useCallback(() => {
+    const estava = seguindoRef.current ? espelho.current : null
+    souDono.current = true
+    donoDesde.current = Date.now()
+    if (seguindoRef.current) {
+      seguindoRef.current = false
+      setSeguindo(false); setTocandoLa(false)
+      if (estava) montar(estava.ops)
+    }
+  }, [montar])
+  const assumirRef = useRef(assumir); assumirRef.current = assumir
+
+  // o canal entre as abas
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined' || !roteiro.id) return
+    const c = new BroadcastChannel(`${MARCA.id}.simulacao.palco`)
+    canal.current = c
+    c.onmessage = (ev: MessageEvent) => {
+      const m = ev.data
+      if (!m || m.aba === aba || m.id !== roteiro.id) return
+      if (m.t === 'quem') { anunciarRef.current(); return }
+      // a dona segue viva (numa análise longa pode passar muito tempo sem operação nova)
+      if (m.t === 'vivo') { if (espelho.current) espelho.current.vistoEm = Date.now(); return }
+      // a dona foi fechada: se rodava, esta continua na hora, do ponto em que ela estava
+      if (m.t === 'saiu') {
+        if (!seguindoRef.current) return
+        if (espelho.current) espelho.current.ops = m.ops
+        const rodava = tocandoLaRef.current
+        assumirRef.current()
+        if (rodava) setTocando(true)
+        return
+      }
+      if (m.t !== 'estado') return
+      // as duas rodando: fica a que mexeu por último
+      if (souDono.current && tocandoRef.current && m.tocando && m.desde < donoDesde.current) return
+      souDono.current = false
+      seguindoRef.current = true
+      setTocando(false)
+      espelho.current = { ops: m.ops, vistoEm: Date.now() }
+      setSeguindo(true); setTocandoLa(!!m.tocando)
+      setEstado(m.foto); setFase(m.fase); setTrecho(m.trecho); setVel(m.vel); setLimite(m.limite ?? null); setDesligadoNoRobo(!!m.desligado)
+      definirSaldoSimulado(m.saldo)
+      registrar(m.foto?.historico ?? [])
+    }
+    // chegou agora: quem está rodando esta sessão?
+    try { c.postMessage({ t: 'quem', aba, id: roteiro.id }) } catch { /* sem canal */ }
+    return () => { c.close(); canal.current = null }
+  }, [roteiro.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // qualquer mudança de play, velocidade, desligado ou cartão da dona vai para as outras abas
+  useEffect(() => { anunciar() }, [tocando, vel, desligadoNoRobo, limite]) // eslint-disable-line react-hooks/exhaustive-deps
+  // a dona avisa que segue viva enquanto toca, e avisa quando a aba é fechada
+  useEffect(() => {
+    const vivo = window.setInterval(() => {
+      if (!souDono.current || !tocandoRef.current || !canal.current) return
+      try { canal.current.postMessage({ t: 'vivo', aba, id: roteiro.id }) } catch { /* sem canal */ }
+    }, 2000)
+    const saiu = () => {
+      const e = ensaio.current
+      if (!souDono.current || !canal.current || !e) return
+      try { canal.current.postMessage({ t: 'saiu', aba, id: roteiro.id, ops: e.operacoes }) } catch { /* sem canal */ }
+    }
+    window.addEventListener('pagehide', saiu)
+    return () => { window.clearInterval(vivo); window.removeEventListener('pagehide', saiu) }
+  }, [aba, roteiro.id])
+  // a aba que você está olhando roda a sessão (as de fundo têm o relógio freado); a dona sumiu: esta continua
+  useEffect(() => {
+    const olhar = () => {
+      if (document.hidden || !seguindoRef.current) return
+      const estavaTocando = tocandoLaRef.current
+      assumirRef.current()
+      if (estavaTocando) setTocando(true)
+    }
+    document.addEventListener('visibilitychange', olhar)
+    const vigia = window.setInterval(() => {
+      if (!seguindoRef.current || !tocandoLaRef.current || !espelho.current) return
+      if (Date.now() - espelho.current.vistoEm > 7000) { assumirRef.current(); setTocando(true) }
+    }, 2000)
+    return () => { document.removeEventListener('visibilitychange', olhar); window.clearInterval(vigia) }
+  }, [])
+  const tocandoLaRef = useRef(false); tocandoLaRef.current = tocandoLa
+
   useEffect(() => { let vivo = true; void pontoDePartida().then((p) => { if (vivo) setPartida(p) }); return () => { vivo = false } }, [])
   const jaTocou = useRef(false)
   // "Dar o play" já liga: a sessão começa rodando, com o som do play, como a de verdade
@@ -137,6 +265,9 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       setDesligadoNoRobo(true)
       return
     }
+    if (daOutraAba) { montar(0); return }
+    souDono.current = true
+    donoDesde.current = Date.now()
     montar(0)
     roboLigou()
     jaTocou.current = true
@@ -157,7 +288,8 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       if (e.fase !== 'rodando') { setTocando(false); return }
       e.passo(real)
       mostrar()
-      if (pararAoLiquidar.current && !e.foto().emOperacao) { pararAoLiquidar.current = false; setTocando(false) }
+      // para quando o contrato aberto fecha (a Raptor compra a próxima no mesmo tick: nunca fica "sem operação")
+      if (pararAoLiquidar.current && (!e.foto().emOperacao || e.operacoes > opsAoDesligar.current)) { pararAoLiquidar.current = false; setTocando(false) }
     }
     if (vel === 1) {
       let ultimoReal = Date.now()
@@ -169,13 +301,14 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
         passo({ preco: t.quote, epoch: t.epoch })
       }, publicSocket)
       const vigia = setInterval(() => { if (Date.now() - ultimoReal >= 5000) passo() }, SEGUNDOS_POR_TICK * 1000)
-      return () => { parar(); clearInterval(vigia) }
+      return () => { parar(); clearInterval(vigia); ensaio.current?.pausou() }
     }
     const id = setInterval(() => passo(), (SEGUNDOS_POR_TICK * 1000) / vel)
     return () => clearInterval(id)
   }, [tocando, vel, mostrar])
 
   const play = useCallback(() => {
+    assumir()
     const e = ensaio.current
     if (!e) return
     setAviso(null)
@@ -191,9 +324,16 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     } else if (!jaTocou.current) roboLigou()
     jaTocou.current = true
     setTocando(true)
-  }, [montar, mostrar])
-  const pausar = () => setTocando(false)
-  const irPara = useCallback((op: number) => { setTocando(false); setDesligadoNoRobo(false); pararAoLiquidar.current = false; jaTocou.current = op > 0; montar(Math.max(0, op)) }, [montar])
+  }, [montar, mostrar, assumir])
+  const pausar = () => { assumir(); setTocando(false) }
+  /** Velocidade: se a outra aba estava tocando, esta assume e segue tocando na velocidade nova. */
+  const mudarVel = (v: number | ((x: number) => number)) => {
+    const tocava = seguindoRef.current && tocandoLaRef.current
+    assumir()
+    setVel(v)
+    if (tocava) setTocando(true)
+  }
+  const irPara = useCallback((op: number) => { assumir(); setTocando(false); setDesligadoNoRobo(false); pararAoLiquidar.current = false; jaTocou.current = op > 0; montar(Math.max(0, op)) }, [montar, assumir])
 
   // os marcadores: começo, a maior sequência, a meta/stop de cada trecho, o religou
   const marcadores: Marcador[] = useMemo(() => {
@@ -218,27 +358,58 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       if (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)) return
       if (document.body.classList.contains('rel-painel-aberto')) return
       const e = ensaio.current
-      if (ev.key === ' ') { ev.preventDefault(); tocando ? pausar() : play() }
+      if (ev.key === ' ') { ev.preventDefault(); tocandoAqui ? pausar() : play() }
       else if (ev.key === 'ArrowRight' && e) { ev.preventDefault(); irPara(e.operacoes + 1) }
       else if (ev.key === 'ArrowLeft' && e) { ev.preventDefault(); irPara(e.operacoes - 1) }
-      else if (ev.key === '+' || ev.key === '=' || ev.code === 'NumpadAdd') setVel((v) => VELOCIDADES[Math.min(VELOCIDADES.length - 1, VELOCIDADES.indexOf(v) + 1)])
-      else if (ev.key === '-' || ev.code === 'NumpadSubtract') setVel((v) => VELOCIDADES[Math.max(0, VELOCIDADES.indexOf(v) - 1)])
+      else if (ev.key === '+' || ev.key === '=' || ev.code === 'NumpadAdd') mudarVel((v) => VELOCIDADES[Math.min(VELOCIDADES.length - 1, VELOCIDADES.indexOf(v) + 1)])
+      else if (ev.key === '-' || ev.code === 'NumpadSubtract') mudarVel((v) => VELOCIDADES[Math.max(0, VELOCIDADES.indexOf(v) - 1)])
     }
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
-  }, [tocando, play, irPara])
+  }, [tocando, tocandoLa, seguindo, play, irPara])
+
+  /*
+    A mini cabine flutuante (16/11/2026): ao trocar de aba, a sessão simulada aparece nela como uma sessão
+    do servidor. O "Parar" de lá desliga a I.A. aqui, como o "Desligar" da cabine.
+  */
+  const pararPelaMini = useRef<() => void>(() => {})
+  useEffect(() => {
+    if (!estado) return
+    const t = roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)]
+    publicarSessaoSimulada({
+      id: idSessao.startsWith('simulada') ? idSessao : `simulada-${idSessao}`, roboId: roteiro.ia, roboNome: ident.nome, contaId: 'simulada',
+      demo, moeda: 'USD', origem: 'navegador', marca: MARCA.id, config: configDoTrecho(roteiro, t), erro: null,
+      // desligada: enquanto o contrato aberto fecha, segue "operando" (sem o aviso de fim antes da hora);
+      // parada, nenhum contrato pela metade
+      estado: desligadoNoRobo && fase === 'rodando'
+        ? (seguindo ? tocandoLa : tocando)
+          ? { ...estado, aguardando: 'Concluindo o contrato em andamento…' }
+          : { ...estado, rodando: false, emOperacao: false, emCurso: null, aguardando: 'Robô desligado', motivoParada: 'Parada por você' }
+        : estado,
+    })
+  }, [estado, trecho, fase, desligadoNoRobo, tocando, tocandoLa, seguindo]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => publicarSessaoSimulada(null), [])
+  useEffect(() => {
+    const parar = () => pararPelaMini.current()
+    window.addEventListener('simulado:parar', parar)
+    return () => window.removeEventListener('simulado:parar', parar)
+  }, [])
 
   if (!estado || !partida) return <div className="robot-session-loading" role="status"><b>Sessão simulada</b><span>Montando o mercado…</span></div>
 
   const cfg = configDoTrecho(roteiro, roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)])
   // "Desligar" no robô pausa a sessão onde está; o "Continuar" (ou o play) segue da mesma operação
+  pararPelaMini.current = () => desligar()
   const desligar = () => {
+    if (seguindoRef.current) { assumir(); setDesligadoNoRobo(true); setTocando(false); return }
     setDesligadoNoRobo(true)
-    if (tocando && ensaio.current?.foto().emOperacao) pararAoLiquidar.current = true
+    if (tocando && ensaio.current?.foto().emOperacao) { pararAoLiquidar.current = true; opsAoDesligar.current = ensaio.current.operacoes }
     else setTocando(false)
   }
   // concluindo o contrato aberto, a cabine mostra isso; parado, nenhum contrato pela metade (a I.A.
   // que já comprou a próxima no mesmo tick só a manda quando continuar)
+  /** O botão mostra o que a sessão está fazendo, nesta aba ou na outra que roda. */
+  const tocandoAqui = seguindo ? tocandoLa : tocando
   const estadoNaCabine: EstadoMotor = desligadoNoRobo && fase === 'rodando'
     ? tocando
       ? { ...estado, rodando: false, motivoParada: null, aguardando: 'Concluindo o contrato em andamento…' }
@@ -257,9 +428,9 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       */}
       {/* 16/11/2026 (Tiago): com os itens de admin ocultos (o olhinho), a barra de controle some junto; a sessão segue rodando */}
       <div className={`ssim-pilula ${adminOculto ? 'sem-admin' : ''}`} role="toolbar" aria-label="Controle da sessão simulada" aria-hidden={adminOculto || undefined}>
-        <button type="button" className="ssim-play" onClick={tocando ? pausar : play}
-          aria-label={tocando ? 'Pausar' : fase === 'entre' ? 'Religar' : fase === 'fim' ? 'Recomeçar' : 'Começar'}>
-          {tocando ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
+        <button type="button" className="ssim-play" onClick={tocandoAqui ? pausar : play}
+          aria-label={tocandoAqui ? 'Pausar' : fase === 'entre' ? 'Religar' : fase === 'fim' ? 'Recomeçar' : 'Começar'}>
+          {tocandoAqui ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
             : fase === 'fim' ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5" /></svg>
             : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" /></svg>}
         </button>
@@ -268,7 +439,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
         </span>
         <span className="ssim-barra" aria-hidden="true"><i style={{ width: `${total ? Math.min(100, (feitas / total) * 100) : 0}%` }} /></span>
         <div className="ssim-vel" role="group" aria-label="Velocidade">
-          {VELOCIDADES.map((v) => <button key={v} type="button" className={vel === v ? 'on' : ''} onClick={() => setVel(v)}>{v}×</button>)}
+          {VELOCIDADES.map((v) => <button key={v} type="button" className={vel === v ? 'on' : ''} onClick={() => mudarVel(v)}>{v}×</button>)}
         </div>
         <select className="ssim-marcas" aria-label="Pular para" value="" onChange={(ev) => {
           const op = Number(ev.target.value)

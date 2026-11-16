@@ -722,8 +722,14 @@ export class Ensaio {
   private casas: number
   private sigma: number
   readonly t0: number
-  /** O relógio da sessão (ms): o horário do tick real em 1×, ou 2 s por tick quando acelerada. */
+  /**
+   * O relógio da sessão (ms). Em 1× anda o intervalo entre um tick real e o seguinte; acelerada, 2 s por
+   * tick. Pausada, não anda (16/11/2026, Tiago: "enquanto estiver pausado não vai estar contando o tempo da
+   * sessão"): o 1º tick depois da pausa conta só 2 s, e a sessão segue de onde parou.
+   */
   private relogio: number
+  /** O horário do último tick real que entrou (para medir o intervalo até o próximo). */
+  private ultimoReal: number | null = null
   tick = 0
   trecho = 0
   fase: FaseDoEnsaio = 'rodando'
@@ -776,6 +782,8 @@ export class Ensaio {
   }
 
   get agora(): number { return this.relogio }
+  /** Pausou (ou mudou a velocidade): o tempo até o próximo tick não conta. */
+  pausou(): void { this.ultimoReal = null }
   get saldo(): number { return this.caixa.saldo }
   get operacoes(): number { return this.caixa.operacoes }
 
@@ -999,7 +1007,16 @@ export class Ensaio {
     // parada, a sessão não assina mais o preço (como o motor): a fita fica onde parou
     if (this.fase !== 'rodando') return
     this.tick += 1
-    this.relogio = real ? Math.max(this.relogio + 1, real.epoch * 1000) : this.relogio + SEGUNDOS_POR_TICK * 1000
+    if (real) {
+      const ms = real.epoch * 1000
+      const intervalo = this.ultimoReal === null ? 0 : ms - this.ultimoReal
+      this.ultimoReal = ms
+      // um tick seguido do outro: o intervalo de verdade; depois de uma pausa (ou de um buraco): 2 s
+      this.relogio += intervalo > 0 && intervalo <= 3 * SEGUNDOS_POR_TICK * 1000 ? intervalo : SEGUNDOS_POR_TICK * 1000
+    } else {
+      this.ultimoReal = null
+      this.relogio += SEGUNDOS_POR_TICK * 1000
+    }
     const v = this.emVoo
     // o tick de saída já sai com o dígito do roteiro
     let digito: number | undefined
