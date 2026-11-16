@@ -12,6 +12,11 @@
  *
  * Contratos aceitos: Comprar/Vender (CALL/PUT, com ou sem barreira) e os de
  * dígito. Os demais recusam com aviso, para nunca simular errado.
+ *
+ * Encerrar antes (16/11/2026, Tiago: "nas reais eu consigo encerrar antes com pagamento parcial, positivo
+ * ou negativo; nas simuladas também, como os alunos; o resultado simulado vem só no final"): como na
+ * Deriv, o Comprar/Vender por tempo encerra a qualquer momento pelo valor de agora; os de ticks e os de
+ * dígito vão até o fim. Encerrada antes, a operação sai do roteiro: o resultado é o parcial.
  */
 import { useSyncExternalStore } from 'react'
 import { publicSocket } from '../deriv/client'
@@ -106,6 +111,40 @@ function liquidar(a: EmAndamento, saida: number, epoch: number) {
   })
 }
 
+/** Como na Deriv: só o Comprar/Vender por tempo encerra antes (ticks e dígitos vão até o fim). */
+export const podeEncerrarAntes = (tipo: string, unidade: string) => TIPOS_DE_DIRECAO.includes(tipo) && unidade !== 't'
+
+/**
+ * Encerrar antes: vende pelo valor de agora (o mesmo que o cartão mostra), positivo ou negativo. Sai do
+ * roteiro: o preço da tela volta a colar no real, e o resultado é o parcial.
+ */
+export function encerrarSimulado(contractId: number): { soldFor: number } {
+  const a = andamento.get(contractId)
+  if (!a || a.c.status !== 'open') throw new Error('Esta posição já fechou.')
+  if (!a.c.isValidToSell) throw new Error(podeEncerrarAntes(a.c.contractType, a.unidade) ? 'Aguarde um instante: o preço ainda não chegou.' : 'Este contrato vai até o vencimento (ticks e dígitos não encerram antes).')
+  a.parar()
+  andamento.delete(contractId)
+  esquecerContrato(contractId)
+  const c = a.c
+  const venda = Math.max(0, r2(c.bidPrice))
+  const lucro = r2(venda - c.buyPrice)
+  somarAoSaldoSimulado(venda)
+  const final: OpenContract = {
+    ...c, status: 'sold', isExpired: false, isValidToSell: false, exitSpot: c.currentSpot,
+    profit: lucro, bidPrice: venda, profitPercentage: r2((lucro / c.buyPrice) * 100),
+  }
+  contratos.set(contractId, final)
+  avisar()
+  setTimeout(() => { if (contratos.get(contractId)?.status !== 'open') { contratos.delete(contractId); avisar() } }, 7000)
+  operacaoTerminou(contractId, lucro)
+  anotarResultado(contractId, lucro > 0, lucro)
+  somarNoLivro('manuais', {
+    quando: new Date().toISOString(), origem: 'manual', id: 'manual', nome: 'Manual', ativo: c.symbol,
+    tipo: c.contractType, entrada: c.buyPrice, pagamento: venda, resultado: lucro, ganhou: lucro > 0,
+  })
+  return { soldFor: venda }
+}
+
 /**
  * A compra simulada. Devolve o mesmo que a compra de verdade devolve à tela
  * (id, valor pago, pagamento). Recusa se o modo não estiver ligado.
@@ -136,7 +175,8 @@ export async function comprarSimulado(pedido: {
   const porTempo = pedido.durationUnit !== 't'
   const c: OpenContract = {
     contractId: id, symbol: pedido.simbolo, contractType: pedido.tipo, buyPrice: p.askPrice, bidPrice: p.askPrice, payout: p.payout,
-    profit: 0, profitPercentage: 0, status: 'open', isValidToSell: false, motivoSemVenda: 'No modo simulado a posição vai até o vencimento.',
+    profit: 0, profitPercentage: 0, status: 'open', isValidToSell: false,
+    motivoSemVenda: podeEncerrarAntes(pedido.tipo, pedido.durationUnit) ? 'wait: aguardando o primeiro preço' : 'Este contrato vai até o vencimento (como na Deriv: ticks e dígitos não encerram antes).',
     isExpired: false, entrySpot: null, currentSpot: null, exitSpot: null,
     barrier: TIPOS_DE_DIGITO.includes(pedido.tipo) && pedido.barrier !== undefined ? Number(pedido.barrier) : null,
     longcode: p.longcode, shortcode: '', currency: pedido.moeda, purchaseTime: agora, startTime: agora,
@@ -174,7 +214,9 @@ export async function comprarSimulado(pedido: {
       atual.c = { ...atual.c, currentSpot: t.quote }
     }
     const valeAgora = r2(atual.c.payout * chanceAgora(atual, t.quote, t.epoch))
-    atual.c = { ...atual.c, bidPrice: valeAgora, profit: r2(valeAgora - atual.c.buyPrice), profitPercentage: r2(((valeAgora - atual.c.buyPrice) / atual.c.buyPrice) * 100) }
+    // como na Deriv: o Comprar/Vender por tempo pode encerrar antes, até perto do fim
+    const vende = podeEncerrarAntes(atual.c.contractType, atual.unidade) && atual.c.entrySpot !== null && t.epoch < atual.c.expiryTime - 1
+    atual.c = { ...atual.c, isValidToSell: vende, motivoSemVenda: vende ? null : atual.c.motivoSemVenda, bidPrice: valeAgora, profit: r2(valeAgora - atual.c.buyPrice), profitPercentage: r2(((valeAgora - atual.c.buyPrice) / atual.c.buyPrice) * 100) }
     contratos.set(id, atual.c)
     avisar()
   }, publicSocket)

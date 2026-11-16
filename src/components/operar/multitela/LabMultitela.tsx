@@ -10,7 +10,7 @@ import type { OpenContract } from '../../../core/deriv/trading'
 import { Multitela } from './Multitela'
 import { useMultitela, type Quadros } from './estado'
 import type { ContaDaMultitela } from './Quadro'
-import { comprarSimulado, useContratosSimulados } from '../../../core/teeds/corretoraSimulada'
+import { comprarSimulado, encerrarSimulado, useContratosSimulados } from '../../../core/teeds/corretoraSimulada'
 import { definirSaldoSimulado, ligarModoSimulado, permitirModoSimulado, useModoSimulado } from '../../../core/teeds/modoSimulado'
 import { permitirRoteiroManual } from '../../../core/teeds/roteiroManual'
 import { ControleDaManual } from '../../roteiroManual/ControleDaManual'
@@ -26,7 +26,7 @@ const SIMULADO = new URLSearchParams(location.search).has('simulado')
 if (SIMULADO) {
   permitirModoSimulado(true); ligarModoSimulado(); permitirRoteiroManual(true)
   // para testar os dígitos pelo console: __comprarSimulado({ simbolo: 'R_75', tipo: 'DIGITOVER', valor: 10, moeda: 'USD', duration: 1, durationUnit: 't', barrier: '4' })
-  Object.assign(window, { __comprarSimulado: comprarSimulado, __contratos: contratosSimuladosAgora, __desvio: desvioAgora })
+  Object.assign(window, { __encerrarSimulado: encerrarSimulado, __comprarSimulado: comprarSimulado, __contratos: contratosSimuladosAgora, __desvio: desvioAgora })
 }
 
 const agoraS = () => Math.floor(Date.now() / 1000)
@@ -124,6 +124,7 @@ export default function LabMultitela() {
     ...conta, real: false, tipoNaTela: 'real', saldo: sim?.saldo ?? 0,
     contratos: simulados.filter((c) => c.status === 'open'), encerradas: fechadosSim,
     comprar: async (simbolo, tipo, valor, duracao, unidade) => comprarSimulado({ simbolo, tipo, valor, moeda: 'USD', duration: duracao, durationUnit: unidade }),
+    encerrar: (id) => { try { encerrarSimulado(id) } catch (e) { console.warn((e as Error).message) } },
   }
   return (
     <div className="app workspace-app" style={{ minHeight: 'calc(100vh / var(--escala-pagina, 1))', background: 'var(--bg)' }}>

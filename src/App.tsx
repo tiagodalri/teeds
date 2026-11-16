@@ -69,7 +69,7 @@ import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
 import { ModoSimuladoTopo, abrirPainelSimulado } from './components/modoSimulado/ModoSimuladoTopo'
 import { permitirModoSimulado, useLivroSimulado, useModoSimulado } from './core/teeds/modoSimulado'
-import { comprarSimulado, limparContratosSimulados, useContratosSimulados } from './core/teeds/corretoraSimulada'
+import { comprarSimulado, encerrarSimulado, limparContratosSimulados, useContratosSimulados } from './core/teeds/corretoraSimulada'
 import { permitirRoteiroManual, roteiroLiberadoPara, useRoteiroManual } from './core/teeds/roteiroManual'
 import { ControleDaManual } from './components/roteiroManual/ControleDaManual'
 import { SeloCategoria, type Categoria } from './components/SeloCategoria'
@@ -1349,7 +1349,14 @@ export default function App() {
 
   /** Encerra uma posicao antes do fim (vende de volta para a Deriv, a mercado). */
   async function encerrar(contractId: number) {
-    if (sim) { setAviso({ tipo: 'erro', texto: 'No modo simulado a posição vai até o vencimento.' }); return }
+    // modo simulado: encerra pelo valor de agora, como na Deriv (16/11/2026)
+    if (sim) {
+      try {
+        const r = encerrarSimulado(contractId)
+        setAviso({ tipo: 'ok', texto: `Posição encerrada por ${dinheiro(r.soldFor, moeda)}.` })
+      } catch (e) { setAviso({ tipo: 'erro', texto: (e as Error).message }) }
+      return
+    }
     if (!conta.socket) return
     setVendendo(contractId)
     setAviso(null)
