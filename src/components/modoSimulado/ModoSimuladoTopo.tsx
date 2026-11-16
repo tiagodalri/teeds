@@ -42,7 +42,6 @@ export function ModoSimuladoTopo({ ocultarBotao = false }: { ocultarBotao?: bool
       <button type="button" className="msim-ligar" onClick={() => { ligarModoSimulado(); setAberto(true) }}
         title="Ligar o modo simulado (só administradores)" aria-label="Ligar o modo simulado">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v5.5L4.8 18a2 2 0 0 0 1.8 3h10.8a2 2 0 0 0 1.8-3L14 8.5V3" /><path d="M7.5 14h9" /></svg>
-        <span>Simular</span>
       </button>
     )
   }

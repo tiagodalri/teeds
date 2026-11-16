@@ -1,9 +1,10 @@
 /* Modo simulado geral (12/11/2026). Prefixo msim-. O laranja é o mesmo do relatório e da sessão simulada. */
 
-.msim-ligar { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px solid color-mix(in srgb, #FB923C 55%, var(--border)); border-radius: 999px;
-  background: transparent; color: #FB923C; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; flex: none; }
-.msim-ligar svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.msim-ligar:hover { background: color-mix(in srgb, #FB923C 12%, transparent); }
+/* 16/11/2026 (Tiago: "tire a palavra Simular, deixe só o iconezinho, mais discreto"): só o frasco, sem borda */
+.msim-ligar { display: inline-grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 999px;
+  background: transparent; color: color-mix(in srgb, #FB923C 70%, var(--muted, #8b93a7)); cursor: pointer; flex: none; transition: color .15s, background .15s; }
+.msim-ligar svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.msim-ligar:hover { color: #FB923C; background: color-mix(in srgb, #FB923C 12%, transparent); }
 .msim-ligar:focus-visible, .msim-tag:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
 
 /* a marca do modo, sempre à vista: só uma bolinha laranja discreta, piscando (16/11/2026) */
@@ -43,8 +44,6 @@
 .msim-painel button:focus-visible, .msim-painel input:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
 
 @media (max-width: 900px) {
-  .msim-ligar span { display: none; }
-  .msim-ligar { width: 34px; padding: 0; justify-content: center; }
   .msim-painel { top: auto; bottom: 0; right: 0; left: 0; width: auto; max-height: 88dvh; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) { .msim-tag i { animation: none; } }
