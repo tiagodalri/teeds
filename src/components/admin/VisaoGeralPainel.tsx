@@ -25,6 +25,7 @@ import { PERIODO_AGORA, SeletorDePeriodo, janelaDoPeriodo, ddmm, lerPeriodo, typ
 import { MapaDoMarkup } from './MapaDoMarkup'
 import { MetasDaVisaoGeral } from './MetasDaVisaoGeral'
 import { CotacaoDoDolar, Reais, Usd } from './EmReais'
+import { NegocioDaVisaoGeral } from './NegocioDaVisaoGeral'
 import './visao-geral.css'
 import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 
@@ -436,6 +437,9 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
           ))}
         </ol>
       </div>
+
+      {/* ------------------------------------------------ inteligência do negócio: manual x I.A., clientes, lives e a leitura da I.A. (16/11/2026) */}
+      <NegocioDaVisaoGeral sessao={sessao} marca={marca} parceiro={parceiro} janela={janela} />
     </section>
   )
 }

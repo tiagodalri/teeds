@@ -1,0 +1,210 @@
+/* Inteligência do negócio (Visão geral, 16/11/2026). Ver NegocioDaVisaoGeral.tsx. Prefixo ngc-.
+   A I.A. é o ouro da tela; a manual é o azul-céu que já é da paleta da marca (#5E8FC8, na lista `manter`).
+   NÃO usar a classe solta `foco` (colide com uma regra global): aqui é ngc-foco. */
+.ngc { --ngc-ia: var(--vg-ouro); --ngc-manual: #5E8FC8; --ngc-trilho: color-mix(in srgb, var(--text) 6%, transparent); display: grid; gap: 16px; }
+.ngc :where(button) { font: inherit; color: inherit; }
+.ngc-cab { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 16px; }
+.ngc-cab h3 { margin: 4px 0 0; font-size: clamp(18px, 2vw, 22px); line-height: 1.2; font-weight: 800; letter-spacing: -.01em; }
+.ngc-legenda { display: inline-flex; gap: 14px; font-size: 12.5px; font-weight: 650; color: var(--muted); }
+.ngc-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.ngc-legenda i, .ngc-nome > i, .ngc-duelo-topo i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.ngc i.ia, .ngc u.ia, .ngc-duelo-topo .ia i, .ngc-duelo-barra.ia u { background: var(--ngc-ia); }
+.ngc i.manual, .ngc u.manual, .ngc-duelo-topo .manual i, .ngc-duelo-barra.manual u { background: var(--ngc-manual); }
+.ngc-esq { display: grid; gap: 10px; }
+.ngc-pe { margin: 0; font-size: 11.5px; color: var(--muted); }
+.ngc-leg { display: block; min-height: 2.6em; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.ngc-leg b { color: var(--text); font-weight: 700; }
+
+/* a conclusão escrita */
+.ngc-frase { margin: 0; font-size: 15.5px; line-height: 1.75; color: var(--text); text-wrap: pretty; }
+.ngc-frase b { font-weight: 800; }
+.ngc-frase.menor { font-size: 14px; }
+
+/* a fatia de cada lado numa barra só */
+.ngc-fatia { display: flex; gap: 2px; width: 100%; height: 8px; }
+.ngc-fatia.alto { height: 14px; }
+.ngc-fatia.vazia { border-radius: 4px; background: var(--ngc-trilho); }
+.ngc-fatia u { display: block; min-width: 2px; height: 100%; transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.ngc-fatia u:first-child { border-radius: 4px 0 0 4px; } .ngc-fatia u:last-child { border-radius: 0 4px 4px 0; }
+.ngc-fatia u:only-child { border-radius: 4px; }
+
+.ngc-bloco { display: grid; align-content: start; gap: 12px; min-width: 0; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.ngc-bloco h4 { margin: 0; font-size: 14px; font-weight: 750; }
+.ngc-bloco h4 small { margin-left: 6px; font-size: 11.5px; font-weight: 500; color: var(--muted); }
+.ngc-dois { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+/* ------------------------------------------------ frente a frente */
+.ngc-duelo-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 4px; }
+.ngc-duelo-topo b { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 800; }
+.ngc-duelo-topo span { font-size: 11.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ngc-duelo {
+  display: grid; grid-template-columns: minmax(96px, 1fr) minmax(0, 1.25fr) minmax(170px, 1.35fr) minmax(0, 1.25fr) minmax(96px, 1fr);
+  align-items: center; gap: 12px; min-height: 44px; padding: 6px 0; border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.ngc-duelo-valor { font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--muted); }
+.ngc-duelo-valor.vence { color: var(--text); font-weight: 800; }
+.ngc-duelo-valor.ia { text-align: right; } .ngc-duelo-valor.ia .vbr { align-items: flex-end; }
+.ngc-duelo-valor small { font-size: 11px; font-weight: 500; color: var(--muted); }
+.ngc-duelo-barra { display: flex; height: 10px; border-radius: 4px; background: var(--ngc-trilho); }
+.ngc-duelo-barra.ia { justify-content: flex-end; }
+.ngc-duelo-barra u { display: block; height: 100%; min-width: 2px; transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+.ngc-duelo-barra.ia u { border-radius: 4px 0 0 4px; } .ngc-duelo-barra.manual u { border-radius: 0 4px 4px 0; }
+.ngc-duelo-rot { text-align: center; font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+.ngc-duelo-rot small { display: block; font-size: 10.5px; font-weight: 500; color: var(--muted); }
+
+/* ------------------------------------------------ barras empilhadas (por dia, por horário) */
+.ngc-emp { display: grid; gap: 6px; }
+.ngc-emp-barras, .ngc-emp-eixo { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px; }
+.ngc-emp-barras { align-items: end; height: 176px; border-bottom: 1px solid var(--border); }
+.ngc-emp-barras button { display: flex; align-items: flex-end; justify-content: center; height: 100%; min-width: 0; padding: 0; border: 0; background: transparent; cursor: default; }
+.ngc-emp-barras button > span { display: flex; flex-direction: column; gap: 2px; width: 100%; max-width: 44px; transition: height .6s cubic-bezier(.2, .8, .2, 1); }
+.ngc-emp-barras u { display: block; flex-basis: 0; min-height: 2px; opacity: .78; transition: opacity .15s; }
+.ngc-emp-barras u:first-child { border-radius: 4px 4px 0 0; }
+.ngc-emp-barras button:hover u, .ngc-emp-barras button.ngc-foco u, .ngc-emp-barras button:focus-visible u { opacity: 1; }
+.ngc-emp-barras button:focus-visible { outline: 2px solid var(--vg-ouro); outline-offset: 1px; border-radius: 4px; }
+.ngc-emp-eixo span { min-width: 0; font-size: 10px; text-align: center; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------ quem opera como */
+.ngc-perfis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ngc-perfil { display: grid; align-content: start; gap: 8px; min-width: 0; padding: 14px; border-radius: 12px; background: color-mix(in srgb, var(--surface-alt) 70%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.ngc-perfil > span, .ngc-clientes span, .ngc-lives-kpis span { font-size: 11px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ngc-perfil > b { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ngc-perfil > b small { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.ngc-perfil dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin: 4px 0 0; }
+.ngc-perfil dt { font-size: 11px; color: var(--muted); }
+.ngc-perfil dd { margin: 2px 0 0; font-size: 13.5px; font-weight: 750; font-variant-numeric: tabular-nums; }
+.ngc-perfil.vazio { opacity: .6; }
+
+/* ------------------------------------------------ tabelas (cada I.A., lives) */
+.ngc-tabela { display: grid; }
+.ngc-linha {
+  display: grid; grid-template-columns: minmax(150px, 1.5fr) minmax(70px, 1.3fr) repeat(6, minmax(0, 1fr));
+  align-items: center; gap: 12px; padding: 9px 6px; border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-size: 13px; font-variant-numeric: tabular-nums; text-align: right;
+}
+.ngc-tabela.lives .ngc-linha { grid-template-columns: minmax(200px, 2fr) minmax(112px, 1.25fr) repeat(7, minmax(0, 1fr)); }
+.ngc-linha.cabeca { border-top: 0; padding-top: 0; font-size: 10.5px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.ngc-linha.melhor { border-radius: 10px; background: color-mix(in srgb, var(--vg-ouro) 9%, transparent); border-top-color: transparent; }
+.ngc-linha > span { min-width: 0; }
+.ngc-linha > span:first-child { text-align: left; }
+.ngc-linha [role='cell'] { display: grid; justify-items: end; gap: 4px; }
+.ngc-linha [role='cell'] .vbr { align-items: flex-end; }
+.ngc-nome { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-weight: 700; }
+.ngc-nome small { flex-basis: 100%; font-size: 11px; font-weight: 500; color: var(--muted); }
+.ngc-nome > i + small, .ngc-nome > i ~ small { padding-left: 18px; }
+.ngc-trilho { display: block; height: 10px; border-radius: 4px; background: var(--ngc-trilho); }
+.ngc-trilho u { display: block; height: 100%; border-radius: 0 4px 4px 0; transition: width .6s cubic-bezier(.2, .8, .2, 1); }
+
+/* ------------------------------------------------ banca x markup */
+.ngc-faixas { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ngc-faixas li { display: grid; grid-template-columns: 132px minmax(0, 1fr) 132px; align-items: center; gap: 12px; }
+.ngc-faixa-nome { font-size: 13px; font-weight: 650; }
+.ngc-faixa-nome small, .ngc-faixa-valor small { display: block; font-size: 11px; font-weight: 500; color: var(--muted); }
+.ngc-faixa-barra { display: block; justify-self: start; min-width: 6px; }
+.ngc-faixa-barra .ngc-fatia { height: 12px; }
+.ngc-faixa-valor { display: grid; justify-items: end; font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.ngc-faixa-valor .vbr { align-items: flex-end; }
+
+/* ------------------------------------------------ clientes · indicadores das lives */
+.ngc-clientes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ngc-lives-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.ngc-clientes > div, .ngc-lives-kpis > div { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--surface-alt) 70%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.ngc-clientes > div > b, .ngc-lives-kpis > div > b { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ngc-clientes > div > b small { font-size: 12px; font-weight: 600; color: var(--muted); }
+.ngc-clientes > div > small, .ngc-lives-kpis > div > small { font-size: 12px; line-height: 1.5; color: var(--muted); }
+.ngc-clientes > div > small b { color: var(--text); font-weight: 700; }
+.ngc-lives-kpis > div.destaque { border-color: color-mix(in srgb, var(--vg-ouro) 55%, var(--border)); background: color-mix(in srgb, var(--vg-ouro) 9%, var(--surface)); }
+.ngc-lives-kpis > div.destaque > b { color: var(--vg-ouro); }
+.ngc-lives-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+
+/* ------------------------------------------------ quem mais gerou */
+.ngc-top { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.ngc-top li { display: grid; grid-template-columns: 18px 34px minmax(0, 1.7fr) minmax(60px, 1fr) repeat(3, minmax(96px, .8fr)); align-items: center; gap: 12px; padding: 7px 6px; border-radius: 10px; }
+.ngc-top li:first-child { background: color-mix(in srgb, var(--vg-ouro) 8%, transparent); }
+.ngc-pos { font-size: 12px; font-weight: 800; color: var(--muted); text-align: center; }
+.ngc-av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--vg-ouro) 20%, var(--surface)); font-size: 12px; font-weight: 800; }
+.ngc-av img { width: 100%; height: 100%; object-fit: cover; }
+.ngc-top-nome { display: grid; min-width: 0; }
+.ngc-top-nome b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ngc-top-nome small { font-size: 11.5px; color: var(--muted); }
+.ngc-top-num { display: grid; justify-items: end; font-size: 13px; text-align: right; font-variant-numeric: tabular-nums; }
+.ngc-top-num .vbr { align-items: flex-end; }
+.ngc-top-num::before { content: attr(data-rot); font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+
+/* ------------------------------------------------ as recomendações da I.A. */
+.ngc-ia { border-color: color-mix(in srgb, var(--vg-ouro) 40%, var(--border)); background: radial-gradient(120% 160% at 100% 0%, color-mix(in srgb, var(--vg-ouro) 10%, transparent), transparent 55%), var(--surface); }
+.ngc-ia-cab { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.ngc-ia-marca { font-style: normal; color: var(--vg-ouro); }
+.ngc-ia-quando { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
+/* .vg button { font: inherit } pesa mais que uma classe só: por isso o .ngc na frente */
+.ngc .vgm-modo button { font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.ngc .ngc-ia-botao { min-height: 40px; padding: 0 16px; border: 1px solid var(--vg-ouro); border-radius: 10px; background: var(--vg-ouro); color: #051528 !important; font-size: 13px; font-weight: 800; cursor: pointer; }
+.ngc .ngc-ia-botao.discreto { background: transparent; color: var(--vg-ouro) !important; }
+.ngc-ia-botao:disabled { opacity: .6; cursor: progress; }
+.ngc-ia-botao:focus-visible { outline: 2px solid var(--vg-ouro); outline-offset: 2px; }
+.ngc-ia-texto { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
+.ngc-ia-texto b { color: var(--text); }
+.ngc-ia-pulso { display: flex; align-items: flex-start; gap: 10px; }
+.ngc-ia-pulso i { flex: none; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--vg-ouro); animation: vg-pulso 1.8s ease-out infinite; }
+.ngc-ia-resumo { margin: 0; font-size: 15px; line-height: 1.65; text-wrap: pretty; }
+.ngc-ia-veredito { display: grid; gap: 4px; padding: 14px 16px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--vg-ouro) 45%, var(--border)); background: color-mix(in srgb, var(--vg-ouro) 9%, var(--surface)); }
+.ngc-ia-veredito > span { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--vg-ouro); }
+.ngc-ia-veredito > b { font-size: 16px; font-weight: 800; }
+.ngc-ia-veredito p, .ngc-ia-nota p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
+.ngc-ia-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.ngc-ia-lista li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 14px; border-radius: 12px; background: color-mix(in srgb, var(--surface-alt) 70%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.ngc-ia-n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--vg-ouro) 22%, transparent); color: var(--vg-ouro); font-size: 12.5px; font-weight: 800; }
+.ngc-ia-lista li > div { display: grid; gap: 6px; min-width: 0; }
+.ngc-ia-lista li b { font-size: 14px; font-weight: 800; line-height: 1.35; }
+.ngc-ia-lista li p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); }
+.ngc-ia-lista li em { font-style: normal; font-weight: 700; color: var(--text); }
+.ngc-ia-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.ngc-ia-tags i { padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); font-style: normal; font-size: 11px; font-weight: 700; color: var(--muted); }
+.ngc-ia-tags i.imp.alto { border-color: color-mix(in srgb, var(--vg-ouro) 60%, var(--border)); color: var(--vg-ouro); }
+.ngc-ia-nota { display: grid; gap: 4px; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--surface-alt) 70%, transparent); }
+.ngc-ia-nota > b { font-size: 12.5px; font-weight: 800; }
+.ngc-ia-nota ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.ngc-ia-nota.alerta { border: 1px solid color-mix(in srgb, var(--down) 30%, var(--border)); }
+
+@media (max-width: 1100px) {
+  .ngc-dois { grid-template-columns: minmax(0, 1fr); }
+  .ngc-lives-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ngc-ia-lista { grid-template-columns: minmax(0, 1fr); }
+  /* as tabelas largas viram fichas: cada número com o nome em cima */
+  .ngc-linha.cabeca { display: none; }
+  .ngc-linha, .ngc-tabela.lives .ngc-linha { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; padding: 12px 6px; text-align: left; }
+  .ngc-linha > span:first-child, .ngc-linha > .ngc-trilho { grid-column: 1 / -1; }
+  .ngc-linha [role='cell'] { justify-items: start; }
+  .ngc-linha [role='cell'] .vbr { align-items: flex-start; }
+  .ngc-linha [role='cell']::before { content: attr(data-rot); font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+  .ngc-top li { grid-template-columns: 18px 34px minmax(0, 1fr) repeat(3, auto); }
+  .ngc-top-fatia { display: none; }
+}
+@media (max-width: 720px) {
+  .ngc-bloco { padding: 14px 12px; }
+  .ngc-perfis, .ngc-clientes { grid-template-columns: minmax(0, 1fr); }
+  .ngc-duelo { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; grid-template-areas: 'rot rot rot rot' 'vi bi bm vm'; gap: 6px 8px; padding: 10px 0; }
+  .ngc-duelo-rot { grid-area: rot; text-align: left; }
+  .ngc-duelo-valor.ia { grid-area: vi; } .ngc-duelo-barra.ia { grid-area: bi; }
+  .ngc-duelo-barra.manual { grid-area: bm; } .ngc-duelo-valor.manual { grid-area: vm; text-align: right; }
+  .ngc-duelo-valor.ia { text-align: left; } .ngc-duelo-valor.ia .vbr { align-items: flex-start; }
+  .ngc-duelo-valor.manual .vbr { align-items: flex-end; }
+  .ngc-duelo-valor { font-size: 12.5px; }
+  .ngc-emp-barras { height: 150px; gap: 2px; } .ngc-emp-eixo { gap: 2px; }
+  .ngc-emp-eixo span { font-size: 8.5px; letter-spacing: -.03em; }
+  .ngc-linha, .ngc-tabela.lives .ngc-linha { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ngc-faixas li { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'nome valor' 'barra barra'; gap: 6px 10px; }
+  .ngc-faixa-nome { grid-area: nome; } .ngc-faixa-valor { grid-area: valor; } .ngc-faixa-barra { grid-area: barra; }
+  /* quem mais gerou: a pessoa na linha de cima e os três números embaixo, lado a lado */
+  .ngc-top li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 8px; }
+  .ngc-top-nome { flex: 1 1 calc(100% - 82px); }
+  .ngc-top-nome b { white-space: normal; }
+  .ngc-top-num { flex: 1 1 28%; justify-items: start; text-align: left; align-self: start; }
+  .ngc-top-num .vbr { align-items: flex-start; }
+  .ngc .vgm-modo button { padding: 0 9px; }
+  .ngc .ngc-ia-botao { min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ngc-fatia u, .ngc-duelo-barra u, .ngc-trilho u, .ngc-emp-barras button > span { transition: none; }
+  .ngc-ia-pulso i { animation: none; }
+}
