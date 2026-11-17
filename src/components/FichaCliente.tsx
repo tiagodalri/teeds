@@ -8,6 +8,7 @@ import { MARCA } from '../marca'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { aparelhoLegivel, dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../core/teeds/termos'
 import { NomeDoRobo } from './NomeDoRobo'
+import { dataBr, idadeDe } from '../core/teeds/perfil'
 
 /**
  * A vida inteira de um cliente, dentro da ficha do admin.
@@ -238,6 +239,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
               <div><dt>E-mail</dt><dd>{c.email || '—'}</dd></div>
               <div><dt>Telefone</dt><dd>{c.telefone || '—'}{c.telefone && MARCA.id === 'globalfly' && <button type="button" className="fc-whatsapp" title="Abrir a conversa no WhatsApp oficial" onClick={() => window.dispatchEvent(new CustomEvent('whatsapp:conversar', { detail: { numero: c.telefone, nome: c.nome ?? '' } }))}>Conversar no WhatsApp</button>}</dd></div>
               <div><dt>CPF</dt><dd>{c.cpf || '—'}</dd></div>
+              <div><dt>Nascimento</dt><dd>{c.nascimento ? <>{dataBr(c.nascimento)} <em>({idadeDe(c.nascimento)} anos{c.nascimentoFonte === 'deriv' ? ', pela Deriv' : c.nascimentoFonte === 'cliente' ? ', informada pelo cliente' : ''})</em></> : '—'}</dd></div>
               <div><dt>Situação</dt><dd>{rotulo(c.situacao)}</dd></div>
               <div><dt>Cadastro</dt><dd>{soData(c.criadoEm)} <em>({haQuantoTempo(c.criadoEm)})</em></dd></div>
               <div><dt>Acesso expira</dt><dd>{soData(c.acessoExpiraEm)}</dd></div>

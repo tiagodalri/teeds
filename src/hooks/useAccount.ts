@@ -11,6 +11,7 @@ const marcarSaida = () => { try { localStorage.setItem(CHAVE_SAIU, String(Date.n
 const esquecerSaida = () => { try { localStorage.removeItem(CHAVE_SAIU) } catch { /* idem */ } }
 import { fetchAccounts, fetchTradingSocketUrl, resetDemoBalance, type TradingAccount } from '../core/deriv/account'
 import { TeedsSocket } from '../core/deriv/client'
+import { buscarNascimentoNaDeriv } from '../core/deriv/nascimento'
 import type { ConnectionState } from '../core/deriv/types'
 import { acessoSomenteDemo, contasPermitidas, rotulosTrocados as temRotulosTrocados } from '../core/deriv/accountAccess'
 import { MARCA } from '../marca'
@@ -300,6 +301,8 @@ export function useAccount(acesso: { email?: string | null; simulador?: boolean;
         sock.connect()
 
         paradas.push(subscribeBalance(sock, (b) => alive && setBalance(b)))
+        // a data de nascimento da conta Deriv, uma vez por pessoa e aparelho (17/11/2026); nunca atrapalha a conexão
+        window.setTimeout(() => { if (alive) void buscarNascimentoNaDeriv(sock, tokenTeedsRef.current) }, 4000)
         /*
           O saldo do topo nunca congela (30/10/2026, Tiago: "precisa ser
           atualizado sempre em tempo real"). A assinatura acima é a fonte

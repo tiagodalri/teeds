@@ -1261,6 +1261,8 @@ export interface FichaCliente {
     totalAcessos: number; tempoTotalSegundos: number
     sessaoAtual: string | null; sessaoAtualSegundos: number
     fusoHorario: string | null; idioma: string | null; observacoes: string | null
+    /** 'AAAA-MM-DD' e de onde veio (17/11/2026) */
+    nascimento: string | null; nascimentoFonte: 'cliente' | 'deriv' | null
   }
   cadastro: { status: string; pedidoEm: string; decididoEm: string | null; recadastro: boolean; emailCadastroEm: string | null; emailAprovacaoEm: string | null } | null
   produtos: Array<{ produtoId: string; ativo: boolean; concedidoEm: string; expiraEm: string | null; origem: string | null }>
@@ -1329,6 +1331,8 @@ export async function lerFichaCliente(sessao: SessaoTeeds, userId: string): Prom
       totalAcessos: n(c.total_acessos), tempoTotalSegundos: n(c.tempo_total_segundos),
       sessaoAtual: c.sessao_atual, sessaoAtualSegundos: n(c.sessao_atual_segundos),
       fusoHorario: c.fuso_horario, idioma: c.idioma, observacoes: c.observacoes,
+      nascimento: c.data_nascimento ? String(c.data_nascimento).slice(0, 10) : null,
+      nascimentoFonte: c.nascimento_fonte === 'deriv' || c.nascimento_fonte === 'cliente' ? c.nascimento_fonte : null,
     },
     cadastro: r.cadastro ? {
       status: r.cadastro.status, pedidoEm: r.cadastro.pedido_em, decididoEm: r.cadastro.decidido_em,

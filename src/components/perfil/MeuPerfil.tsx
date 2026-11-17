@@ -3,7 +3,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { cpfValido, formatarCPF, formatarTelefone, recuperarSenha, telefoneValido, trocarSenha } from '../../core/teeds/conta'
 import type { TradingAccount } from '../../core/deriv/account'
 import {
-  buscarCep, enviarFoto, formatarCep, lerPerfil, removerFoto, salvarPerfil, type Endereco, type Perfil,
+  buscarCep, dataBr, enviarFoto, formatarCep, idadeDe, lerDataBr, lerPerfil, mascararDataBr, removerFoto, salvarPerfil, type Endereco, type Perfil,
 } from '../../core/teeds/perfil'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { Monograma } from '../marca/Monograma'
@@ -63,6 +63,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   const [nome, setNome] = useState('')
   const [cpf, setCpf] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [nascimento, setNascimento] = useState('')
   const [end, setEnd] = useState<Endereco>(VAZIO)
   const [buscandoCep, setBuscandoCep] = useState(false)
   const [cepNaoAchado, setCepNaoAchado] = useState(false)
@@ -79,7 +80,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   useEffect(() => { if (recado) recadoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }) }, [recado])
 
   const carregar = () => lerPerfil(sessao).then((p) => {
-    setPerfil(p); setNome(p.nome); setCpf(p.cpf ? formatarCPF(p.cpf) : ''); setTelefone(formatarTelefone(p.telefone)); setEnd({ ...p.endereco, cep: formatarCep(p.endereco.cep) }); setFoto(p.fotoUrl); setErroCarga(null)
+    setPerfil(p); setNome(p.nome); setCpf(p.cpf ? formatarCPF(p.cpf) : ''); setTelefone(formatarTelefone(p.telefone)); setNascimento(dataBr(p.nascimento)); setEnd({ ...p.endereco, cep: formatarCep(p.endereco.cep) }); setFoto(p.fotoUrl); setErroCarga(null)
   }).catch(() => setErroCarga('Não consegui abrir seus dados agora. Confira a conexão e tente de novo.'))
   useEffect(() => { void carregar() }, [sessao.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // termos de uso (27/10/2026): quando a pessoa aceitou, e o texto para reler
@@ -114,21 +115,27 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   const cpfOk = cpfTravado || (cpf.replace(/\D/g, '') === '' || cpfValido(cpf))
   const telOk = telefone.replace(/\D/g, '') === '' || telefoneValido(telefone)
   const cepOk = cepDigitos === '' || cepDigitos.length === 8
-  const mudou = !!perfil && (
+  // data de nascimento (17/11/2026): dd/mm/aaaa, de 18 a 110 anos (a plataforma é só para maiores)
+  const nascIso = lerDataBr(nascimento)
+  const nascIdade = nascIso ? idadeDe(nascIso) : null
+  const nascOk = nascimento.trim() === '' || (nascIso !== null && nascIdade !== null && nascIdade >= 18 && nascIdade <= 110)
+  const nascMudou = !!perfil && (nascimento.trim() === '' ? perfil.nascimento !== null : nascIso !== perfil.nascimento)
+  const mudou = !!perfil && (nascMudou ||
     nome.trim() !== perfil.nome.trim() || (!cpfTravado && cpf.replace(/\D/g, '') !== perfil.cpf) || telefone.replace(/\D/g, '') !== perfil.telefone.replace(/\D/g, '') ||
     cepDigitos !== perfil.endereco.cep.replace(/\D/g, '') || (['rua', 'numero', 'complemento', 'bairro', 'cidade', 'uf'] as const).some((k) => end[k].trim() !== perfil.endereco[k].trim()))
   // um nome só já gravado não trava o resto: o aviso pede o sobrenome, mas dá para salvar o telefone
-  const valido = (nomeOk || (!!nome.trim() && nome.trim() === perfil?.nome.trim())) && cpfOk && telOk && cepOk
+  const valido = (nomeOk || (!!nome.trim() && nome.trim() === perfil?.nome.trim())) && cpfOk && telOk && cepOk && nascOk
 
   // o quanto do perfil está completo
   const itens = useMemo(() => [
     { id: 'mp-nome', rotulo: 'Nome completo', ok: nomeOk },
     { id: 'mp-cpf', rotulo: 'CPF', ok: cpfTravado || cpfValido(cpf) },
     { id: 'mp-telefone', rotulo: 'Telefone', ok: telefoneValido(telefone) },
+    { id: 'mp-nascimento', rotulo: 'Data de nascimento', ok: !!nascIso && nascOk },
     { id: 'mp-email', rotulo: 'E-mail', ok: true },
     { id: 'mp-cep', rotulo: 'Endereço', ok: cepDigitos.length === 8 && !!end.rua.trim() && !!end.numero.trim() && !!end.cidade.trim() },
     { id: 'mp-foto', rotulo: 'Foto', ok: !!foto },
-  ], [nomeOk, cpfTravado, cpf, telefone, cepDigitos, end, foto])
+  ], [nomeOk, cpfTravado, cpf, telefone, nascIso, nascOk, cepDigitos, end, foto])
   const feitos = itens.filter((i) => i.ok).length
   const irPara = (id: string) => { const el = document.getElementById(id); el?.scrollIntoView({ behavior: 'smooth', block: 'center' }); window.setTimeout(() => el?.focus({ preventScroll: true }), 350) }
 
@@ -136,7 +143,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
     if (!mudou || !valido || salvando) return
     setSalvando(true); setRecado(null)
     try {
-      await salvarPerfil(sessao, { nome, cpf: cpfTravado ? '' : cpf, telefone, endereco: end })
+      await salvarPerfil(sessao, { nome, cpf: cpfTravado ? '' : cpf, telefone, endereco: end, ...(nascMudou ? { nascimento: nascIso } : {}) })
       await carregar()
       onMudou?.({ nome: nome.trim(), fotoUrl: foto })
       setRecado({ tipo: 'ok', texto: 'Dados salvos.' })
@@ -257,6 +264,14 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
             <span>Telefone com DDD</span>
             <input id="mp-telefone" value={telefone} inputMode="tel" autoComplete="tel" placeholder="(11) 91234-5678" onChange={(e) => setTelefone(formatarTelefone(e.target.value))} aria-invalid={!telOk} />
             {!telOk && <small className="erro">Coloque o DDD e o número.</small>}
+          </label>
+          <label className="mp-campo">
+            <span>Data de nascimento</span>
+            <input id="mp-nascimento" value={nascimento} inputMode="numeric" autoComplete="bday" placeholder="dd/mm/aaaa" maxLength={10}
+              onChange={(e) => setNascimento(mascararDataBr(e.target.value))} aria-invalid={!nascOk} />
+            {!nascOk ? <small className="erro">{nascimento.replace(/\D/g, '').length < 8 ? 'Coloque dia, mês e ano: dd/mm/aaaa.' : !nascIso ? 'Essa data não existe. Confira o dia e o mês.' : (nascIdade ?? 0) < 18 ? 'A plataforma é só para maiores de 18 anos.' : 'Confira o ano.'}</small>
+              : nascIso && !nascMudou && perfil?.nascimentoFonte === 'deriv' ? <small>Veio da sua conta Deriv. Se estiver errada, corrija aqui.</small>
+              : nascIso && nascIdade !== null ? <small>{nascIdade} anos</small> : null}
           </label>
         </section>
 

@@ -14,9 +14,11 @@ const EXEMPLO_COMPLETO = {
   nome: 'Lucas Andrade Ribeiro', cpf: '52998224725', telefone: '11987654321', email: 'lucas.andrade@exemplo.com',
   end_cep: '01310100', end_rua: 'Avenida Paulista', end_numero: '1578', end_complemento: 'Conj. 42', end_bairro: 'Bela Vista', end_cidade: 'São Paulo', end_uf: 'SP',
   foto_url: null, plano_id: 'treino', status_acesso: 'ativo', acesso_inicio: '2026-10-01T12:00:00Z', acesso_expira_em: '2026-11-30T12:00:00Z', criado_em: '2026-09-28T12:00:00Z', tour_visto_em: '2026-10-01T12:10:00Z',
+  data_nascimento: '1991-03-12' as string | null, nascimento_fonte: 'deriv' as string | null,
 }
 const EXEMPLO_NOVO = {
   ...EXEMPLO_COMPLETO, nome: 'Lucas', cpf: null, telefone: null, end_cep: null, end_rua: null, end_numero: null, end_complemento: null, end_bairro: null, end_cidade: null, end_uf: null,
+  data_nascimento: null, nascimento_fonte: null,
   acesso_expira_em: '2026-10-24T12:00:00Z',
 }
 
@@ -29,7 +31,15 @@ export default function LabPerfil() {
   if (!instalado) { instalado = true; const original = window.fetch.bind(window); window.fetch = (async (url: RequestInfo | URL, init?: RequestInit) => {
     const u = String(url)
     // como o banco: a leitura e a gravação (return=representation) devolvem a ficha; &semficha=1 simula quem não tem ficha
-    if (u.includes('/rest/v1/clientes')) return new Response(JSON.stringify(q.has('semficha') && (init?.method ?? 'GET') !== 'GET' ? [] : [ficha]), { status: 200 })
+    if (u.includes('/rest/v1/clientes')) {
+      // a gravação muda a ficha de exemplo (como o gatilho do banco: data nova = informada pelo cliente)
+      if ((init?.method ?? 'GET') === 'PATCH' && !q.has('semficha')) {
+        const corpo = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>
+        if ('data_nascimento' in corpo && corpo.data_nascimento !== ficha.data_nascimento) Object.assign(ficha, { nascimento_fonte: corpo.data_nascimento ? 'cliente' : null })
+        Object.assign(ficha, corpo)
+      }
+      return new Response(JSON.stringify(q.has('semficha') && (init?.method ?? 'GET') !== 'GET' ? [] : [ficha]), { status: 200 })
+    }
     if (u.includes('/auth/v1/user') || u.includes('/storage/v1/')) return new Response('{}', { status: 200 })
     return original(url, init)
   }) as typeof fetch }

@@ -30,9 +30,12 @@ export interface Perfil {
   tourVistoEm: string | null
   /** Selo Silver/Gold (GlobalFly); null nas outras marcas. */
   categoria: 'silver' | 'gold' | 'black' | 'prestige' | null
+  /** Data de nascimento 'AAAA-MM-DD' (17/11/2026) e de onde veio: digitada aqui ou puxada da conta Deriv. */
+  nascimento: string | null
+  nascimentoFonte: 'cliente' | 'deriv' | null
 }
 
-const CAMPOS = 'nome,cpf,telefone,email,end_cep,end_rua,end_numero,end_complemento,end_bairro,end_cidade,end_uf,foto_url,plano_id,status_acesso,acesso_inicio,acesso_expira_em,criado_em,tour_visto_em,categoria'
+const CAMPOS = 'nome,cpf,telefone,email,end_cep,end_rua,end_numero,end_complemento,end_bairro,end_cidade,end_uf,foto_url,plano_id,status_acesso,acesso_inicio,acesso_expira_em,criado_em,tour_visto_em,categoria,data_nascimento,nascimento_fonte'
 
 async function rest<T>(caminho: string, sessao: SessaoTeeds, init: RequestInit = {}): Promise<T> {
   const r = await fetch(`${SUPABASE.url}/rest/v1${caminho}`, {
@@ -81,13 +84,17 @@ export async function lerPerfil(sessao: SessaoTeeds): Promise<Perfil> {
     criadoEm: l?.criado_em ?? null,
     tourVistoEm: l?.tour_visto_em ?? null,
     categoria: ['silver', 'gold', 'black', 'prestige'].includes(l?.categoria) ? l.categoria : null,
+    nascimento: l?.data_nascimento ? String(l.data_nascimento).slice(0, 10) : null,
+    nascimentoFonte: l?.nascimento_fonte === 'deriv' || l?.nascimento_fonte === 'cliente' ? l.nascimento_fonte : null,
   }
 }
 
 /** Dados pessoais e endereço: na ficha e no cadastro do login (nome e telefone aparecem no menu). */
-export async function salvarPerfil(sessao: SessaoTeeds, d: { nome: string; cpf: string; telefone: string; endereco: Endereco }): Promise<void> {
+export async function salvarPerfil(sessao: SessaoTeeds, d: { nome: string; cpf: string; telefone: string; endereco: Endereco; nascimento?: string | null }): Promise<void> {
   const so = (s: string) => s.replace(/\D/g, '')
   await gravarNaFicha(sessao, {
+    // 'AAAA-MM-DD'; ausente = não mexe (o banco carimba quando mudou e marca que foi o cliente)
+    ...(d.nascimento !== undefined ? { data_nascimento: d.nascimento || null } : {}),
     nome: d.nome.trim(), telefone: so(d.telefone), ...(d.cpf ? { cpf: so(d.cpf) } : {}),
     end_cep: so(d.endereco.cep) || null, end_rua: d.endereco.rua.trim() || null, end_numero: d.endereco.numero.trim() || null,
     end_complemento: d.endereco.complemento.trim() || null, end_bairro: d.endereco.bairro.trim() || null,
@@ -148,3 +155,29 @@ export async function buscarCep(cep: string): Promise<Partial<Endereco> | null> 
 }
 
 export const formatarCep = (v: string) => { const d = v.replace(/\D/g, '').slice(0, 8); return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d }
+
+/* ------------------------------------------------------------------ data de nascimento (17/11/2026) */
+
+/** "12/03/1990" → '1990-03-12' (null quando não é uma data de verdade). */
+export function lerDataBr(t: string): string | null {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t.trim())
+  if (!m) return null
+  const [, dd, mm, aaaa] = m
+  const d = new Date(Date.UTC(Number(aaaa), Number(mm) - 1, Number(dd)))
+  if (d.getUTCFullYear() !== Number(aaaa) || d.getUTCMonth() !== Number(mm) - 1 || d.getUTCDate() !== Number(dd)) return null
+  return `${aaaa}-${mm}-${dd}`
+}
+/** '1990-03-12' → "12/03/1990". */
+export const dataBr = (iso: string | null | undefined) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '')
+/** Máscara enquanto digita: só números, com as barras no lugar. */
+export function mascararDataBr(t: string): string {
+  const n = t.replace(/\D/g, '').slice(0, 8)
+  return n.length > 4 ? `${n.slice(0, 2)}/${n.slice(2, 4)}/${n.slice(4)}` : n.length > 2 ? `${n.slice(0, 2)}/${n.slice(2)}` : n
+}
+/** Idade completa hoje (horário de Brasília). */
+export function idadeDe(iso: string, hoje = new Date(Date.now() - 3 * 3_600_000)): number {
+  const [a, m, d] = iso.split('-').map(Number)
+  let idade = hoje.getUTCFullYear() - a
+  if (hoje.getUTCMonth() + 1 < m || (hoje.getUTCMonth() + 1 === m && hoje.getUTCDate() < d)) idade--
+  return idade
+}
