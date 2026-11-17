@@ -28,7 +28,7 @@ import { ProfilePanel } from './components/ProfilePanel'
 import { DerivLogo, IconeElo } from './components/DerivMarca'
 import { LoginScreen } from './components/LoginScreen'
 import { paginaDeVenda } from './core/teeds/entradaInicial'
-import { videosDoQuiz } from './core/teeds/quizDoTrafego'
+import { paginaComQuiz } from './core/teeds/quizDoTrafego'
 import { Abrindo, Carregando } from './components/entrada/Carregando'
 import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
@@ -1486,7 +1486,7 @@ export default function App() {
   // /n/trafego aberto por quem já está logado (16/11/2026, Tiago: "se acessar pelo /trafego cai no
   // quiz mesmo que esteja logado"). Deslogado, o quiz vem do LoginScreen; logado, vem daqui, sem
   // registrar na central nem no pixel, e o Garantir minha vaga entra na plataforma.
-  const [quizLogado, setQuizLogado] = useState(() => (paginaDeVenda === 'trafego' ? videosDoQuiz() : null))
+  const [quizLogado, setQuizLogado] = useState(() => (paginaDeVenda === 'trafego' ? paginaComQuiz() : null))
   useEffect(() => { if (!abrindo) liberarPouso() }, [abrindo])
   if (abrindo) {
     if (MARCA.decolagem) return <Carregando />
@@ -1495,7 +1495,7 @@ export default function App() {
   if (quizLogado && teeds.status === 'logado') {
     return (
       <Suspense fallback={MARCA.decolagem ? <Carregando /> : <Abrindo />}>
-        <QuizDoTrafego videos={quizLogado} semRegistro aoConcluir={() => { setQuizLogado(null); scrollTo(0, 0) }} />
+        <QuizDoTrafego pagina={quizLogado} semRegistro aoConcluir={() => { setQuizLogado(null); scrollTo(0, 0) }} />
       </Suspense>
     )
   }

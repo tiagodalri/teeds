@@ -1,29 +1,29 @@
 /**
- * O quiz da página de tráfego pago (/n/trafego, /v/trafego), 16/11/2026.
+ * A página de tráfego pago de cada parceiro (/n/trafego, /v/trafego, /d/trafego), 16-17/11/2026.
+ *
+ * Nasceu como cópia da /cadastro (o mesmo cadastro com planos, marcado como 'trafego' para ser medido
+ * à parte: entradaInicial.ts, pixelDoParceiro.ts, rastroDoCadastro.ts) e ganhou o quiz com a VSL na frente.
  *
  * Tiago: "quando o cara chegar do anúncio, ele vai cair no quiz (que vai mostrando vídeos no meio),
  * são 3 vídeos intervalados entre as perguntas; faça exatamente igual, apenas adaptando o visual".
  * O modelo é o quiz "Ganhe em Dólar" do Naor (sucessonotrade.com): 15 etapas, os vídeos na 9, na 12
  * e na 15, e o botão de cada vídeo só aparece num tempo certo do vídeo, como lá.
- * No fim, "Garantir minha vaga" abre o WhatsApp do atendimento do parceiro (17/11/2026, Tiago: "deve levar
- * pra esse número de WhatsApp do Naor onde faremos o atendimento"), como no vídeo 3 ("falando diretamente
- * comigo"). Parceiro sem número aqui segue para a escolha do plano, como antes.
  *
- * Os vídeos são de cada parceiro (é a história do "seu futuro sócio"). Parceiro sem vídeos aqui não
- * tem quiz: a /trafego dele abre direto nos planos, como antes.
+ * SEPARADO POR PARCEIRO (17/11/2026, Tiago: "tem que ser bem separadinho o /v/trafego e o /n/trafego").
+ * Tudo o que é de um parceiro mora no bloco dele em PAGINAS_DE_TRAFEGO, e só nele: o nome da abertura
+ * ("seu futuro sócio"), os 3 vídeos e o WhatsApp do "Garantir minha vaga". Quem decide qual bloco vale
+ * é o endereço (/n ou /v), lido uma vez quando a página abre; o quiz não troca de parceiro no meio.
+ *  - `quiz: null`: o parceiro ainda não tem VSL; a /trafego dele abre direto nos planos, como a /cadastro.
+ *  - `whatsapp: null`: o quiz termina na escolha do plano em vez do WhatsApp.
+ * Perguntas, análise e aprovado (ETAPAS_DO_QUIZ, abaixo) são iguais para todos, porque falam em
+ * primeira pessoa e servem a qualquer sócio.
+ *
+ * Para ligar o quiz de um parceiro: subir os 3 MP4 em aulas/globalfly/vsl-trafego/<nome>-<1|2|3>-v1.mp4,
+ * as capas em public/aulas-globalfly/vsl/, e preencher `quiz` no bloco dele.
  */
 import { vitrine } from './parceiro'
 import { SUPABASE } from './config'
 
-/**
- * 17/11/2026: a VSL nova do Naor em 3 partes (Tiago: "a vsl será dividida em 3 etapas"), no nosso
- * player (MP4 no bucket público `aulas` do Supabase, pasta globalfly/vsl-trafego), no lugar da vturb.
- * O botão de cada parte aparece no segundo em que o Naor manda clicar:
- *  - parte 1 (história, "Você está chegando ao fim desse quiz"): 4:10, "Finalize as últimas perguntas…";
- *  - parte 2 (as lives e os depoimentos): 2:37, "Clique no botão abaixo pra continuar";
- *  - parte 3 (aprovado, a proposta dos 10%): 5:01, "vai aparecer um botão verde agora".
- * Trocar um vídeo: subir com outro nome (o -v1 no fim) para o navegador não guardar o antigo.
- */
 export interface VideoDoQuiz {
   /** O MP4 (720p, começa a tocar antes de baixar inteiro). */
   src: string
@@ -35,31 +35,81 @@ export interface VideoDoQuiz {
   duracao: number
 }
 
+export interface QuizDoParceiro {
+  /** As 3 partes da VSL: etapa 9 (história), etapa 12 (resultados) e etapa 15 (aprovado). */
+  videos: readonly [VideoDoQuiz, VideoDoQuiz, VideoDoQuiz]
+  /** O WhatsApp do atendimento (DDI + DDD + número), ou null para o fim levar aos planos. */
+  whatsapp: string | null
+}
+
+export interface PaginaDeTrafego {
+  /** O código do endereço: /n, /v, /d. */
+  codigo: string
+  /** O nome na abertura do quiz, com a foto do parceiro ("Seu futuro sócio"). */
+  nome: string
+  /** O quiz com a VSL, ou null quando o parceiro ainda não tem (a /trafego abre nos planos). */
+  quiz: QuizDoParceiro | null
+}
+
 const PASTA = `${SUPABASE.url}/storage/v1/object/public/aulas/globalfly/vsl-trafego`
-
-export const VIDEOS_DO_QUIZ: Partial<Record<string, readonly [VideoDoQuiz, VideoDoQuiz, VideoDoQuiz]>> = {
-  n: [
-    { src: `${PASTA}/naor-1-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-1.webp', botaoAos: 250, duracao: 258 },
-    { src: `${PASTA}/naor-2-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-2.webp', botaoAos: 157, duracao: 166 },
-    { src: `${PASTA}/naor-3-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-3.webp', botaoAos: 301, duracao: 315 },
-  ],
-}
-
-/** O WhatsApp do atendimento de cada parceiro (DDI + DDD + número) e a mensagem que já vai escrita. */
-const WHATSAPP_DO_QUIZ: Partial<Record<string, string>> = {
-  n: '5511994437461',
-}
 export const MENSAGEM_DO_WHATSAPP = 'Olá, quero garantir minha vaga na GlobalFly Trade.'
 
-/** O link do WhatsApp do parceiro da visita com a mensagem pronta, ou null quando ele não tem número aqui. */
-export function whatsappDoQuiz(): string | null {
-  const numero = WHATSAPP_DO_QUIZ[vitrine()]
-  return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(MENSAGEM_DO_WHATSAPP)}` : null
+export const PAGINAS_DE_TRAFEGO: Record<string, PaginaDeTrafego> = {
+  /* ---------------------------------------------------------------- /n/trafego · Naor Bezerra
+   * VSL em 3 partes (17/11/2026, Tiago: "a vsl será dividida em 3 etapas"), no nosso player, no lugar
+   * da vturb. O botão de cada parte aparece no segundo em que o Naor manda clicar:
+   *  - parte 1 (história, "Você está chegando ao fim desse quiz"): 4:10;
+   *  - parte 2 (as lives e os depoimentos): 2:37;
+   *  - parte 3 (aprovado, a proposta dos 10%): 5:01, "vai aparecer um botão verde agora".
+   * "Garantir minha vaga" abre o WhatsApp do atendimento do Naor (17/11/2026, Tiago: "deve levar pra esse
+   * número de WhatsApp do Naor onde faremos o atendimento").
+   * Trocar um vídeo: subir com outro nome (o -v1 no fim) para o navegador não guardar o antigo. */
+  n: {
+    codigo: 'n',
+    nome: 'Naor Bezerra',
+    quiz: {
+      videos: [
+        { src: `${PASTA}/naor-1-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-1.webp', botaoAos: 250, duracao: 258 },
+        { src: `${PASTA}/naor-2-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-2.webp', botaoAos: 157, duracao: 166 },
+        { src: `${PASTA}/naor-3-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-3.webp', botaoAos: 301, duracao: 315 },
+      ],
+      whatsapp: '5511994437461',
+    },
+  },
+
+  /* ---------------------------------------------------------------- /v/trafego · Victor Cordeiro
+   * Ainda sem VSL própria: abre direto nos planos. Os vídeos do Naor NÃO servem aqui (são a
+   * história dele, em primeira pessoa). */
+  v: {
+    codigo: 'v',
+    nome: 'Victor Cordeiro',
+    quiz: null,
+  },
+
+  /* ---------------------------------------------------------------- /d/trafego · Douglas
+   * Ainda sem VSL própria: abre direto nos planos. */
+  d: {
+    codigo: 'd',
+    nome: 'Douglas',
+    quiz: null,
+  },
 }
 
-/** Os vídeos do quiz de quem trouxe a visita, ou null quando esse parceiro ainda não tem quiz. */
-export function videosDoQuiz(): readonly [VideoDoQuiz, VideoDoQuiz, VideoDoQuiz] | null {
-  return VIDEOS_DO_QUIZ[vitrine()] ?? null
+/** A página de tráfego do parceiro do endereço (/n, /v, /d), ou null quando o endereço não tem parceiro. */
+export function paginaDeTrafego(): PaginaDeTrafego | null {
+  return PAGINAS_DE_TRAFEGO[vitrine()] ?? null
+}
+
+/** A página de tráfego da visita, só quando ela tem quiz (senão, null: a página vai direto aos planos). */
+export function paginaComQuiz(): (PaginaDeTrafego & { quiz: QuizDoParceiro }) | null {
+  const p = paginaDeTrafego()
+  return p?.quiz ? (p as PaginaDeTrafego & { quiz: QuizDoParceiro }) : null
+}
+
+/** O link do WhatsApp da página com a mensagem pronta, ou null quando o parceiro não tem número. */
+export function linkDoWhatsapp(pagina: PaginaDeTrafego): string | null {
+  const numero = pagina.quiz?.whatsapp
+  return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(MENSAGEM_DO_WHATSAPP)}` : null
 }
 
 export type EtapaDoQuiz =

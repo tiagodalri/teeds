@@ -1,26 +1,25 @@
 /**
- * O quiz da página de tráfego pago (/n/trafego), 16/11/2026. Regras e textos em core/teeds/quizDoTrafego.ts.
+ * O quiz da página de tráfego pago (/n/trafego...), 16/11/2026. Regras, textos e o que é de cada parceiro
+ * (nome, vídeos, WhatsApp) em core/teeds/quizDoTrafego.ts: aqui chega só a página do parceiro da visita.
  *
  * Mesmo céu, vidro e dourado do cadastro com planos (a raiz também é .cpl, para herdar as variáveis
  * e o céu do canvas). Uma etapa por vez, num painel de vidro: abertura, perguntas com as opções em
  * lista (clique, ou as teclas 1 a 4), a análise com o anel que conta até 67%, os vídeos com o botão
  * que só aparece no tempo certo do vídeo, o processando de 4 s e o aprovado. "Garantir minha vaga"
- * abre o WhatsApp do atendimento do parceiro (whatsappDoQuiz); sem número, leva para os planos
+ * abre o WhatsApp do atendimento do parceiro (linkDoWhatsapp); sem número, leva para os planos
  * (aoConcluir). Prefixo das classes: qzt-.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Brand } from '../Brand'
 import { AvatarDoParceiro } from '../parceiros/FiltroDeParceiros'
-import { vitrine } from '../../core/teeds/parceiro'
 import { quizRapido } from '../../core/teeds/entradaInicial'
 import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 import { rastroDoCadastro } from '../../core/teeds/rastroDoCadastro'
-import { ETAPAS_DO_QUIZ, TOTAL_DO_QUIZ, progressoDaEtapa, whatsappDoQuiz, type VideoDoQuiz } from '../../core/teeds/quizDoTrafego'
+import { ETAPAS_DO_QUIZ, TOTAL_DO_QUIZ, progressoDaEtapa, linkDoWhatsapp, type PaginaDeTrafego, type QuizDoParceiro, type VideoDoQuiz } from '../../core/teeds/quizDoTrafego'
 import { calma, useCeu } from './CadastroComPlanos'
 import '../../casca/globalfly/styles/cadastro-planos.css'
 import '../../casca/globalfly/styles/quiz-trafego.css'
 
-const NOMES: Record<string, string> = { n: 'Naor Bezerra', v: 'Victor Cordeiro', d: 'Douglas' }
 const LETRAS = ['A', 'B', 'C', 'D']
 
 function Seta() {
@@ -164,7 +163,8 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
  * `semRegistro`: quem já tem conta e abriu o /trafego logado (a equipe revisando) faz o quiz sem
  * entrar na central de rastreio nem no pixel, para não sujar o funil dos anúncios.
  */
-export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { videos: readonly [VideoDoQuiz, VideoDoQuiz, VideoDoQuiz]; aoConcluir: () => void; semRegistro?: boolean }) {
+export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pagina: PaginaDeTrafego & { quiz: QuizDoParceiro }; aoConcluir: () => void; semRegistro?: boolean }) {
+  const { videos } = pagina.quiz
   const rastro: typeof rastroDoCadastro = semRegistro ? () => undefined : rastroDoCadastro
   const pixel: typeof eventoDoPixel = semRegistro ? () => undefined : eventoDoPixel
   const [etapa, setEtapa] = useState(0)
@@ -178,7 +178,6 @@ export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { vid
   const canvas = useRef<HTMLCanvasElement>(null)
   const ceuAtivo = useRef(true)
   useCeu(canvas, ceuAtivo)
-  const parceiro = vitrine()
   const atual = ETAPAS_DO_QUIZ[etapa]
 
   const irPara = useCallback((n: number) => {
@@ -261,7 +260,7 @@ export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { vid
     pixel('QuizResposta', { etapa, resposta: opcao })
     window.setTimeout(() => irPara(etapa + 1), calma() ? 0 : 320)
   }
-  const whatsapp = whatsappDoQuiz()
+  const whatsapp = linkDoWhatsapp(pagina)
   const concluir = () => {
     rastro('quiz-concluiu', { respostas: respostas.current, ...(whatsapp ? { destino: 'whatsapp' } : {}) })
     pixel('QuizConcluido', undefined, true)
@@ -304,12 +303,10 @@ export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { vid
       <main className="qzt-palco cpl-faixa">
         {etapa === 0 && (
           <section className="qzt-painel qzt-abertura" key="abertura">
-            {parceiro && NOMES[parceiro] && (
-              <div className="qzt-socio">
-                <AvatarDoParceiro codigo={parceiro} nome={NOMES[parceiro]} tamanho={52} />
-                <div><b>{NOMES[parceiro]}</b><span>Seu futuro sócio</span></div>
-              </div>
-            )}
+            <div className="qzt-socio">
+              <AvatarDoParceiro codigo={pagina.codigo} nome={pagina.nome} tamanho={52} />
+              <div><b>{pagina.nome}</b><span>Seu futuro sócio</span></div>
+            </div>
             <h1>
               <em>Você pode lucrar de R$&nbsp;100 a R$&nbsp;7.000 por mês</em>{' '}
               <span>começando do zero e sem experiência</span>

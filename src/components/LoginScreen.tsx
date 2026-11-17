@@ -8,7 +8,7 @@ import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
 import { abrirNoCadastro, paginaDeVenda } from '../core/teeds/entradaInicial'
-import { videosDoQuiz } from '../core/teeds/quizDoTrafego'
+import { paginaComQuiz } from '../core/teeds/quizDoTrafego'
 import { vitrine } from '../core/teeds/parceiro'
 import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 import { marcarEmbarque } from '../core/decolagem'
@@ -90,7 +90,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   // Link de campanha de cadastro ou /cadastre-se: abre direto no formulário.
   const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : 'entrar')
   // o quiz só vale na /trafego de parceiro que já tem os vídeos (quizDoTrafego.ts); sem eles, direto aos planos
-  const [videosDoQuizDaVisita] = useState(() => (paginaDeVenda === 'trafego' ? videosDoQuiz() : null))
+  const [quizDaVisita] = useState(() => (paginaDeVenda === 'trafego' ? paginaComQuiz() : null))
   const [quizFeito, setQuizFeito] = useState(false)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -222,10 +222,10 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     </label>
   )
 
-  if (MARCA.planosNoCadastro && modo === 'criar' && videosDoQuizDaVisita && !quizFeito) {
+  if (MARCA.planosNoCadastro && modo === 'criar' && quizDaVisita && !quizFeito) {
     return (
       <Suspense fallback={<div className="entrada" />}>
-        <QuizDoTrafego videos={videosDoQuizDaVisita} aoConcluir={() => { setQuizFeito(true); scrollTo(0, 0) }} />
+        <QuizDoTrafego pagina={quizDaVisita} aoConcluir={() => { setQuizFeito(true); scrollTo(0, 0) }} />
       </Suspense>
     )
   }
