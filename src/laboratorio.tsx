@@ -107,6 +107,7 @@ const LabCarteira = lazy(() => import('./components/LabCarteira'))
 function LabSeletor() {
   const [v, setV] = useState('globalfly')
   const [p, setP] = useState('')
+  const [pv, setPv] = useState('todos')
   return <div className="workspace-app" style={{ padding: 32, background: 'var(--bg)', minHeight: '100vh', display: 'grid', gap: 12, alignContent: 'start' }}>
     <SeletorDePlataforma valor={v} opcoes={opcoesDePlataforma(true, 'teeds')} onTrocar={setV} parceiros={v === 'globalfly' ? [{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }] : []} parceiro={p} onParceiro={setP} />
     <small style={{ color: 'var(--muted)' }}>parceiro em foco: {p || 'todos'}</small>
@@ -115,6 +116,12 @@ function LabSeletor() {
       <SeletorDePlataforma valor={v} opcoes={opcoesDePlataforma(true, 'teeds')} onTrocar={setV} parceiros={v === 'globalfly' ? [{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'd', nome: 'Douglas' }] : []} parceiro={p} onParceiro={setP} />
       <button className="admin-refresh">Atualizar</button>
     </div></header></main></div>
+    {/* 17/11/2026: como o Victor (admin do parceiro que vê /v e /n) vê o topo na Visão geral */}
+    <div className="admin-shell" style={{ display: 'block' }}><main className="admin-main" style={{ padding: 0 }}><header className="admin-top"><div><span className="rot">GlobalFly Trade · Admin do parceiro Victor</span><h1>Visão geral</h1></div><div className="admin-top-acoes">
+      <SeletorDePlataforma valor="globalfly" opcoes={opcoesDePlataforma(false, 'globalfly')} onTrocar={() => undefined} parceiros={[{ codigo: 'v', nome: 'Victor Cordeiro' }, { codigo: 'n', nome: 'Naor Bezerra' }]} parceiro={pv} onParceiro={setPv} soParceiros todosDoParceiro />
+      <button className="admin-refresh">Atualizar</button>
+    </div></header></main></div>
+    <small style={{ color: 'var(--muted)' }}>foco do Victor: {pv}</small>
   </div>
 }
 const LabParceiros = lazy(() => import('./components/LabParceiros'))

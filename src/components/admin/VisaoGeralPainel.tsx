@@ -276,7 +276,7 @@ export function VisaoGeralPainel({ sessao, marca, parceiro, aoIr, periodoInicial
 
       {/* ------------------------------------------------ metas (11/11/2026) */}
       <MetasDaVisaoGeral sessao={sessao} marca={marca} parceiro={parceiro} atalho={periodo.atalho}
-        nomeDoEscopo={!parceiro ? 'Geral' : parceiro === 'direto' ? 'Direto' : `${PARCEIRO[parceiro] ?? 'Parceiro'} /${parceiro}`} />
+        nomeDoEscopo={!parceiro ? 'Geral' : parceiro === 'todos' ? 'Todos os seus parceiros' : parceiro === 'direto' ? 'Direto' : `${PARCEIRO[parceiro] ?? 'Parceiro'} /${parceiro}`} />
 
       {/* ------------------------------------------------ 2. dinheiro */}
       <div className="vg-trio">

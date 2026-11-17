@@ -438,6 +438,8 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   // admin do parceiro: o banco já devolve só o que é dele; aqui só o rótulo
   const papel = useMeuPapel(sessao, MARCA.id)
   const doParceiro = !!papel && !papel.geral && !!papel.parceiro
+  // 17/11/2026: o "Todos" do admin do parceiro é só da Visão geral; aqui o foco volta para o parceiro dele
+  useEffect(() => { if (doParceiro && parceiroFoco === 'todos' && papel?.ve.length) trocarParceiro(papel.ve[0]) }, [doParceiro, parceiroFoco, papel]) // eslint-disable-line react-hooks/exhaustive-deps
   /** A vitrine de um registro: a dele ('' = direto → null); sem (registro antigo), o parceiro da conta. */
   function vitrineDoRegistro(parceiro: string | null | undefined, userId: string): string | null | undefined {
     if (parceiro !== null && parceiro !== undefined) return parceiro || null

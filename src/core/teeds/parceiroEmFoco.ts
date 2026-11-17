@@ -78,7 +78,8 @@ export function useParceirosDaMarca(sessao: SessaoTeeds | null, marca: string): 
         ve = papel && !papel.geral ? papel.ve : []
         if (ve.length < 2) return
         // o foco fica sempre num parceiro da lista (nunca "Todos"): começa no dele
-        if (!ve.includes(emFoco)) { emFoco = ve[0]; window.dispatchEvent(new Event(EVENTO)) }
+        // 17/11/2026: 'todos' (os dele somados) também vale; quem cuida de usá-lo só na Visão geral é o painel
+        if (!ve.includes(emFoco) && emFoco !== 'todos') { emFoco = ve[0]; window.dispatchEvent(new Event(EVENTO)) }
       }
       const r = await fetch(`${SUPABASE.url}/rest/v1/parceiros?marca=eq.${encodeURIComponent(marca)}&ativo=eq.true&select=codigo,nome&order=codigo`, { headers: h }).catch(() => null)
       let l: OpcaoDeParceiro[] = ((r?.ok ? await r.json() : null) ?? []).map((p: any) => ({ codigo: String(p.codigo), nome: String(p.nome) }))

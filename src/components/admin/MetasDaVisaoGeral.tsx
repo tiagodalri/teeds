@@ -248,7 +248,8 @@ export function MetasDaVisaoGeral({ sessao, marca, parceiro, nomeDoEscopo, atalh
               <button key={h} type="button" aria-pressed={horizonte === h} className={horizonte === h ? 'on' : ''} onClick={() => setHorizonte(h)}>{NOME[h]}</button>
             ))}
           </div>
-          {!editando && (
+          {/* 17/11/2026: no "Todos" do admin do parceiro a meta é a soma das metas de cada parceiro (só leitura) */}
+          {!editando && parceiro !== 'todos' && (
             <button type="button" className="vmt-definir" onClick={abrir}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z M13.5 6.5l4 4" /></svg>
               {meta ? 'Editar meta' : 'Definir meta'}

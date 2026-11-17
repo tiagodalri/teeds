@@ -34,7 +34,7 @@ export const opcoesDePlataforma = (master: boolean, marcaPropria: string): Opcao
   return [{ id: REDE, nome: 'Rede', papel: `${cada.length} plataformas somadas` }, ...cada]
 }
 
-export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], parceiro = '', onParceiro, soParceiros = false }: {
+export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], parceiro = '', onParceiro, soParceiros = false, todosDoParceiro = false }: {
   valor: string
   opcoes: OpcaoDePlataforma[]
   onTrocar: (id: string) => void
@@ -44,6 +44,8 @@ export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], p
   onParceiro?: (codigo: string) => void
   /** Só os parceiros, sem "Todos" e "Direto" (a aba Anúncios: cada conta de anúncios é de um parceiro). */
   soParceiros?: boolean
+  /** 17/11/2026: o admin do parceiro que vê mais de um (Victor: /v e /n) ganha o "Todos" somado, só na Visão geral. */
+  todosDoParceiro?: boolean
 }) {
   if (opcoes.length < 2 && !parceiros.length) return null
   const nomeDaMarca = opcoes.find((o) => o.id === valor)?.nome ?? ''
@@ -79,6 +81,7 @@ export function SeletorDePlataforma({ valor, opcoes, onTrocar, parceiros = [], p
         <FiltroDeParceiros rotulo={soParceiros ? 'Conta de anúncios do parceiro' : 'Parceiro de divulgação'} valor={parceiro} onTrocar={onParceiro}
           opcoes={[
             ...(soParceiros ? [] : [{ id: '', nome: 'Todos', titulo: 'Todos os parceiros e quem chegou direto' }]),
+            ...(soParceiros && todosDoParceiro ? [{ id: 'todos', nome: 'Todos', titulo: `${parceiros.map((p) => p.nome.split(' ')[0]).join(' e ')} somados` }] : []),
             ...parceiros.map((p) => ({ id: p.codigo, pessoa: p.nome, prefixo: opcoes.length > 1 ? nomeDaMarca : undefined, nome: p.nome.split(' ')[0], codigo: p.codigo, titulo: soParceiros ? `A conta de anúncios do ${p.nome.split(' ')[0]}` : `${nomeDaMarca} · ${p.nome}` })),
             ...(soParceiros ? [] : [{ id: 'direto', nome: 'Direto', titulo: 'Quem chegou sem link de parceiro' }]),
           ]} />

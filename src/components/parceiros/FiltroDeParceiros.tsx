@@ -29,7 +29,7 @@ export function AvatarDoParceiro({ codigo, nome, tamanho = 26 }: { codigo: strin
 }
 
 export interface OpcaoDeParceiro {
-  /** '' = todos; 'direto' = sem link de parceiro; senão, o código do parceiro (n, v, d…). */
+  /** '' = todos; 'todos' = todos os parceiros do admin do parceiro (17/11/2026); 'direto' = sem link de parceiro; senão, o código do parceiro (n, v, d…). */
   id: string
   nome: string
   /** Mostra o "/código" ao lado do nome. */
@@ -68,7 +68,7 @@ export function FiltroDeParceiros({ opcoes, valor, onTrocar, rotulo = 'Parceiro'
     void document.fonts?.ready.then(() => { if (vivo) medir() })
     return () => { vivo = false; ro.disconnect() }
   }, [valor, opcoes.length])
-  const parceiros = opcoes.filter((o) => o.id && o.id !== 'direto')
+  const parceiros = opcoes.filter((o) => o.id && o.id !== 'direto' && o.id !== 'todos')
 
   return (
     <div ref={caixa} className={`fp ${className}`} role="group" aria-label={rotulo}>
@@ -77,7 +77,7 @@ export function FiltroDeParceiros({ opcoes, valor, onTrocar, rotulo = 'Parceiro'
         const ativo = valor === o.id
         return (
           <button key={o.id || 'todos'} type="button" aria-pressed={ativo} title={o.titulo} onClick={() => { if (!ativo) onTrocar(o.id) }}>
-            {o.id === '' ? (
+            {o.id === '' || o.id === 'todos' ? (
               <span className="fp-pilha" aria-hidden="true">
                 {parceiros.slice(0, 3).map((p) => <AvatarDoParceiro key={p.id} codigo={p.id} nome={p.pessoa ?? p.nome} tamanho={20} />)}
                 {!parceiros.length && <span className="fp-av fp-icone" style={{ width: 22, height: 22 }}><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="8" r="3.2" /><circle cx="16.5" cy="9.5" r="2.6" /><path d="M3.5 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.6 14.4c2.5-.4 4.9 1 5.6 4.1" /></svg></span>}
