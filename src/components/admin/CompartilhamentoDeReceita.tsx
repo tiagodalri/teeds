@@ -4,6 +4,7 @@ import { SUPABASE } from '../../core/teeds/config'
 import { buscarCotacoes, cotacoesGuardadas } from '../ferramentas/cambio'
 import './compartilhamento.css'
 import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
+import { PalcoDoCompartilhamento } from './PalcoDoCompartilhamento'
 
 /**
  * Compartilhamento de receita (11/11/2026, Tiago: "quem é do plano Gold tem que pagar 10% do que lucrou
@@ -29,7 +30,7 @@ export interface Fatura {
   gerada_em: string; historico: Array<{ acao: string; em: string; motivo?: string | null }>; nome: string | null; email: string | null
   user_id: string; parceiro: string | null
 }
-interface Linha {
+export interface Linha {
   user_id: string; nome: string | null; email: string | null; telefone: string | null; foto_url: string | null
   parceiro: string | null; parceiro_nome: string | null; subplano: string; percentual: number
   operacoes: number; ganhas: number; manuais: number; volume: number; resultado: number; valor_usd: number
@@ -39,7 +40,7 @@ interface Linha {
   /** tem fatura viva no mês mas saiu da base de hoje (virou equipe ou trocou de parceiro) */
   fora_da_base?: boolean
 }
-interface Painel {
+export interface Painel {
   agora: string; hoje: string; mes: string; mes_atual: string; fechado: boolean; vencimento: string
   parceiro: string | null; geral: boolean; percentuais: Record<string, number>; clientes: Linha[]
   carteira: { abertas: number; a_receber_brl: number; vencidas: number; vencidas_brl: number; pagas: number; recebido_brl: number }
@@ -243,6 +244,9 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
         : <p><b>{nomeDoMes(mes)} está em andamento.</b> Os números abaixo são uma prévia ao vivo, relida a cada minuto. As faturas saem quando o mês fechar, a partir de {dataCurta(quandoFecha)}, e vencem nesse dia.</p>}
       <span className="cdr-oculto">Os clientes ainda não veem as faturas</span>
     </div>}
+
+    {painel && <PalcoDoCompartilhamento painel={painel} linhas={linhas} cotacao={cotacao} nomeMes={nomeMes} receber={numeros.receber} cobrar={numeros.cobrar}
+      onVer={(l) => setAberta(l)} onFicha={onAbrirCliente} />}
 
     <div className="cdr-kpis">
       <article className="cdr-kpi destaque">
