@@ -115,7 +115,7 @@ export function RecomendacoesDoNegocio({ sessao, marca, parceiro, periodo, de, a
       {carregando ? <div className="ngc-esq"><i className="vg-esq" /><i className="vg-esq" /></div>
         : !temIA ? <p className="ngc-ia-texto">{podeColar ? 'Ainda não há I.A. ligada nesta plataforma. Cole abaixo a chave gratuita do Gemini para começar.' : 'Ainda não há I.A. ligada nesta plataforma. Peça ao administrador geral para colar a chave no cartão.'}</p>
         : analisando ? (
-          <p className="ngc-ia-texto ngc-ia-pulso"><i aria-hidden="true" /> A I.A. está lendo os números do período: manual x {umaIA}, horários, clientes e lives. Leva cerca de um minuto; pode continuar usando o painel.</p>
+          <p className="ngc-ia-texto ngc-ia-pulso"><i aria-hidden="true" /> A I.A. está lendo os números do período: manual x {umaIA}, horários, clientes e lives. Leva de um a três minutos; pode continuar usando o painel.</p>
         ) : pronta ? <>
           <p className="ngc-ia-resumo">{pronta.resumo}</p>
           <div className={`ngc-ia-veredito ${pronta.veredito.onde}`}>

@@ -192,6 +192,8 @@
 .ngc-ia-veredito p, .ngc-ia-nota p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--muted); }
 .ngc-ia-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
 .ngc-ia-lista li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 14px; border-radius: 12px; background: color-mix(in srgb, var(--surface-alt) 70%, transparent); border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+/* número ímpar de recomendações: a última ocupa a linha inteira, sem buraco ao lado */
+.ngc-ia-lista li:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .ngc-ia-n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--vg-ouro) 22%, transparent); color: var(--vg-ouro); font-size: 12.5px; font-weight: 800; }
 .ngc-ia-lista li > div { display: grid; gap: 6px; min-width: 0; }
 .ngc-ia-lista li b { font-size: 14px; font-weight: 800; line-height: 1.35; }

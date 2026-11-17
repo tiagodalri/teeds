@@ -47,40 +47,70 @@ async function chaves(): Promise<{ anthropic: string; gemini: string }> {
 
 /* ------------------------------------------------------------------ o Gemini (faixa gratuita do Google) */
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta'
-// do mais capaz para o mais leve: se um estiver sem cota no dia (429) ou fora do ar para a chave (404), tenta o seguinte
-const MODELOS_GEMINI = ['gemini-3.8-flash', 'gemini-4-hydrogen', 'gemini-3.5-flash-lite']
+// do mais capaz para o mais leve: se um estiver sem cota no dia (429), sobrecarregado (503) ou fora do ar para a chave
+// (404), tenta o seguinte. 17/11/2026: o 4 Hydrogen fez a melhor leitura (contas certas, datas certas); o 3.8 Flash deu 503
+// nas duas vezes e ficou pendurado na repetição; o 3.5 Flash-Lite responde em ~10 s, mas erra mais.
+const MODELOS_GEMINI = ['gemini-4-hydrogen', 'gemini-3.8-flash', 'gemini-3.5-flash-lite']
+
+// 17/11/2026: a leitura do Hydrogen levou 88 s e a leitura inteira 211 s; a tela dá a leitura como perdida depois de
+// 5 min. Tudo tem de caber em PRAZO_TOTAL (com folga) e cada pedido tem o seu teto, sobrando tempo para o mais leve.
+const PRAZO_TOTAL = 230_000
+const PRAZO_POR_PEDIDO = 120_000
 
 async function pedirAoGemini(chave: string, sistema: string, pergunta: string): Promise<{ texto: string; modelo: string; uso: Record<string, unknown> }> {
+  const inicio = Date.now()
+  const resta = () => PRAZO_TOTAL - (Date.now() - inicio)
   let ultimo = ''
+  // o que aconteceu em cada tentativa (vai para "uso" da leitura, sem a chave): diz por que um modelo foi pulado
+  const tentativas: Array<{ modelo: string; esquema: boolean; status: number | string; ms: number; motivo?: string }> = []
   for (const modelo of MODELOS_GEMINI) {
-    // 1ª tentativa com o formato travado pelo esquema; se o esquema for recusado (400), pede só "JSON" e descreve o formato no texto
-    for (const comEsquema of [true, false]) {
+    // com o esquema primeiro; sem ele se o esquema for recusado. Um 503 repete o mesmo pedido uma vez.
+    const formatos = [true, false]
+    let f = 0, deNovo = true
+    while (f < formatos.length) {
+      // o último modelo (o mais leve, que responde em ~10 s) sempre ganha a vez se ainda houver 20 s
+      if (resta() < 20_000) { ultimo = ultimo || 'gemini prazo'; tentativas.push({ modelo, esquema: formatos[f], status: 'sem tempo', ms: 0 }); break }
+      const comEsquema = formatos[f]
+      const t0 = Date.now()
+      const prazo = new AbortController()
+      // os modelos maiores só podem gastar até sobrar tempo para o mais leve
+      const ehUltimo = modelo === MODELOS_GEMINI[MODELOS_GEMINI.length - 1]
+      const teto = Math.max(5_000, Math.min(PRAZO_POR_PEDIDO, resta() - (ehUltimo ? 2_000 : 30_000)))
+      const relogio = setTimeout(() => prazo.abort(), teto)
       const r = await fetch(`${GEMINI}/interactions`, {
-        method: 'POST', headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' },
+        method: 'POST', signal: prazo.signal, headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: modelo, store: false,
           system_instruction: comEsquema ? sistema : `${sistema}\n\nResponda SÓ com um objeto JSON neste formato (JSON Schema):\n${JSON.stringify(ESQUEMA)}`,
           input: pergunta,
           response_format: comEsquema ? { type: 'text', mime_type: 'application/json', schema: ESQUEMA } : { type: 'text', mime_type: 'application/json' },
-          generation_config: { max_output_tokens: 8000, thinking_level: 'medium' },
+          generation_config: { max_output_tokens: 8000, thinking_level: 'low' },
         }),
-      })
+      }).catch((e) => ({ ok: false, status: (e as Error)?.name === 'AbortError' ? 'prazo' : 'rede', json: async () => ({}) }) as unknown as Response)
+      clearTimeout(relogio)
       const d = await r.json().catch(() => ({})) as Record<string, any>
+      const ms = Date.now() - t0
       if (r.ok) {
-        if (d.status && d.status !== 'completed') { ultimo = `gemini ${modelo}: ${d.status}`; break }
+        if (d.status && d.status !== 'completed') { ultimo = `gemini ${modelo}: ${d.status}`; tentativas.push({ modelo, esquema: comEsquema, status: String(d.status), ms }); break }
         const texto = ((d.steps ?? []) as any[]).filter((p) => p?.type === 'model_output')
           .flatMap((p) => (p.content ?? []) as any[]).filter((c) => c?.type === 'text').map((c) => String(c.text ?? '')).join('')
-        if (!texto.trim()) { ultimo = `gemini ${modelo}: resposta vazia`; break }
-        return { texto, modelo, uso: { entrada: d.usage?.total_input_tokens, saida: d.usage?.total_output_tokens } }
+        if (!texto.trim()) { ultimo = `gemini ${modelo}: resposta vazia`; tentativas.push({ modelo, esquema: comEsquema, status: 'vazia', ms }); break }
+        tentativas.push({ modelo, esquema: comEsquema, status: 200, ms })
+        return { texto, modelo, uso: { entrada: d.usage?.total_input_tokens, saida: d.usage?.total_output_tokens, tentativas } }
       }
       ultimo = `gemini ${r.status} ${String(d?.error?.status ?? '')}: ${String(d?.error?.message ?? '').slice(0, 300)}`
-      if (r.status === 400 && comEsquema) continue          // tenta sem o esquema
-      if (r.status === 401 || r.status === 403) throw new Error(ultimo)   // chave recusada: não adianta trocar de modelo
-      break                                                  // 404, 429, 5xx: tenta o próximo modelo
+      tentativas.push({ modelo, esquema: comEsquema, status: r.status, ms, motivo: `${String(d?.error?.status ?? '')} ${String(d?.error?.message ?? '').slice(0, 160)}`.trim() })
+      if (r.status === 400 && comEsquema) { f++; continue }   // tenta sem o esquema
+      // 503 = o Google está com pico de uso naquele modelo: espera 4 s e tenta mais uma vez antes de cair para o mais leve
+      if (r.status === 503 && deNovo && resta() > 90_000) { deNovo = false; await new Promise((ok) => setTimeout(ok, 4000)); continue }
+      if (r.status === 401 || r.status === 403) throw new ErroDoGemini(ultimo, tentativas)   // chave recusada: não adianta trocar de modelo
+      break                                                  // 404, 429, 5xx, prazo: tenta o próximo modelo
     }
   }
-  throw new Error(ultimo || 'gemini: sem resposta')
+  throw new ErroDoGemini(ultimo || 'gemini: sem resposta', tentativas)
 }
+/** O erro do Gemini com o registro das tentativas, para a leitura guardar por que falhou. */
+class ErroDoGemini extends Error { constructor(m: string, public tentativas: unknown[]) { super(m) } }
 
 /** A resposta no formato que a tela espera, venha de onde vier (o Gemini sem esquema pode faltar com um campo). */
 function arrumar(d: any) {
@@ -143,7 +173,7 @@ const ESQUEMA = {
           titulo: { type: 'string', description: 'A ação, no imperativo, em até 10 palavras.' },
           porque: { type: 'string', description: 'O número que sustenta a recomendação.' },
           como: { type: 'string', description: 'O passo concreto para colocar em prática nesta semana.' },
-          categoria: { type: 'string', enum: ['horario', 'ia', 'manual', 'lives', 'clientes', 'banca'] },
+          categoria: { type: 'string', enum: ['horario', 'ia', 'manual', 'lives', 'clientes', 'banca'], description: 'horario = quando operar; ia = qual estratégia automática; manual = operação manual; lives = transmissões; clientes = reativar, reter, trazer de volta; banca = tamanho da conta e depósito.' },
           impacto: { type: 'string', enum: ['alto', 'medio', 'baixo'] },
         },
       },
@@ -170,11 +200,14 @@ OS DADOS (JSON, período: ${rotulo}; horários de Brasília; valores em dólar)
 - faixas: as pessoas pela banca de hoje (0 = sem saldo, 1 = até US$ 50, 2 = US$ 50 a 200, 3 = US$ 200 a 1 mil, 4 = US$ 1 mil a 5 mil, 5 = mais de US$ 5 mil).
 - clientes: quem terminou o período no azul ou no vermelho, quem ficou sem saldo, quem operou um dia só e quem operou 3 dias ou mais.
 - dias, horas (0 a 23) e semana (1 = segunda ... 7 = domingo; "vezes" = quantos desses dias houve no período): o markup de "ia" e de "manual".
-- lives: cada live com inicio e fim, markup, o "tipico" (o que aquele mesmo horário costuma render sem live), operacoes, pessoas, volume, depositos feitos durante e "entraram" (pessoas que clicaram no aviso para entrar). "estimada": true quer dizer que o horário foi reconstruído pelos cliques e é aproximado. lives_resumo compara as horas em live com as horas sem live.
+- lives: já em ordem do markup (posicao_por_markup 1 = a que mais rendeu), com "quando" no horário de Brasília (use exatamente esse dia e horário), duração, markup, markup por hora, "vezes_o_normal_do_horario" (quanto rendeu a mais que o mesmo horário sem live), operações, pessoas operando, movimentado, depósitos feitos durante e quantos clicaram para entrar. "horario_estimado": true quer dizer que o horário foi reconstruído pelos cliques e é aproximado. lives_resumo compara as horas em live com as horas sem live.
+- contas_prontas: as contas já feitas (markup por operação, por pessoa, a cada US$ 100 movimentados, dias ativos por pessoa, percentual da I.A., melhores horas de cada lado, quanto as lives renderam a mais). Use esses números em vez de refazer as contas. "quem_vence" diz, métrica por métrica, se a I.A. ou a manual ganha: nunca afirme o contrário do que está ali.
+- Para dizer quanto as lives renderam a mais, use contas_prontas.lives_vezes_o_normal (comparação com o mesmo horário sem live). Não divida o markup por hora em live pelo markup por hora sem live.
 - top: os 10 maiores geradores de markup, sem identificação.
 
 COMO LER (regras duras)
-- Use só os números dos dados. Não invente número, nome de estratégia nem live. Faça as contas com cuidado: markup por operação, por pessoa, a cada US$ 100 movimentados, por hora.
+- Use só os números dos dados. Não invente número, nome de estratégia nem live. Quando um número já estiver em contas_prontas, use ele; não refaça a conta.
+- Datas e horários: copie como vieram (já estão no horário de Brasília). Nunca converta fuso.
 - Amostra: não declare vencedor com menos de 30 pessoas ou menos de 500 operações de um lado; diga que é cedo. Estratégia com menos de 10 pessoas é só observação. Diferença abaixo de 15% é empate.
 - A maioria dos clientes termina no vermelho: isso é o comportamento normal desse mercado. Não trate como defeito a corrigir nem como vantagem; o que importa para o negócio é o cliente continuar ativo e com saldo.
 - Compare "ia" e "manual" pelo que cada um entrega ao negócio: markup total, markup por pessoa, markup por operação, quanto do volume vira markup, quantos dias a pessoa volta e quanto ela deposita.
@@ -199,11 +232,66 @@ async function montarEntrada(cab: Record<string, string>, marca: string, parceir
   // sem nome, foto nem id de cliente
   d.top = ((d.top ?? []) as any[]).map((t, i) => ({ posicao: i + 1, perfil: t.perfil, markup: t.markup, markup_ia: t.markup_ia, markup_manual: t.markup_manual, resultado: t.resultado, saldo: t.saldo, operacoes: t.operacoes, dias: t.dias, depositos: t.depositos }))
   delete d.lido_em
+  // 17/11/2026: a 1ª leitura real trocou as datas das lives (o banco manda em UTC: a de terça 21h virou "quarta de
+  // madrugada") e errou contas. Agora vai tudo no horário de Brasília, escrito, e com as contas prontas.
+  const r2 = (v: unknown, c = 2) => Math.round((Number(v) || 0) * 10 ** c) / 10 ** c
+  const div = (a: unknown, b: unknown) => (Number(b) > 0 ? Number(a) / Number(b) : 0)
+  d.de = quandoEmBrasilia(d.de); d.ate = quandoEmBrasilia(d.ate)
+  const lives = ((d.lives ?? []) as any[]).map((l) => {
+    const horas = (Date.parse(l.fim) - Date.parse(l.inicio)) / 3_600_000
+    return {
+      quando: `${quandoEmBrasilia(l.inicio)} às ${horaEmBrasilia(l.fim)}`, duracao_horas: r2(horas, 1), horario_estimado: Boolean(l.estimada),
+      origem: l.origem, markup: r2(l.markup), markup_ia: r2(l.markup_ia), markup_manual: r2(l.markup_manual), markup_por_hora: r2(div(l.markup, horas)),
+      vezes_o_normal_do_horario: Number(l.tipico) > 0 ? r2(div(l.markup, l.tipico), 1) : null,
+      operacoes: l.operacoes, pessoas_operando: l.pessoas, movimentado: r2(l.volume), depositos: r2(l.depositos), clicaram_para_entrar: l.entraram,
+    }
+  }).sort((a, b) => b.markup - a.markup).map((l, i) => ({ posicao_por_markup: i + 1, ...l }))
+  d.lives = lives
+  const o = d.origens ?? {}
+  const conta = (x: any) => x && ({
+    markup_por_operacao: r2(div(x.markup, x.operacoes), 4), markup_por_pessoa: r2(div(x.markup, x.pessoas)),
+    markup_a_cada_100_movimentados: r2(div(x.markup, x.volume) * 100), entrada_media: r2(div(x.volume, x.operacoes)),
+    percentual_de_operacoes_com_ganho: r2(div(x.ganhas, x.operacoes) * 100, 1), dias_ativos_por_pessoa: r2(x.dias_media, 1),
+  })
+  // quem vence em cada métrica, já escrito (a 1ª leitura disse que a I.A. "mantém os clientes mais ativos", e era o contrário)
+  const vence = (nome: string, a: number, b: number, fmt: (v: number) => string) =>
+    `${nome}: ${a === b ? 'empate' : a > b ? 'I.A.' : 'manual'} (I.A. ${fmt(a)} x manual ${fmt(b)})`
+  const usd = (v: number) => `US$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const ci = conta(o.ia) ?? {}, cm = conta(o.manual) ?? {}
+  const total = Number(o.ia?.markup ?? 0) + Number(o.manual?.markup ?? 0)
+  d.contas_prontas = {
+    markup_total: r2(total), percentual_do_markup_da_ia: r2(div(o.ia?.markup, total) * 100, 1),
+    ia: conta(o.ia), manual: conta(o.manual),
+    quem_vence: o.ia && o.manual ? [
+      vence('markup total', r2(o.ia.markup), r2(o.manual.markup), usd),
+      vence('markup por operação', ci.markup_por_operacao, cm.markup_por_operacao, usd),
+      vence('markup por pessoa', ci.markup_por_pessoa, cm.markup_por_pessoa, usd),
+      vence('dias ativos por pessoa (quem volta mais)', ci.dias_ativos_por_pessoa, cm.dias_ativos_por_pessoa, (v) => v.toLocaleString('pt-BR')),
+      vence('pessoas que operaram', Number(o.ia.pessoas), Number(o.manual.pessoas), (v) => String(v)),
+    ] : [],
+    melhores_horas_ia: [...(d.horas ?? [])].sort((a: any, b: any) => b.ia - a.ia).slice(0, 3).map((h: any) => `${h.hora}h (US$ ${r2(h.ia)})`),
+    melhores_horas_manual: [...(d.horas ?? [])].sort((a: any, b: any) => b.manual - a.manual).slice(0, 3).map((h: any) => `${h.hora}h (US$ ${r2(h.manual)})`),
+    // as lives contra o MESMO horário sem live (é o número certo para dizer "quanto as lives renderam a mais")
+    lives_vezes_o_normal: Number(d.lives_resumo?.tipico_live) > 0 ? r2(div(d.lives_resumo.markup_live, d.lives_resumo.tipico_live), 1) : null,
+    markup_por_hora_em_live: r2(div(d.lives_resumo?.markup_live, d.lives_resumo?.horas_live)),
+    markup_por_hora_sem_live: r2(div(d.lives_resumo?.markup_fora, d.lives_resumo?.horas_fora)),
+  }
   return d
 }
 
+const FUSO = 'America/Sao_Paulo'
+const fmtQuando = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, weekday: 'long', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+const fmtHora = new Intl.DateTimeFormat('pt-BR', { timeZone: FUSO, hour: '2-digit', minute: '2-digit' })
+/** "terça-feira, 10/11, 21:11" no horário de Brasília. */
+const quandoEmBrasilia = (iso: unknown) => (iso ? fmtQuando.format(Date.parse(String(iso))) : '')
+const horaEmBrasilia = (iso: unknown) => (iso ? fmtHora.format(Date.parse(String(iso))) : '')
+
 async function analisar(id: string, cab: Record<string, string>, marca: string, parceiro: string, de: string, ate: string, rotulo: string, chave: { anthropic: string; gemini: string }) {
   const mudar = (campos: Record<string, unknown>) => rest(`negocio_analises?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify(campos) })
+  // se o Supabase desligar a função antes do fim, a leitura vira erro em vez de ficar "analisando" para sempre
+  let terminou = false
+  const aoDesligar = () => { if (!terminou) void rest(`negocio_analises?id=eq.${id}&situacao=eq.analisando`, { method: 'PATCH', body: JSON.stringify({ situacao: 'erro', erro: 'A I.A. demorou demais para responder. Tente de novo.' }) }) }
+  addEventListener('beforeunload', aoDesligar)
   try {
     const entrada = await montarEntrada(cab, marca, parceiro, de, ate)
     const operacoes = Number(entrada.origens?.ia?.operacoes ?? 0) + Number(entrada.origens?.manual?.operacoes ?? 0)
@@ -215,7 +303,7 @@ async function analisar(id: string, cab: Record<string, string>, marca: string, 
       await mudar({ situacao: 'pronta', dados: arrumar(JSON.parse(limpo)), modelo: g.modelo, pronta_em: new Date().toISOString(), uso: g.uso })
       return
     }
-    const cliente = new Anthropic({ apiKey: chave.anthropic })
+    const cliente = new Anthropic({ apiKey: chave.anthropic, timeout: PRAZO_TOTAL, maxRetries: 0 })
     const resposta = await cliente.messages.create({
       model: MODELO, max_tokens: 16000,
       system: instrucoes(marca, rotulo),
@@ -228,7 +316,10 @@ async function analisar(id: string, cab: Record<string, string>, marca: string, 
     const dados = arrumar(JSON.parse(texto))
     await mudar({ situacao: 'pronta', dados, modelo: resposta.model, pronta_em: new Date().toISOString(), uso: { entrada: resposta.usage?.input_tokens, saida: resposta.usage?.output_tokens } })
   } catch (e) {
-    await mudar({ situacao: 'erro', erro: erroParaTela(e) })
+    await mudar({ situacao: 'erro', erro: erroParaTela(e), ...(e instanceof ErroDoGemini ? { uso: { tentativas: e.tentativas } } : {}) })
+  } finally {
+    terminou = true
+    removeEventListener('beforeunload', aoDesligar)
   }
 }
 
@@ -240,6 +331,7 @@ function erroParaTela(e: unknown): string {
   if (/rate_limit|overloaded/i.test(m)) return 'A I.A. está ocupada agora. Tente de novo em alguns minutos.'
   if (/^gemini (401|403)|API_KEY_INVALID|PERMISSION_DENIED/i.test(m)) return 'A chave do Gemini foi recusada pelo Google. Cole uma chave nova no cartão.'
   if (/^gemini 429|RESOURCE_EXHAUSTED/i.test(m)) return 'A cota gratuita do Gemini de hoje acabou. Ela volta amanhã; tente de novo depois.'
+  if (/^gemini 503|high demand|UNAVAILABLE/i.test(m)) return 'O Gemini gratuito está sobrecarregado agora. Tente de novo em alguns minutos.'
   if (/^gemini/i.test(m)) return 'O Gemini não respondeu agora. Tente de novo em alguns minutos.'
   if (/JSON|Unexpected token/i.test(m)) return 'A resposta da I.A. veio fora do formato. Tente de novo.'
   return m.slice(0, 600)
