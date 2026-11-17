@@ -318,7 +318,7 @@ export function NegocioDaVisaoGeral({ sessao, marca, parceiro, janela }: { sessa
       </Gaveta>
 
       {/* ------------------------------------------------ as recomendações da I.A. */}
-      <RecomendacoesDoNegocio sessao={sessao} marca={marca} parceiro={parceiro} periodo={periodo} de={de} ate={lido?.fim ?? ate} rotulo={rotulo} />
+      <RecomendacoesDoNegocio sessao={sessao} marca={marca} parceiro={parceiro} periodo={periodo} de={de} ate={lido?.fim ?? ate} rotulo={rotulo} negocio={d} />
 
       {/* ------------------------------------------------ as lives: o pódio e os quatro números */}
       <div className="ngc-bloco ngc-lives">

@@ -175,13 +175,19 @@ const LEITURA_DO_LAB = {
   resumo: 'Nos últimos 30 dias a plataforma gerou US$ 3.784,67 de markup em conta real: 76% vieram da I.A. (US$ 2.883,49) e 24% da manual (US$ 901,18). A manual faz 18 vezes menos operações, mas cada uma rende 5,6 vezes mais markup. Em live, o markup por hora foi mais de 5 vezes o do mesmo horário sem live.',
   veredito: { onde: 'as_duas', titulo: 'A I.A. dá o volume; a manual, feita em live, dá o salto', texto: 'A I.A. sustenta o dia a dia: 179 pessoas e US$ 16,11 por pessoa. A manual rende US$ 0,23 por operação contra US$ 0,04 da I.A. e quem opera dos dois jeitos volta 3,7 dias, quase o dobro de quem só usa a I.A. O melhor retorno está em levar quem só usa a I.A. para operar na manual durante as lives.' },
   recomendacoes: [
-    { titulo: 'Leve quem só usa a I.A. para a manual nas lives', porque: 'Quem opera dos dois jeitos gera US$ 24,65 por pessoa; quem só usa a I.A., US$ 9,36.', como: 'Em cada live, reserve 15 minutos de operação manual guiada e chame pelo nome quem está só com a I.A. ligada.', categoria: 'manual', impacto: 'alto' },
-    { titulo: 'Mantenha a live das 21h como a principal do dia', porque: 'As duas lives que mais renderam foram à noite: US$ 192,70 e US$ 151,95, cerca de 7 vezes o típico do horário.', como: 'Fixe 21h de segunda a quinta e avise às 20h30 por notificação e WhatsApp.', categoria: 'lives', impacto: 'alto' },
-    { titulo: 'Divulgue a GF Raptor como a porta de entrada', porque: 'Ela gerou US$ 1.254,13 com 149 pessoas, 43% do markup da I.A.', como: 'Abra as lives com a Raptor ligada na tela e use-a nos conteúdos da semana.', categoria: 'ia', impacto: 'medio' },
-    { titulo: 'Crie um horário forte à tarde', porque: 'Das 15h às 16h a manual rende quase o mesmo que à noite, e a live de sexta à tarde foi 11 vezes o típico.', como: 'Teste uma live fixa às 15h por duas semanas e compare o markup por hora.', categoria: 'horario', impacto: 'medio' },
-    { titulo: 'Reative quem está sem saldo', porque: '23 pessoas zeraram a conta e, mesmo assim, geraram US$ 538,08 no período.', como: 'Mande uma mensagem individual com o convite para a próxima live e o link de depósito.', categoria: 'clientes', impacto: 'medio' },
+    { titulo: 'Leve quem só usa a I.A. para a manual nas lives', porque: 'Quem opera dos dois jeitos gera US$ 24,65 por pessoa; quem só usa a I.A., US$ 9,36.', como: 'Em cada live, reserve 15 minutos de operação manual guiada e chame pelo nome quem está só com a I.A. ligada.', categoria: 'manual', impacto: 'alto',
+      prazo: 'semana', responsavel: 'Lives', passos: ['Separar 15 minutos de manual guiada no roteiro de cada live', 'Listar quem só usa a I.A. antes de entrar ao vivo', 'Chamar essas pessoas pelo nome durante o bloco manual'], indicador: 'Pessoas que operam dos dois jeitos', alvo: 'De 138 para 160 pessoas', potencial: 310 },
+    { titulo: 'Mantenha a live das 21h como a principal do dia', porque: 'As duas lives que mais renderam foram à noite: US$ 192,70 e US$ 151,95, cerca de 7 vezes o típico do horário.', como: 'Fixe 21h de segunda a quinta e avise às 20h30 por notificação e WhatsApp.', categoria: 'lives', impacto: 'alto',
+      prazo: 'semana', responsavel: 'Lives', passos: ['Fixar a live às 21h de segunda a quinta', 'Programar o aviso das 20h30 no push e no WhatsApp'], indicador: 'Markup por live à noite', alvo: 'De US$ 172 para US$ 200 por live', potencial: 220 },
+    { titulo: 'Divulgue a GF Raptor como a porta de entrada', porque: 'Ela gerou US$ 1.254,13 com 149 pessoas, 43% do markup da I.A.', como: 'Abra as lives com a Raptor ligada na tela e use-a nos conteúdos da semana.', categoria: 'ia', impacto: 'medio',
+      prazo: '15_dias', responsavel: 'Marketing', passos: ['Colocar a Raptor em destaque na tela inicial', 'Gravar 3 conteúdos curtos com a Raptor rodando', 'Abrir as lives com a Raptor ligada'], indicador: 'Markup da GF Raptor', alvo: 'De US$ 1.254,13 para US$ 1.400', potencial: 145 },
+    { titulo: 'Crie um horário forte à tarde', porque: 'Das 15h às 16h a manual rende quase o mesmo que à noite, e a live de sexta à tarde foi 11 vezes o típico.', como: 'Teste uma live fixa às 15h por duas semanas e compare o markup por hora.', categoria: 'horario', impacto: 'medio',
+      prazo: '15_dias', responsavel: 'Gestão', passos: ['Marcar uma live às 15h por duas semanas', 'Comparar o markup por hora com a semana anterior'], indicador: 'Markup das 15h às 16h', alvo: 'De US$ 98 para US$ 140 no período', potencial: 42 },
+    { titulo: 'Reative quem está sem saldo', porque: '23 pessoas zeraram a conta e, mesmo assim, geraram US$ 538,08 no período.', como: 'Mande uma mensagem individual com o convite para a próxima live e o link de depósito.', categoria: 'clientes', impacto: 'medio',
+      prazo: '30_dias', responsavel: 'Suporte', passos: ['Puxar a lista das 23 pessoas sem saldo', 'Mandar mensagem individual com o convite da live', 'Acompanhar quem voltou a depositar em 7 dias'], indicador: 'Clientes sem saldo que voltaram a operar', alvo: '6 das 23 pessoas de volta', potencial: 120 },
   ],
   lives: 'As lives da noite (por volta de 21h) foram as que mais renderam, com US$ 192,70 e US$ 151,95. A de sexta à tarde rendeu US$ 111,33, 11 vezes o típico do horário. As da manhã rendem menos em valor, mas ainda de 3 a 5 vezes o normal.',
+  meta: { titulo: 'Levar o markup de US$ 3.784,67 para US$ 4.621 no próximo período de 30 dias', atual: 3784.67, alvo: 4621.67, texto: 'A meta soma o que cada ação pode render a mais; o que mais pesa é levar quem só usa a I.A. para a manual nas lives.' },
   alertas: ['O período tem só 11 dias com operação: as conclusões ainda podem mudar.', 'O horário de 7 das 9 lives é estimado pelos cliques no aviso.'],
 }
 let leituraDoLab: Record<string, unknown> | null = null
@@ -221,6 +227,11 @@ function comAoVivo<T extends { markup: any; lido_em?: string }>(d: T, campos: st
   return { ...d, markup, lido_em: new Date(agora).toISOString() }
 }
 
+// &plano: abre o plano de ação sozinho (para conferir a tela e o PDF sem clicar)
+if (new URLSearchParams(location.search).has('plano')) {
+  const abrir = () => { const b = [...document.querySelectorAll('button')].find((x) => /Ver o plano de a/.test(x.textContent ?? '')); if (b) b.click(); else setTimeout(abrir, 300) }
+  setTimeout(abrir, 300)
+}
 export default function LabVisaoGeral() {
   const busca = new URLSearchParams(location.search)
   const cenario = busca.get('cenario') ?? ''

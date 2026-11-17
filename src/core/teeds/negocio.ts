@@ -53,10 +53,15 @@ export type CategoriaDaDica = 'horario' | 'ia' | 'manual' | 'lives' | 'clientes'
 export interface LeituraDaIA {
   resumo: string
   veredito: { onde: 'ia' | 'manual' | 'as_duas' | 'cedo'; titulo: string; texto: string }
-  recomendacoes: Array<{ titulo: string; porque: string; como: string; categoria: CategoriaDaDica; impacto: 'alto' | 'medio' | 'baixo' }>
+  recomendacoes: Array<{ titulo: string; porque: string; como: string; categoria: CategoriaDaDica; impacto: 'alto' | 'medio' | 'baixo'
+    /** o plano de ação (17/11/2026); leituras antigas não têm esses campos */
+    prazo?: PrazoDaAcao; responsavel?: string; passos?: string[]; indicador?: string; alvo?: string; potencial?: number }>
   lives: string
   alertas: string[]
+  /** a meta do próximo período do mesmo tamanho (leituras antigas não têm) */
+  meta?: { titulo: string; atual: number; alvo: number; texto: string } | null
 }
+export type PrazoDaAcao = 'semana' | '15_dias' | '30_dias'
 export interface AnaliseDoNegocio {
   id: string; situacao: 'analisando' | 'pronta' | 'erro'; dados: LeituraDaIA | null; erro: string | null
   criadoEm: string; prontaEm: string | null; quem: string | null; de: string; ate: string; motor?: MotorDaIA

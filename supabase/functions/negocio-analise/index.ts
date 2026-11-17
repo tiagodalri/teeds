@@ -116,10 +116,16 @@ class ErroDoGemini extends Error { constructor(m: string, public tentativas: unk
 function arrumar(d: any) {
   const txt = (v: unknown, max = 2000) => String(v ?? '').trim().slice(0, max)
   const um = <T extends string>(v: unknown, lista: readonly T[], padrao: T): T => (lista.includes(v as T) ? (v as T) : padrao)
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : 0 }
   const recs = (Array.isArray(d?.recomendacoes) ? d.recomendacoes : []).map((r: any) => ({
     titulo: txt(r?.titulo, 200), porque: txt(r?.porque, 600), como: txt(r?.como, 600),
     categoria: um(r?.categoria, ['horario', 'ia', 'manual', 'lives', 'clientes', 'banca'] as const, 'clientes'),
     impacto: um(r?.impacto, ['alto', 'medio', 'baixo'] as const, 'medio'),
+    // o plano de ação (17/11/2026): quando, quem, os passos, como medir e quanto pode render
+    prazo: um(r?.prazo, ['semana', '15_dias', '30_dias'] as const, r?.impacto === 'alto' ? 'semana' : r?.impacto === 'baixo' ? '30_dias' : '15_dias'),
+    responsavel: txt(r?.responsavel, 60), indicador: txt(r?.indicador, 200), alvo: txt(r?.alvo, 200),
+    passos: (Array.isArray(r?.passos) ? r.passos : []).map((x: unknown) => txt(x, 220)).filter(Boolean).slice(0, 5),
+    potencial: num(r?.potencial_usd),
   })).filter((r: any) => r.titulo).slice(0, 8)
   if (!txt(d?.resumo) || !recs.length) throw new Error('A resposta da I.A. veio incompleta. Tente de novo.')
   return {
@@ -127,6 +133,7 @@ function arrumar(d: any) {
     veredito: { onde: um(d?.veredito?.onde, ['ia', 'manual', 'as_duas', 'cedo'] as const, 'cedo'), titulo: txt(d?.veredito?.titulo, 300), texto: txt(d?.veredito?.texto) },
     recomendacoes: recs, lives: txt(d?.lives),
     alertas: (Array.isArray(d?.alertas) ? d.alertas : []).map((a: unknown) => txt(a, 400)).filter(Boolean).slice(0, 6),
+    meta: d?.meta && txt(d.meta.titulo) ? { titulo: txt(d.meta.titulo, 200), atual: num(d.meta.atual_usd), alvo: num(d.meta.alvo_usd), texto: txt(d.meta.texto, 600) } : null,
   }
 }
 
@@ -154,7 +161,7 @@ const PROIBIDAS = '"aposta", "apostar", "sorte", "chute", "jogar" ou "jogo"' // 
 
 const ESQUEMA = {
   type: 'object', additionalProperties: false,
-  required: ['resumo', 'veredito', 'recomendacoes', 'lives', 'alertas'],
+  required: ['resumo', 'veredito', 'meta', 'recomendacoes', 'lives', 'alertas'],
   properties: {
     resumo: { type: 'string', description: '2 a 4 frases com os números que mais importam do período.' },
     veredito: {
@@ -168,14 +175,29 @@ const ESQUEMA = {
     recomendacoes: {
       type: 'array',
       items: {
-        type: 'object', additionalProperties: false, required: ['titulo', 'porque', 'como', 'categoria', 'impacto'],
+        type: 'object', additionalProperties: false, required: ['titulo', 'porque', 'como', 'categoria', 'impacto', 'prazo', 'responsavel', 'passos', 'indicador', 'alvo', 'potencial_usd'],
         properties: {
           titulo: { type: 'string', description: 'A ação, no imperativo, em até 10 palavras.' },
           porque: { type: 'string', description: 'O número que sustenta a recomendação.' },
           como: { type: 'string', description: 'O passo concreto para colocar em prática nesta semana.' },
           categoria: { type: 'string', enum: ['horario', 'ia', 'manual', 'lives', 'clientes', 'banca'], description: 'horario = quando operar; ia = qual estratégia automática; manual = operação manual; lives = transmissões; clientes = reativar, reter, trazer de volta; banca = tamanho da conta e depósito.' },
           impacto: { type: 'string', enum: ['alto', 'medio', 'baixo'] },
+          prazo: { type: 'string', enum: ['semana', '15_dias', '30_dias'], description: 'Quando começar: semana = já nesta semana; 15_dias = nos próximos 15 dias; 30_dias = dentro do mês.' },
+          responsavel: { type: 'string', description: 'Quem do time toca, em 1 ou 2 palavras: Lives, Marketing, Suporte, Parceiros, Produto ou Gestão.' },
+          passos: { type: 'array', items: { type: 'string' }, description: '2 a 4 passos curtos e concretos, na ordem, cada um começando com um verbo.' },
+          indicador: { type: 'string', description: 'O número da plataforma que mostra se deu certo (ex.: markup das 11h às 12h).' },
+          alvo: { type: 'string', description: 'Aonde levar esse número no próximo período do mesmo tamanho, saindo do valor de hoje (ex.: de US$ 283,12 para US$ 340).' },
+          potencial_usd: { type: 'number', description: 'Markup a mais estimado no próximo período do mesmo tamanho, conservador e tirado dos números; 0 quando não der para estimar.' },
         },
+      },
+    },
+    meta: {
+      type: 'object', additionalProperties: false, required: ['titulo', 'atual_usd', 'alvo_usd', 'texto'],
+      properties: {
+        titulo: { type: 'string', description: 'A meta do próximo período do mesmo tamanho, numa frase (ex.: levar o markup de US$ 3.862 para US$ 4.400).' },
+        atual_usd: { type: 'number', description: 'O markup total do período (contas_prontas.markup_total).' },
+        alvo_usd: { type: 'number', description: 'O markup total que o plano busca no próximo período do mesmo tamanho: o atual mais a soma dos potenciais.' },
+        texto: { type: 'string', description: '1 ou 2 frases: de onde vem a meta e o que mais pesa nela.' },
       },
     },
     lives: { type: 'string', description: 'A leitura das lives: quais renderam mais, em que dia e horário, e o padrão. Vazio se não houve live no período.' },
@@ -219,7 +241,15 @@ COMO ESCREVER
 - Valores como "US$ 1.234,56" (ponto no milhar, vírgula nos centavos). Percentual sem casas, a não ser abaixo de 10%.
 - Nunca use ${PROIBIDAS} para falar de operar. Nunca prometa ganho ao cliente nem sugira esconder risco, travar saque ou induzir o cliente a perder.
 - recomendacoes: de 4 a 7, em ordem de impacto, cada uma com o número que a sustenta e o passo prático. Pelo menos uma de horário, uma sobre qual estratégia automática divulgar e, se houve live, uma sobre as lives.
-- alertas: só o que ele precisa saber antes de agir (amostra pequena, período curto, horário de live estimado). Pode ser vazio.`
+- alertas: só o que ele precisa saber antes de agir (amostra pequena, período curto, horário de live estimado). Pode ser vazio.
+
+O PLANO DE AÇÃO (cada recomendação vira uma tarefa do time)
+- prazo: as de impacto alto e fáceis começam nesta semana; o resto em 15 ou 30 dias. Distribua: não ponha tudo na mesma semana.
+- responsavel: quem toca (Lives, Marketing, Suporte, Parceiros, Produto ou Gestão).
+- passos: de 2 a 4, curtos, práticos, que dá para marcar como feito.
+- indicador e alvo: o número que vai mostrar que deu certo, saindo do valor de hoje dos dados (nunca invente o valor de hoje).
+- potencial_usd: estimativa CONSERVADORA de markup a mais no próximo período do mesmo tamanho, tirada dos números (ex.: levar um horário fraco a metade do que rende o horário forte). Nunca some mais de 35% do markup total do período em todos os potenciais juntos. 0 quando não der para estimar.
+- meta: atual_usd = contas_prontas.markup_total; alvo_usd = atual mais a soma dos potenciais. Escreva a meta como objetivo do time, sem prometer.`
 }
 
 async function montarEntrada(cab: Record<string, string>, marca: string, parceiro: string, de: string, ate: string) {
