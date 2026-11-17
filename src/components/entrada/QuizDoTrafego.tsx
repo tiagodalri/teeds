@@ -259,6 +259,10 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
     rastro('quiz-video-progresso', { etapa, video, pct, ...(mudo ? { mudo: true } : {}) })
     pixel('AssistiuVSL', { video, percentual: pct, mudo }, true)
     if (!mudo && pct === 75) pixel(`AssistiuVSL${video}_75`, undefined, true)
+    // 17/11/2026: o pixel do Naor bloqueia eventos próprios "não verificados" (QuizResposta, QuizComecou...
+    // foram descartados pelo próprio fbevents). O vídeo vai também como evento padrão, que nunca é bloqueado:
+    // ViewContent "vsl-<vídeo>-<%>", para públicos e conversões personalizadas no Meta.
+    if (!mudo && pct > 0) pixel('ViewContent', { content_name: `vsl-${video}-${pct}` }, true)
   }
   const comecar = () => {
     rastro('quiz-comecou')
