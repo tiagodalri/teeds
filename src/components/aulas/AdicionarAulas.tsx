@@ -10,7 +10,7 @@ import './adicionar-aulas.css'
  * com facilidade"). Cola-se uma lista: um link por linha (YouTube, Vimeo ou MP4), um
  * título por linha, ou os dois ("Título | link"). O título de cada vídeo do YouTube e
  * do Vimeo vem sozinho; dá para corrigir antes de criar. As aulas entram no assunto
- * escolhido (ou num módulo novo) e ficam no rascunho, como tudo no editor. Prefixo aa-.
+ * escolhido (ou num módulo novo) e ficam no rascunho, como tudo no editor. Prefixo adl- (era aa-, que é o do painel de Anúncios: a janela limitava a altura do painel, 17/11/2026).
  */
 
 export interface AulaNova { titulo: string; video: string }
@@ -86,32 +86,32 @@ export function AdicionarAulas({ grade, curso, destinoInicial, aoCriar, aoFechar
   }
 
   return createPortal(
-    <div className="aa-fundo" onMouseDown={aoFechar}>
-      <section className="aa" role="dialog" aria-modal="true" aria-label="Adicionar aulas" onMouseDown={(e) => e.stopPropagation()}>
-        <header className="aa-cab">
+    <div className="adl-fundo" onMouseDown={aoFechar}>
+      <section className="adl" role="dialog" aria-modal="true" aria-label="Adicionar aulas" onMouseDown={(e) => e.stopPropagation()}>
+        <header className="adl-cab">
           <div><b>Adicionar aulas</b><small>Cole a lista: um link por linha, um título por linha, ou os dois (Título | link).</small></div>
-          <button type="button" className="aa-x" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
+          <button type="button" className="adl-x" onClick={aoFechar} aria-label="Fechar"><IconeFechar /></button>
         </header>
-        <div className="aa-corpo">
-          <label className="aa-cola">
+        <div className="adl-corpo">
+          <label className="adl-cola">
             <span>Links ou títulos</span>
             <textarea ref={area} value={texto} onChange={(e) => setTexto(e.target.value)} spellCheck={false} rows={10}
               placeholder={'https://youtu.be/…\nhttps://youtu.be/…\nComo sacar da corretora | https://youtu.be/…\nAula sem vídeo ainda'}
               onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); criar() } }} />
             <small>YouTube (não listado), Vimeo ou MP4. O título do vídeo vem sozinho. Linha sem link vira aula sem vídeo, que aparece como "Em breve".</small>
           </label>
-          <div className="aa-lista" aria-live="polite">
+          <div className="adl-lista" aria-live="polite">
             <span>{prontas.length ? `${prontas.length} ${prontas.length === 1 ? 'aula' : 'aulas'}` : 'Prévia'}</span>
-            {!prontas.length && <p className="aa-vazio">As aulas aparecem aqui conforme você cola.</p>}
+            {!prontas.length && <p className="adl-vazio">As aulas aparecem aqui conforme você cola.</p>}
             <ol>
               {prontas.map((l, i) => {
                 const p = playerDoVideo(l.video)
                 const thumb = p?.tipo === 'youtube' && p.id ? `https://i.ytimg.com/vi/${p.id}/mqdefault.jpg` : null
                 return (
                   <li key={l.chave}>
-                    <span className="aa-thumb">{thumb ? <img src={thumb} alt="" loading="lazy" /> : <i>{String(i + 1).padStart(2, '0')}</i>}</span>
-                    <span className="aa-item">
-                      {linhas[i]?.buscando ? <em className="aa-buscando">Buscando o título…</em>
+                    <span className="adl-thumb">{thumb ? <img src={thumb} alt="" loading="lazy" /> : <i>{String(i + 1).padStart(2, '0')}</i>}</span>
+                    <span className="adl-item">
+                      {linhas[i]?.buscando ? <em className="adl-buscando">Buscando o título…</em>
                         : <input value={editados[l.chave] ?? linhas[i]?.titulo ?? ''} placeholder={`Aula ${i + 1}`} aria-label={`Título da aula ${i + 1}`} onChange={(e) => setEditados((x) => ({ ...x, [l.chave]: e.target.value }))} />}
                       <small>{!l.video ? 'Sem vídeo: "Em breve"' : p?.tipo === 'vimeo' ? 'Vimeo' : p?.tipo === 'mp4' ? 'MP4' : p?.tipo === 'youtube' && p.id ? 'YouTube' : 'Link (confira se toca)'}</small>
                     </span>
@@ -121,8 +121,8 @@ export function AdicionarAulas({ grade, curso, destinoInicial, aoCriar, aoFechar
             </ol>
           </div>
         </div>
-        <footer className="aa-rodape">
-          <div className="aa-destino">
+        <footer className="adl-rodape">
+          <div className="adl-destino">
             <label><span>Colocar em</span>
               <select value={destino} onChange={(e) => setDestino(e.target.value)}>
                 {modulos.map((m) => <optgroup key={m.id} label={m.titulo || 'Módulo sem nome'}>{m.assuntos.map((s) => <option key={s.id} value={s.id}>{s.titulo ? `${m.titulo} › ${s.titulo}` : m.titulo || 'Módulo sem nome'}</option>)}</optgroup>)}
@@ -130,10 +130,10 @@ export function AdicionarAulas({ grade, curso, destinoInicial, aoCriar, aoFechar
               </select>
             </label>
             {novo && <label><span>Nome do módulo</span><input value={nomeDoModulo} onChange={(e) => setNomeDoModulo(e.target.value)} placeholder="Ex.: Estratégias avançadas" maxLength={80} autoFocus /></label>}
-            <label className="aa-chave"><input type="checkbox" checked={visiveis} onChange={(e) => setVisiveis(e.target.checked)} /><span>Visíveis para os alunos ao publicar</span></label>
+            <label className="adl-chave"><input type="checkbox" checked={visiveis} onChange={(e) => setVisiveis(e.target.checked)} /><span>Visíveis para os alunos ao publicar</span></label>
           </div>
-          {ruins.length > 0 && <small className="aa-aviso">{ruins.length} {ruins.length === 1 ? 'link não parece' : 'links não parecem'} YouTube, Vimeo ou MP4: confira na prévia depois de criar.</small>}
-          <div className="aa-botoes">
+          {ruins.length > 0 && <small className="adl-aviso">{ruins.length} {ruins.length === 1 ? 'link não parece' : 'links não parecem'} YouTube, Vimeo ou MP4: confira na prévia depois de criar.</small>}
+          <div className="adl-botoes">
             <button type="button" className="admin-secundario" onClick={aoFechar}>Cancelar</button>
             <button type="button" className="admin-primary" disabled={!podeCriar} onClick={criar}>{prontas.length > 1 ? `Criar ${prontas.length} aulas` : 'Criar aula'}</button>
           </div>
