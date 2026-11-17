@@ -5,6 +5,8 @@ import { buscarCotacoes, cotacoesGuardadas } from '../ferramentas/cambio'
 import './compartilhamento.css'
 import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 import { PalcoDoCompartilhamento } from './PalcoDoCompartilhamento'
+import { useModoSimulado } from '../../core/teeds/modoSimulado'
+import { guardarAjusteSimulado, lerAjusteSimulado, painelSimulado } from '../../core/teeds/compartilhamentoSimulado'
 
 /**
  * Compartilhamento de receita (11/11/2026, Tiago: "quem é do plano Gold tem que pagar 10% do que lucrou
@@ -107,7 +109,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
   onAbrirCliente?: (userId: string) => void
 }) {
   const [mes, setMes] = useState(mesDeHoje)
-  const [painel, setPainel] = useState<Painel | null>(null)
+  const [painelReal, setPainel] = useState<Painel | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(false)
   const [dolar, setDolar] = useState<{ valor: number; quando: number; fonte: string } | null>(() => {
@@ -148,12 +150,26 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
   useEffect(() => { if (pedido) { void ler(); void lerDolar() } }, [pedido]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { try { localStorage.setItem(CHAVE_MINIMO, String(minimo)) } catch { /* opcional */ } }, [minimo])
 
+  // modo simulado (16/11/2026, só admin): a tela inteira mostra a base simulada regulada nos termômetros do palco;
+  // o painel real continua sendo lido por baixo (datas, percentuais e parceiros vêm dele), mas nada é gravado
+  const simulado = useModoSimulado()
+  const [ajuste, setAjuste] = useState(lerAjusteSimulado)
+  useEffect(() => { guardarAjusteSimulado(ajuste) }, [ajuste])
+  const cotacaoSim = dolar?.valor ?? 0
+  const painel = useMemo(() => {
+    if (!simulado) return painelReal
+    const base = painelReal && painelReal.mes.slice(0, 7) === mes.slice(0, 7) ? painelReal : null
+    return painelSimulado(ajuste, mes, base, cotacaoSim)
+  }, [simulado, painelReal, ajuste, mes, cotacaoSim])
+  const abrirFicha = simulado ? undefined : onAbrirCliente
+
   const meses = useMemo(() => {
     const l: string[] = []
     for (let m = mesDeHoje(); m >= MES_INICIAL && l.length < 36; ) { l.push(m); const [a, n] = m.split('-').map(Number); m = n === 1 ? `${a - 1}-12-01` : `${a}-${String(n - 1).padStart(2, '0')}-01` }
-    for (const x of painel?.meses ?? []) if (!l.includes(x.mes)) l.push(x.mes)
+    // só os meses do painel real (o histórico simulado não abre abas de meses sem operação)
+    for (const x of painelReal?.meses ?? []) if (!l.includes(x.mes)) l.push(x.mes)
     return l.sort().reverse()
-  }, [painel])
+  }, [painelReal])
   const cotacao = dolar?.valor ?? 0
   const linhas = painel?.clientes ?? []
   const sit = useCallback((l: Linha) => painel ? situacaoDa(l, painel, cotacao, minimo) : 'previa', [painel, cotacao, minimo])
@@ -210,7 +226,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
     const csv = [cab, ...linhasCsv].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
-    a.download = `compartilhamento-${mes.slice(0, 7)}.csv`
+    a.download = `compartilhamento-${simulado ? 'simulado-' : ''}${mes.slice(0, 7)}.csv`
     a.click()
     setTimeout(() => URL.revokeObjectURL(a.href), 2000)
   }
@@ -246,7 +262,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
     </div>}
 
     {painel && <PalcoDoCompartilhamento painel={painel} linhas={linhas} cotacao={cotacao} nomeMes={nomeMes} receber={numeros.receber} cobrar={numeros.cobrar}
-      onVer={(l) => setAberta(l)} onFicha={onAbrirCliente} />}
+      onVer={(l) => setAberta(l)} onFicha={abrirFicha} simulacao={simulado ? { ajuste, mudar: setAjuste } : undefined} />}
 
     <div className="cdr-kpis">
       <article className="cdr-kpi destaque">
@@ -276,7 +292,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
       <article className="ok"><span>Recebido · todos os meses</span><strong>{reais(painel.carteira.recebido_brl)}</strong><small>{inteiro(painel.carteira.pagas)} {painel.carteira.pagas === 1 ? 'fatura paga' : 'faturas pagas'}</small></article>
     </div>}
 
-    {painel?.fechado && <section className="admin-card full cdr-gerar">
+    {painel?.fechado && !simulado && <section className="admin-card full cdr-gerar">
       <header><div><span className="rot">Faturas de {nomeMes}</span><h3>{numeros.aGerar ? `${inteiro(numeros.aGerar)} ${numeros.aGerar === 1 ? 'fatura pronta' : 'faturas prontas'} para gerar` : numeros.geradas ? 'Todas as faturas deste mês já foram geradas' : 'Nenhum cliente para faturar neste mês'}</h3></div></header>
       <div className="cdr-gerar-corpo">
         <dl>
@@ -315,7 +331,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
         {lista.map((l) => {
           const s = sit(l)
           return <div key={l.user_id} className={`cdr-linha ${s}`}>
-            <span><button type="button" className="cdr-quem" disabled={!onAbrirCliente} onClick={() => onAbrirCliente?.(l.user_id)} title="Abrir a ficha do cliente">
+            <span><button type="button" className="cdr-quem" disabled={!abrirFicha} onClick={() => abrirFicha?.(l.user_id)} title="Abrir a ficha do cliente">
               {l.foto_url ? <img src={l.foto_url} alt="" loading="lazy" /> : <i>{(l.nome || l.email || '?')[0].toUpperCase()}</i>}
               <b>{l.nome || l.email || 'Sem nome'}<SeloDoParceiro codigo={l.parceiro} nome={l.parceiro_nome} /><small>{l.email}{l.fora_da_base ? ' · Fora da base hoje' : ''}</small></b></button></span>
             <span data-rot="Plano"><em className={`cdr-selo ${planoDa(l)}`}>{nomePlano(planoDa(l))}</em><small>{(l.fatura?.percentual ?? l.percentual) > 0 ? pct(l.fatura?.percentual ?? l.percentual) : 'Isento'}</small></span>
@@ -335,12 +351,12 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
       </div> : <div className="adm-vazio">{filtrando ? 'Nenhum cliente com esses filtros.' : `Ninguém operou em conta real em ${nomeMes.toLowerCase()}.`}</div>)}
     </section>
 
-    {gerando && painel && <ConfirmarGeracao sessao={sessao} marca={marca} mes={mes} cotacaoAgora={dolar} minimo={minimo}
+    {gerando && painel && !simulado && <ConfirmarGeracao sessao={sessao} marca={marca} mes={mes} cotacaoAgora={dolar} minimo={minimo}
       previa={{ n: gerando.usuarios.length, usd: gerando.usd, abaixo: gerando.abaixo }} usuarios={gerando.usuarios} refazer={gerando.refazer} vencimento={painel.vencimento}
       onFechar={() => setGerando(null)} onGerou={() => { setGerando(null); setAberta(null); void ler() }} />}
-    {aberta && painel && <JanelaDaFatura sessao={sessao} linha={aberta} painel={painel} cotacao={cotacao} podeMexer={painel.geral}
+    {aberta && painel && <JanelaDaFatura sessao={sessao} linha={aberta} painel={painel} cotacao={cotacao} podeMexer={painel.geral && !simulado}
       situacao={sit(aberta)} onFechar={() => setAberta(null)} onMudou={aoMudarFatura}
-      onRefazer={painel.geral && painel.fechado && !aberta.fatura && aberta.cancelada && aberta.resultado > 0 && aberta.percentual > 0
+      onRefazer={!simulado && painel.geral && painel.fechado && !aberta.fatura && aberta.cancelada && aberta.resultado > 0 && aberta.percentual > 0
         ? () => setGerando({ usuarios: [aberta.user_id], usd: aberta.valor_usd, abaixo: 0, refazer: true }) : undefined} />}
   </div>
 }

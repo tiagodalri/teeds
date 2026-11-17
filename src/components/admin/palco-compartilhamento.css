@@ -194,3 +194,41 @@
   .cpo-ranking button { grid-template-columns: 26px minmax(0, 1fr) auto; }
   .cpo-ranking .barra { display: none; }
 }
+
+/* modo simulado (16/11/2026): o botão e os termômetros que regulam a base simulada; laranja do modo simulado */
+.cpo-controles button.cpo-sim-botao { color: #FB923C; border-color: color-mix(in srgb, #FB923C 45%, transparent); background: color-mix(in srgb, #FB923C 8%, transparent); }
+.cpo-controles button.cpo-sim-botao:hover { border-color: #FB923C; background: color-mix(in srgb, #FB923C 16%, transparent); }
+.cpo-controles button.cpo-sim-botao.on { color: #2A1F10; border-color: #FB923C; background: #FB923C; }
+.cpo-sim { display: grid; gap: 14px; padding: 16px 18px; border: 1px solid color-mix(in srgb, #FB923C 40%, transparent); border-radius: 16px; background: color-mix(in srgb, #FB923C 6%, transparent); animation: cpo-sim-entra .25s ease-out; }
+@keyframes cpo-sim-entra { from { opacity: 0; transform: translateY(-6px); } }
+.cpo-sim-reguas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 22px; }
+.cpo-sim-regua { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; min-width: 0; }
+.cpo-sim-regua label { color: var(--cpo-suave); font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+.cpo-sim-valor { width: calc((var(--ch, 6) + 1) * 1ch + 22px); max-width: 100%; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: rgba(255, 255, 255, .05); color: var(--cpo-texto);
+  font: inherit; font-size: 15px; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; transition: border-color .15s, background .15s; }
+.cpo-sim-valor:hover { border-color: color-mix(in srgb, #FB923C 35%, transparent); }
+.cpo-sim-valor:focus { outline: none; border-color: #FB923C; background: rgba(5, 21, 40, .6); }
+.cpo-sim-regua input[type="range"] { grid-column: 1 / -1; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.cpo-sim-regua input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, #FB923C var(--pos), rgba(255, 255, 255, .12) var(--pos)); }
+.cpo-sim-regua input[type="range"]::-moz-range-track { height: 6px; border-radius: 999px; background: linear-gradient(90deg, #FB923C var(--pos), rgba(255, 255, 255, .12) var(--pos)); }
+.cpo-sim-regua input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; margin-top: -7px; border: 3px solid #FB923C; border-radius: 50%; background: #FFFDF7; box-shadow: 0 2px 8px rgba(0, 0, 0, .35); transition: transform .12s; }
+.cpo-sim-regua input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border: 3px solid #FB923C; border-radius: 50%; background: #FFFDF7; box-shadow: 0 2px 8px rgba(0, 0, 0, .35); }
+.cpo-sim-regua input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.18); }
+.cpo-sim-regua input[type="range"]:focus-visible { outline: 2px solid #FB923C; outline-offset: 3px; border-radius: 999px; }
+.cpo-sim-pe { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, #FB923C 20%, transparent); }
+.cpo-sim-pe p { margin: 0; color: var(--cpo-suave); font-size: 13px; }
+.cpo-sim-pe p b { color: var(--cpo-texto); font-variant-numeric: tabular-nums; }
+.cpo-sim-pe div { display: flex; flex-wrap: wrap; gap: 8px; }
+.cpo-sim-pe button { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 1px solid color-mix(in srgb, #FB923C 40%, transparent); border-radius: 9px; background: transparent; color: #FB923C; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.cpo-sim-pe button:hover { background: color-mix(in srgb, #FB923C 14%, transparent); }
+.cpo-sim-pe button:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
+.cpo-sim-pe svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 1100px) { .cpo-sim-reguas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .cpo-sim { padding: 14px; }
+  .cpo-sim-reguas { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .cpo-sim-regua input[type="range"] { height: 30px; }
+  .cpo-sim-pe { align-items: stretch; }
+  .cpo-sim-pe div, .cpo-sim-pe button { flex: 1 1 0; justify-content: center; }
+  .cpo-sim-pe button { min-width: 0; padding: 0 8px; white-space: nowrap; font-size: 12.5px; }
+}

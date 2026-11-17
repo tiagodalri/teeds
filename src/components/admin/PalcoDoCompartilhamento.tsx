@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Linha, Painel } from './CompartilhamentoDeReceita'
+import type { AjusteSimulado } from '../../core/teeds/compartilhamentoSimulado'
+import { useMenuAdminOculto } from '../../core/menuDeAdmin'
+import { AjusteDoPalcoSimulado } from './AjusteDoPalcoSimulado'
 import './palco-compartilhamento.css'
 
 /**
@@ -16,6 +19,7 @@ import './palco-compartilhamento.css'
  */
 
 const CHAVE_OCULTAR = 'gf.compartilhamento.ocultar'
+const CHAVE_AJUSTE_ABERTO = 'gf.compartilhamento.simulado.aberto'
 const PLANOS = ['gold', 'black', 'prestige'] as const
 const NOME_PLANO: Record<string, string> = { gold: 'Gold', black: 'Black', prestige: 'Prestige', silver: 'Silver' }
 const nomePlano = (s: string) => NOME_PLANO[s] ?? (s ? s[0].toUpperCase() + s.slice(1) : '—')
@@ -56,15 +60,22 @@ function useContador(alvo: number, ms = 900) {
   return v
 }
 
-export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, receber, cobrar, onVer, onFicha }: {
+export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, receber, cobrar, onVer, onFicha, simulacao }: {
   painel: Painel; linhas: Linha[]; cotacao: number; nomeMes: string
   /** o "A receber" do mês (mesma conta do cartão de baixo) */
   receber: number; cobrar: number
   /** abre a conta/fatura do cliente (só quando há valor a compartilhar ou fatura) */
   onVer: (l: Linha) => void
   onFicha?: (userId: string) => void
+  /** modo simulado ligado (só admin): os termômetros que regulam a base simulada */
+  simulacao?: { ajuste: AjusteSimulado; mudar: (a: AjusteSimulado) => void }
 }) {
   const palco = useRef<HTMLElement>(null)
+  const adminOculto = useMenuAdminOculto()
+  // os termômetros abrem sozinhos na 1ª vez; depois ficam como o admin deixou
+  const [ajusteAberto, setAjusteAberto] = useState(() => { try { return localStorage.getItem(CHAVE_AJUSTE_ABERTO) !== '0' } catch { return true } })
+  useEffect(() => { try { localStorage.setItem(CHAVE_AJUSTE_ABERTO, ajusteAberto ? '1' : '0') } catch { /* opcional */ } }, [ajusteAberto])
+  const mostrarAjuste = !!simulacao && !adminOculto
   const [ocultar, setOcultar] = useState(() => { try { return localStorage.getItem(CHAVE_OCULTAR) === '1' } catch { return false } })
   const [cheia, setCheia] = useState(false)
   const [foco, setFoco] = useState<string | null>(null)
@@ -134,6 +145,10 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
         <h2>O resultado dos clientes GlobalFly</h2>
       </div>
       <div className="cpo-controles">
+        {mostrarAjuste && <button type="button" className={`cpo-sim-botao ${ajusteAberto ? 'on' : ''}`} aria-pressed={ajusteAberto} aria-expanded={ajusteAberto}
+          onClick={() => setAjusteAberto((a) => !a)} title="Regular os números da simulação">
+          <svg viewBox="0 0 24 24" aria-hidden><path d="M9 3h6M10 3v5.5L4.8 18a2 2 0 0 0 1.8 3h10.8a2 2 0 0 0 1.8-3L14 8.5V3" /><path d="M7.5 14h9" /></svg>
+          {ajusteAberto ? 'Fechar ajuste' : 'Ajustar simulação'}</button>}
         <button type="button" className={ocultar ? 'on' : ''} aria-pressed={ocultar} onClick={() => setOcultar((o) => !o)}>
           <svg viewBox="0 0 24 24" aria-hidden>{ocultar
             ? <><path d="M3 3l18 18" /><path d="M10.6 5.1A9.8 9.8 0 0 1 12 5c5 0 9 4.5 10 7a13 13 0 0 1-3.2 4.3M6.6 6.6C4.4 8 2.8 10.1 2 12c1 2.5 5 7 10 7a9.6 9.6 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></>
@@ -146,6 +161,8 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
           {cheia ? 'Sair da tela cheia' : 'Tela cheia'}</button>
       </div>
     </header>
+
+    {mostrarAjuste && ajusteAberto && <AjusteDoPalcoSimulado ajuste={simulacao!.ajuste} mudar={simulacao!.mudar} />}
 
     <div className="cpo-heroi">
       <div className="cpo-numero">

@@ -1,9 +1,10 @@
 /**
- * Laboratório (?tela=compartilhamento(&parceiro=1)(&vazio)(&muitos)): o Compartilhamento de receita com clientes de
+ * Laboratório (?tela=compartilhamento(&parceiro=1)(&vazio)(&muitos)(&simulado)): o Compartilhamento de receita com clientes de
  * exemplo, sem banco. Gerar, dar baixa, cancelar e reabrir funcionam em memória. &parceiro=1 mostra a visão
  * do admin do parceiro (vê, mas não mexe).
  */
 import { CompartilhamentoDeReceita, type Fatura } from './CompartilhamentoDeReceita'
+import { desligarModoSimulado, ligarModoSimulado, permitirModoSimulado } from '../../core/teeds/modoSimulado'
 
 const NOMES = ['Marcos Vinícius Andrade', 'Patrícia Lemos', 'Rafael Costa', 'Juliana Prado', 'Eduardo Nunes', 'Camila Rocha', 'Bruno Teixeira',
   'Larissa Mendes', 'Diego Farias', 'Fernanda Alves', 'Gustavo Pires', 'Aline Barbosa', 'Thiago Moura', 'Renata Dias']
@@ -99,6 +100,9 @@ function acao(corpo: { p_id: string; p_acao: string; p_motivo: string | null }) 
 export default function LabCompartilhamento() {
   const busca = new URLSearchParams(location.search)
   const vazio = busca.has('vazio'), geral = !busca.has('parceiro')
+  // &simulado: o modo simulado geral ligado, como um admin com o frasco do topo aceso
+  permitirModoSimulado(true)
+  if (busca.has('simulado')) ligarModoSimulado(); else desligarModoSimulado()
   const original = window.fetch
   window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
     const url = String(u), corpo = JSON.parse(String(i?.body ?? '{}'))
