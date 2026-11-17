@@ -28,6 +28,7 @@ import type { SessaoTeeds } from './conta'
 import { aoMudarModulos, modulosEmUso, MODULOS, usarModulosDaGrade, type LinkDaAula, type Material, type Modulo } from './aulas'
 import type { VideoDaAula } from './aulasVideos'
 import { meuParceiro, vitrine } from './parceiro'
+import { abrirImagem, canvasParaArquivo } from '../imagem'
 
 /* ---------------------------------------------------------------- tipos */
 
@@ -46,6 +47,8 @@ export interface AulaGrade {
   /** URL da capa enviada; vazio = a capa do código (pelo id) ou a capa desenhada. */
   capa?: string
   capaArquivo?: string | null
+  /** 16/11/2026: capa própria por vitrine de parceiro ('n', 'v'...). Vale por cima da `capa` naquela vitrine. */
+  capas?: Record<string, string>
   topicos: TopicoGrade[]
   materiais: Material[]
   links: LinkDaAula[]
@@ -111,6 +114,8 @@ export interface CursoGrade {
   sobre?: string
   capa?: string
   capaArquivo?: string | null
+  /** 16/11/2026: capa própria por vitrine de parceiro. */
+  capas?: Record<string, string>
   cor: string
   /** Selo no canto do cartão: "Novo", "Lançamento", "Bônus"... */
   selo?: string
@@ -193,11 +198,17 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
   const g = bruta as GradeAulas | null
   if (!g || !Array.isArray(g.modulos)) return null
   const txt = (v: unknown) => (typeof v === 'string' ? v : '')
+  /** { n: url, v: url } só com textos; vazio = undefined (não pesa no JSON). */
+  const capas = (v: unknown): Record<string, string> | undefined => {
+    if (!v || typeof v !== 'object') return undefined
+    const l = Object.entries(v as Record<string, unknown>).filter(([k, u]) => k && typeof u === 'string' && u.trim())
+    return l.length ? Object.fromEntries(l) as Record<string, string> : undefined
+  }
   const cursos: CursoGrade[] = (Array.isArray(g.cursos) ? g.cursos : []).filter((c) => c && txt(c.id)).map((c) => {
     const a = (c.acesso ?? {}) as Partial<AcessoDoCurso>
     const modo: ModoDoCurso = a.modo === 'planos' || a.modo === 'compra' ? a.modo : 'todos'
     return {
-      id: txt(c.id), titulo: txt(c.titulo), descricao: txt(c.descricao), sobre: txt(c.sobre), capa: txt(c.capa), capaArquivo: c.capaArquivo ?? null,
+      id: txt(c.id), titulo: txt(c.titulo), descricao: txt(c.descricao), sobre: txt(c.sobre), capa: txt(c.capa), capaArquivo: c.capaArquivo ?? null, capas: capas(c.capas),
       cor: txt(c.cor) || CORES_DA_MARCA[0], selo: txt(c.selo), publicado: c.publicado !== false, liberarEm: c.liberarEm || null,
       acesso: {
         modo, planos: Array.isArray(a.planos) ? a.planos.filter((p) => p && p.id) : [],
@@ -220,7 +231,7 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
         id: txt(s.id), titulo: txt(s.titulo), descricao: txt(s.descricao),
         aulas: (Array.isArray(s.aulas) ? s.aulas : []).filter(Boolean).map((a) => ({
           id: txt(a.id), titulo: txt(a.titulo), descricao: txt(a.descricao), video: txt(a.video), arquivo: a.arquivo ?? null,
-          duracao: txt(a.duracao), capa: txt(a.capa), capaArquivo: a.capaArquivo ?? null,
+          duracao: txt(a.duracao), capa: txt(a.capa), capaArquivo: a.capaArquivo ?? null, capas: capas(a.capas),
           topicos: (Array.isArray(a.topicos) ? a.topicos : []).filter((t) => t && t.titulo).map((t) => ({ id: txt(t.id) || Math.random().toString(36).slice(2, 8), titulo: txt(t.titulo), tempo: txt(t.tempo) })),
           materiais: Array.isArray(a.materiais) ? a.materiais.filter((x) => x && x.url && x.nome) : [],
           links: Array.isArray(a.links) ? a.links.filter((x) => x && x.url && x.nome) : [],
@@ -250,7 +261,7 @@ export interface ContextoDaSala {
  * outro plano ou com data futura aparece trancada, com o motivo no cartão.
  */
 export interface CursoNaSala {
-  id: string; titulo: string; descricao: string; sobre: string; capa?: string; cor: string; selo?: string
+  id: string; titulo: string; descricao: string; sobre: string; capa?: string; capas?: Record<string, string>; cor: string; selo?: string
   /** Pode assistir. */
   liberado: boolean
   /** Por que não pode (para o cartão e a janela). */
@@ -285,7 +296,7 @@ export function cursosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}): Cur
     const motivo = motivoDoCurso(c, ctx, agora)
     const modulos = modulosParaSala(grade, ctx, c.id)
     return {
-      id: c.id, titulo: c.titulo, descricao: c.descricao, sobre: c.sobre ?? '', capa: c.capa || undefined, cor: c.cor, selo: c.selo || undefined,
+      id: c.id, titulo: c.titulo, descricao: c.descricao, sobre: c.sobre ?? '', capa: c.capa || undefined, capas: c.capas, cor: c.cor, selo: c.selo || undefined,
       liberado: !motivo, motivo, checkout: motivo && c.acesso.modo === 'compra' && c.acesso.checkout ? c.acesso.checkout : null, modo: c.acesso.modo,
       modulos, aulas: modulos.reduce((n, m) => n + m.aulas.length, 0),
     }
@@ -325,7 +336,7 @@ export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cur
       assuntos: assuntos.map((s) => ({ id: s.id, titulo: s.titulo, descricao: s.descricao })),
       aulas: assuntos.flatMap((s) => s.aulas.map((a) => ({
         id: a.id, titulo: a.titulo, descricao: a.descricao, video: a.video, duracao: a.duracao,
-        materiais: a.materiais, links: a.links, capa: a.capa || undefined, nivel: a.nivel || undefined, repetir: a.repetir || undefined, vertical: a.vertical || undefined,
+        materiais: a.materiais, links: a.links, capa: a.capa || undefined, capas: a.capas, nivel: a.nivel || undefined, repetir: a.repetir || undefined, vertical: a.vertical || undefined,
         topicos: a.topicos.map((t) => ({ titulo: t.titulo, tempo: t.tempo || undefined })),
         assunto: { id: s.id, titulo: s.titulo },
         bloqueio: doModulo ?? motivo(a.liberarEm, a.planos),
@@ -427,16 +438,20 @@ export async function liberarCurso(sessao: SessaoTeeds, curso: { id: string; tit
  * marca. Devolve a URL pública e o caminho (para apagar depois).
  */
 export async function enviarCapa(sessao: SessaoTeeds, aulaId: string, fonte: Blob, marca: string = MARCA.id): Promise<{ url: string; caminho: string }> {
-  const imagem = await createImageBitmap(fonte)
-  const escala = Math.min(1, 1200 / Math.max(imagem.width, imagem.height))
-  const tela = document.createElement('canvas')
-  tela.width = Math.round(imagem.width * escala); tela.height = Math.round(imagem.height * escala)
-  tela.getContext('2d')!.drawImage(imagem, 0, 0, tela.width, tela.height)
-  const blob = await new Promise<Blob>((ok, falha) => tela.toBlob((b) => (b ? ok(b) : falha(new Error('Não consegui converter a imagem.'))), 'image/webp', 0.86))
-  const caminho = `${marca}/capas/${aulaId}-${Date.now().toString(36)}.webp`
+  // 16/11/2026: WEBP onde o navegador sabe, JPEG no Safari antigo, com o tipo verdadeiro (antes ia PNG com nome .webp)
+  const a = await abrirImagem(fonte)
+  let pronto: Awaited<ReturnType<typeof canvasParaArquivo>>
+  try {
+    const escala = Math.min(1, 1200 / Math.max(a.w, a.h))
+    const tela = document.createElement('canvas')
+    tela.width = Math.max(1, Math.round(a.w * escala)); tela.height = Math.max(1, Math.round(a.h * escala))
+    tela.getContext('2d')!.drawImage(a.fonte, 0, 0, tela.width, tela.height)
+    pronto = await canvasParaArquivo(tela, 0.88)
+  } finally { a.soltar() }
+  const caminho = `${marca}/capas/${aulaId}-${Date.now().toString(36)}.${pronto.ext}`
   const alvo = caminho.split('/').map(encodeURIComponent).join('/')
   const res = await fetch(`${SUPABASE.url}/storage/v1/object/materiais/${alvo}`, {
-    method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'image/webp', 'x-upsert': 'true' }, body: blob,
+    method: 'POST', headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': pronto.tipo, 'x-upsert': 'true' }, body: pronto.blob,
   })
   if (!res.ok) throw new Error((await res.json().catch(() => ({})))?.message || `Erro ${res.status} ao enviar a capa`)
   return { url: `${SUPABASE.url}/storage/v1/object/public/materiais/${alvo}`, caminho }

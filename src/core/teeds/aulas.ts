@@ -25,6 +25,8 @@ export interface Aula {
   /* ---- 04/11/2026: o que a grade do painel (gradeAulas.ts) acrescenta ---- */
   /** A capa enviada pelo painel (URL). Sem ela, vale a capa do código pelo id. */
   capa?: string
+  /** 16/11/2026: capa própria por vitrine de parceiro ('n', 'v'...), por cima da `capa`. */
+  capas?: Record<string, string>
   /** Os tópicos da aula, com o minuto em que cada um começa no vídeo (opcional). */
   topicos?: Topico[]
   /** O assunto (agrupamento dentro do módulo) a que a aula pertence. */

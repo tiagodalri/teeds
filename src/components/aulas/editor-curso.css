@@ -166,3 +166,34 @@
 
 /* a escolha do modo: o estilo geral dos campos do editor (.eg input) não vale para a bolinha */
 .eg .ec-modos .ec-modo input[type=radio][name] { flex: none; width: 16px; height: 16px; min-height: 0; padding: 0; margin: 3px 0 0; border: 0; background: none; }
+
+/* 16/11/2026: lista de cursos em pôsteres (ec-grade / ec-poster) */
+.ec-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 18px; }
+.ec-poster { display: grid; gap: 10px; align-content: start; min-width: 0; transition: opacity .2s; }
+.ec-poster.apagado .ec-poster-capa { filter: grayscale(.7) brightness(.75); }
+.ec-poster.alvo .ec-poster-capa { box-shadow: 0 0 0 2px var(--primary), 0 22px 40px -24px #000; }
+.ec-poster-capa { position: relative; display: block; width: 100%; aspect-ratio: 3 / 4; padding: 0; overflow: hidden; border: 0; border-radius: 16px; background: #07172c; cursor: pointer;
+  box-shadow: 0 0 0 1px var(--border), 0 22px 40px -26px #000; transition: transform .25s cubic-bezier(.2, .8, .2, 1), box-shadow .2s, filter .2s; }
+.ec-poster-capa:hover { transform: translateY(-3px); box-shadow: 0 0 0 1px color-mix(in srgb, var(--vc) 60%, var(--border)), 0 30px 50px -26px #000; }
+.ec-poster-capa .vc-capa-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ec-poster-pills { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 6px; }
+.ec-poster-pills .ec-pill { backdrop-filter: blur(8px); }
+.ec-poster-abrir { position: absolute; inset: auto 10px 10px auto; padding: 6px 10px; border-radius: 9px; color: #fff; background: rgb(0 0 0 / .55); backdrop-filter: blur(8px); font-size: 11.5px; font-weight: 800; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; }
+.ec-poster-capa:hover .ec-poster-abrir, .ec-poster-capa:focus-visible .ec-poster-abrir { opacity: 1; transform: none; }
+.ec-poster-texto { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+.ec-poster-texto b { max-width: 100%; font-size: 14.5px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ec-poster-texto small { font-size: 12px; color: var(--muted); }
+.ec-poster-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; margin-top: -2px; }
+.ec-poster-acoes > button { padding: 5px 8px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; cursor: pointer; font: inherit; font-size: 12px; font-weight: 700; }
+.ec-poster-acoes > button:hover:not(:disabled) { color: var(--text); background: color-mix(in srgb, var(--text) 7%, transparent); }
+.ec-poster-acoes > button.perigo { color: #C95F5F; }
+.ec-poster-acoes > button:disabled { opacity: .35; cursor: default; }
+.ec-poster-acoes .ec-setas { display: inline-flex; gap: 2px; margin-left: auto; }
+.ec-poster-acoes .ec-setas button { width: 26px; height: 24px; font-size: 12px; }
+.ec-poster-novo { aspect-ratio: 3 / 4; display: grid; place-content: center; justify-items: center; gap: 4px; border: 1.5px dashed color-mix(in srgb, var(--primary) 55%, var(--border)); border-radius: 16px;
+  color: var(--text); background: color-mix(in srgb, var(--primary) 5%, transparent); cursor: pointer; font: inherit; transition: background .15s; }
+.ec-poster-novo:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.ec-poster-novo span { font-size: 34px; line-height: 1; color: var(--primary); font-weight: 300; }
+.ec-poster-novo b { font-size: 14px; }
+.ec-poster-novo small { font-size: 11.5px; color: var(--muted); }
+@media (max-width: 560px) { .ec-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .ec-poster-abrir { display: none; } }

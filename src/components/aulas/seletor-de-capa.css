@@ -1,0 +1,48 @@
+/* Seletor de capa do painel (16/11/2026). Prefixo sc-. */
+.sc { display: grid; gap: 12px; }
+.sc-cab { display: grid; gap: 2px; }
+.sc-rot { font-size: 12px; font-weight: 700; color: var(--text); }
+.sc-cab small, .sc-info small { font-size: 11.5px; color: var(--muted); line-height: 1.45; }
+
+.sc-vitrines { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 74px)); gap: 8px; }
+.sc-vitrine { min-width: 0; display: grid; justify-items: center; gap: 3px; padding: 6px 6px 7px; border: 1px solid var(--border); border-radius: 12px; color: var(--text); background: var(--surface); cursor: pointer; font: inherit; transition: border-color .15s, box-shadow .15s; }
+.sc-vitrine.on { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+.sc-vitrine b { font-size: 11.5px; }
+.sc-vitrine small { font-size: 10px; line-height: 1.25; text-align: center; color: var(--muted); }
+.sc-mini { position: relative; width: 44px; overflow: hidden; border-radius: 6px; background: #0a1424; container-type: inline-size; }
+
+.sc-linha { display: flex; gap: 16px; align-items: flex-start; }
+.sc-amostra { position: relative; flex: none; width: 128px; padding: 0; overflow: hidden; border: 0; border-radius: 12px; background: #0a1424; cursor: pointer; container-type: inline-size;
+  box-shadow: 0 0 0 1px var(--border), 0 14px 30px -18px #000; transition: transform .2s cubic-bezier(.2, .8, .2, 1), box-shadow .15s; }
+.sc-amostra:hover { transform: translateY(-2px); }
+.sc-amostra.sobre { box-shadow: 0 0 0 2px var(--primary), 0 14px 30px -18px #000; }
+.sc-trocar { position: absolute; inset: auto 8px 8px; padding: 5px 0; border-radius: 8px; color: #fff; background: rgb(0 0 0 / .55); backdrop-filter: blur(6px); font-size: 11.5px; font-weight: 800; opacity: 0; transform: translateY(4px); transition: opacity .15s, transform .15s; }
+.sc-amostra:hover .sc-trocar, .sc-amostra:focus-visible .sc-trocar, .sc-amostra.sobre .sc-trocar { opacity: 1; transform: none; }
+@media (hover: none) { .sc-trocar { opacity: 1; transform: none; } }
+.sc-mini img, .sc-amostra img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sc-mini .responsive-image, .sc-amostra .responsive-image { display: block; width: 100%; height: 100%; }
+.sc-mini .capa-poster-fundo, .sc-amostra .capa-poster-fundo { display: none; }
+
+.sc-info { flex: 1; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.sc-info > b { font-size: 13.5px; }
+.sc-origem { color: var(--text) !important; opacity: .8; }
+.sc-acoes { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; }
+.sc-acoes .admin-primary, .sc-acoes .admin-secundario { justify-self: auto; padding: 8px 14px; font-size: 12.5px; }
+.sc-nota { padding: 8px 10px; border-radius: 9px; background: color-mix(in srgb, var(--primary) 9%, transparent); }
+
+@media (max-width: 560px) {
+  .sc-linha { flex-direction: column; }
+  .sc-amostra { width: 116px; }
+}
+
+/* a capa desenhada em tamanhos pequenos */
+:is(.sc-mini, .eg-aula-capa) .capa-desenhada { padding: 12%; gap: 2px; }
+:is(.sc-mini, .eg-aula-capa) .capa-desenhada-num { font-size: 40cqw; }
+:is(.sc-mini, .eg-aula-capa) :is(.capa-desenhada-titulo, .capa-desenhada-marca, .capa-desenhada-luz) { display: none; }
+.sc-amostra .capa-desenhada-num { font-size: 32cqw; }
+.sc-amostra .capa-desenhada-titulo { font-size: 10.5cqw; }
+.sc-amostra .capa-desenhada-marca { font-size: 6.5cqw; }
+:is(.sc-mini, .sc-amostra) .ec-capa-amostra { display: block; width: 100%; height: 100%; aspect-ratio: auto; border-radius: 0; }
+.sc-mini .vc-capa-desenho :is(b, small) { display: none; }
+/* o pôster tem uma camada de fundo desfocado (só para quadros largos): nas miniaturas ela não ocupa lugar */
+:is(.sc-mini, .sc-amostra, .eg-aula-capa, .eg-cartao-capa) picture:has(> .capa-poster-fundo) { display: none !important; }

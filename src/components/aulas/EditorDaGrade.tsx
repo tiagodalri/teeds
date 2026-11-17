@@ -15,7 +15,10 @@ import { listarPlanos } from '../../core/teeds/clientes'
 import { MARCA } from '../../marca'
 import { DEMONSTRACAO_EM_AULA_SEM_VIDEO } from '../../core/teeds/modulosAulas'
 import { IconeFechar } from '../IconeFechar'
-import { CapaDaAula } from './CapaDaAula'
+import { CapaDaAula, capaResolvida } from './CapaDaAula'
+import { SeletorDeCapa } from './SeletorDeCapa'
+import { AdicionarAulas, type AulaNova, type Destino } from './AdicionarAulas'
+import { JanelaDaCapa, miniaturaDoYouTube, quadroDeUmVideo, type FonteExtra } from './JanelaDaCapa'
 import './editor-grade.css'
 
 /**
@@ -93,10 +96,19 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
   const ultima = useRef<GradeAulas | null>(null)
   const gradeAtual = useRef<GradeAulas | null>(null)
   useEffect(() => { gradeAtual.current = grade }, [grade])
+  // 16/11/2026: desfazer e refazer (⌘Z / ⇧⌘Z) e o aviso com "Desfazer" depois de excluir ou criar
+  const passado = useRef<GradeAulas[]>([])
+  const futuro = useRef<GradeAulas[]>([])
+  const ultimoPasso = useRef(0)
+  const [, setPassos] = useState(0)
+  const [toque, setToque] = useState<{ texto: string; id: number; antes: GradeAulas | null; depois: GradeAulas | null } | null>(null)
+  const [adicionando, setAdicionando] = useState<{ destino?: string } | null>(null)
 
   /* ------------------------------------------------------------ carregar */
   useEffect(() => {
     let vivo = true
+    // outra plataforma (seletor do master): o desfazer não pode levar a grade de uma para a outra
+    passado.current = []; futuro.current = []; ultimoPasso.current = 0; setToque(null)
     void (async () => {
       try {
         const [doBanco, videos] = await Promise.all([lerGradeDoAdmin(sessao, marca), listarVideosDasAulas(sessao, marca)])
@@ -117,15 +129,47 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
     try { setRascunhoEm(await salvarRascunho(sessao, g, marca)); setSituacao(ultima.current === g ? 'salvo' : 'pendente') }
     catch (e) { setSituacao('erro'); setErro(`O rascunho não foi salvo: ${(e as Error).message}`) }
   }, [sessao, marca])
-  const mudar = useCallback((fn: (g: GradeAulas) => void) => {
-    const atual = gradeAtual.current
-    if (!atual) return
-    const nova = clone(atual); fn(nova)
+  const aplicar = useCallback((nova: GradeAulas) => {
     gradeAtual.current = nova; ultima.current = nova
     setGrade(nova); setSituacao('pendente')
     if (timer.current) clearTimeout(timer.current)
     timer.current = setTimeout(() => { if (ultima.current) void gravar(ultima.current) }, 1200)
   }, [gravar])
+  const mudar = useCallback((fn: (g: GradeAulas) => void) => {
+    const atual = gradeAtual.current
+    if (!atual) return
+    const nova = clone(atual); fn(nova)
+    if (JSON.stringify(nova) === JSON.stringify(atual)) return
+    // digitação seguida vira um passo só
+    if (Date.now() - ultimoPasso.current > 900) { passado.current.push(atual); if (passado.current.length > 100) passado.current.shift() }
+    ultimoPasso.current = Date.now(); futuro.current = []
+    setPassos((n) => n + 1)
+    aplicar(nova)
+  }, [aplicar])
+  const voltarPasso = useCallback((para: 'tras' | 'frente') => {
+    const atual = gradeAtual.current
+    const de = para === 'tras' ? passado.current : futuro.current, outro = para === 'tras' ? futuro.current : passado.current
+    const g = de.pop()
+    if (!g || !atual) return
+    outro.push(atual); ultimoPasso.current = 0
+    setPassos((n) => n + 1)
+    aplicar(g)
+  }, [aplicar])
+  /** Aviso com Desfazer: volta exatamente ao estado de antes, e só enquanto nada mais mudou. */
+  const avisar = (texto: string, antes: GradeAulas | null) => setToque({ texto, id: Date.now(), antes, depois: gradeAtual.current })
+  useEffect(() => { if (!toque) return; const t = setTimeout(() => setToque(null), 6000); return () => clearTimeout(t) }, [toque])
+  useEffect(() => {
+    const tecla = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.key.toLowerCase() !== 'z') return
+      // dentro de um campo vale o desfazer do próprio campo
+      const alvo = e.target as HTMLElement | null
+      if (alvo?.closest?.('input, textarea, select, [contenteditable=true]')) return
+      if (document.querySelector('.jc-fundo, .aa-fundo, .eg-previa, .adm-modal-fundo')) return
+      e.preventDefault(); voltarPasso(e.shiftKey ? 'frente' : 'tras'); setToque(null)
+    }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [voltarPasso])
   useEffect(() => {
     const sair = (e: BeforeUnloadEvent) => { if (situacao === 'pendente' || situacao === 'salvando') { e.preventDefault(); e.returnValue = '' } }
     window.addEventListener('beforeunload', sair)
@@ -180,8 +224,9 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
   const remover = (id: string) => {
     if (!grade) return
     const l = localizar(grade, id); if (!l) return
-    const nome = l.a ? `a aula "${l.a.titulo}"` : l.s ? `o assunto "${l.s.titulo || 'sem nome'}" e as ${l.s.aulas.length} aulas dele` : `o módulo "${l.m.titulo}" e todas as ${l.m.assuntos.reduce((n, s) => n + s.aulas.length, 0)} aulas dele`
-    if (!window.confirm(`Tirar ${nome} da grade? Fica só no rascunho até você publicar, e dá para trazer de volta pelo Histórico.`)) return
+    const antes = gradeAtual.current; ultimoPasso.current = 0
+    // aula e assunto saem na hora, com "Desfazer" no aviso; módulo inteiro ainda pergunta
+    if (!l.s && !window.confirm(`Tirar o módulo "${l.m.titulo}" e todas as ${l.m.assuntos.reduce((n, s) => n + s.aulas.length, 0)} aulas dele? Dá para desfazer (⌘Z) e, depois de publicar, trazer de volta pelo Histórico.`)) return
     mudar((g) => {
       const x = localizar(g, id); if (!x) return
       if (x.a) x.s!.aulas.splice(x.ai!, 1)
@@ -189,6 +234,28 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
       else g.modulos.splice(x.mi, 1)
     })
     setSel(null)
+    avisar(l.a ? `Aula "${l.a.titulo || 'sem título'}" excluída` : l.s ? `Assunto "${l.s.titulo || 'sem nome'}" excluído` : `Módulo "${l.m.titulo}" excluído`, antes)
+  }
+  /** Várias aulas de uma vez (janela Adicionar aulas). */
+  const criarEmLote = (lista: AulaNova[], destino: Destino, visiveis: boolean) => {
+    const usados = ids()
+    const novas = lista.map((x) => { const id = novoId(x.titulo, usados); usados.add(id); return { ...novaAula(x.titulo), id, video: x.video, publicado: visiveis } })
+    let alvoModulo = ''
+    const antes = gradeAtual.current; ultimoPasso.current = 0
+    mudar((g) => {
+      if ('novoModulo' in destino) {
+        const curso = cursoAberto ?? g.cursos?.[0]?.id
+        const id = novoId(destino.novoModulo, usados); usados.add(id); const sid = novoId(`${id}-geral`, usados)
+        alvoModulo = id
+        g.modulos.push({ id, curso, titulo: destino.novoModulo, chamada: '', cor: g.cursos?.find((c) => c.id === curso)?.cor ?? CORES_DA_MARCA[g.modulos.length % CORES_DA_MARCA.length], publicado: true, assuntos: [{ id: sid, titulo: '', aulas: novas }] })
+      } else {
+        const l = localizar(g, destino.assunto); l?.s?.aulas.push(...novas); alvoModulo = l?.m.id ?? ''
+      }
+    })
+    setAdicionando(null)
+    if (alvoModulo) setFechados((f) => { const n = new Set(f); n.delete(alvoModulo); return n })
+    if (novas[0]) { setSel({ tipo: 'aula', id: novas[0].id }); setAba('conteudo') }
+    avisar(novas.length === 1 ? 'Aula criada no rascunho' : `${novas.length} aulas criadas no rascunho`, antes)
   }
   const duplicar = (id: string) => {
     if (!grade) return
@@ -300,6 +367,10 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
           </p>
         </div>
         <div className="eg-topo-acoes">
+          <span className="eg-passos" role="group" aria-label="Desfazer e refazer">
+            <button type="button" onClick={() => voltarPasso('tras')} disabled={!passado.current.length} title="Desfazer (⌘Z)" aria-label="Desfazer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 010 11H11" /></svg></button>
+            <button type="button" onClick={() => voltarPasso('frente')} disabled={!futuro.current.length} title="Refazer (⇧⌘Z)" aria-label="Refazer"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 14l5-5-5-5" /><path d="M20 9H9.5a5.5 5.5 0 000 11H13" /></svg></button>
+          </span>
           <button type="button" className="admin-secundario" onClick={() => setModal('historico')}>Histórico</button>
           {naoPublicado && publicada && <button type="button" className="admin-secundario" onClick={() => { if (window.confirm('Descartar o rascunho e voltar para o que está publicado?')) mudar((g) => { g.modulos = clone(publicada.modulos); g.cursos = clone(publicada.cursos ?? []); if (publicada.boasVindas) g.boasVindas = clone(publicada.boasVindas); else delete g.boasVindas }) }}>Descartar alterações</button>}
           <button type="button" className="admin-secundario eg-previa-btn" onClick={() => setModal('previa')}>Ver prévia</button>
@@ -346,7 +417,10 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
       {curso && abaCurso === 'conteudo' && <div className="eg-corpo">
         {/* ------------------------------------------------------ a árvore */}
         <nav className="eg-arvore" aria-label="Grade das aulas">
-          <input className="eg-busca" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Procurar aula" aria-label="Procurar aula" />
+          <div className="eg-arvore-topo">
+            <input className="eg-busca" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Procurar aula" aria-label="Procurar aula" />
+            <button type="button" className="admin-primary eg-lote" onClick={() => setAdicionando({ destino: achado?.s?.id })} title="Colar vários links de uma vez">+ Aulas</button>
+          </div>
           {doEscopo.map((m, mi) => {
             const fechado = fechados.has(m.id) && !termo
             return (
@@ -376,8 +450,8 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
                             <li key={a.id} className={`eg-aula ${sel?.id === a.id ? 'sel' : ''} ${alvo === a.id ? 'alvo' : ''} ${a.publicado ? '' : 'oculta'}`} {...dnd(a.id, true)}>
                               <span className="eg-pega" aria-hidden="true">⋮⋮</span>
                               <button type="button" className="eg-aula-nome" onClick={() => escolher({ tipo: 'aula', id: a.id })}>
-                                <i>{String(numero.get(a.id) ?? 0).padStart(2, '0')}</i>
-                                <span><b>{a.titulo || 'Aula sem título'}</b><small>{a.video ? `${origemDoVideo(a.video)}${a.duracao ? ` · ${a.duracao}` : ''}` : 'Sem vídeo'}{a.topicos.length ? ` · ${a.topicos.length} tópicos` : ''}</small></span>
+                                <span className="eg-aula-capa"><CapaDaAula aula={a} cor={m.cor} numero={numero.get(a.id)} alt="" loading="lazy" /></span>
+                                <span><b>{a.titulo || 'Aula sem título'}</b><small>{String(numero.get(a.id) ?? 0).padStart(2, '0')} · {a.video ? `${origemDoVideo(a.video)}${a.duracao ? ` · ${a.duracao}` : ''}` : 'Sem vídeo'}{a.topicos.length ? ` · ${a.topicos.length} tópicos` : ''}</small></span>
                               </button>
                               <span className="eg-sinais">
                                 {!a.video && <em className="eg-chip falta" title="Sem vídeo">!</em>}
@@ -396,7 +470,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
               </section>
             )
           })}
-          {!doEscopo.length && <p className="eg-dica">Este curso ainda não tem módulos.</p>}
+          {!doEscopo.length && <p className="eg-dica">Este curso ainda não tem módulos. Crie um ou cole vários links em <b>+ Aulas</b>.</p>}
           <button type="button" className="eg-novo-modulo" onClick={addModulo}>+ Novo módulo</button>
           <p className="eg-dica">Arraste as aulas pela alça ⋮⋮ para mudar a ordem ou levar para outro assunto ou módulo.</p>
         </nav>
@@ -406,12 +480,12 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
           {!achado && <div className="eg-vazio"><b>Escolha um módulo, assunto ou aula na lista</b><p>Ou crie um módulo novo. Tudo fica no rascunho até você publicar.</p></div>}
           {achado && !achado.s && (
             <EditorDoModulo m={achado.m} numero={doEscopo.findIndex((x) => x.id === achado.m.id) + 1} planos={planos} mudar={(fn) => mudar((g) => { const x = localizar(g, achado.m.id); if (x) fn(x.m) })}
-              aoAddAssunto={() => addAssunto(achado.m.id)} aoAddAula={() => addAula(achado.m.assuntos[achado.m.assuntos.length - 1].id)}
+              aoAddAssunto={() => addAssunto(achado.m.id)} aoAddAula={() => addAula(achado.m.assuntos[achado.m.assuntos.length - 1].id)} aoAddLote={() => setAdicionando({ destino: achado.m.assuntos[achado.m.assuntos.length - 1].id })}
               aoDuplicar={() => duplicar(achado.m.id)} aoRemover={() => remover(achado.m.id)} />
           )}
           {achado?.s && !achado.a && (
             <EditorDoAssunto s={achado.s} m={achado.m} mudar={(fn) => mudar((g) => { const x = localizar(g, achado.s!.id); if (x?.s) fn(x.s) })}
-              aoAddAula={() => addAula(achado.s!.id)} aoRemover={() => remover(achado.s!.id)} />
+              aoAddAula={() => addAula(achado.s!.id)} aoAddLote={() => setAdicionando({ destino: achado.s!.id })} aoRemover={() => remover(achado.s!.id)} />
           )}
           {achado?.a && (
             <EditorDaAula key={achado.a.id} sessao={sessao} marca={marca} a={achado.a} m={achado.m} s={achado.s!} grade={grade} numero={numero.get(achado.a.id) ?? 0}
@@ -423,6 +497,14 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
         </section>
       </div>}
 
+      {adicionando && curso && <AdicionarAulas grade={grade} curso={curso.id} destinoInicial={adicionando.destino} aoCriar={criarEmLote} aoFechar={() => setAdicionando(null)} />}
+      {toque && (
+        <div className="eg-toque" role="status" key={toque.id}>
+          <span>{toque.texto}</span>
+          {toque.antes && toque.depois === grade && <button type="button" onClick={() => { if (toque.antes && gradeAtual.current === toque.depois) voltarPasso('tras'); setToque(null) }}>Desfazer</button>}
+          <button type="button" className="eg-toque-x" onClick={() => setToque(null)} aria-label="Fechar o aviso"><IconeFechar /></button>
+        </div>
+      )}
       {modal === 'previa' && <Previa grade={grade} planos={planos} aoFechar={() => setModal(null)} />}
       {modal === 'publicar' && (
         <Publicar grade={grade} publicada={publicada} aoFechar={() => setModal(null)} aoPublicar={async (nota) => {
@@ -468,9 +550,9 @@ function Acesso({ publicado, liberarEm, planos, todos, mudar, rotulo }: {
   )
 }
 
-function EditorDoModulo({ m, numero, planos, mudar, aoAddAssunto, aoAddAula, aoDuplicar, aoRemover }: {
+function EditorDoModulo({ m, numero, planos, mudar, aoAddAssunto, aoAddAula, aoAddLote, aoDuplicar, aoRemover }: {
   m: ModuloGrade; numero: number; planos: PlanoEscolhido[]; mudar: (fn: (m: ModuloGrade) => void) => void
-  aoAddAssunto: () => void; aoAddAula: () => void; aoDuplicar: () => void; aoRemover: () => void
+  aoAddAssunto: () => void; aoAddAula: () => void; aoAddLote: () => void; aoDuplicar: () => void; aoRemover: () => void
 }) {
   const aulas = m.assuntos.reduce((n, s) => n + s.aulas.length, 0)
   return (
@@ -495,14 +577,14 @@ function EditorDoModulo({ m, numero, planos, mudar, aoAddAssunto, aoAddAula, aoD
       <h4 className="eg-sub">Quem vê este módulo</h4>
       <Acesso rotulo="módulo" publicado={m.publicado} liberarEm={m.liberarEm} planos={m.planos} todos={planos}
         mudar={(v) => mudar((x) => { if (v.publicado !== undefined) x.publicado = v.publicado; if (v.liberarEm !== undefined) x.liberarEm = v.liberarEm; if (v.planos) x.planos = v.planos })} />
-      <div className="eg-rodape-acoes"><button type="button" className="admin-secundario" onClick={aoAddAssunto}>+ Assunto</button><button type="button" className="admin-primary" onClick={aoAddAula}>+ Aula neste módulo</button></div>
+      <div className="eg-rodape-acoes"><button type="button" className="admin-secundario" onClick={aoAddAssunto}>+ Assunto</button><button type="button" className="admin-secundario" onClick={aoAddLote}>Colar vários links</button><button type="button" className="admin-primary" onClick={aoAddAula}>+ Aula neste módulo</button></div>
     </div>
   )
 }
 
 /* =============================================================== assunto */
 
-function EditorDoAssunto({ s, m, mudar, aoAddAula, aoRemover }: { s: AssuntoGrade; m: ModuloGrade; mudar: (fn: (s: AssuntoGrade) => void) => void; aoAddAula: () => void; aoRemover: () => void }) {
+function EditorDoAssunto({ s, m, mudar, aoAddAula, aoAddLote, aoRemover }: { s: AssuntoGrade; m: ModuloGrade; mudar: (fn: (s: AssuntoGrade) => void) => void; aoAddAula: () => void; aoAddLote: () => void; aoRemover: () => void }) {
   return (
     <div className="eg-editor" style={{ ['--cor' as string]: m.cor }}>
       <header className="eg-editor-cab">
@@ -513,7 +595,7 @@ function EditorDoAssunto({ s, m, mudar, aoAddAula, aoRemover }: { s: AssuntoGrad
         <label className="largo"><span>Nome do assunto</span><input value={s.titulo} maxLength={80} onChange={(e) => mudar((x) => { x.titulo = e.target.value })} placeholder="Ex.: Depósitos e saques" /><small>Vazio: as aulas deste assunto aparecem direto no módulo, sem título.</small></label>
         <label className="largo"><span>Descrição (opcional)</span><textarea rows={3} value={s.descricao ?? ''} maxLength={400} onChange={(e) => mudar((x) => { x.descricao = e.target.value })} placeholder="Uma linha sobre o que este grupo de aulas cobre" /></label>
       </div>
-      <div className="eg-rodape-acoes"><button type="button" className="admin-primary" onClick={aoAddAula}>+ Aula neste assunto</button></div>
+      <div className="eg-rodape-acoes"><button type="button" className="admin-secundario" onClick={aoAddLote}>Colar vários links</button><button type="button" className="admin-primary" onClick={aoAddAula}>+ Aula neste assunto</button></div>
     </div>
   )
 }
@@ -529,7 +611,7 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
   const [enviandoCapa, setEnviandoCapa] = useState(false)
   const [enviandoMaterial, setEnviandoMaterial] = useState(false)
   const entradaVideo = useRef<HTMLInputElement>(null)
-  const entradaCapa = useRef<HTMLInputElement>(null)
+  const [quadroParaCapa, setQuadroParaCapa] = useState<Blob | null>(null)
   const entradaMaterial = useRef<HTMLInputElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const player = playerDoVideo(a.video)
@@ -548,14 +630,11 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
       mudar((x) => { x.video = url; x.arquivo = caminho; if (segundos) x.duracao = duracaoLegivel(segundos) })
     } catch (e) { setErro((e as Error).message) } finally { setEnvio(null); if (entradaVideo.current) entradaVideo.current.value = '' }
   }
-  const usarCapa = async (fonte: Blob) => {
-    setEnviandoCapa(true); setErro(null)
-    try { const { url, caminho } = await enviarCapa(sessao, a.id, fonte, marca); mudar((x) => { x.capa = url; x.capaArquivo = caminho }) }
-    catch (e) { setErro((e as Error).message) } finally { setEnviandoCapa(false); if (entradaCapa.current) entradaCapa.current.value = '' }
-  }
+  // o quadro do ponto atual do vídeo abre na janela de capa, para enquadrar no formato do cartão
   const capturarQuadro = async () => {
     if (!video.current) return
-    try { await usarCapa(await quadroDoVideo(video.current)) } catch (e) { setErro((e as Error).message) }
+    setEnviandoCapa(true)
+    try { setQuadroParaCapa(await quadroDoVideo(video.current)) } catch (e) { setErro((e as Error).message) } finally { setEnviandoCapa(false) }
   }
   const adicionarMaterial = async (arquivo: File | undefined) => {
     if (!arquivo) return
@@ -564,6 +643,10 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
     try { const mat: Material = await enviarMaterial(sessao, a.id, arquivo, marca); mudar((x) => { x.materiais.push(mat) }) }
     catch (e) { setErro((e as Error).message) } finally { setEnviandoMaterial(false); if (entradaMaterial.current) entradaMaterial.current.value = '' }
   }
+  const fontesDaCapa: FonteExtra[] = [
+    ...(player?.tipo === 'youtube' && player.id ? [{ rotulo: 'Miniatura do vídeo no YouTube', pegar: () => miniaturaDoYouTube(player.id!) }] : []),
+    ...(mp4 ? [{ rotulo: 'Um quadro do vídeo', pegar: () => quadroDeUmVideo(player!.src) }] : []),
+  ]
   const tempoAtual = () => (video.current ? duracaoDeRelogio(video.current.currentTime) : '')
   const addTopico = (tempo = '') => mudar((x) => { x.topicos.push({ id: Math.random().toString(36).slice(2, 8), titulo: '', tempo }) })
 
@@ -615,18 +698,19 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
           <label className="largo"><span>Descrição</span><textarea rows={5} value={a.descricao} maxLength={1200} onChange={(e) => mudar((x) => { x.descricao = e.target.value })} placeholder="O que a pessoa vai aprender e por que esta aula importa" /><small>{a.descricao.length} de 1200 caracteres · aparece no cartão, na janela de detalhes e embaixo do vídeo.</small></label>
           <label><span>Nível</span><select value={a.nivel || 'Iniciante'} onChange={(e) => mudar((x) => { x.nivel = e.target.value })}>{NIVEIS.map((n) => <option key={n}>{n}</option>)}</select></label>
           <label><span>Duração no cartão</span><input value={a.duracao} maxLength={20} onChange={(e) => mudar((x) => { x.duracao = e.target.value })} placeholder="Ex.: 12 min" /><small>Preenchida sozinha quando o vídeo é enviado.</small></label>
-          <div className="largo eg-capa">
-            <span>Capa</span>
-            <div className="eg-capa-linha">
-              <span className="eg-capa-amostra"><CapaDaAula aula={{ id: a.id, titulo: a.titulo, capa: a.capa }} cor={m.cor} numero={numero} alt="" /></span>
-              <div>
-                <input ref={entradaCapa} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void usarCapa(f) }} />
-                <button type="button" className="admin-primary" disabled={enviandoCapa} onClick={() => entradaCapa.current?.click()}>{enviandoCapa ? 'Enviando…' : a.capa ? 'Trocar a imagem' : 'Enviar uma imagem'}</button>
-                {mp4 && <button type="button" className="admin-secundario" onClick={() => setAba('video')}>Usar um quadro do vídeo</button>}
-                {a.capa && <button type="button" className="admin-secundario" onClick={() => mudar((x) => { x.capa = ''; x.capaArquivo = null })}>Voltar para a capa padrão</button>}
-                <small>Formato em pé (2:3), como um pôster, fica melhor. JPG, PNG ou WebP; a imagem é reduzida sozinha. Sem imagem, a aula usa a capa padrão {a.capa ? '' : '(ao lado)'}.</small>
-              </div>
-            </div>
+          <div className="largo">
+            <SeletorDeCapa rotulo="Capa da aula" proporcao={2 / 3} capa={a.capa} capas={a.capas}
+              resolver={(v) => capaResolvida(a, v)}
+              amostra={(v) => <CapaDaAula aula={a} cor={m.cor} numero={numero} vitrine={v} alt="" />}
+              legenda={{ titulo: a.titulo || 'Aula sem título', numero: `AULA ${String(numero).padStart(2, '0')}` }}
+              extras={fontesDaCapa}
+              enviar={(b) => enviarCapa(sessao, a.id, b, marca)} setErro={setErro}
+              aoMudar={(alvo, url, caminho) => mudar((x) => {
+                if (!alvo) { x.capa = url ?? ''; x.capaArquivo = url ? caminho ?? null : null; return }
+                const c = { ...(x.capas ?? {}) }
+                if (url) c[alvo] = url; else delete c[alvo]
+                x.capas = Object.keys(c).length ? c : undefined
+              })} />
           </div>
         </div>
       )}
@@ -655,7 +739,7 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
           <div className="largo">{reprodutor()}</div>
           {mp4 && (
             <div className="largo eg-video-acoes">
-              <button type="button" className="admin-secundario" disabled={enviandoCapa} onClick={() => void capturarQuadro()}>{enviandoCapa ? 'Gravando a capa…' : 'Usar este quadro como capa'}</button>
+              <button type="button" className="admin-secundario" disabled={enviandoCapa} onClick={() => void capturarQuadro()}>{enviandoCapa ? 'Tirando o quadro…' : 'Usar este quadro como capa'}</button>
               <button type="button" className="admin-secundario" onClick={() => { addTopico(tempoAtual()); setAba('topicos') }}>+ Tópico no ponto atual do vídeo</button>
               {a.video && <button type="button" className="eg-perigo" onClick={() => mudar((x) => { x.video = ''; x.arquivo = null })}>Tirar o vídeo da aula</button>}
             </div>
@@ -738,6 +822,12 @@ function EditorDaAula({ sessao, marca, a, m, s, grade, numero, aba, setAba, plan
             ))}</tbody>
           </table></div>
         ) : <p className="adm-vazio">Ninguém abriu esta aula ainda.</p>
+      )}
+      {quadroParaCapa && (
+        <JanelaDaCapa titulo="Capa a partir do vídeo" proporcao={2 / 3} inicial={quadroParaCapa}
+          legenda={{ titulo: a.titulo || 'Aula sem título', numero: `AULA ${String(numero).padStart(2, '0')}` }}
+          aoFechar={() => setQuadroParaCapa(null)}
+          aoUsar={async (b) => { const { url, caminho } = await enviarCapa(sessao, a.id, b, marca); mudar((x) => { x.capa = url; x.capaArquivo = caminho }); setQuadroParaCapa(null) }} />
       )}
     </div>
   )

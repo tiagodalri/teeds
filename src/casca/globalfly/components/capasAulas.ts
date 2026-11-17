@@ -30,10 +30,18 @@ const DO_NAOR = new Set([
  * profissionais dele em viagem com tratamento de cinema (public/aulas-globalfly/victor/).
  * Valem por cima da capa gravada na grade (as do ChatGPT foram recusadas).
  */
-export const capaEspecial = (id: string): string | null =>
+export const capaEspecial = (id: string, v: string = vitrine()): string | null =>
   !DO_NAOR.has(id) ? null
-    : vitrine() === 'n' ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg`
+    : v === 'n' ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg`
     : `${import.meta.env.BASE_URL}aulas-globalfly/victor/${id}.jpg`
+
+/**
+ * 16/11/2026: a parte da capa especial que é do PARCEIRO (Naor no /n). Ela vale por
+ * cima da capa enviada no painel para todos; a do Victor (fora do /n) é a padrão
+ * e perde para a enviada. Ver capaResolvida em components/aulas/CapaDaAula.tsx.
+ */
+export const capaDoParceiroNoCodigo = (id: string, v: string = vitrine()): string | null =>
+  v === 'n' && DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg` : null
 
 /** As artes dos Destaques com o Naor (09/11/2026), mesma regra da vitrine /n. */
 const DESTAQUES_DO_NAOR = new Set(['ao-vivo', 'comunidade', 'conta', 'deposito', 'apostila'])

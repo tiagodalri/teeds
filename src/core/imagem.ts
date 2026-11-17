@@ -11,8 +11,8 @@
  *    quando se pede webp, então ali vai JPEG, com o tipo verdadeiro.
  */
 
-export const ehHeic = (f: File) => /image\/hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name)
-export const ehImagem = (f: File) => f.type.startsWith('image/') || ehHeic(f)
+export const ehHeic = (f: Blob) => /image\/hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test((f as File).name ?? '')
+export const ehImagem = (f: Blob) => f.type.startsWith('image/') || ehHeic(f)
 
 type Aberta = { fonte: CanvasImageSource; w: number; h: number; soltar: () => void }
 
@@ -30,7 +30,7 @@ async function abrir(dado: Blob): Promise<Aberta | null> {
   return null
 }
 
-export async function abrirImagem(arquivo: File): Promise<Aberta> {
+export async function abrirImagem(arquivo: Blob): Promise<Aberta> {
   let aberta = await abrir(arquivo)
   if (!aberta && ehHeic(arquivo)) {
     try {

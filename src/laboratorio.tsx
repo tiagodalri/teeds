@@ -695,8 +695,16 @@ function Laboratorio() {
     // ?tela=aulas-admin: o editor da grade das aulas, com o banco de mentira (o rascunho fica só na memória)
     const f = window.fetch
     let rascunho: unknown = null
+    const arquivosDoLab = new Map<string, string>()
+    const srcOriginal = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src')!
+    Object.defineProperty(HTMLImageElement.prototype, 'src', { ...srcOriginal, set(v: string) { srcOriginal.set!.call(this, arquivosDoLab.get(v) ?? v) } })
+    const setAttr = Element.prototype.setAttribute
+    Element.prototype.setAttribute = function (n: string, v: string) { return setAttr.call(this, n, n === 'src' || n === 'srcset' ? arquivosDoLab.get(v) ?? v : v) }
     window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
       const url = String(u), ok = (d: unknown, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'content-type': 'application/json' } })
+      // 16/11/2026: capas enviadas ficam na memória; a imagem aparece pelo endereço do Storage
+      if (url.includes('/storage/v1/object/materiais/') && i?.method === 'POST') { arquivosDoLab.set(url.replace('/object/materiais/', '/object/public/materiais/'), URL.createObjectURL(i.body as Blob)); return ok({ Key: 'lab' }) }
+      if (arquivosDoLab.has(url)) return f(arquivosDoLab.get(url)!)
       if (url.includes('/rest/v1/aulas_grade_versoes')) return ok([])
       if (url.includes('/rest/v1/aulas_grade')) { if (i?.method === 'POST') { rascunho = JSON.parse(String(i.body)).rascunho; return new Response(null, { status: 201 }) } return ok(rascunho ? [{ rascunho, rascunho_em: new Date().toISOString() }] : []) }
       if (url.includes('teeds_aulas_publicar')) return ok(new Date().toISOString())

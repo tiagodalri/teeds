@@ -6,7 +6,8 @@ import {
 } from '../../core/teeds/gradeAulas'
 import { MARCA } from '../../marca'
 import { IconeFechar } from '../IconeFechar'
-import { CapaDoCurso } from './VitrineDeCursos'
+import { CapaDoCurso, capaDoCursoNaVitrine } from './VitrineDeCursos'
+import { SeletorDeCapa } from './SeletorDeCapa'
 import './editor-curso.css'
 
 /*
@@ -57,44 +58,41 @@ export function ListaDeCursos({ grade, aoAbrir, aoNovo, mudar, aoDuplicar, aoRem
   return (
     <section className="ec-lista" aria-label="Cursos">
       <header className="ec-lista-topo">
-        <div><h3>Cursos</h3><small>A ordem aqui é a ordem na vitrine dos alunos. Arraste pela alça ⋮⋮ ou use as setas.</small></div>
+        <div><h3>Cursos</h3><small>A ordem aqui é a ordem na vitrine dos alunos. Arraste um cartão para mudar.</small></div>
         <button type="button" className="admin-primary" onClick={aoNovo}>+ Novo curso</button>
       </header>
-      <div className="ec-tabela" role="table" aria-label="Lista de cursos">
-        <div className="ec-linha ec-cab" role="row">
-          <span role="columnheader" aria-label="Ordem" /><span role="columnheader">Curso</span><span role="columnheader" className="num">Módulos</span><span role="columnheader" className="num">Aulas</span>
-          <span role="columnheader">Acesso</span><span role="columnheader">Situação</span><span role="columnheader" className="ec-acoes-cab">Ações</span>
-        </div>
+      {/* 16/11/2026: os cursos em pôsteres, como o aluno vê */}
+      <div className="ec-grade" role="list">
         {cursos.map((c, i) => {
           const ac = resumoDoAcesso(c), st = situacao(c)
           const mods = modulosDoCurso(grade, c.id).length, aulas = aulasDoCurso(grade, c.id)
           return (
-            <div key={c.id} role="row" className={`ec-linha ${alvo === i ? 'alvo' : ''} ${c.publicado ? '' : 'apagado'}`}
+            <article key={c.id} role="listitem" className={`ec-poster ${alvo === i ? 'alvo' : ''} ${c.publicado ? '' : 'apagado'}`} style={{ ['--vc' as string]: c.cor }}
               draggable onDragStart={(e) => { arrastando.current = i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', c.id) }}
               onDragEnd={() => { arrastando.current = null; setAlvo(null) }}
               onDragOver={(e) => { if (arrastando.current != null) { e.preventDefault(); setAlvo(i) } }} onDrop={(e) => { e.preventDefault(); soltar(i) }}>
-              <span className="ec-ordem" role="cell">
-                <span className="ec-pega" aria-hidden="true">⋮⋮</span>
-                <span className="ec-setas"><button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={`Subir ${c.titulo}`}>↑</button><button type="button" onClick={() => mover(i, 1)} disabled={i === cursos.length - 1} aria-label={`Descer ${c.titulo}`}>↓</button></span>
-              </span>
-              <button type="button" role="cell" className="ec-curso" onClick={() => aoAbrir(c.id)}>
-                <span className="ec-mini" style={{ ['--vc' as string]: c.cor }}><CapaDoCurso curso={c} /></span>
-                <span><b>{c.titulo || 'Curso sem nome'}</b><small>{c.descricao || 'Sem descrição'}</small></span>
+              <button type="button" className="ec-poster-capa" onClick={() => aoAbrir(c.id)} aria-label={`Abrir ${c.titulo || 'curso sem nome'}`}>
+                <CapaDoCurso curso={c} />
+                {c.selo && <em className="vc-selo">{c.selo}</em>}
+                <span className="ec-poster-pills"><em className={`ec-pill ${st.tom}`}>{st.texto}</em></span>
+                <span className="ec-poster-abrir">Abrir o curso</span>
               </button>
-              <span role="cell" className="num" data-rot="Módulos">{mods}</span>
-              <span role="cell" className="num" data-rot="Aulas">{aulas}</span>
-              <span role="cell"><em className={`ec-pill ${ac.tom}`}>{ac.texto}</em></span>
-              <span role="cell"><em className={`ec-pill ${st.tom}`}>{st.texto}</em></span>
-              <span role="cell" className="ec-acoes">
-                <button type="button" onClick={() => aoAbrir(c.id, 'conteudo')} title="Módulos e aulas">Conteúdo</button>
-                <button type="button" onClick={() => aoAbrir(c.id, 'info')} title="Nome, capa, descrição">Editar</button>
+              <div className="ec-poster-texto">
+                <b>{c.titulo || 'Curso sem nome'}</b>
+                <small>{mods} {mods === 1 ? 'módulo' : 'módulos'} · {aulas} {aulas === 1 ? 'aula' : 'aulas'}</small>
+                <em className={`ec-pill ${ac.tom}`}>{ac.texto}</em>
+              </div>
+              <div className="ec-poster-acoes">
+                <button type="button" onClick={() => aoAbrir(c.id, 'info')}>Editar</button>
                 <button type="button" onClick={() => mudar((g) => { const x = g.cursos!.find((k) => k.id === c.id); if (x) x.publicado = !x.publicado })}>{c.publicado ? 'Ocultar' : 'Mostrar'}</button>
                 <button type="button" onClick={() => aoDuplicar(c.id)}>Duplicar</button>
                 <button type="button" className="perigo" disabled={cursos.length === 1} title={cursos.length === 1 ? 'A plataforma precisa de pelo menos um curso' : undefined} onClick={() => aoRemover(c.id)}>Excluir</button>
-              </span>
-            </div>
+                <span className="ec-setas"><button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label={`Antes: ${c.titulo}`}>←</button><button type="button" onClick={() => mover(i, 1)} disabled={i === cursos.length - 1} aria-label={`Depois: ${c.titulo}`}>→</button></span>
+              </div>
+            </article>
           )
         })}
+        <button type="button" className="ec-poster-novo" onClick={aoNovo}><span>+</span><b>Novo curso</b><small>Nome, capa, módulos e aulas</small></button>
       </div>
     </section>
   )
@@ -135,13 +133,6 @@ export function CabecalhoDoCurso({ grade, curso, aba, setAba, aoVoltar, alunos }
 export function InfoDoCurso({ sessao, marca, curso, mudar, setErro, aoRemover }: {
   sessao: SessaoTeeds; marca: string; curso: CursoGrade; mudar: (fn: (c: CursoGrade) => void) => void; setErro: (e: string | null) => void; aoRemover: () => void
 }) {
-  const entrada = useRef<HTMLInputElement>(null)
-  const [enviando, setEnviando] = useState(false)
-  const usarCapa = async (f: File) => {
-    setEnviando(true); setErro(null)
-    try { const { url, caminho } = await enviarCapa(sessao, `curso-${curso.id}`, f, marca); mudar((c) => { c.capa = url; c.capaArquivo = caminho }) }
-    catch (e) { setErro((e as Error).message) } finally { setEnviando(false); if (entrada.current) entrada.current.value = '' }
-  }
   return (
     <div className="ec-duas">
       <div className="eg-campos">
@@ -156,17 +147,18 @@ export function InfoDoCurso({ sessao, marca, curso, mudar, setErro, aoRemover }:
             <label className="eg-cor-livre" title="Outra cor"><input type="color" value={/^#[0-9a-f]{6}$/i.test(curso.cor) ? curso.cor : '#B78D39'} onChange={(e) => mudar((c) => { c.cor = e.target.value })} /><span>Outra</span></label>
           </div>
         </div>
-        <div className="largo eg-capa">
-          <span>Capa do curso</span>
-          <div className="eg-capa-linha">
-            <span className="ec-capa-amostra" style={{ ['--vc' as string]: curso.cor }}><CapaDoCurso curso={curso} /></span>
-            <div>
-              <input ref={entrada} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) void usarCapa(f) }} />
-              <button type="button" className="admin-primary" disabled={enviando} onClick={() => entrada.current?.click()}>{enviando ? 'Enviando…' : curso.capa ? 'Trocar a imagem' : 'Enviar uma imagem'}</button>
-              {curso.capa && <button type="button" className="admin-secundario" onClick={() => mudar((c) => { c.capa = ''; c.capaArquivo = null })}>Usar a capa desenhada</button>}
-              <small>Em pé, 3:4 (ex.: 900 × 1200 px), como um pôster. JPG, PNG ou WebP: a imagem é reduzida sozinha. Sem imagem, o curso usa a capa desenhada com o nome e a cor.</small>
-            </div>
-          </div>
+        <div className="largo">
+          <SeletorDeCapa rotulo="Capa do curso" proporcao={3 / 4} capa={curso.capa} capas={curso.capas}
+            resolver={(v) => { const src = capaDoCursoNaVitrine(curso, v); return { src, origem: !src ? 'desenhada' : v && curso.capas?.[v] ? 'parceiro' : 'enviada' } }}
+            amostra={(v) => <span className="ec-capa-amostra" style={{ ['--vc' as string]: curso.cor }}><CapaDoCurso curso={curso} vitrine={v} /></span>}
+            legenda={{ titulo: curso.titulo || 'Curso sem nome' }}
+            enviar={(b) => enviarCapa(sessao, `curso-${curso.id}`, b, marca)} setErro={setErro}
+            aoMudar={(alvo, url, caminho) => mudar((c) => {
+              if (!alvo) { c.capa = url ?? ''; c.capaArquivo = url ? caminho ?? null : null; return }
+              const l = { ...(c.capas ?? {}) }
+              if (url) l[alvo] = url; else delete l[alvo]
+              c.capas = Object.keys(l).length ? l : undefined
+            })} />
         </div>
         <div className="largo ec-perigo-zona">
           <span><b>Excluir o curso</b><small>Tira o curso e todos os módulos e aulas dele do rascunho. Dá para trazer de volta pelo Histórico até publicar outra versão.</small></span>

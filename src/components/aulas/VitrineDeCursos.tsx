@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { CursoNaSala } from '../../core/teeds/gradeAulas'
 import { MARCA } from '../../marca'
+import { vitrine } from '../../core/teeds/parceiro'
 import { IconeFechar } from '../IconeFechar'
 import './vitrine-de-cursos.css'
 
@@ -12,8 +13,12 @@ import './vitrine-de-cursos.css'
   parte, o botão para o checkout da Cakto.
 */
 
-export function CapaDoCurso({ curso, grande = false }: { curso: Pick<CursoNaSala, 'titulo' | 'capa' | 'cor'>; grande?: boolean }) {
-  if (curso.capa) return <img className="vc-capa-img" src={curso.capa} alt="" loading="lazy" />
+/** A capa do curso nesta vitrine: a do parceiro (16/11/2026) ou a de todos. */
+export const capaDoCursoNaVitrine = (curso: Pick<CursoNaSala, 'capa' | 'capas'>, v: string = vitrine()) => (v && curso.capas?.[v]) || curso.capa || null
+
+export function CapaDoCurso({ curso, grande = false, vitrine: v }: { curso: Pick<CursoNaSala, 'titulo' | 'capa' | 'capas' | 'cor'>; grande?: boolean; vitrine?: string }) {
+  const capa = capaDoCursoNaVitrine(curso, v)
+  if (capa) return <img className="vc-capa-img" src={capa} alt="" loading="lazy" />
   // sem imagem: a capa desenhada, na cor do curso
   return (
     <span className={`vc-capa-desenho ${grande ? 'grande' : ''}`} style={{ ['--vc' as string]: curso.cor }} aria-hidden="true">

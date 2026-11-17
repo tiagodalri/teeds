@@ -279,7 +279,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             <div className="in-pv">
               {d.aula && (
                 <button type="button" className="in-aula" onClick={() => aoIr('aulas')}>
-                  {d.aula.capa ? (/\/aulas-globalfly\/(naor|victor)\//.test(d.aula.capa) ? <CapaPoster src={d.aula.capa} alt="" loading="lazy" /> : <ResponsiveImage src={d.aula.capa} alt="" loading="lazy" />) : <span className="in-aula-capa-desenhada"><CapaDesenhada titulo={d.aula.titulo} cor={d.aula.cor} /></span>}
+                  {d.aula.capa ? (/\/aulas-globalfly\/(naor|victor)\/|^https?:\/\//.test(d.aula.capa) ? <CapaPoster src={d.aula.capa} alt="" loading="lazy" /> : <ResponsiveImage src={d.aula.capa} alt="" loading="lazy" />) : <span className="in-aula-capa-desenhada"><CapaDesenhada titulo={d.aula.titulo} cor={d.aula.cor} /></span>}
                   <span className="in-aula-texto">
                     <span className="in-sobre">Continue de onde parou</span>
                     <b>{d.aula.titulo}</b>
