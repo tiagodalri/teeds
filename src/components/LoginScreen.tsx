@@ -7,7 +7,8 @@ import { SENHA_NO_CADASTRO, type ContaDoCadastro, type DadosFilaEspera } from '.
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
-import { abrirNoCadastro } from '../core/teeds/entradaInicial'
+import { abrirNoCadastro, paginaDeVenda } from '../core/teeds/entradaInicial'
+import { videosDoQuiz } from '../core/teeds/quizDoTrafego'
 import { vitrine } from '../core/teeds/parceiro'
 import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 import { marcarEmbarque } from '../core/decolagem'
@@ -17,6 +18,8 @@ import './entrada/login.css'
 
 // 11/11/2026: na GlobalFly o cadastro abre com a escolha do plano (peça própria, só baixa nessa marca)
 const CadastroComPlanos = lazy(() => import('./entrada/CadastroComPlanos').then((m) => ({ default: m.CadastroComPlanos })))
+// 16/11/2026: a /trafego (anúncios) começa pelo quiz; no fim, "Garantir minha vaga" abre os planos
+const QuizDoTrafego = lazy(() => import('./entrada/QuizDoTrafego').then((m) => ({ default: m.QuizDoTrafego })))
 
 type Modo = 'entrar' | 'criar' | 'esqueci'
 
@@ -86,6 +89,9 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   }, [onEntrarComBiometria])
   // Link de campanha de cadastro ou /cadastre-se: abre direto no formulário.
   const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : 'entrar')
+  // o quiz só vale na /trafego de parceiro que já tem os vídeos (quizDoTrafego.ts); sem eles, direto aos planos
+  const [videosDoQuizDaVisita] = useState(() => (paginaDeVenda === 'trafego' ? videosDoQuiz() : null))
+  const [quizFeito, setQuizFeito] = useState(false)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -215,6 +221,14 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       {tocado[chave] && problemas[chave] && <em id={`entrada-${chave}-erro`}>{problemas[chave]}</em>}
     </label>
   )
+
+  if (MARCA.planosNoCadastro && modo === 'criar' && videosDoQuizDaVisita && !quizFeito) {
+    return (
+      <Suspense fallback={<div className="entrada" />}>
+        <QuizDoTrafego videos={videosDoQuizDaVisita} aoConcluir={() => { setQuizFeito(true); scrollTo(0, 0) }} />
+      </Suspense>
+    )
+  }
 
   if (MARCA.planosNoCadastro && modo === 'criar') {
     return (
