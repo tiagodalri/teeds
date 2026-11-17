@@ -91,13 +91,16 @@
 @keyframes cpo-estica { from { transform: scaleX(0); } }
 
 /* mapa de resultados */
-.cpo-mapa { position: relative; display: flex; align-items: stretch; gap: 2px; height: 230px; padding: 6px 0; }
+/* uma coluna por cliente dividindo a largura do cartão: com 200 clientes cada uma fica com ~2-3 px, sem vazar */
+.cpo-mapa { position: relative; display: grid; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); column-gap: var(--vao, 2px); height: 230px; padding: 6px 0; overflow: hidden; }
 .cpo-zero { position: absolute; left: 0; right: 0; top: var(--zero); height: 0; border-top: 1px dashed rgba(244, 238, 223, .35); pointer-events: none; z-index: 1; }
 .cpo-zero i { position: absolute; right: 0; top: -18px; color: var(--cpo-suave); font-style: normal; font-size: 10px; font-weight: 700; }
-.cpo-col { position: relative; flex: 1 1 0; min-width: 2px; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
-.cpo-col i { position: absolute; left: 0; right: 0; height: var(--alt); border-radius: 4px; transform-origin: bottom; animation: cpo-cresce .7s cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--atraso); transition: filter .15s, opacity .15s; }
+.cpo-col { position: relative; min-width: 0; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; cursor: pointer; }
+.cpo-col i { position: absolute; left: 0; right: 0; height: var(--alt); min-height: 2px; border-radius: 4px; transform-origin: bottom; animation: cpo-cresce .7s cubic-bezier(.2, .8, .2, 1) both; animation-delay: var(--atraso); transition: filter .15s, opacity .15s; }
 .cpo-col.sobe i { bottom: calc(100% - var(--zero)); background: linear-gradient(180deg, #5BF09A, var(--cpo-sobe)); border-radius: 4px 4px 1px 1px; }
 .cpo-col.desce i { top: var(--zero); background: linear-gradient(0deg, #FF7A82, var(--cpo-desce)); border-radius: 1px 1px 4px 4px; transform-origin: top; }
+/* colunas finas: cantos quase retos (o arredondado de 4 px num traço de 2 px vira uma bolinha) */
+.cpo-mapa.densa .cpo-col i { border-radius: 1px; }
 .cpo-mapa:hover .cpo-col i { opacity: .45; }
 .cpo-mapa .cpo-col.foco i, .cpo-mapa .cpo-col:hover i { opacity: 1; filter: brightness(1.2) drop-shadow(0 0 6px rgba(255, 255, 255, .35)); }
 .cpo-col:focus-visible { outline: 2px solid var(--cpo-ouro); outline-offset: 1px; border-radius: 3px; }
@@ -128,8 +131,9 @@
 .cpo-planos .barra > i.black { background: linear-gradient(90deg, #2A2A2E, #6B6B72); box-shadow: inset 0 0 0 1px rgba(217, 180, 101, .5); }
 .cpo-planos .barra > i.prestige { background: linear-gradient(90deg, #B9A578, #F7F0E1); }
 .cpo-planos .barra em { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px 0 0 999px; background: rgba(5, 21, 40, .55); box-shadow: 2px 0 0 var(--cpo-fundo); }
-.cpo-nota { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; color: var(--cpo-suave); font-size: 11px; line-height: 1.45; }
-.cpo-nota i { flex-shrink: 0; width: 10px; height: 10px; border-radius: 3px; background: rgba(5, 21, 40, .9); box-shadow: inset 0 0 0 1px var(--cpo-ouro); }
+/* texto corrido com o quadradinho na linha (em flex o texto pulava para baixo do quadradinho em cartão estreito) */
+.cpo-nota { display: block; margin: 0; color: var(--cpo-suave); font-size: 11px; line-height: 1.5; }
+.cpo-nota i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 3px; background: rgba(5, 21, 40, .9); box-shadow: inset 0 0 0 1px var(--cpo-ouro); }
 .cpo-nota i.rec { background: var(--cpo-ouro); box-shadow: none; }
 .cpo-nota i.fat { margin-left: 8px; background: rgba(217, 180, 101, .3); box-shadow: none; }
 .cpo-selo { justify-self: start; padding: 4px 10px; border-radius: 999px; font-style: normal; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; white-space: nowrap; }
@@ -180,7 +184,8 @@
   .cpo-apoio dd { font-size: 16px; overflow-wrap: anywhere; }
   .cpo-grade { grid-template-columns: minmax(0, 1fr); }
   .cpo-bloco { padding: 14px; }
-  .cpo-mapa { height: 180px; gap: 1px; }
+  /* o vão entre as colunas vem de --vao (com 200 clientes, 1 px de vão comia a coluna inteira no celular) */
+  .cpo-mapa { height: 180px; }
   .cpo-podio b { font-size: 11px; }
   .cpo-podio strong { font-size: 11.5px; }
   .cpo-podio .lugar-1 strong { font-size: 13px; }

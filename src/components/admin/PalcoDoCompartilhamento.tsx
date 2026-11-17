@@ -97,7 +97,8 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
     return {
       ord, lucro, perda, ops, ganhas,
       lucroUsd: soma(lucro, (l) => l.resultado), perdaUsd: soma(perda, (l) => l.resultado), liquido: soma(linhas, (l) => l.resultado),
-      maior: Math.max(1, ...ord.map((l) => Math.abs(l.resultado))), planos,
+      // a régua das barrinhas do ranking é o maior LUCRO (com o maior prejuízo, de US$ 900, os lucros viravam um ponto)
+      maior: Math.max(0.01, ...lucro.map((l) => l.resultado)), planos,
       maiorPlano: Math.max(1, ...planos.map((p) => p.lucro)),
     }
   }, [linhas, painel.percentuais])
@@ -110,10 +111,16 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
   const podeVer = (l: Linha) => !!(l.fatura || l.cancelada || l.valor_usd > 0)
   const abrir = (l: Linha) => { if (podeVer(l)) onVer(l); else onFicha?.(l.user_id) }
 
-  // escala do mapa: acima e abaixo do zero na mesma régua, o zero fica onde a proporção mandar
-  const maxPos = Math.max(0, ...n.ord.map((l) => l.resultado)), maxNeg = Math.max(0, ...n.ord.map((l) => -l.resultado))
-  const faixa = Math.max(1, maxPos + maxNeg)
+  // escala do mapa (16/11/2026, 2ª versão): com a base real (197 clientes, lucros de até US$ 25 e prejuízos de até
+  // US$ 900) a régua reta achatava os lucros numa linha invisível. A altura agora segue a raiz do valor, a mesma
+  // régua dos dois lados do zero: a ordem e o sinal ficam exatos, e o valor de cada um aparece ao passar o mouse.
+  const raiz = (v: number) => Math.sqrt(Math.abs(v))
+  const maxPos = Math.max(0, ...n.ord.map((l) => (l.resultado > 0 ? raiz(l.resultado) : 0)))
+  const maxNeg = Math.max(0, ...n.ord.map((l) => (l.resultado < 0 ? raiz(l.resultado) : 0)))
+  const faixa = Math.max(0.0001, maxPos + maxNeg)
   const zero = maxPos / faixa
+  // muitos clientes: as colunas dividem a largura (sem largura mínima, para nunca passar do cartão)
+  const vaoMapa = n.ord.length > 160 ? 0 : n.ord.length > 60 ? 1 : 2
   const historico = painel.meses.filter((m) => m.faturas > 0).slice(0, 6).reverse()
   const maiorMes = Math.max(1, ...historico.map((m) => m.valor_brl))
   const R = 54, C = 2 * Math.PI * R
@@ -193,11 +200,11 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
       </article>
 
       <article className="cpo-bloco cpo-mapa-bloco">
-        <header><h3>Todos os clientes, do maior lucro ao maior prejuízo</h3><small>Passe o mouse ou toque numa barra</small></header>
-        <div className="cpo-mapa" style={{ ['--zero' as string]: `${zero * 100}%` }}>
+        <header><h3>Todos os clientes, do maior lucro ao maior prejuízo</h3><small>Passe o mouse ou toque numa barra para ver o valor</small></header>
+        <div className={`cpo-mapa${vaoMapa < 2 ? ' densa' : ''}`} style={{ ['--zero' as string]: `${zero * 100}%`, ['--n' as string]: String(Math.max(1, n.ord.length)), ['--vao' as string]: `${vaoMapa}px` }}>
           <span className="cpo-zero" aria-hidden><i>US$ 0</i></span>
           {n.ord.map((l, i) => {
-            const alt = Math.abs(l.resultado) / faixa * 100
+            const alt = raiz(l.resultado) / faixa * 100
             return <button key={l.user_id} type="button" className={`cpo-col ${l.resultado >= 0 ? 'sobe' : 'desce'} ${foco === l.user_id ? 'foco' : ''}`}
               style={{ ['--alt' as string]: `${Math.max(alt, 0.6)}%`, ['--atraso' as string]: `${Math.min(i * 12, 700)}ms` }}
               aria-label={`${nomeDe(l, ocultar)}: ${comSinal(l.resultado)}`}
