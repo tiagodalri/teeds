@@ -1,5 +1,5 @@
 /**
- * Laboratório (?tela=compartilhamento(&parceiro=1)(&vazio)): o Compartilhamento de receita com clientes de
+ * Laboratório (?tela=compartilhamento(&parceiro=1)(&vazio)(&muitos)): o Compartilhamento de receita com clientes de
  * exemplo, sem banco. Gerar, dar baixa, cancelar e reabrir funcionam em memória. &parceiro=1 mostra a visão
  * do admin do parceiro (vê, mas não mexe).
  */
@@ -15,9 +15,22 @@ const mesSp = () => `${new Date(Date.now() - 3 * 3_600_000).toISOString().slice(
 const hojeSp = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
 const proximo = (mes: string) => { const [a, m] = mes.split('-').map(Number); return m === 12 ? `${a + 1}-01-01` : `${a}-${String(m + 1).padStart(2, '0')}-01` }
 
+/** &muitos: ~200 clientes como na base real de 16/11/2026 (17 no lucro, o resto no prejuízo, com cauda longa). */
+const MUITOS = typeof location !== 'undefined' && new URLSearchParams(location.search).has('muitos')
 function clientes(mes: string, vazio: boolean) {
   if (vazio) return []
   const semente = Number(mes.slice(5, 7))
+  if (MUITOS) return Array.from({ length: 197 }, (_, i) => {
+    const sub = i % 23 === 4 ? 'black' : i % 31 === 7 ? 'prestige' : 'gold'
+    const r = i < 17 ? Math.round((25 - i * 1.45) * 100) / 100 : -Math.round((2 + Math.pow((i - 17) / 180, 2.6) * 880 + ((i * 13) % 7)) * 100) / 100
+    const nome = `${NOMES[i % NOMES.length]} ${i + 1}`, ops = 20 + ((i * 37) % 600)
+    return {
+      user_id: `m${i}`, nome, email: `cliente${i}@exemplo.com`, telefone: null, foto_url: null,
+      parceiro: ['n', 'v', null][i % 3], parceiro_nome: ['Naor', 'Victor', null][i % 3], subplano: sub, percentual: PERC[sub],
+      operacoes: ops, ganhas: Math.round(ops * (r > 0 ? 0.6 : 0.45)), manuais: 0, volume: ops * 3.1,
+      resultado: r, valor_usd: Math.round(Math.max(0, r) * PERC[sub] * 100) / 100,
+    }
+  }).sort((a, b) => b.resultado - a.resultado)
   return NOMES.map((nome, i) => {
     const sub = i === 2 || i === 9 ? 'black' : i === 5 ? 'prestige' : 'gold'
     const r = Math.round((Math.sin(i * 1.7 + semente) * 260 + (i % 3 === 0 ? 120 : -20)) * 100) / 100
