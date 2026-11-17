@@ -96,7 +96,13 @@ function VideoDaVturb({ video, aoLiberar }: { video: VideoDoQuiz; aoLiberar: () 
   )
 }
 
-export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoDoQuiz, VideoDoQuiz, VideoDoQuiz]; aoConcluir: () => void }) {
+/**
+ * `semRegistro`: quem já tem conta e abriu o /trafego logado (a equipe revisando) faz o quiz sem
+ * entrar na central de rastreio nem no pixel, para não sujar o funil dos anúncios.
+ */
+export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { videos: readonly [VideoDoQuiz, VideoDoQuiz, VideoDoQuiz]; aoConcluir: () => void; semRegistro?: boolean }) {
+  const rastro: typeof rastroDoCadastro = semRegistro ? () => undefined : rastroDoCadastro
+  const pixel: typeof eventoDoPixel = semRegistro ? () => undefined : eventoDoPixel
   const [etapa, setEtapa] = useState(0)
   const [escolhida, setEscolhida] = useState<string | null>(null)
   const [botaoDoVideo, setBotaoDoVideo] = useState(false)
@@ -120,8 +126,8 @@ export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoD
   useEffect(() => {
     let nova = true
     try { nova = !sessionStorage.getItem('gf.rastro.sessao'); sessionStorage.setItem('gf.rastro.sessao', '1') } catch { /* sem armazenamento */ }
-    rastroDoCadastro(nova ? 'entrada' : 'pagina', { quiz: true })
-    eventoDoPixel('ViewContent', { content_name: 'quiz-abertura' }, true)
+    rastro(nova ? 'entrada' : 'pagina', { quiz: true })
+    pixel('ViewContent', { content_name: 'quiz-abertura' }, true)
   }, [])
   const etapaAgora = useRef(0)
   etapaAgora.current = etapa
@@ -131,7 +137,7 @@ export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoD
     const aoSair = () => {
       if (foi) return
       foi = true
-      rastroDoCadastro('saiu', { segundos: Math.round((Date.now() - inicio) / 1000), etapa: etapaAgora.current, quiz: true })
+      rastro('saiu', { segundos: Math.round((Date.now() - inicio) / 1000), etapa: etapaAgora.current, quiz: true })
     }
     addEventListener('pagehide', aoSair)
     return () => removeEventListener('pagehide', aoSair)
@@ -142,9 +148,9 @@ export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoD
     scrollTo({ top: 0, behavior: 'auto' })
     if (etapa > 0) titulo.current?.focus({ preventScroll: true })
     if (etapa === 0) return
-    eventoDoPixel('ViewContent', { content_name: `quiz-etapa-${etapa}` }, true)
-    if (atual?.tipo === 'video') rastroDoCadastro('quiz-video', { etapa, video: atual.video + 1 })
-    if (atual?.tipo === 'aprovado') { rastroDoCadastro('quiz-aprovado', { etapa }); eventoDoPixel('QuizAprovado', undefined, true) }
+    pixel('ViewContent', { content_name: `quiz-etapa-${etapa}` }, true)
+    if (atual?.tipo === 'video') rastro('quiz-video', { etapa, video: atual.video + 1 })
+    if (atual?.tipo === 'aprovado') { rastro('quiz-aprovado', { etapa }); pixel('QuizAprovado', undefined, true) }
   }, [etapa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // a análise conta até 67%
@@ -178,8 +184,8 @@ export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoD
   }, [irPara])
 
   const comecar = () => {
-    rastroDoCadastro('quiz-comecou')
-    eventoDoPixel('QuizComecou', undefined, true)
+    rastro('quiz-comecou')
+    pixel('QuizComecou', undefined, true)
     irPara(1)
   }
   const responder = (opcao: string) => {
@@ -187,13 +193,13 @@ export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoD
     setEscolhida(opcao)
     respostas.current[etapa] = opcao
     const pergunta = atual.pergunta.replace('%%', atual.destaque ?? '')
-    rastroDoCadastro('quiz-resposta', { etapa, pergunta, resposta: opcao })
-    eventoDoPixel('QuizResposta', { etapa, resposta: opcao })
+    rastro('quiz-resposta', { etapa, pergunta, resposta: opcao })
+    pixel('QuizResposta', { etapa, resposta: opcao })
     window.setTimeout(() => irPara(etapa + 1), calma() ? 0 : 320)
   }
   const concluir = () => {
-    rastroDoCadastro('quiz-concluiu', { respostas: respostas.current })
-    eventoDoPixel('QuizConcluido', undefined, true)
+    rastro('quiz-concluiu', { respostas: respostas.current })
+    pixel('QuizConcluido', undefined, true)
     aoConcluir()
   }
 
@@ -285,7 +291,7 @@ export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoD
           <section className="qzt-painel qzt-centro qzt-com-video" key={etapa}>
             <p className="qzt-olho">Vídeo {atual.video + 1} de 3</p>
             <h2 ref={titulo} tabIndex={-1}>{atual.titulo}</h2>
-            <VideoDaVturb video={videos[atual.video]} aoLiberar={() => { setBotaoDoVideo(true); rastroDoCadastro('quiz-video-botao', { etapa, video: atual.video + 1 }) }} />
+            <VideoDaVturb video={videos[atual.video]} aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: atual.video + 1 }) }} />
             <div className={`qzt-depois ${botaoDoVideo ? 'qzt-visivel' : ''}`} aria-hidden={!botaoDoVideo}>
               <button type="button" className="qzt-btn qzt-btn-ouro qzt-grande" tabIndex={botaoDoVideo ? 0 : -1} onClick={() => irPara(etapa + 1)}>Continuar <Seta /></button>
             </div>
@@ -310,7 +316,7 @@ export function QuizDoTrafego({ videos, aoConcluir }: { videos: readonly [VideoD
             <h2 ref={titulo} tabIndex={-1}>Parabéns! Seu perfil é <b className="qzt-verde">89% compatível.</b></h2>
             <p className="qzt-forte">Você foi selecionado para se tornar um dos meus sócios.</p>
             <p className="qzt-desc">Assista ao vídeo abaixo para entender os últimos detalhes da nossa parceria.</p>
-            <VideoDaVturb video={videos[2]} aoLiberar={() => { setBotaoDoVideo(true); rastroDoCadastro('quiz-video-botao', { etapa, video: 3 }) }} />
+            <VideoDaVturb video={videos[2]} aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: 3 }) }} />
             <div className={`qzt-depois ${botaoDoVideo ? 'qzt-visivel' : ''}`} aria-hidden={!botaoDoVideo}>
               <button type="button" className="qzt-btn qzt-btn-ouro qzt-grande qzt-vaga" tabIndex={botaoDoVideo ? 0 : -1} onClick={concluir}>Garantir minha vaga <Seta /></button>
             </div>

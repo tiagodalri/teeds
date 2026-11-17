@@ -27,6 +27,8 @@ import { UserMenu } from './components/UserMenu'
 import { ProfilePanel } from './components/ProfilePanel'
 import { DerivLogo, IconeElo } from './components/DerivMarca'
 import { LoginScreen } from './components/LoginScreen'
+import { paginaDeVenda } from './core/teeds/entradaInicial'
+import { videosDoQuiz } from './core/teeds/quizDoTrafego'
 import { Abrindo, Carregando } from './components/entrada/Carregando'
 import { decolar, liberarPouso } from './core/decolagem'
 import { definirDonoDoPlano } from './core/teeds/planoDoDia'
@@ -123,6 +125,7 @@ const InicioPagina = lazy(() => carregarInicio().then((m) => ({ default: m.Inici
 // Telas que ninguém vê ao entrar (administração, aulas, loja, gerenciamento) baixam só quando abertas:
 // o app principal fica ~30% menor no celular
 const AdminPanel = lazy(() => import('./components/AdminPanel').then((m) => ({ default: m.AdminPanel })))
+const QuizDoTrafego = lazy(() => import('./components/entrada/QuizDoTrafego').then((m) => ({ default: m.QuizDoTrafego })))
 const InsightsPanel = lazy(() => import('./components/InsightsPanel').then((m) => ({ default: m.InsightsPanel })))
 const ManagementPanel = lazy(() => import('./components/ManagementPanel').then((m) => ({ default: m.ManagementPanel })))
 const AulasPanel = lazy(() => import('./components/AulasPanel').then((m) => ({ default: m.AulasPanel })))
@@ -1480,10 +1483,21 @@ export default function App() {
     if (MARCA.decolagem && statusAnterior.current === 'deslogado' && teeds.status === 'logado') decolar(teeds.sessao?.usuario.nome ?? null)
     statusAnterior.current = teeds.status
   }, [teeds.status]) // eslint-disable-line react-hooks/exhaustive-deps
+  // /n/trafego aberto por quem já está logado (16/11/2026, Tiago: "se acessar pelo /trafego cai no
+  // quiz mesmo que esteja logado"). Deslogado, o quiz vem do LoginScreen; logado, vem daqui, sem
+  // registrar na central nem no pixel, e o Garantir minha vaga entra na plataforma.
+  const [quizLogado, setQuizLogado] = useState(() => (paginaDeVenda === 'trafego' ? videosDoQuiz() : null))
   useEffect(() => { if (!abrindo) liberarPouso() }, [abrindo])
   if (abrindo) {
     if (MARCA.decolagem) return <Carregando />
     return <Abrindo />
+  }
+  if (quizLogado && teeds.status === 'logado') {
+    return (
+      <Suspense fallback={MARCA.decolagem ? <Carregando /> : <Abrindo />}>
+        <QuizDoTrafego videos={quizLogado} semRegistro aoConcluir={() => { setQuizLogado(null); scrollTo(0, 0) }} />
+      </Suspense>
+    )
   }
 
   /*
