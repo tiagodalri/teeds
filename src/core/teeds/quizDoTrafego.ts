@@ -5,7 +5,9 @@
  * são 3 vídeos intervalados entre as perguntas; faça exatamente igual, apenas adaptando o visual".
  * O modelo é o quiz "Ganhe em Dólar" do Naor (sucessonotrade.com): 15 etapas, os vídeos na 9, na 12
  * e na 15, e o botão de cada vídeo só aparece num tempo certo do vídeo, como lá.
- * No fim, em vez do WhatsApp, a pessoa segue para a escolha do plano (o que já existia na /trafego).
+ * No fim, "Garantir minha vaga" abre o WhatsApp do atendimento do parceiro (17/11/2026, Tiago: "deve levar
+ * pra esse número de WhatsApp do Naor onde faremos o atendimento"), como no vídeo 3 ("falando diretamente
+ * comigo"). Parceiro sem número aqui segue para a escolha do plano, como antes.
  *
  * Os vídeos são de cada parceiro (é a história do "seu futuro sócio"). Parceiro sem vídeos aqui não
  * tem quiz: a /trafego dele abre direto nos planos, como antes.
@@ -41,6 +43,18 @@ export const VIDEOS_DO_QUIZ: Partial<Record<string, readonly [VideoDoQuiz, Video
     { src: `${PASTA}/naor-2-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-2.webp', botaoAos: 157, duracao: 166 },
     { src: `${PASTA}/naor-3-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-3.webp', botaoAos: 301, duracao: 315 },
   ],
+}
+
+/** O WhatsApp do atendimento de cada parceiro (DDI + DDD + número) e a mensagem que já vai escrita. */
+const WHATSAPP_DO_QUIZ: Partial<Record<string, string>> = {
+  n: '5511994437461',
+}
+export const MENSAGEM_DO_WHATSAPP = 'Olá, quero garantir minha vaga na GlobalFly Trade.'
+
+/** O link do WhatsApp do parceiro da visita com a mensagem pronta, ou null quando ele não tem número aqui. */
+export function whatsappDoQuiz(): string | null {
+  const numero = WHATSAPP_DO_QUIZ[vitrine()]
+  return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(MENSAGEM_DO_WHATSAPP)}` : null
 }
 
 /** Os vídeos do quiz de quem trouxe a visita, ou null quando esse parceiro ainda não tem quiz. */

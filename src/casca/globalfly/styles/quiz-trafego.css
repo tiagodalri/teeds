@@ -36,7 +36,7 @@
 .qzt-branco { color: var(--cpl-marfim); }
 
 /* ---------- botões */
-.qzt-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 52px; padding: 0 28px; border-radius: 999px; font-size: 16px; font-weight: 700; letter-spacing: -.005em; transition: transform .2s, box-shadow .25s, opacity .3s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+.qzt-btn { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 52px; padding: 0 28px; border-radius: 999px; font-size: 16px; font-weight: 700; letter-spacing: -.005em; transition: transform .2s, box-shadow .25s, opacity .3s; -webkit-tap-highlight-color: transparent; touch-action: manipulation; text-decoration: none; }
 .qzt-btn svg { width: 18px; height: 18px; transition: transform .25s; }
 .qzt-btn:hover svg { transform: translateX(4px); }
 .qzt-btn:active { transform: scale(.98); }

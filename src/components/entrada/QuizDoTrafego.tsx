@@ -5,7 +5,8 @@
  * e o céu do canvas). Uma etapa por vez, num painel de vidro: abertura, perguntas com as opções em
  * lista (clique, ou as teclas 1 a 4), a análise com o anel que conta até 67%, os vídeos com o botão
  * que só aparece no tempo certo do vídeo, o processando de 4 s e o aprovado. "Garantir minha vaga"
- * leva para os planos (aoConcluir). Prefixo das classes: qzt-.
+ * abre o WhatsApp do atendimento do parceiro (whatsappDoQuiz); sem número, leva para os planos
+ * (aoConcluir). Prefixo das classes: qzt-.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Brand } from '../Brand'
@@ -14,7 +15,7 @@ import { vitrine } from '../../core/teeds/parceiro'
 import { quizRapido } from '../../core/teeds/entradaInicial'
 import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 import { rastroDoCadastro } from '../../core/teeds/rastroDoCadastro'
-import { ETAPAS_DO_QUIZ, TOTAL_DO_QUIZ, progressoDaEtapa, type VideoDoQuiz } from '../../core/teeds/quizDoTrafego'
+import { ETAPAS_DO_QUIZ, TOTAL_DO_QUIZ, progressoDaEtapa, whatsappDoQuiz, type VideoDoQuiz } from '../../core/teeds/quizDoTrafego'
 import { calma, useCeu } from './CadastroComPlanos'
 import '../../casca/globalfly/styles/cadastro-planos.css'
 import '../../casca/globalfly/styles/quiz-trafego.css'
@@ -260,10 +261,13 @@ export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { vid
     pixel('QuizResposta', { etapa, resposta: opcao })
     window.setTimeout(() => irPara(etapa + 1), calma() ? 0 : 320)
   }
+  const whatsapp = whatsappDoQuiz()
   const concluir = () => {
-    rastro('quiz-concluiu', { respostas: respostas.current })
+    rastro('quiz-concluiu', { respostas: respostas.current, ...(whatsapp ? { destino: 'whatsapp' } : {}) })
     pixel('QuizConcluido', undefined, true)
-    aoConcluir()
+    // o WhatsApp abre pelo próprio link (toque de verdade: celular e navegador do Instagram abrem o app)
+    if (whatsapp) pixel('Contact', { canal: 'whatsapp' }, true)
+    else aoConcluir()
   }
 
   // teclas 1 a 4 (ou A a D) respondem a pergunta
@@ -383,7 +387,9 @@ export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { vid
             <PlayerDoQuiz key={etapa} video={videos[2]} aoMarco={(pct) => rastro('quiz-video-progresso', { etapa, video: 3, pct })}
               aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: 3 }) }} />
             <div className={`qzt-depois ${botaoDoVideo ? 'qzt-visivel' : ''}`} aria-hidden={!botaoDoVideo}>
-              <button type="button" className="qzt-btn qzt-btn-verde qzt-grande qzt-vaga" tabIndex={botaoDoVideo ? 0 : -1} onClick={concluir}>Garantir minha vaga <Seta /></button>
+              {whatsapp
+                ? <a className="qzt-btn qzt-btn-verde qzt-grande qzt-vaga" href={whatsapp} target="_blank" rel="noopener noreferrer" tabIndex={botaoDoVideo ? 0 : -1} onClick={concluir}>Garantir minha vaga <Seta /></a>
+                : <button type="button" className="qzt-btn qzt-btn-verde qzt-grande qzt-vaga" tabIndex={botaoDoVideo ? 0 : -1} onClick={concluir}>Garantir minha vaga <Seta /></button>}
             </div>
           </section>
         )}

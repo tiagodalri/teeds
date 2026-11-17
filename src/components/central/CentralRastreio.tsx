@@ -85,7 +85,7 @@ function frase(e: { evento: string; pagina: string | null; detalhe: Record<strin
     case 'quiz-video-botao': return `Assistiu o vídeo ${String(d.video ?? '')} até o botão`
     case 'quiz-video-progresso': return `Assistiu ${String(d.pct ?? '')}% do vídeo ${String(d.video ?? '')} do quiz`
     case 'quiz-aprovado': return 'Chegou no aprovado do quiz'
-    case 'quiz-concluiu': return 'Clicou em Garantir minha vaga'
+    case 'quiz-concluiu': return d.destino === 'whatsapp' ? 'Clicou em Garantir minha vaga (foi para o WhatsApp)' : 'Clicou em Garantir minha vaga'
     case 'questionario': return 'Abriu o questionário'
     case 'respondeu': return d.exCliente === true ? 'Respondeu: já foi cliente' : d.exCliente === false ? 'Respondeu: nunca foi cliente' : 'Respondeu o questionário'
     case 'obrigado': return 'Chegou na página de obrigado'
