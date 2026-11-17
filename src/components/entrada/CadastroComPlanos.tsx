@@ -51,7 +51,7 @@ const brl = (n: number) => n.toLocaleString('pt-BR')
 const nomeCompleto = (v: string) => v.trim().split(/\s+/).filter((p) => p.length >= 2).length >= 2
 const CLASSE_DO_BOTAO: Record<IdDoPlano, string> = { gold: 'cpl-btn-linha', black: 'cpl-btn-ouro', prestige: 'cpl-btn-claro' }
 const BOTAO: Record<IdDoPlano, string> = { gold: 'Começar no Gold', black: 'Quero o Black', prestige: 'Quero o Prestige' }
-export const calma = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
+const calma = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 const noCelular = () => typeof matchMedia !== 'undefined' && matchMedia('(max-width: 960px)').matches
 
 /** O plano pedido no endereço (?plano=black), para a equipe mandar o link já no plano certo. */
@@ -137,7 +137,7 @@ function endireitar(cartao: HTMLElement | null) {
 }
 
 /** O céu do fundo: degradê do entardecer, estrelas, nuvens no horizonte e uma rota de voo. */
-export function useCeu(canvas: React.RefObject<HTMLCanvasElement>, ativo: React.MutableRefObject<boolean>) {
+function useCeu(canvas: React.RefObject<HTMLCanvasElement>, ativo: React.MutableRefObject<boolean>) {
   useEffect(() => {
     const cv = canvas.current
     const ctx = cv?.getContext('2d')

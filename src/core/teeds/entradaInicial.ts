@@ -61,20 +61,3 @@ function decidirPagina(): PaginaDeVenda {
 }
 
 export const paginaDeVenda: PaginaDeVenda = typeof location === 'undefined' ? 'cadastro' : decidirPagina()
-
-/**
- * `?rapido=1` no link da /trafego: os botões dos vídeos do quiz aparecem em 5 s em vez do tempo de
- * cada vídeo (4:10, 1:55, 5:00). É para a equipe revisar o caminho inteiro sem assistir tudo.
- */
-function decidirRapido(): boolean {
-  try {
-    const u = new URL(location.href)
-    if (!u.searchParams.has('rapido')) return false
-    const sim = u.searchParams.get('rapido') === '1'
-    u.searchParams.delete('rapido')
-    history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash)
-    return sim
-  } catch { return false }
-}
-
-export const quizRapido: boolean = typeof location === 'undefined' ? false : decidirRapido()

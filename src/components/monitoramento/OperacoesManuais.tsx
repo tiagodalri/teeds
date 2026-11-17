@@ -116,17 +116,6 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
     return () => assinatura.fechar()
   }, [sessao.token, marcas.join(',')]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  /*
-    Ordenar pelos títulos das colunas (16/11/2026, Tiago: "clicar no título de cada coluna e ordenar
-    do maior pro menor e vice-versa, igual nas outras"). O mesmo jeito das Sessões encerradas: o 1º
-    clique usa a ordem que faz sentido (nome de A a Z; números do maior para o menor; mais recente
-    primeiro), o 2º inverte e o 3º volta à ordem padrão (abertas primeiro, depois as mais recentes).
-  */
-  type Coluna = 'hora' | 'cliente' | 'ativo' | 'contrato' | 'conta' | 'entrada' | 'situacao' | 'resultado' | 'markup'
-  const PRIMEIRO_DESC: Record<Coluna, boolean> = { hora: true, cliente: false, ativo: false, contrato: false, conta: false, entrada: true, situacao: false, resultado: true, markup: true }
-  const [ordem, setOrdem] = useState<{ col: Coluna; desc: boolean } | null>(null)
-  const ordenarPor = (col: Coluna) => setOrdem((o) => (o?.col !== col ? { col, desc: PRIMEIRO_DESC[col] } : o.desc === PRIMEIRO_DESC[col] ? { col, desc: !o.desc } : null))
-
   const termo = busca.trim().toLowerCase()
   const lista = useMemo(() => [...ops.values()]
     .filter((o) => (conta === 'todas' || (conta === 'demo') === o.demo))
@@ -141,46 +130,6 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
       || Date.parse(b.compradaEm) - Date.parse(a.compradaEm)),
   // `agora` anda de 1 em 1 s; o vencimento só muda a ordem na virada do segundo, então reordenar junto basta.
   [ops, conta, termo, clientes, doFoco, agora])
-  const ordenada = useMemo(() => {
-    if (!ordem) return lista
-    const texto = (v: string) => v.trim().toLocaleLowerCase('pt-BR')
-    // a ordem das situações: aberta, apurando, sem resultado, ganhou, perdeu, encerrada antes, encerrada
-    const rankSituacao = (o: OpManual) => estaAberta(o, agora) ? 0 : semRetorno(o, agora) ? (agora - vencimento(o) <= 60_000 ? 1 : 2) : ({ ganhou: 3, perdeu: 4, vendida: 5, encerrada: 6 } as Record<string, number>)[o.situacao] ?? 7
-    const chaveDe = (o: OpManual): string | number | null => {
-      switch (ordem.col) {
-        case 'hora': return Date.parse(o.compradaEm) || null
-        case 'cliente': { const c = clientes.get(o.userId); return texto(c?.nome || c?.email || '') || null }
-        case 'ativo': return texto(nomeDoAtivo(o.ativo))
-        case 'contrato': return texto(NOMES_DE_CONTRATO[o.tipo] ?? o.tipo)
-        // real antes de demo (A→Z)
-        case 'conta': return o.demo ? 1 : 0
-        case 'entrada': return o.entrada
-        case 'situacao': return rankSituacao(o)
-        // aberta ainda não tem resultado: fica no fim
-        case 'resultado': return o.situacao === 'aberta' ? null : o.resultado
-        case 'markup': return o.markup
-      }
-    }
-    const sinal = ordem.desc ? -1 : 1
-    return lista.map((o) => ({ o, k: chaveDe(o) })).sort((a, b) => {
-      // sem valor fica sempre no fim
-      if (a.k === null || a.k === '') return b.k === null || b.k === '' ? 0 : 1
-      if (b.k === null || b.k === '') return -1
-      const d = typeof a.k === 'number' && typeof b.k === 'number' ? a.k - b.k : String(a.k).localeCompare(String(b.k), 'pt-BR')
-      return d * sinal || Date.parse(b.o.compradaEm) - Date.parse(a.o.compradaEm)
-    }).map((x) => x.o)
-  }, [lista, ordem, clientes, agora])
-  const titulo = (col: Coluna, rotulo: string, dir = false) => {
-    const on = ordem?.col === col
-    return (
-      <th key={col} className={dir ? 'dir' : undefined} aria-sort={on ? (ordem!.desc ? 'descending' : 'ascending') : 'none'}>
-        <button type="button" className={on ? 'on' : ''} onClick={() => ordenarPor(col)}
-          title={on && ordem!.desc !== PRIMEIRO_DESC[col] ? 'Clique de novo para voltar à ordem padrão (abertas primeiro)' : `Ordenar por ${rotulo.toLowerCase()}`}>
-          {rotulo}<i aria-hidden="true">{on ? (ordem!.desc ? '↓' : '↑') : '↕'}</i>
-        </button>
-      </th>
-    )
-  }
 
   const abertas = lista.filter((o) => estaAberta(o, agora))
   const chaveAbertas = abertas.map((o) => `${chave(o)}:${o.demo ? 'd' : 'r'}`).join(',')
@@ -206,8 +155,8 @@ export function OperacoesManuais({ sessao, marcas, horas, conta, busca, mostrarM
       </header>
       {lista.length === 0 ? <p className="mon-manuais-vazio">Nenhuma operação manual no período. Quando um cliente comprar na tela Manual, ela aparece aqui na hora.</p> : (
         <div className="mon-manuais-tabela"><table>
-          <thead><tr className="adm-cab-ordem mm-cab-ordem">{titulo('hora', 'Hora')}{titulo('cliente', 'Cliente')}{titulo('ativo', 'Ativo')}{titulo('contrato', 'Contrato')}{titulo('conta', 'Conta')}{titulo('entrada', 'Entrada', true)}{titulo('situacao', 'Situação')}{titulo('resultado', 'Resultado', true)}{mostrarMarkup && titulo('markup', 'Markup', true)}</tr></thead>
-          <tbody>{ordenada.slice(0, 120).map((o) => {
+          <thead><tr><th>Hora</th><th>Cliente</th><th>Ativo</th><th>Contrato</th><th>Conta</th><th className="dir">Entrada</th><th>Situação</th><th className="dir">Resultado</th>{mostrarMarkup && <th className="dir">Markup</th>}</tr></thead>
+          <tbody>{lista.slice(0, 120).map((o) => {
             const c = clientes.get(o.userId)
             const aberta = estaAberta(o, agora)
             const falta = aberta && o.expiraEm ? Math.max(0, Math.round((Date.parse(o.expiraEm) - agora) / 1000)) : null

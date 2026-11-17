@@ -79,12 +79,6 @@ function frase(e: { evento: string; pagina: string | null; detalhe: Record<strin
     case 'erro-campos': return `Faltou corrigir: ${String(d.campos ?? '').split(',').filter(Boolean).map((c) => CAMPO[c] ?? c).join(', ') || 'campos'}`
     case 'erro-cadastro': return `O cadastro não passou: ${String(d.erro ?? '')}`
     case 'cadastro': return 'Se cadastrou'
-    case 'quiz-comecou': return 'Começou o quiz'
-    case 'quiz-resposta': return `Quiz ${String(d.etapa ?? '')}: “${String(d.resposta ?? '')}”`
-    case 'quiz-video': return `Viu o vídeo ${String(d.video ?? '')} do quiz`
-    case 'quiz-video-botao': return `Assistiu o vídeo ${String(d.video ?? '')} até o botão`
-    case 'quiz-aprovado': return 'Chegou no aprovado do quiz'
-    case 'quiz-concluiu': return 'Clicou em Garantir minha vaga'
     case 'questionario': return 'Abriu o questionário'
     case 'respondeu': return d.exCliente === true ? 'Respondeu: já foi cliente' : d.exCliente === false ? 'Respondeu: nunca foi cliente' : 'Respondeu o questionário'
     case 'obrigado': return 'Chegou na página de obrigado'
@@ -93,7 +87,7 @@ function frase(e: { evento: string; pagina: string | null; detalhe: Record<strin
     case 'notificacoes': return 'Ativou as notificações'
     case 'baixou-app': return 'Instalou o app'
     case 'plataforma': return 'Foi para a plataforma'
-    case 'saiu': return `Saiu depois de ${segundos(Number(d.segundos ?? 0))}${d.rolou != null ? ` (rolou ${d.rolou}%)` : ''}${d.quiz ? ` na etapa ${String(d.etapa ?? 0)} do quiz` : ''}`
+    case 'saiu': return `Saiu depois de ${segundos(Number(d.segundos ?? 0))}${d.rolou != null ? ` (rolou ${d.rolou}%)` : ''}`
     case 'clique': return `Clicou em “${String(d.alvo ?? '')}”`
     case 'app-entrou': return 'Entrou logado na plataforma'
     case 'app-tela': return `Abriu a tela ${String(e.pagina ?? '').split(' · ')[1] ?? ''}`.trim()

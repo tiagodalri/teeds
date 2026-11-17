@@ -6287,10 +6287,6 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 .mon-manuais td{height:auto;padding:10px 12px;border-top:1px solid var(--border);white-space:nowrap;vertical-align:middle}
 .mon-manuais th:first-child,.mon-manuais td:first-child{padding-left:18px}.mon-manuais th:last-child,.mon-manuais td:last-child{padding-right:18px}
 .mon-manuais .dir{text-align:right}
-/* 16/11/2026: títulos que ordenam (o botão herda as letras do título; nas colunas de número, à direita) */
-.mon-manuais .mm-cab-ordem button{font-size:inherit;font-weight:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;white-space:nowrap}
-.mon-manuais .mm-cab-ordem button.on{font-weight:800}
-.mon-manuais .mm-cab-ordem th.dir button{justify-content:flex-end}
 .mon-manuais td b{display:block;font-weight:700}.mon-manuais td small{display:block;margin-top:1px;color:var(--muted);font-size:11px;font-weight:500}
 .mon-manuais td.num{font-variant-numeric:tabular-nums}
 .mon-manuais tbody tr:hover td{background:color-mix(in srgb,var(--text) 3%,transparent)}

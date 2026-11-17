@@ -13,7 +13,6 @@
  * este arquivo nunca chega ao site. Não há rede nem conta envolvida.
  */
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
-import { OperacoesManuais } from './components/monitoramento/OperacoesManuais'
 import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { createPortal } from 'react-dom'
 import { RelogioDoSimulador, JanelaSemTempo } from './components/plano/LimiteDoSimulador'
@@ -592,42 +591,10 @@ function LabUltimas() {
   )
 }
 
-/**
- * ?tela=manuais — 16/11/2026: a tabela "Operações manuais" do Monitoramento com operações de exemplo
- * (o banco responde de mentira), para testar a ordenação pelos títulos das colunas.
- */
-function LabManuais() {
-  const agora = Date.now()
-  const nomes = ['Bruno Cabral', 'David Felipe', 'Jonas Sousa', 'Ana Lima', 'Carla Dias']
-  const linhas = Array.from({ length: 14 }, (_, i) => {
-    const aberta = i < 3
-    const res = aberta ? 0 : [0.04, -0.13, 1.2, -10, 7.83, -0.5, 15.67, 0.3, -1, 2.4, -0.35][i - 3]
-    return {
-      user_id: `u${i % 5}`, contract_id: 500 + i, marca: 'globalfly', conta_id: 'CR1', demo: i % 4 === 3, ativo: ['R_75', 'R_10', '1HZ100V'][i % 3],
-      tipo_contrato: ['CALL', 'PUT', 'DIGITOVER'][i % 3], moeda: 'USD', entrada: [0.35, 1, 0.5, 10, 25][i % 5], pagamento: 1, resultado: res,
-      markup: [0.02, 0.05, 0.03, 0.6, 1.34][i % 5], situacao: aberta ? 'aberta' : res > 0 ? (i % 2 ? 'ganhou' : 'vendida') : 'perdeu',
-      comprada_em: new Date(agora - i * 7 * 60_000).toISOString(), expira_em: new Date(agora + (aberta ? 600_000 - i * 60_000 : -i * 60_000)).toISOString(),
-      encerrada_em: null, parceiro: 'v', preco_entrada: null, preco_saida: null, barreira: null,
-    }
-  })
-  const original = window.fetch
-  window.fetch = (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('/operacoes_manuais')
-    ? Promise.resolve(new Response(JSON.stringify(linhas), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    : original(u, i)
-  const clientes = new Map(nomes.map((n, i) => [`u${i}`, { userId: `u${i}`, nome: n, email: `${n.split(' ')[0].toLowerCase()}@exemplo.com` } as never]))
-  return (
-    <div className="mon" style={{ padding: 24 }}>
-      <OperacoesManuais sessao={{ token: 'lab', usuario: { id: 'lab' } } as never} marcas={['globalfly']} horas={6} conta="todas" busca="" mostrarMarkup
-        clientes={clientes} garantirClientes={() => undefined} />
-    </div>
-  )
-}
-
 function Laboratorio() {
   const qual = new URLSearchParams(location.search).get('tela') ?? 'cabine'
   // a home vem com a casca inteira da plataforma: fora da moldura do laboratório
   if (qual === 'ultimas') return <LabUltimas />
-  if (qual === 'manuais') return <LabManuais />
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   if (qual === 'organizacao') return <Suspense fallback={null}><LabOrganizacao /></Suspense>

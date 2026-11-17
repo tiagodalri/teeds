@@ -27,6 +27,7 @@ import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { aoMudarModulos, modulosEmUso, MODULOS, usarModulosDaGrade, type LinkDaAula, type Material, type Modulo } from './aulas'
 import type { VideoDaAula } from './aulasVideos'
+import { meuParceiro, vitrine } from './parceiro'
 
 /* ---------------------------------------------------------------- tipos */
 
@@ -291,6 +292,19 @@ export function cursosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}): Cur
   }).filter((c) => c.aulas > 0 && (c.liberado || ctx.admin || (grade.cursos ?? []).find((x) => x.id === c.id)?.acesso.vitrine !== false))
 }
 
+/**
+ * Aulas que o cliente de um parceiro não vê (pela vitrine /n ou pelo parceiro
+ * gravado na conta). O admin continua vendo tudo.
+ */
+const AULAS_FORA_DO_PARCEIRO: Record<string, string[]> = {
+  n: ['quem-e-victor-cordeiro'],
+}
+let parceiroDaConta: string | null = null
+function aulaForaDoParceiro(id: string, ctx: ContextoDaSala): boolean {
+  if (ctx.admin) return false
+  return [vitrine(), parceiroDaConta].some((p) => !!p && (AULAS_FORA_DO_PARCEIRO[p] ?? []).includes(id))
+}
+
 export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cursoId?: string): Modulo[] {
   const agora = ctx.agora ?? Date.now()
   // o curso vale por cima do módulo e da aula: curso oculto some; curso sem acesso tranca tudo
@@ -305,7 +319,7 @@ export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cur
   }
   return grade.modulos.filter((m) => m.publicado && (cursoId ? m.curso === cursoId : cursoVisivel(m.curso))).map((m) => {
     const doModulo = doCurso(m.curso) ?? motivo(m.liberarEm, m.planos)
-    const assuntos = m.assuntos.map((s) => ({ ...s, aulas: s.aulas.filter((a) => a.publicado) })).filter((s) => s.aulas.length)
+    const assuntos = m.assuntos.map((s) => ({ ...s, aulas: s.aulas.filter((a) => a.publicado && !aulaForaDoParceiro(a.id, ctx)) })).filter((s) => s.aulas.length)
     return {
       id: m.id, titulo: m.titulo, chamada: m.chamada, descricao: m.descricao, cor: m.cor, daGrade: true,
       assuntos: assuntos.map((s) => ({ id: s.id, titulo: s.titulo, descricao: s.descricao })),
@@ -445,7 +459,11 @@ let cache: { chave: string; promessa: Promise<GradeAulas | null> } | null = null
 /** A grade publicada, lida uma vez por sessão (a sala, o início e a ficha usam a mesma). */
 export function gradePublicadaEmCache(sessao: SessaoTeeds | null | undefined): Promise<GradeAulas | null> {
   const chave = `${MARCA.id}:${sessao?.usuario.id ?? ''}`
-  if (!cache || cache.chave !== chave) cache = { chave, promessa: lerGradePublicada(sessao) }
+  if (!cache || cache.chave !== chave) {
+    parceiroDaConta = null
+    const parceiro = sessao && MARCA.id === 'globalfly' ? meuParceiro(sessao).then((p) => { parceiroDaConta = p }) : Promise.resolve()
+    cache = { chave, promessa: Promise.all([lerGradePublicada(sessao), parceiro]).then(([g]) => g) }
+  }
   return cache.promessa
 }
 export const esquecerGradeEmCache = () => { cache = null; cacheCursos = null }
