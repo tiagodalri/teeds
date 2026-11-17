@@ -69,6 +69,19 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
     const aoEsperar = () => setEsperando(true)
     const aoTocar = () => setEsperando(false)
     const aoErro = () => setEstado('falhou')
+    // Sem pular: a tela cheia do iPhone é o player da Apple, com barra de arrastar. Quem tenta
+    // avançar volta para o ponto mais longe que já assistiu (voltar para trás pode).
+    let assistido = 0
+    const aoAndar = () => { if (!v.seeking && v.currentTime > assistido && v.currentTime - assistido < 2) assistido = v.currentTime }
+    const aoPular = () => { if (v.currentTime > assistido + 1.5) v.currentTime = assistido }
+    // O iPhone pausa sozinho (troca de app, tela bloqueada, sair da tela cheia): a tela acompanha,
+    // para um toque só bastar para continuar.
+    const aoPausar = () => { if (vivo && !v.ended && v.readyState > 0) setEstado((e) => (e === 'tocando' || e === 'mudo' ? 'pausado' : e)) }
+    const aoVoltar = () => { if (vivo) setEstado(v.muted ? 'mudo' : 'tocando') }
+    v.addEventListener('timeupdate', aoAndar)
+    v.addEventListener('seeking', aoPular)
+    v.addEventListener('pause', aoPausar)
+    v.addEventListener('play', aoVoltar)
     v.addEventListener('timeupdate', aoTempo)
     v.addEventListener('ended', aoFim)
     v.addEventListener('waiting', aoEsperar)
@@ -83,6 +96,10 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
     })
     return () => {
       vivo = false
+      v.removeEventListener('timeupdate', aoAndar)
+      v.removeEventListener('seeking', aoPular)
+      v.removeEventListener('pause', aoPausar)
+      v.removeEventListener('play', aoVoltar)
       v.removeEventListener('timeupdate', aoTempo)
       v.removeEventListener('ended', aoFim)
       v.removeEventListener('waiting', aoEsperar)
@@ -98,7 +115,7 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
     if (!v) return
     if (estado === 'falhou') { setEstado('carregando'); setEsperando(true); v.load(); void v.play().then(() => setEstado('tocando')).catch(() => setEstado('pausado')); return }
     if (estado === 'mudo' || estado === 'fim') { v.currentTime = 0; setBarra(0) }
-    if (estado === 'tocando') { v.pause(); setEstado('pausado'); return }
+    if (estado === 'tocando' && !v.paused) { v.pause(); setEstado('pausado'); return }
     v.muted = false
     void v.play().then(() => setEstado('tocando')).catch(() => setEstado('pausado'))
   }
