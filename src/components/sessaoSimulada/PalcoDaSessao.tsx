@@ -17,7 +17,7 @@ import { MARCA } from '../../marca'
 import { publicSocket } from '../../core/deriv/client'
 import { roboLigou, sessaoBateuLimite } from '../../core/som'
 import { definirSaldoSimulado, escreverNoLivro, somarAoSaldoSimulado } from '../../core/teeds/modoSimulado'
-import { resumoDeEstudo } from '../../core/teeds/estudoDoDono'
+import { resumoDeEstudo, type DadosEstudo } from '../../core/teeds/estudoDoDono'
 import { guardarPonto, lerPontoGuardado } from '../../core/teeds/sessaoGuardada'
 import {
   configDoTrecho, Ensaio, ensaioAte, estrategiaDa, nomeDaIa, previaDoRoteiro, SEGUNDOS_POR_TICK,
@@ -47,8 +47,15 @@ export async function pontoDePartida(): Promise<PontoDePartida> {
 
 interface Marcador { rotulo: string; op: number }
 
-export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair, daOutraAba = false }: {
+export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair, daOutraAba = false, grupo }: {
   roteiro: Roteiro
+  /**
+   * Várias sessões na tela (17/11/2026, Tiago: "simular as 5 e não só uma"). Vazio = a sessão está sozinha e
+   * tudo segue como sempre foi. Com outras, o painel desenha uma visão geral só (o resumo sobe por `aoResumo`),
+   * a linha tem o número dela e abre e fecha, o saldo do topo só recebe a diferença desta sessão (as I.A. dividem
+   * a conta) e os atalhos do teclado ficam desligados (o espaço religaria uma sessão que já terminou).
+   */
+  grupo?: { numero: string; aberta: boolean; aoAbrir: () => void; aoResumo: (id: string, d: DadosEstudo | null) => void; saldoJaContado: boolean }
   mostrarMarkup?: boolean
   /** A sessão chegou de outra aba (ela é quem está rodando): esta aba não dá o play sozinha, espelha. */
   daOutraAba?: boolean
@@ -56,6 +63,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   aoSair: () => void
 }) {
   const adminOculto = useMenuAdminOculto()
+  const emGrupoRef = useRef(false); emGrupoRef.current = !!grupo
   const previa = useMemo(() => previaDoRoteiro(roteiro), [roteiro])
   const plano = previa.resultados
   const ident = useMemo(() => {
@@ -110,8 +118,10 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     No começo (ou ao voltar à sessão), o saldo vira o da sessão, como antes.
   */
   const saldoPublicado = useRef<number | null>(null)
+  // com outras sessões na tela, o saldo do topo já é o da conta: esta só soma o que fizer daqui em diante
+  const saldoJaContado = useRef(!!grupo?.saldoJaContado).current
   const publicarSaldo = useCallback((v: number) => {
-    if (saldoPublicado.current === null) definirSaldoSimulado(v)
+    if (saldoPublicado.current === null) { if (!saldoJaContado) definirSaldoSimulado(v) }
     else if (v !== saldoPublicado.current) somarAoSaldoSimulado(v - saldoPublicado.current)
     saldoPublicado.current = v
   }, [])
@@ -370,6 +380,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
       const alvo = ev.target as HTMLElement | null
       if (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)) return
       if (document.body.classList.contains('rel-painel-aberto')) return
+      if (emGrupoRef.current) return
       const e = ensaio.current
       if (ev.key === ' ') { ev.preventDefault(); tocandoAqui ? pausar() : play() }
       else if (ev.key === 'ArrowRight' && e) { ev.preventDefault(); irPara(e.operacoes + 1) }
@@ -386,11 +397,12 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
     do servidor. O "Parar" de lá desliga a I.A. aqui, como o "Desligar" da cabine.
   */
   const pararPelaMini = useRef<() => void>(() => {})
+  const idPublico = idSessao.startsWith('simulada') ? idSessao : `simulada-${idSessao}`
   useEffect(() => {
     if (!estado) return
     const t = roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)]
-    publicarSessaoSimulada({
-      id: idSessao.startsWith('simulada') ? idSessao : `simulada-${idSessao}`, roboId: roteiro.ia, roboNome: ident.nome, contaId: 'simulada',
+    publicarSessaoSimulada(idPublico, {
+      id: idPublico, roboId: roteiro.ia, roboNome: ident.nome, contaId: 'simulada',
       demo, moeda: 'USD', origem: 'navegador', marca: MARCA.id, config: configDoTrecho(roteiro, t), erro: null,
       // desligada: enquanto o contrato aberto fecha, segue "operando" (sem o aviso de fim antes da hora);
       // parada, nenhum contrato pela metade
@@ -401,14 +413,29 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
         : estado,
     })
   }, [estado, trecho, fase, desligadoNoRobo, tocando, tocandoLa, seguindo]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => publicarSessaoSimulada(null), [])
+  useEffect(() => () => publicarSessaoSimulada(idPublico, null), [idPublico])
+  // o resumo desta sessão para a visão geral única do painel (quando há outras na tela)
+  const aoResumoRef = useRef(grupo?.aoResumo); aoResumoRef.current = grupo?.aoResumo
+  const numeroDoGrupo = grupo?.numero
   useEffect(() => {
-    const parar = () => pararPelaMini.current()
+    if (!estado || !numeroDoGrupo) return
+    aoResumoRef.current?.(idSessao, resumoDeEstudo(estado, { id: idSessao, nome: ident.nome, cor: ident.cor, numero: numeroDoGrupo, modo: null, demo }))
+  }, [estado, numeroDoGrupo, idSessao, ident, demo])
+  useEffect(() => () => aoResumoRef.current?.(idSessao, null), [idSessao])
+  useEffect(() => {
+    const parar = (ev: Event) => {
+      const alvo = (ev as CustomEvent<{ id?: string | null }>).detail?.id
+      if (alvo && alvo !== idPublico) return
+      pararPelaMini.current()
+    }
     window.addEventListener('simulado:parar', parar)
     return () => window.removeEventListener('simulado:parar', parar)
-  }, [])
+  }, [idPublico])
 
-  if (!estado || !partida) return <div className="robot-session-loading" role="status"><b>Sessão simulada</b><span>Montando o mercado…</span></div>
+  if (!estado || !partida) {
+    const abrindo = <div className="robot-session-loading" role="status"><b>Sessão simulada</b><span>Montando o mercado…</span></div>
+    return grupo ? <div className="rob-board-slot">{abrindo}</div> : abrindo
+  }
 
   const cfg = configDoTrecho(roteiro, roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)])
   // "Desligar" no robô pausa a sessão onde está; o "Continuar" (ou o play) segue da mesma operação
@@ -431,16 +458,8 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
   const total = previa.operacoes
   const feitas = estado.operacoes
 
-  return (
-    <>
-      <RobotOverview sessoes={[]} paineis={[resumoDeEstudo(estado, { id: idSessao, nome: ident.nome, cor: ident.cor, numero: '#1', modo: null, demo })]} moeda="USD" demoDaTela={demo} />
-      {/*
-        16/11/2026 (Tiago: "cadê o botão do play na operação, o pause? Estou sentindo falta"): a barra de
-        controle fica presa em cima da operação e não some mais sozinha (antes flutuava no rodapé da tela e
-        sumia depois de 2,5 s sem mexer o mouse).
-      */}
-      {/* 16/11/2026 (Tiago): com os itens de admin ocultos (o olhinho), a barra de controle some junto; a sessão segue rodando */}
-      <div className={`ssim-pilula ${adminOculto ? 'sem-admin' : ''}`} role="toolbar" aria-label="Controle da sessão simulada" aria-hidden={adminOculto || undefined}>
+  const pilula = (
+      <div className={`ssim-pilula ${grupo ? 'em-grupo' : ''} ${adminOculto ? 'sem-admin' : ''}`} role="toolbar" aria-label={grupo ? `Controle da sessão simulada ${grupo.numero} (${ident.nome})` : 'Controle da sessão simulada'} aria-hidden={adminOculto || undefined}>
         <button type="button" className="ssim-play" onClick={tocandoAqui ? pausar : play}
           aria-label={tocandoAqui ? 'Pausar' : fase === 'entre' ? 'Religar' : fase === 'fim' ? 'Recomeçar' : 'Começar'}>
           {tocandoAqui ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
@@ -448,6 +467,7 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
             : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" /></svg>}
         </button>
         <span className="ssim-rotulo">
+          {grupo && <b className="ssim-quem" style={{ color: ident.cor }}>{grupo.numero} {ident.nome} · </b>}
           {fase === 'entre' && !tocando ? 'Parou. Play para religar' : fase === 'fim' && !tocando ? 'Sessão encerrada' : `Operação ${feitas} de ${total}`}
         </span>
         <span className="ssim-barra" aria-hidden="true"><i style={{ width: `${total ? Math.min(100, (feitas / total) * 100) : 0}%` }} /></span>
@@ -470,16 +490,32 @@ export function PalcoDaSessao({ roteiro, mostrarMarkup = false, aoEditar, aoSair
         <button type="button" className="ssim-texto sair" onClick={() => { setTocando(false); aoSair() }}>Encerrar</button>
         {aviso && <small className="ssim-aviso" role="alert">{aviso}</small>}
       </div>
+  )
+  const linha = (
+    <div className={`rob-board-slot ${!grupo || grupo.aberta ? 'aberta' : ''}`}>
+      <CabineDaSessao roteiro={roteiro} estado={estadoNaCabine} trecho={trecho} inicio={t0} mostrarMarkup={mostrarMarkup}
+        numero={grupo?.numero} aberta={!grupo || grupo.aberta} onAbrir={grupo?.aoAbrir}
+        onDesligar={desligar} onLigarDeNovo={play}>
+        {limite && (!grupo || grupo.aberta) && <LimiteAtingido tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor} moeda="USD"
+          onFechar={() => setLimite(null)} onLigarDeNovo={fase === 'entre' ? () => { setLimite(null); play() } : undefined} />}
+      </CabineDaSessao>
+    </div>
+  )
+  // com outras sessões na tela, o painel é quem desenha a visão geral e o quadro: aqui só a barra e a linha desta
+  if (grupo) return <>{pilula}{linha}</>
+  return (
+    <>
+      {!grupo && <RobotOverview sessoes={[]} paineis={[resumoDeEstudo(estado, { id: idSessao, nome: ident.nome, cor: ident.cor, numero: '#1', modo: null, demo })]} moeda="USD" demoDaTela={demo} />}
+      {/*
+        16/11/2026 (Tiago: "cadê o botão do play na operação, o pause? Estou sentindo falta"): a barra de
+        controle fica presa em cima da operação e não some mais sozinha (antes flutuava no rodapé da tela e
+        sumia depois de 2,5 s sem mexer o mouse).
+      */}
+      {/* 16/11/2026 (Tiago): com os itens de admin ocultos (o olhinho), a barra de controle some junto; a sessão segue rodando */}
+      {pilula}
       <div className="rob-workspace-board modo-lista ssim-quadro">
-        <div className="rob-board-slot aberta">
-          <CabineDaSessao roteiro={roteiro} estado={estadoNaCabine} trecho={trecho} inicio={t0} mostrarMarkup={mostrarMarkup}
-            onDesligar={desligar} onLigarDeNovo={play}>
-            {limite && <LimiteAtingido tipo={limite} estado={estado} config={cfg} nome={ident.nome} cor={ident.cor} moeda="USD"
-              onFechar={() => setLimite(null)} onLigarDeNovo={fase === 'entre' ? () => { setLimite(null); play() } : undefined} />}
-          </CabineDaSessao>
-        </div>
+        {linha}
       </div>
-
     </>
   )
 }

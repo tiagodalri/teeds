@@ -1757,7 +1757,7 @@ export default function App() {
 
       {MARCA.inicio && !JANELA && teeds.sessao && tela !== 'robos' && !trancado && (
         <MiniCabine sessoes={vivasRobos} sessao={teeds.sessao} demo={conta.status === 'logado' ? conta.isDemo : undefined} demoComoReal={conta.somenteDemo} rotulosTrocados={conta.rotulosTrocados} aoAbrirCabine={() => setTela('robos')}
-          aoParar={async (id) => { if (ehSessaoSimulada(id)) { pedirParadaDaSimulada(); return } if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
+          aoParar={async (id) => { if (ehSessaoSimulada(id)) { pedirParadaDaSimulada(id); return } if (teeds.sessao) await pararNoServidor(teeds.sessao, id) }} />
       )}
       {MARCA.inicio && !JANELA && teeds.sessao && <BarraInferior tela={tela} aoVivoAgora={aoVivoAgora} irPara={(t) => { setVerPerfil(false); setTela(t) }} />}
 

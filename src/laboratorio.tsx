@@ -413,7 +413,7 @@ function LabOutraTela() {
   return (
     <>
       <button type="button" className="lab-outra-tela" onClick={() => setFora((v) => !v)} style={{ position: 'fixed', left: 12, bottom: 12, zIndex: 50 }}>{fora ? 'Voltar às I.A.' : 'Outra tela'}</button>
-      {fora && <MiniCabine sessoes={vivas} aoAbrirCabine={() => setFora(false)} aoParar={(id) => { if (ehSessaoSimulada(id)) pedirParadaDaSimulada() }} />}
+      {fora && <MiniCabine sessoes={vivas} aoAbrirCabine={() => setFora(false)} aoParar={(id) => { if (ehSessaoSimulada(id)) pedirParadaDaSimulada(id) }} />}
     </>
   )
 }

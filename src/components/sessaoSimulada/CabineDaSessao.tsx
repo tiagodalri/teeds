@@ -17,7 +17,7 @@ export function identidadeDaSessao(ia: string) {
   return { ...identidade(ia), nome: nomeDaIa(ia) }
 }
 
-export function CabineDaSessao({ roteiro, estado, trecho, inicio, mostrarMarkup = false, onDesligar, onLigarDeNovo, children }: {
+export function CabineDaSessao({ roteiro, estado, trecho, inicio, mostrarMarkup = false, onDesligar, onLigarDeNovo, children, numero = '#1', aberta = true, onAbrir }: {
   roteiro: Roteiro
   estado: EstadoMotor
   trecho: number
@@ -26,6 +26,10 @@ export function CabineDaSessao({ roteiro, estado, trecho, inicio, mostrarMarkup 
   onDesligar?: () => void
   onLigarDeNovo?: () => void
   children?: ReactNode
+  /** Várias sessões na tela (17/11/2026): o número da linha, e a cabine que abre e fecha como a de verdade. */
+  numero?: string
+  aberta?: boolean
+  onAbrir?: () => void
 }) {
   const ident = identidadeDaSessao(roteiro.ia)
   const t = roteiro.trechos[Math.min(trecho, roteiro.trechos.length - 1)]
@@ -50,15 +54,15 @@ export function CabineDaSessao({ roteiro, estado, trecho, inicio, mostrarMarkup 
   ]
   const rodando = estado.rodando
   return (
-    <div className={`cabine-caixa aberta ssim-cabine ${rodando ? 'rodando' : 'parado'}`} style={{ ['--robo' as string]: ident.cor, ['--robo-suave' as string]: ident.corSuave }}>
-      <RobotLinha estado={estado} config={cfg} moeda="USD" nome={ident.nome} cor={ident.cor} numero="#1" inicio={inicio} demo={demo}
+    <div className={`cabine-caixa ${aberta ? 'aberta' : 'linha'} ssim-cabine ${rodando ? 'rodando' : 'parado'}`} style={{ ['--robo' as string]: ident.cor, ['--robo-suave' as string]: ident.corSuave }}>
+      <RobotLinha estado={estado} config={cfg} moeda="USD" nome={ident.nome} cor={ident.cor} numero={numero} inicio={inicio} demo={demo}
         rotulosTrocados={false} demoComoReal={false} modo={modo ? modo.toLowerCase() : null} conexao="open" ceo={mostrarMarkup}
-        onDesligar={rodando ? onDesligar : undefined} desligando={false} onLigarDeNovo={!rodando ? onLigarDeNovo : undefined} aberta />
-      <RobotLive
+        onDesligar={rodando ? onDesligar : undefined} desligando={false} onLigarDeNovo={!rodando ? onLigarDeNovo : undefined} aberta={aberta} onAbrir={onAbrir} />
+      {aberta && <RobotLive
         estado={estado} config={cfg} moeda="USD" contaDaSessao={{ contaId: 'simulada', demo, moeda: 'USD' }}
-        estrategiaId={roteiro.ia} nomeEstrategia={ident.nome} ativo="Volatility 75" titulo="#1" regra={regra} cor={ident.cor}
+        estrategiaId={roteiro.ia} nomeEstrategia={ident.nome} ativo="Volatility 75" titulo={numero} regra={regra} cor={ident.cor}
         ganhaCom={ganhaCom} parametros={parametros} conexao="open" mostrarMarkup={mostrarMarkup} esconderDemo={false}
-        onDesligar={rodando ? onDesligar : undefined} onLigarDeNovo={!rodando ? onLigarDeNovo : undefined} />
+        onDesligar={rodando ? onDesligar : undefined} onLigarDeNovo={!rodando ? onLigarDeNovo : undefined} />}
       {children}
     </div>
   )

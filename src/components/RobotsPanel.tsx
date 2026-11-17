@@ -33,12 +33,12 @@ import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
 import { configDoTrecho, type Roteiro } from '../core/teeds/sessaoSimulada'
 import { iaDoPlanoMaisRecente, planoSalvo } from '../core/teeds/planosSimulados'
-import { useSessaoSimuladaAoVivo } from '../core/teeds/sessaoSimuladaAoVivo'
+import { useSessoesSimuladasAoVivo } from '../core/teeds/sessaoSimuladaAoVivo'
 import { minutosDaSessao, remontarSessao } from '../core/teeds/cenariosDaSessao'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { modoSimuladoAtivo, useModoSimulado } from '../core/teeds/modoSimulado'
 import { definirContaSimulada, definirSaldoSimulado } from '../core/teeds/modoSimulado'
-import { esquecerSessao, guardarSessao, lerSessaoGuardada } from '../core/teeds/sessaoGuardada'
+import { guardarSessoes, lerSessoesGuardadas, MAX_SIMULADAS } from '../core/teeds/sessaoGuardada'
 // Sessão simulada (12/11/2026): só no modo simulado (administradores); o código só desce quando abre
 const BotaoSessaoSimulada = lazy(() => import('./sessaoSimulada/BotaoSessaoSimulada').then((m) => ({ default: m.BotaoSessaoSimulada })))
 const PalcoDaSessao = lazy(() => import('./sessaoSimulada/PalcoDaSessao').then((m) => ({ default: m.PalcoDaSessao })))
@@ -177,28 +177,79 @@ export function RobotsPanel({
   const modoSim = useModoSimulado()
   // com os itens de admin ocultos (o olhinho), os controles da simulação somem da tela
   const menuAdminOculto = useMenuAdminOculto()
-  const [simulada, setSimuladaAgora] = useState<Roteiro | null>(null)
+  /*
+    17/11/2026 (Tiago: "quero que eu consiga simular as 5 e não só uma"): as sessões simuladas na tela, na
+    ordem em que entraram (até MAX_SIMULADAS). Com uma só, tudo segue como sempre foi; com mais, cada uma tem
+    a sua linha e a sua barra, e a visão geral soma todas.
+  */
+  const [simuladas, setSimuladasAgora] = useState<Roteiro[]>([])
+  const simuladasRef = useRef(simuladas); simuladasRef.current = simuladas
+  /** Sessões que entraram com outra já na tela (ou voltaram juntas): o saldo do topo só recebe a diferença delas. */
+  const saldoJaContado = useRef(new Set<string>())
+  /** Qual está com a cabine aberta (undefined = a mais nova; null = todas fechadas). */
+  const [abertaSim, setAbertaSim] = useState<string | null | undefined>(undefined)
+  /** O "Editar" de uma sessão: o play da mesa troca essa sessão (e não entra como mais uma). */
+  const editandoSim = useRef<string | null>(null)
+  const [resumosSim, setResumosSim] = useState<Record<string, DadosEstudo>>({})
+  const receberResumoSim = useCallback((id: string, d: DadosEstudo | null) => setResumosSim((m) => {
+    if (d) return { ...m, [id]: d }
+    if (!(id in m)) return m
+    const { [id]: _fora, ...resto } = m
+    void _fora
+    return resto
+  }), [])
   /** A mesa de termômetros aberta (com a I.A. pedida pela vitrine, quando veio de lá). */
   const [assistente, setAssistente] = useState<{ ia: string | null } | null>(null)
   // a sessão aberta fica guardada no navegador: recarregar ou sair da aba volta nela, no mesmo ponto
   /** A sessão aberta veio de outra aba (lá ela já está rodando): aqui ela espelha, sem dar o play sozinha. */
-  const [simuladaDeFora, setSimuladaDeFora] = useState(false)
-  const setSimulada = (r: Roteiro | null) => { if (r) guardarSessao(r); else esquecerSessao(); setSimuladaDeFora(false); setSimuladaAgora(r) }
+  const [simuladasDeFora, setSimuladasDeFora] = useState<ReadonlySet<string>>(() => new Set())
+  const setSimuladas = (rs: Roteiro[]) => { guardarSessoes(rs); setSimuladasDeFora(new Set()); setSimuladasAgora(rs) }
+  /** Entra uma sessão nova (ou troca a que estava sendo editada). Devolve false se a tela já está cheia. */
+  const entrarSimulada = (r: Roteiro, noLugarDe: string | null = null): boolean => {
+    const atuais = simuladasRef.current
+    const id = r.id ?? `simulada-${Date.now()}`
+    const lugar = noLugarDe ? atuais.findIndex((x) => x.id === noLugarDe) : -1
+    if (lugar < 0 && atuais.length >= MAX_SIMULADAS) return false
+    const outras = lugar >= 0 ? atuais.length - 1 : atuais.length
+    if (outras === 0) {
+      // sozinha, como sempre foi: o topo mostra o saldo e a conta com que a sessão foi planejada
+      definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
+      saldoJaContado.current.delete(id)
+      setSimuladas([{ ...r, id }])
+    } else {
+      // já há I.A. operando: a conta e o saldo são os que estão na tela (as I.A. dividem a mesma conta)
+      const nova: Roteiro = { ...r, id, conta: modoSim?.conta ?? atuais[0].conta }
+      saldoJaContado.current.add(id)
+      setSimuladas(lugar >= 0 ? atuais.map((x, i) => (i === lugar ? nova : x)) : [...atuais, nova])
+    }
+    setAbertaSim(id)
+    return true
+  }
+  const sairSimulada = (id: string) => { saldoJaContado.current.delete(id); setSimuladas(simuladasRef.current.filter((x) => x.id !== id)) }
   useEffect(() => {
-    if (!modoSim) { setSimuladaAgora(null); setAssistente(null) }
-    else setSimuladaAgora((atual) => atual ?? lerSessaoGuardada())
+    if (!modoSim) { setSimuladasAgora([]); setAssistente(null) }
+    else setSimuladasAgora((atual) => {
+      if (atual.length) return atual
+      const guardadas = lerSessoesGuardadas()
+      // voltaram juntas: o saldo do topo (guardado no aparelho) já tem o resultado de todas
+      if (guardadas.length > 1) guardadas.forEach((r) => { if (r.id) saldoJaContado.current.add(r.id) })
+      return guardadas
+    })
   }, [!!modoSim]) // eslint-disable-line react-hooks/exhaustive-deps
   // outra aba abriu, trocou ou fechou a sessão simulada: esta acompanha (16/11/2026)
   useEffect(() => {
     if (!modoSim) return
     const mudou = (ev: StorageEvent) => {
       if (ev.key !== null && ev.key !== 'teeds:sessao-simulada:roteiro') return
-      const r = lerSessaoGuardada()
-      setSimuladaAgora((atual) => {
-        if ((atual?.id ?? null) === (r?.id ?? null)) return atual
-        setSimuladaDeFora(!!r)
-        return r
-      })
+      const rs = lerSessoesGuardadas()
+      const atual = simuladasRef.current
+      if (atual.length === rs.length && atual.every((x, i) => x.id === rs[i].id)) return
+      // as que chegaram de lá espelham (lá elas já estão rodando); as que já estavam aqui seguem como estão
+      const daqui = new Map(atual.map((x) => [x.id, x]))
+      const novas = rs.filter((r) => !daqui.has(r.id))
+      novas.forEach((r) => { if (r.id && (rs.length > 1)) saldoJaContado.current.add(r.id) })
+      setSimuladasDeFora((antes) => new Set([...[...antes].filter((id) => rs.some((r) => r.id === id)), ...novas.map((r) => r.id!)]))
+      setSimuladasAgora(rs.map((r) => daqui.get(r.id) ?? r))
     }
     window.addEventListener('storage', mudou)
     return () => window.removeEventListener('storage', mudou)
@@ -222,8 +273,8 @@ export function RobotsPanel({
   }, [sessaoTeeds?.token]) // eslint-disable-line react-hooks/exhaustive-deps
   // no modo simulado a mini-cabine e o Início não mostram as sessões de verdade (gravação)
   // no modo simulado, a sessão simulada que está na tela vai para a mini cabine flutuante (16/11/2026)
-  const simuladaAoVivo = useSessaoSimuladaAoVivo()
-  useEffect(() => { onSessoesVivas?.(modoSim ? (simuladaAoVivo ? [simuladaAoVivo] : []) : vivasNoServidor) }, [vivasNoServidor, !!modoSim, simuladaAoVivo]) // eslint-disable-line react-hooks/exhaustive-deps
+  const simuladasAoVivo = useSessoesSimuladasAoVivo()
+  useEffect(() => { onSessoesVivas?.(modoSim ? simuladasAoVivo : vivasNoServidor) }, [vivasNoServidor, !!modoSim, simuladasAoVivo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /*
     Uma sessão que encerrou (meta, stop, desligada) NÃO some da tela.
@@ -441,11 +492,15 @@ export function RobotsPanel({
     abrem a mesa, que reabre como foi deixada (a I.A. pedida na vitrine, quando houver, entra no lugar).
     O estúdio antigo saiu.
   */
-  const abrirAssistente = () => {
+  const abrirAssistente = (editar: string | null = null) => {
     const ia = modeloPedidoDaVitrine()
     pedirModeloDaVitrine(null)
+    // 17/11/2026: o "Editar" de uma sessão (e o ícone laranja, com uma só na tela) troca essa sessão no play;
+    // por qualquer outro caminho, o play entra como mais uma sessão
+    editandoSim.current = editar
     setAssistente({ ia })
   }
+  const telaCheiaSim = simuladas.length >= MAX_SIMULADAS
   /*
     16/11/2026 (Tiago: "deixar salvo para a próxima; na próxima, com o modo simulado ativo, seleciono a
     Raptor e os parâmetros já vêm preenchidos, e ao iniciar ele roda a operação planejada"): a vitrine (e o
@@ -473,6 +528,7 @@ export function RobotsPanel({
   const fecharPreparoSim = () => { setPreparoSim(null); setPreparoSimEscolhe(false) }
   const novoRoboSim = () => {
     const ia = iaDoPlanoMaisRecente()
+    if (telaCheiaSim) return
     if (!ia) { abrirAssistente(); return }
     pedirModeloDaVitrine(null)
     setPreparoSimEscolhe(true)
@@ -486,9 +542,9 @@ export function RobotsPanel({
     const plano = planoSalvo(id)
     if (!plano) { fecharPreparoSim(); setAssistente({ ia: id }); return }
     const comecar = (r: Roteiro) => {
-      fecharPreparoSim(); setErroDoPreparoSim(null)
-      definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
-      setSimulada({ ...r, id: `simulada-${Date.now()}` })
+      setErroDoPreparoSim(null)
+      if (entrarSimulada({ ...r, id: `simulada-${Date.now()}` })) fecharPreparoSim()
+      else setErroDoPreparoSim(`Já há ${MAX_SIMULADAS} sessões simuladas na tela. Encerre uma para iniciar outra.`)
     }
     const lv = cfg.lossVirtualCliente ?? plano.lossVirtual ?? null
     const igual = (a: number, b: number) => Math.abs(a - b) < 0.005
@@ -504,30 +560,54 @@ export function RobotsPanel({
       else setErroDoPreparoSim(r.erro)
     }, 30)
   }
+  const temSimuladas = simuladas.length > 0
+  const emGrupoSim = simuladas.length > 1
+  // a cabine aberta: a escolhida (se ainda está na tela); sem escolha, a mais nova
+  const abertaSimEfetiva = abertaSim === null ? null
+    : abertaSim !== undefined && simuladas.some((r) => r.id === abertaSim) ? abertaSim
+    : simuladas[simuladas.length - 1]?.id ?? null
   const conteudoSimulado = modoSim && (
     <>
       <div className="ger-topo rob-workspace-header">
         <div>
           <span className="rob-eyebrow">CENTRAL DE ROBÔS</span>
-          {(simulada || !MARCA.vitrineDosRobos) && <>
-            <h2>{simulada ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
-            <p className="ger-sub">{simulada ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}</p>
+          {(temSimuladas || !MARCA.vitrineDosRobos) && <>
+            <h2>{temSimuladas ? 'Suas sessões' : 'Vamos preparar seu primeiro robô?'}</h2>
+            <p className="ger-sub">{temSimuladas ? 'Acompanhe cada sessão. Abra os detalhes quando precisar.' : 'Escolha um modelo, defina seus limites e acompanhe a sessão.'}</p>
           </>}
         </div>
         <div className="rob-workspace-actions">
-          {!menuAdminOculto && <Suspense fallback={null}><BotaoSessaoSimulada ativo={!!simulada} aoAbrir={() => abrirAssistente()} /></Suspense>}
+          {!menuAdminOculto && <Suspense fallback={null}><BotaoSessaoSimulada ativo={simuladas.length === 1} aoAbrir={() => abrirAssistente(simuladas.length === 1 ? simuladas[0].id ?? null : null)} /></Suspense>}
           <button type="button" className={`rob-ampliar-digitos ${digitosDe ? 'on' : ''}`} aria-expanded={!!digitosDe}
             onClick={() => setDigitosDe((atual) => (atual ? null : 'geral'))}>
             <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M5 20V13M10 20V8M15 20V11M20 20V5" />}</svg>
             {digitosDe ? 'Fechar Probabilística' : 'Probabilística'}
           </button>
-          <button className="rob-new-button" onClick={() => novoRoboSim()}>+ Novo robô</button>
+          <button className="rob-new-button" onClick={() => novoRoboSim()} disabled={telaCheiaSim}
+            title={telaCheiaSim ? `Limite de ${MAX_SIMULADAS} sessões simuladas ao mesmo tempo` : undefined}>+ Novo robô</button>
         </div>
       </div>
-      {simulada ? (
+      {temSimuladas ? (
         <Suspense fallback={<div className="robot-session-loading" role="status"><b>Sessão</b><span>Abrindo…</span></div>}>
-          <PalcoDaSessao key={simulada.id ?? 'simulada'} roteiro={simulada} mostrarMarkup={admin && mostrarMarkup} daOutraAba={simuladaDeFora}
-            aoEditar={() => abrirAssistente()} aoSair={() => setSimulada(null)} />
+          {/*
+            17/11/2026: várias I.A. simuladas juntas, como as de verdade: uma visão geral, uma linha por sessão.
+            Com uma só, o palco desenha tudo como sempre (o invólucro não ocupa lugar). A árvore é a mesma nos
+            dois casos de propósito: entrar a segunda sessão não remonta (não pausa) a primeira.
+          */}
+          {emGrupoSim && <RobotOverview key="visao-geral" sessoes={[]} paineis={simuladas.map((r) => resumosSim[r.id ?? '']).filter((d): d is DadosEstudo => !!d)} moeda="USD" demoDaTela={(modoSim?.conta ?? simuladas[0].conta) === 'demo'} />}
+          <div key="sessoes" className={emGrupoSim ? 'rob-workspace-board modo-lista ssim-quadro' : 'ssim-sozinha'}>
+            {simuladas.map((r, i) => {
+              const id = r.id ?? ''
+              return (
+                <PalcoDaSessao key={id} roteiro={r} mostrarMarkup={admin && mostrarMarkup} daOutraAba={simuladasDeFora.has(id)}
+                  grupo={emGrupoSim ? {
+                    numero: `#${i + 1}`, aberta: abertaSimEfetiva === id, saldoJaContado: saldoJaContado.current.has(id), aoResumo: receberResumoSim,
+                    aoAbrir: () => setAbertaSim(abertaSimEfetiva === id ? null : id),
+                  } : undefined}
+                  aoEditar={() => abrirAssistente(id)} aoSair={() => sairSimulada(id)} />
+              )
+            })}
+          </div>
         </Suspense>
       ) : MARCA.vitrineDosRobos ? <VitrineDeRobos onConfigurar={() => abrirPreparoSim()} /> : (
         <section className="robot-workspace-empty">
@@ -555,8 +635,10 @@ export function RobotsPanel({
         <Suspense fallback={null}>
           <AssistenteDaSessao ia={assistente.ia} saldo={modoSim?.saldo ?? null} conta={modoSim?.conta ?? 'real'}
             aoDarPlay={(r) => {
-              definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
-              setSimulada(r); setAssistente(null)
+              // editando: troca aquela sessão; senão entra como mais uma (com a tela cheia, troca a última)
+              const noLugarDe = editandoSim.current ?? (telaCheiaSim ? simuladas[simuladas.length - 1].id ?? null : null)
+              editandoSim.current = null
+              entrarSimulada(r, noLugarDe); setAssistente(null)
             }}
             aoSalvar={() => setAssistente(null)}
             aoFechar={() => setAssistente(null)} />

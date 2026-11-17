@@ -8,15 +8,24 @@
 import { useSyncExternalStore } from 'react'
 import type { SessaoViva } from './servidorRobos'
 
-let atual: SessaoViva | null = null
+/*
+  17/11/2026 (Tiago: "simular as 5 e não só uma"): várias sessões simuladas na tela ao mesmo tempo. Cada palco
+  publica a sua pelo id; a lista sai na ordem em que as sessões entraram.
+*/
+const porId = new Map<string, SessaoViva>()
+let lista: SessaoViva[] = []
 const ouvintes = new Set<() => void>()
 
-export function publicarSessaoSimulada(s: SessaoViva | null): void {
-  atual = s
+/** O palco publica a sessão dele a cada passo; `null` tira a sessão (o palco saiu da tela). */
+export function publicarSessaoSimulada(id: string, s: SessaoViva | null): void {
+  if (s) porId.set(id, s)
+  else if (!porId.delete(id)) return
+  lista = [...porId.values()]
   ouvintes.forEach((f) => f())
 }
-export function useSessaoSimuladaAoVivo(): SessaoViva | null {
-  return useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => atual, () => atual)
+export function useSessoesSimuladasAoVivo(): SessaoViva[] {
+  return useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => lista, () => lista)
 }
 export const ehSessaoSimulada = (id: string) => id.startsWith('simulada')
-export const pedirParadaDaSimulada = () => window.dispatchEvent(new CustomEvent('simulado:parar'))
+/** O "Parar" da mini cabine: desliga a sessão simulada desse id (sem id, todas). */
+export const pedirParadaDaSimulada = (id?: string) => window.dispatchEvent(new CustomEvent('simulado:parar', { detail: { id: id ?? null } }))

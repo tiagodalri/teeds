@@ -100,3 +100,9 @@
 
 /* com os itens de admin ocultos (o olhinho), a barra de controle da sessão some (16/11/2026) */
 .ssim-pilula.sem-admin { display: none !important; }
+
+/* várias sessões simuladas na tela (17/11/2026): a barra de cada uma fica em cima da linha dela, sem grudar no topo */
+.ssim-pilula.em-grupo { position: static; flex: none; }
+.ssim-pilula.em-grupo .ssim-quem { font-weight: 800; }
+/* uma sessão só: o invólucro não ocupa lugar (o palco desenha a visão geral, a barra e o quadro como sempre) */
+.ssim-sozinha { display: contents; }
