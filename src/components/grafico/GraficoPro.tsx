@@ -93,7 +93,13 @@ function registrarTudo() {
       if (!dados?.marcas.length) return []
       const lista = chart.getDataList()
       const ultima = lista[lista.length - 1]
-      const agoraPx = ultima ? chart.convertToPixel({ timestamp: ultima.timestamp, value: ultima.close }, { paneId: 'candle_pane' }) as { x?: number; y?: number } : null
+      /*
+        16/11/2026 (print do Tiago: a faixa não aparecia): "agora" era o centro da última vela, mas a
+        entrada feita no meio da vela atual cai À DIREITA desse centro (o gráfico põe o horário exato),
+        e a faixa ficava com largura zero até a vela seguinte. Agora o x é o do horário de agora, na
+        mesma régua da entrada; o y continua o preço atual.
+      */
+      const agoraPx = ultima ? chart.convertToPixel({ timestamp: Math.max(ultima.timestamp, Date.now()), value: ultima.close }, { paneId: 'candle_pane' }) as { x?: number; y?: number } : null
       const agora = Date.now() / 1000
       const itens: ItemDaMarca[] = []
       dados.marcas.forEach((m, i) => {
@@ -199,11 +205,13 @@ function desenharMarcas(ctx: CanvasRenderingContext2D, { itens, largura, altura,
     const cRes = ganhando ? cores.up : cores.down
     const ateAgora = Math.min(Math.max(m.nx, m.ex), m.fx)
     // a zona entre a entrada e o preço de agora, em degradê a partir do preço de agora
-    if (ateAgora > m.ex + 1 && Math.abs(m.ny - m.ey) > .5) {
+    if (ateAgora > m.ex + 1) {
       const g = ctx.createLinearGradient(0, m.ny, 0, m.ey)
       g.addColorStop(0, comAlfa(cRes, .34)); g.addColorStop(1, comAlfa(cRes, .05))
       ctx.fillStyle = g
-      ctx.fillRect(m.ex, Math.min(m.ey, m.ny), ateAgora - m.ex, Math.abs(m.ny - m.ey))
+      // preço quase em cima da entrada: a faixa ainda aparece com 3 px, no lado em que o preço está
+      const alto = Math.max(3, Math.abs(m.ny - m.ey)), topo = m.ny <= m.ey ? m.ey - alto : m.ey
+      ctx.fillRect(m.ex, topo, ateAgora - m.ex, alto)
       ctx.strokeStyle = comAlfa(cRes, .55); ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(m.ex, m.ny); ctx.lineTo(ateAgora, m.ny); ctx.stroke()
     }
@@ -212,7 +220,7 @@ function desenharMarcas(ctx: CanvasRenderingContext2D, { itens, largura, altura,
     ctx.beginPath(); ctx.moveTo(m.fx, 0); ctx.lineTo(m.fx, altura); ctx.stroke()
     // a linha da operação: acesa até agora, apagada até o vencimento
     ctx.lineCap = 'round'
-    ctx.strokeStyle = comAlfa(c, .35); ctx.lineWidth = 2
+    ctx.strokeStyle = comAlfa(c, .5); ctx.lineWidth = 2
     ctx.beginPath(); ctx.moveTo(ateAgora, m.ey); ctx.lineTo(m.fx, m.ey); ctx.stroke()
     ctx.strokeStyle = c; ctx.lineWidth = 2
     ctx.beginPath(); ctx.moveTo(m.ex, m.ey); ctx.lineTo(ateAgora, m.ey); ctx.stroke()

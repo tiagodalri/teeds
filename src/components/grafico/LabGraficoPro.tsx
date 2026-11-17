@@ -71,12 +71,13 @@ export default function LabGraficoPro() {
       return { epoch: fim - (159 - i) * 60, open: abre, high: alta, low: baixa, close: fecha }
     })
   })
-  const [abriuEm] = useState(() => Math.floor(Date.now() / 60000) * 60 - 200)
+  // &recente=1: a entrada acabou de acontecer, dentro da vela atual (o caso do print de 16/11/2026)
+  const [abriuEm] = useState(() => new URLSearchParams(location.search).has('recente') ? Math.floor(Date.now() / 1000) - 25 : Math.floor(Date.now() / 60000) * 60 - 200)
   const cena: ContractMarker[] = (() => {
     const c = REAL ? reais1m.candles : velasCena
     if (c.length < 40) return []
     const u = c[c.length - 1], r = (i: number) => c[c.length - i]
-    const entrada = r(4).close
+    const entrada = new URLSearchParams(location.search).has('recente') ? u.close + 9 : r(4).close
     const lucro = Math.max(-9.6, Math.min(7.83, ((entrada - u.close) / entrada) * 40000))
     return [
       { id: 11, type: 'PUT', entryEpoch: abriuEm, entryPrice: entrada, expiryEpoch: abriuEm + 300, profit: +lucro.toFixed(2) },
