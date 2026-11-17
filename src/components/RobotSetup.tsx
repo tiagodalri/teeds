@@ -238,7 +238,8 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   })
   useEffect(() => { modeloDaVitrine = null }, [])
   const [modelo, setModelo] = useState(() => {
-    const pedido = daVitrine ?? (escolherModelo ? lerPreparo().modelo : undefined)
+    // no modo simulado (planoDe), a escolha abre na I.A. que o painel indicou (a da sessão salva), não no último uso de verdade
+    const pedido = daVitrine ?? (escolherModelo && !planoDe ? lerPreparo().modelo : undefined)
     return pedido && IDENTIDADES.some((i) => i.id === pedido) ? identidadeDoRobo(pedido) : identidade
   })
   const [passo, setPasso] = useState<Passo>(escolherModelo && !daVitrine ? 'escolha' : 'plano')
@@ -285,7 +286,13 @@ export function RobotSetup({ identidade, symbols, configInicial, moeda, isDemo, 
   }
   const aplicarMetaEStop = (id: string) => {
     const p = planoDe?.(id)
-    if (p) { setValores({ valorAoVencer: n2(p.entrada), takeProfit: n2(p.meta), stopLoss: n2(p.stop) }); setModo(p.modo); return }
+    if (p) {
+      setValores({ valorAoVencer: n2(p.entrada), takeProfit: n2(p.meta), stopLoss: n2(p.stop) }); setModo(p.modo)
+      // trocou para outra I.A. com sessão salva (escolha do modo simulado): o loss virtual também é o dela
+      const lvDoPlano = p.lossVirtual
+      if (lvDoPlano != null) setLvEscolhido((m) => ({ ...m, [id]: lvDoPlano }))
+      return
+    }
     const o = metaEStopDoPreparo(id, contaDemo, id === identidade.id ? metaDaSessao : null)
     setOrigem(o)
     setValores((x) => ({ ...x, takeProfit: n2(o.meta), stopLoss: n2(o.limite) }))

@@ -32,7 +32,7 @@ import { modeloPedidoDaVitrine, pedirModeloDaVitrine, RobotSetup } from './Robot
 import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { BotaoJanelaSolta } from './janela/BotaoJanelaSolta'
 import { configDoTrecho, type Roteiro } from '../core/teeds/sessaoSimulada'
-import { planoSalvo } from '../core/teeds/planosSimulados'
+import { iaDoPlanoMaisRecente, planoSalvo } from '../core/teeds/planosSimulados'
 import { useSessaoSimuladaAoVivo } from '../core/teeds/sessaoSimuladaAoVivo'
 import { minutosDaSessao, remontarSessao } from '../core/teeds/cenariosDaSessao'
 import type { ConfigEstrategia } from '../core/deriv/engine'
@@ -460,6 +460,22 @@ export function RobotsPanel({
     pedirModeloDaVitrine(null)
     // o topo já mostra o saldo com que a sessão foi planejada
     definirSaldoSimulado(plano.roteiro.saldo); definirContaSimulada(plano.roteiro.conta)
+    setPreparoSimEscolhe(false)
+    setPreparoSim(ia)
+  }
+  /*
+    17/11/2026 (Tiago, relato do Victor Dias: "configurou e salvou a Legacy; depois não consegue abrir o
+    painel para escolher a próxima I.A., abre a mesa dos termômetros"): com sessão salva, o "+ Novo robô"
+    abre a escolha de I.A. do preparo de verdade (a salva vem preenchida). A mesa de termômetros só abre
+    pelo ícone laranja e pelo "Editar". Sem nenhuma sessão salva, o "+ Novo robô" abre a mesa, como antes.
+  */
+  const [preparoSimEscolhe, setPreparoSimEscolhe] = useState(false)
+  const fecharPreparoSim = () => { setPreparoSim(null); setPreparoSimEscolhe(false) }
+  const novoRoboSim = () => {
+    const ia = iaDoPlanoMaisRecente()
+    if (!ia) { abrirAssistente(); return }
+    pedirModeloDaVitrine(null)
+    setPreparoSimEscolhe(true)
     setPreparoSim(ia)
   }
   const abrirPreparoSimRef = useRef(abrirPreparoSim)
@@ -468,9 +484,9 @@ export function RobotsPanel({
   const [remontando, setRemontando] = useState(false)
   const iniciarPlano = (id: string, cfg: ConfigEstrategia) => {
     const plano = planoSalvo(id)
-    if (!plano) { setPreparoSim(null); setAssistente({ ia: id }); return }
+    if (!plano) { fecharPreparoSim(); setAssistente({ ia: id }); return }
     const comecar = (r: Roteiro) => {
-      setPreparoSim(null); setErroDoPreparoSim(null)
+      fecharPreparoSim(); setErroDoPreparoSim(null)
       definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
       setSimulada({ ...r, id: `simulada-${Date.now()}` })
     }
@@ -505,7 +521,7 @@ export function RobotsPanel({
             <svg viewBox="0 0 24 24" aria-hidden="true">{digitosDe ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M5 20V13M10 20V8M15 20V11M20 20V5" />}</svg>
             {digitosDe ? 'Fechar Probabilística' : 'Probabilística'}
           </button>
-          <button className="rob-new-button" onClick={() => abrirAssistente()}>+ Novo robô</button>
+          <button className="rob-new-button" onClick={() => novoRoboSim()}>+ Novo robô</button>
         </div>
       </div>
       {simulada ? (
@@ -518,7 +534,7 @@ export function RobotsPanel({
           <span className="robot-empty-symbol" aria-hidden="true">▷</span>
           <h3>Um robô. Seus limites. Tudo aqui.</h3>
           <p>Escolha entre {IDENTIDADES.length} modelos e configure a sessão, uma etapa por vez.</p>
-          <button className="rob-new-button" onClick={() => abrirAssistente()}>Escolher e configurar →</button>
+          <button className="rob-new-button" onClick={() => novoRoboSim()}>Escolher e configurar →</button>
         </section>
       )}
       {preparoSim && (() => {
@@ -529,9 +545,9 @@ export function RobotsPanel({
           <RobotSetup identidade={ident} nomeEstrategia={ident.nome} symbols={symbols} symbolInicial={ATIVO_DOS_ROBOS}
             configInicial={configDoTrecho(plano.roteiro, plano.roteiro.trechos[0])} moeda="USD"
             isDemo={(modoSim?.conta ?? plano.roteiro.conta) === 'demo'} saldo={modoSim?.saldo ?? plano.roteiro.saldo}
-            planoDe={(id) => planoSalvo(id)}
+            planoDe={(id) => planoSalvo(id)} escolherModelo={preparoSimEscolhe}
             ligando={remontando} erro={erroDoPreparoSim}
-            onCancelar={() => { setPreparoSim(null); setErroDoPreparoSim(null) }}
+            onCancelar={() => { fecharPreparoSim(); setErroDoPreparoSim(null) }}
             onLigar={(cfg, _symbol, modelo) => iniciarPlano(modelo?.id ?? preparoSim, cfg)} />
         )
       })()}
@@ -542,6 +558,7 @@ export function RobotsPanel({
               definirSaldoSimulado(r.saldo); definirContaSimulada(r.conta)
               setSimulada(r); setAssistente(null)
             }}
+            aoSalvar={() => setAssistente(null)}
             aoFechar={() => setAssistente(null)} />
         </Suspense>
       )}

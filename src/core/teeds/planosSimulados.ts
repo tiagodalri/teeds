@@ -51,6 +51,12 @@ export function apagarPlano(ia: string) {
   gravar(resto)
 }
 export const planoSalvo = (ia: string | null | undefined): PlanoSalvo | null => (ia ? planos[ia] ?? null : null)
+/** A I.A. da sessão salva mais recente (null = nenhuma sessão salva neste aparelho). */
+export function iaDoPlanoMaisRecente(): string | null {
+  let melhor: string | null = null
+  for (const [ia, p] of Object.entries(planos)) if (p && Array.isArray(p.roteiro?.trechos) && p.roteiro.trechos.length > 0 && (melhor === null || (p.salvoEm ?? 0) > (planos[melhor].salvoEm ?? 0))) melhor = ia
+  return melhor
+}
 
 export function usePlanosSalvos(): Record<string, PlanoSalvo> {
   return useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => planos, () => planos)

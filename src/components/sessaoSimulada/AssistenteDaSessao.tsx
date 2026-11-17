@@ -134,12 +134,14 @@ function Termometro({ id, rotulo, f, ligado, aoArrastar, aoAlternarElo, valor, d
 
 /* ============================================================== a mesa */
 
-export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: contaInicial, aoDarPlay, aoFechar }: {
+export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: contaInicial, aoDarPlay, aoFechar, aoSalvar }: {
   ia: string | null
   saldo: number | null
   conta: 'real' | 'demo'
   aoDarPlay: (r: Roteiro) => void
   aoFechar: () => void
+  /** Salvou para a próxima (17/11/2026): quem abriu a mesa decide o que fazer (a aba das I.A. fecha a mesa). */
+  aoSalvar?: () => void
 }) {
   const versao = definirRegrasDaSessao(useCatalogoCompleto())
   // a mesa reabre como foi deixada (16/11/2026: o "Editar" da sessão volta para ela); a I.A. pedida na vitrine entra no lugar
@@ -279,7 +281,7 @@ export function AssistenteDaSessao({ ia: iaInicial, saldo: saldoInicial, conta: 
   const salvoDaIa = planos[ia] ?? null
   const [acabouDeSalvar, setAcabouDeSalvar] = useState(false)
   useEffect(() => { setAcabouDeSalvar(false) }, [chaveDaSessao])
-  const salvar = () => { if (!c || calibrando) return; salvarPlano(roteiroDaMesa(c)); setAcabouDeSalvar(true) }
+  const salvar = () => { if (!c || calibrando) return; salvarPlano(roteiroDaMesa(c)); setAcabouDeSalvar(true); aoSalvar?.() }
   const trocarIa = (id: string) => { setIa(id); setModo('conservador'); setElos((x) => ({ ...x, lv: { ligado: false, fixo: null } })) }
   const presos = (Object.keys(elos) as Param[]).filter((p) => (p !== 'lv' || comLV) && elos[p].ligado).length
   const totalDeTermos = comLV ? 5 : 4
