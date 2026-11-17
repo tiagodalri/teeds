@@ -29,69 +29,115 @@ function Certo() {
   return <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
 }
 
-type InstanciaDaVturb = { instance?: { __originalId?: string; pause?: () => void } | HTMLElement & { __originalId?: string; pause?: () => void }; video?: { currentTime?: number } }
+type EstadoDoPlayer = 'carregando' | 'tocando' | 'mudo' | 'pausado' | 'fim' | 'falhou'
 
 /**
- * O player da vturb e o tempo assistido. O botão aparece quando o vídeo passa de `botaoAos` segundos
- * (lido do próprio <video> do player); se o player não deixar ler o tempo, conta o tempo com a página
- * aberta nesta etapa. Os botões que o player traz por dentro ficam escondidos: quem conduz é o nosso.
+ * O player da VSL (17/11/2026: os vídeos são nossos, MP4; antes era a vturb). Do jeito das VSLs:
+ *  - começa sozinho com som (a pessoa acabou de clicar); se o navegador não deixar, começa mudo com
+ *    "Seu vídeo já começou · Clique para ouvir" e o clique volta ao começo com som;
+ *  - sem barra de avançar: tocar no vídeo pausa e continua; a barra de baixo anda mais rápido no começo;
+ *  - o botão da etapa aparece quando o vídeo passa de `botaoAos` (ou no fim), nunca pelo relógio;
+ *  - 25/50/75/100% vão para a central de rastreio (onde as pessoas param de assistir).
  */
-function VideoDaVturb({ video, aoLiberar }: { video: VideoDoQuiz; aoLiberar: () => void }) {
+function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLiberar: () => void; aoMarco: (pct: number) => void }) {
+  const ref = useRef<HTMLVideoElement>(null)
   const caixa = useRef<HTMLDivElement>(null)
-  const [estado, setEstado] = useState<'carregando' | 'pronto' | 'falhou'>('carregando')
-  const [tentativa, setTentativa] = useState(0)
+  const [estado, setEstado] = useState<EstadoDoPlayer>('carregando')
+  const [esperando, setEsperando] = useState(true)
+  const [barra, setBarra] = useState(0)
   const liberar = useRef(aoLiberar)
   liberar.current = aoLiberar
+  const marco = useRef(aoMarco)
+  marco.current = aoMarco
 
   useEffect(() => {
-    const c = caixa.current
-    if (!c) return
-    setEstado('carregando')
-    const player = document.createElement('vturb-smartplayer')
-    player.id = `vid-${video.id}`
-    player.setAttribute('style', 'display:block;margin:0 auto;width:100%')
-    c.replaceChildren(player)
-    const script = document.createElement('script')
-    script.src = `https://scripts.converteai.net/${video.conta}/players/${video.id}/v4/player.js`
-    script.async = true
-    script.onload = () => setEstado('pronto')
-    script.onerror = () => setEstado('falhou')
-    document.head.appendChild(script)
-
+    const v = ref.current
+    if (!v) return
+    let feito = false
+    let vivo = true
+    const marcos = new Set<number>()
     const alvo = quizRapido ? 5 : video.botaoAos
-    let feito = false, aberto = 0, ultimo = performance.now()
-    // o <video> fica numa sombra fechada; o tempo vem da lista de players da vturb (window.smartplayer)
-    const daVturb = () => (window as unknown as { smartplayer?: { instances?: InstanciaDaVturb[] } }).smartplayer?.instances
-      ?.find((i) => i.instance === player || i.instance?.__originalId === player.id)
-    const tempoDoVideo = (): number | null => {
-      const t = daVturb()?.video?.currentTime
-      return typeof t === 'number' && Number.isFinite(t) ? t : null
+    const soltar = () => { if (!feito) { feito = true; liberar.current() } }
+    const aoTempo = () => {
+      const d = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : video.duracao
+      const p = Math.min(1, v.currentTime / d)
+      setBarra(1 - (1 - p) ** 2)
+      if (!v.muted && v.currentTime >= alvo) soltar()
+      if (!v.muted) for (const m of [25, 50, 75]) if (p * 100 >= m && !marcos.has(m)) { marcos.add(m); marco.current(m) }
     }
-    const relogio = window.setInterval(() => {
-      const agora = performance.now()
-      if (!document.hidden) aberto += (agora - ultimo) / 1000
-      ultimo = agora
-      const t = tempoDoVideo()
-      // com o tempo do vídeo, vale o vídeo; sem ele (player fechado), o tempo de página aberta
-      if (!feito && ((t != null && t >= alvo) || (t == null && aberto >= alvo) || (quizRapido && aberto >= alvo))) {
-        feito = true
-        liberar.current()
-      }
-    }, 500)
-    // tirar o player da página não para o som: pausa antes
-    return () => { window.clearInterval(relogio); try { daVturb()?.instance?.pause?.() } catch { /* já saiu */ } script.remove(); c.replaceChildren() }
-  }, [video.conta, video.id, tentativa])
+    const aoFim = () => { setEstado('fim'); setBarra(1); if (!marcos.has(100)) { marcos.add(100); marco.current(100) } soltar() }
+    const aoEsperar = () => setEsperando(true)
+    const aoTocar = () => setEsperando(false)
+    const aoErro = () => setEstado('falhou')
+    v.addEventListener('timeupdate', aoTempo)
+    v.addEventListener('ended', aoFim)
+    v.addEventListener('waiting', aoEsperar)
+    v.addEventListener('playing', aoTocar)
+    v.addEventListener('canplay', aoTocar)
+    v.addEventListener('error', aoErro)
+    v.muted = false
+    v.play().then(() => { if (vivo) setEstado('tocando') }).catch(() => {
+      if (!vivo) return
+      v.muted = true
+      v.play().then(() => { if (vivo) setEstado('mudo') }).catch(() => { if (vivo) { setEstado('pausado'); setEsperando(false) } })
+    })
+    return () => {
+      vivo = false
+      v.removeEventListener('timeupdate', aoTempo)
+      v.removeEventListener('ended', aoFim)
+      v.removeEventListener('waiting', aoEsperar)
+      v.removeEventListener('playing', aoTocar)
+      v.removeEventListener('canplay', aoTocar)
+      v.removeEventListener('error', aoErro)
+      v.pause()
+    }
+  }, [video.src, video.botaoAos, video.duracao])
 
+  const tocar = () => {
+    const v = ref.current
+    if (!v) return
+    if (estado === 'falhou') { setEstado('carregando'); setEsperando(true); v.load(); void v.play().then(() => setEstado('tocando')).catch(() => setEstado('pausado')); return }
+    if (estado === 'mudo' || estado === 'fim') { v.currentTime = 0; setBarra(0) }
+    if (estado === 'tocando') { v.pause(); setEstado('pausado'); return }
+    v.muted = false
+    void v.play().then(() => setEstado('tocando')).catch(() => setEstado('pausado'))
+  }
+  const telaCheia = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const v = ref.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null
+    const c = caixa.current
+    if (!v || !c) return
+    if (document.fullscreenElement) { void document.exitFullscreen(); return }
+    if (c.requestFullscreen) void c.requestFullscreen().catch(() => v.webkitEnterFullscreen?.())
+    else v.webkitEnterFullscreen?.()
+  }
+
+  const rotulo = estado === 'tocando' ? 'Pausar o vídeo' : estado === 'mudo' ? 'Ouvir o vídeo do começo' : estado === 'fim' ? 'Assistir de novo' : 'Assistir ao vídeo'
   return (
-    <div className="qzt-video" data-estado={estado}>
-      <div className="qzt-video-player" ref={caixa} />
-      {estado !== 'pronto' && (
-        <div className="qzt-video-capa" role="status">
-          {estado === 'falhou'
-            ? <><span>Não foi possível carregar o vídeo.</span><button type="button" className="qzt-btn qzt-btn-linha" onClick={() => setTentativa((n) => n + 1)}>Tentar novamente</button></>
-            : <><i className="qzt-girando" aria-hidden="true" /><span>Carregando vídeo...</span></>}
-        </div>
-      )}
+    <div className="qzt-video" data-estado={estado} ref={caixa}>
+      <video ref={ref} src={video.src} poster={video.capa} playsInline preload="auto" disablePictureInPicture
+        controlsList="nodownload noplaybackrate noremoteplayback" onContextMenu={(e) => e.preventDefault()} />
+      <button type="button" className="qzt-video-toque" onClick={tocar} aria-label={rotulo}>
+        {estado === 'mudo' && (
+          <span className="qzt-video-som">
+            <b>Seu vídeo já começou</b>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" /><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+            <span>Clique para ouvir</span>
+          </span>
+        )}
+        {(estado === 'pausado' || estado === 'fim') && (
+          <span className="qzt-video-play">
+            <i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="currentColor" /></svg></i>
+            <span>{estado === 'fim' ? 'Assistir de novo' : barra > 0 ? 'Continuar assistindo' : 'Assistir ao vídeo'}</span>
+          </span>
+        )}
+        {estado === 'falhou' && <span className="qzt-video-play"><span>Não foi possível carregar o vídeo.</span><span className="qzt-btn qzt-btn-linha">Tentar novamente</span></span>}
+        {esperando && (estado === 'carregando' || estado === 'tocando' || estado === 'mudo') && <i className="qzt-girando qzt-video-girando" aria-hidden="true" />}
+      </button>
+      <button type="button" className="qzt-video-cheia" onClick={telaCheia} aria-label="Tela cheia">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      <div className="qzt-video-barra" aria-hidden="true"><i style={{ transform: `scaleX(${barra})` }} /></div>
     </div>
   )
 }
@@ -291,7 +337,8 @@ export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { vid
           <section className="qzt-painel qzt-centro qzt-com-video" key={etapa}>
             <p className="qzt-olho">Vídeo {atual.video + 1} de 3</p>
             <h2 ref={titulo} tabIndex={-1}>{atual.titulo}</h2>
-            <VideoDaVturb video={videos[atual.video]} aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: atual.video + 1 }) }} />
+            <PlayerDoQuiz key={etapa} video={videos[atual.video]} aoMarco={(pct) => rastro('quiz-video-progresso', { etapa, video: atual.video + 1, pct })}
+              aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: atual.video + 1 }) }} />
             <div className={`qzt-depois ${botaoDoVideo ? 'qzt-visivel' : ''}`} aria-hidden={!botaoDoVideo}>
               <button type="button" className="qzt-btn qzt-btn-ouro qzt-grande" tabIndex={botaoDoVideo ? 0 : -1} onClick={() => irPara(etapa + 1)}>Continuar <Seta /></button>
             </div>
@@ -316,9 +363,10 @@ export function QuizDoTrafego({ videos, aoConcluir, semRegistro = false }: { vid
             <h2 ref={titulo} tabIndex={-1}>Parabéns! Seu perfil é <b className="qzt-verde">89% compatível.</b></h2>
             <p className="qzt-forte">Você foi selecionado para se tornar um dos meus sócios.</p>
             <p className="qzt-desc">Assista ao vídeo abaixo para entender os últimos detalhes da nossa parceria.</p>
-            <VideoDaVturb video={videos[2]} aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: 3 }) }} />
+            <PlayerDoQuiz key={etapa} video={videos[2]} aoMarco={(pct) => rastro('quiz-video-progresso', { etapa, video: 3, pct })}
+              aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: 3 }) }} />
             <div className={`qzt-depois ${botaoDoVideo ? 'qzt-visivel' : ''}`} aria-hidden={!botaoDoVideo}>
-              <button type="button" className="qzt-btn qzt-btn-ouro qzt-grande qzt-vaga" tabIndex={botaoDoVideo ? 0 : -1} onClick={concluir}>Garantir minha vaga <Seta /></button>
+              <button type="button" className="qzt-btn qzt-btn-verde qzt-grande qzt-vaga" tabIndex={botaoDoVideo ? 0 : -1} onClick={concluir}>Garantir minha vaga <Seta /></button>
             </div>
           </section>
         )}

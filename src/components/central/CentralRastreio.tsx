@@ -83,6 +83,7 @@ function frase(e: { evento: string; pagina: string | null; detalhe: Record<strin
     case 'quiz-resposta': return `Quiz ${String(d.etapa ?? '')}: “${String(d.resposta ?? '')}”`
     case 'quiz-video': return `Viu o vídeo ${String(d.video ?? '')} do quiz`
     case 'quiz-video-botao': return `Assistiu o vídeo ${String(d.video ?? '')} até o botão`
+    case 'quiz-video-progresso': return `Assistiu ${String(d.pct ?? '')}% do vídeo ${String(d.video ?? '')} do quiz`
     case 'quiz-aprovado': return 'Chegou no aprovado do quiz'
     case 'quiz-concluiu': return 'Clicou em Garantir minha vaga'
     case 'questionario': return 'Abriu o questionário'

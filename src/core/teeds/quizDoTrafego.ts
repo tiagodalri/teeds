@@ -4,30 +4,42 @@
  * Tiago: "quando o cara chegar do anúncio, ele vai cair no quiz (que vai mostrando vídeos no meio),
  * são 3 vídeos intervalados entre as perguntas; faça exatamente igual, apenas adaptando o visual".
  * O modelo é o quiz "Ganhe em Dólar" do Naor (sucessonotrade.com): 15 etapas, os vídeos na 9, na 12
- * e na 15, e o botão de cada vídeo só aparece num tempo certo do vídeo, como lá (o player da vturb
- * mostrava o botão dentro do vídeo: Continuar aos 4:10 e aos 1:55; Garantir minha vaga aos 5:00).
+ * e na 15, e o botão de cada vídeo só aparece num tempo certo do vídeo, como lá.
  * No fim, em vez do WhatsApp, a pessoa segue para a escolha do plano (o que já existia na /trafego).
  *
  * Os vídeos são de cada parceiro (é a história do "seu futuro sócio"). Parceiro sem vídeos aqui não
  * tem quiz: a /trafego dele abre direto nos planos, como antes.
  */
 import { vitrine } from './parceiro'
+import { SUPABASE } from './config'
 
+/**
+ * 17/11/2026: a VSL nova do Naor em 3 partes (Tiago: "a vsl será dividida em 3 etapas"), no nosso
+ * player (MP4 no bucket público `aulas` do Supabase, pasta globalfly/vsl-trafego), no lugar da vturb.
+ * O botão de cada parte aparece no segundo em que o Naor manda clicar:
+ *  - parte 1 (história, "Você está chegando ao fim desse quiz"): 4:10, "Finalize as últimas perguntas…";
+ *  - parte 2 (as lives e os depoimentos): 2:37, "Clique no botão abaixo pra continuar";
+ *  - parte 3 (aprovado, a proposta dos 10%): 5:01, "vai aparecer um botão verde agora".
+ * Trocar um vídeo: subir com outro nome (o -v1 no fim) para o navegador não guardar o antigo.
+ */
 export interface VideoDoQuiz {
-  /** Conta da vturb (converteai) e o id do player. */
-  conta: string
-  id: string
-  /** Em que segundo do vídeo o botão aparece (o mesmo tempo do botão dentro do player original). */
+  /** O MP4 (720p, começa a tocar antes de baixar inteiro). */
+  src: string
+  /** A capa enquanto carrega (quadro do próprio vídeo, no site). */
+  capa: string
+  /** Em que segundo do vídeo o botão aparece. */
   botaoAos: number
+  /** Duração em segundos (a barra usa antes de o vídeo dizer a dele). */
+  duracao: number
 }
 
-const NAOR = 'd23e69b1-9de6-4831-8739-c71e897b42dc'
+const PASTA = `${SUPABASE.url}/storage/v1/object/public/aulas/globalfly/vsl-trafego`
 
 export const VIDEOS_DO_QUIZ: Partial<Record<string, readonly [VideoDoQuiz, VideoDoQuiz, VideoDoQuiz]>> = {
   n: [
-    { conta: NAOR, id: '686cb8ef7a26e34823e55631', botaoAos: 250 },
-    { conta: NAOR, id: '686cb9229ffc878a018e5319', botaoAos: 115 },
-    { conta: NAOR, id: '687131d1f01862c337441acb', botaoAos: 300 },
+    { src: `${PASTA}/naor-1-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-1.webp', botaoAos: 250, duracao: 258 },
+    { src: `${PASTA}/naor-2-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-2.webp', botaoAos: 157, duracao: 166 },
+    { src: `${PASTA}/naor-3-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-3.webp', botaoAos: 301, duracao: 315 },
   ],
 }
 
