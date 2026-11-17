@@ -29,6 +29,8 @@ body.pda-aberto { overflow: hidden; }
 /* capa */
 .pda-capa { position: relative; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 28px; padding: 32px; border: 1px solid var(--pda-linha); border-radius: 22px;
   background: radial-gradient(70% 90% at 0% 0%, rgba(217, 180, 101, .14), transparent 60%), var(--pda-cartao); }
+.pda-capa.sem-meta { grid-template-columns: minmax(0, 1fr); }
+.pda-capa.sem-meta .pda-capa-txt { max-width: 860px; }
 .pda-capa-txt { display: grid; align-content: start; gap: 12px; min-width: 0; }
 .pda-capa h1 { margin: 0; font-size: clamp(26px, 3.2vw, 40px); line-height: 1.12; font-weight: 800; letter-spacing: -.02em;
   background: linear-gradient(100deg, #FBEFC9, var(--pda-ouro) 50%, #F7E3AE 75%, var(--pda-ouro-escuro)); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -181,6 +183,7 @@ body.pda-aberto { overflow: hidden; }
   .pda-folha { display: block; max-width: none; padding: 11mm; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
   .pda-folha > * + * { margin-top: 18px; }
   .pda-capa { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; padding: 22px; break-inside: avoid; }
+  .pda-capa.sem-meta { grid-template-columns: minmax(0, 1fr); }
   .pda-capa h1 { font-size: 28px; color: #D9B465; -webkit-text-fill-color: #D9B465; background: none; }
   .pda-capa-txt p { font-size: 13.5px; }
   .pda-meta { min-width: 0; padding: 16px; }

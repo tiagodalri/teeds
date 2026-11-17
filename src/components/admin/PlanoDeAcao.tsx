@@ -102,7 +102,7 @@ export function PlanoDeAcao({ leitura, negocio, rotulo, id, prontaEm, quem, aoFe
 
       <div className="pda-folha">
         {/* capa */}
-        <header className="pda-capa">
+        <header className={`pda-capa${meta ? '' : ' sem-meta'}`}>
           <div className="pda-capa-txt">
             <span className="pda-rot">Plano de ação · {rotulo}</span>
             <h1>{leitura.veredito.titulo || 'O que fazer para aumentar o markup'}</h1>
