@@ -100,7 +100,8 @@
 .cpo-col.sobe i { bottom: calc(100% - var(--zero)); background: linear-gradient(180deg, #5BF09A, var(--cpo-sobe)); border-radius: 4px 4px 1px 1px; }
 .cpo-col.desce i { top: var(--zero); background: linear-gradient(0deg, #FF7A82, var(--cpo-desce)); border-radius: 1px 1px 4px 4px; transform-origin: top; }
 /* colunas finas: cantos quase retos (o arredondado de 4 px num traço de 2 px vira uma bolinha) */
-.cpo-mapa.densa .cpo-col i { border-radius: 1px; }
+/* e um pouco sobrepostas: com larguras de 2,5 px o navegador arredonda e deixava frestas escuras (pareciam linhas de grade) */
+.cpo-mapa.densa .cpo-col i { left: -0.5px; right: -0.5px; border-radius: 1px; }
 .cpo-mapa:hover .cpo-col i { opacity: .45; }
 .cpo-mapa .cpo-col.foco i, .cpo-mapa .cpo-col:hover i { opacity: 1; filter: brightness(1.2) drop-shadow(0 0 6px rgba(255, 255, 255, .35)); }
 .cpo-col:focus-visible { outline: 2px solid var(--cpo-ouro); outline-offset: 1px; border-radius: 3px; }
