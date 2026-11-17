@@ -13,9 +13,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Brand } from '../Brand'
 import { AvatarDoParceiro } from '../parceiros/FiltroDeParceiros'
 import { quizRapido } from '../../core/teeds/entradaInicial'
-import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
+import { eventoDoPixel, eventoComServidor } from '../../core/teeds/pixelDoParceiro'
+import { visitante } from '../../core/teeds/visitas'
 import { rastroDoCadastro } from '../../core/teeds/rastroDoCadastro'
-import { ETAPAS_DO_QUIZ, TOTAL_DO_QUIZ, progressoDaEtapa, linkDoWhatsapp, type PaginaDeTrafego, type QuizDoParceiro, type VideoDoQuiz } from '../../core/teeds/quizDoTrafego'
+import { ETAPAS_DO_QUIZ, TOTAL_DO_QUIZ, progressoDaEtapa, linkDoWhatsapp, codigoDoLead, type PaginaDeTrafego, type QuizDoParceiro, type VideoDoQuiz } from '../../core/teeds/quizDoTrafego'
 import { calma, useCeu } from './CadastroComPlanos'
 import '../../casca/globalfly/styles/cadastro-planos.css'
 import '../../casca/globalfly/styles/quiz-trafego.css'
@@ -37,9 +38,9 @@ type EstadoDoPlayer = 'carregando' | 'tocando' | 'mudo' | 'pausado' | 'fim' | 'f
  *    "Seu vídeo já começou · Clique para ouvir" e o clique volta ao começo com som;
  *  - sem barra de avançar: tocar no vídeo pausa e continua; a barra de baixo anda mais rápido no começo;
  *  - o botão da etapa aparece quando o vídeo passa de `botaoAos` (ou no fim), nunca pelo relógio;
- *  - 25/50/75/100% vão para a central de rastreio (onde as pessoas param de assistir).
+ *  - 0 (começou)/25/50/75/100% vão para a central de rastreio e para o pixel (AssistiuVSL), o mudo à parte.
  */
-function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLiberar: () => void; aoMarco: (pct: number) => void }) {
+function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLiberar: () => void; aoMarco: (pct: number, mudo: boolean) => void }) {
   const ref = useRef<HTMLVideoElement>(null)
   const caixa = useRef<HTMLDivElement>(null)
   const [estado, setEstado] = useState<EstadoDoPlayer>('carregando')
@@ -55,7 +56,7 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
     if (!v) return
     let feito = false
     let vivo = true
-    const marcos = new Set<number>()
+    const marcos = new Set<string>()
     const alvo = quizRapido ? 5 : video.botaoAos
     const soltar = () => { if (!feito) { feito = true; liberar.current() } }
     const aoTempo = () => {
@@ -63,9 +64,14 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
       const p = Math.min(1, v.currentTime / d)
       setBarra(1 - (1 - p) ** 2)
       if (!v.muted && v.currentTime >= alvo) soltar()
-      if (!v.muted) for (const m of [25, 50, 75]) if (p * 100 >= m && !marcos.has(m)) { marcos.add(m); marco.current(m) }
+      // 17/11/2026: o mudo também conta (separado: o clique para ouvir volta ao começo e conta de novo, com som)
+      const mudo = v.muted
+      for (const m of [0, 25, 50, 75]) {
+        const chave = `${mudo ? 'm' : 's'}${m}`
+        if ((m === 0 ? v.currentTime > 0.5 : p * 100 >= m) && !marcos.has(chave)) { marcos.add(chave); marco.current(m, mudo) }
+      }
     }
-    const aoFim = () => { setEstado('fim'); setBarra(1); if (!marcos.has(100)) { marcos.add(100); marco.current(100) } soltar() }
+    const aoFim = () => { setEstado('fim'); setBarra(1); if (!marcos.has('s100')) { marcos.add('s100'); marco.current(100, false) } soltar() }
     const aoEsperar = () => setEsperando(true)
     const aoTocar = () => setEsperando(false)
     const aoErro = () => setEstado('falhou')
@@ -167,6 +173,7 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
   const { videos } = pagina.quiz
   const rastro: typeof rastroDoCadastro = semRegistro ? () => undefined : rastroDoCadastro
   const pixel: typeof eventoDoPixel = semRegistro ? () => undefined : eventoDoPixel
+  const pixelComServidor: typeof eventoComServidor = semRegistro ? () => undefined : eventoComServidor
   const [etapa, setEtapa] = useState(0)
   const [escolhida, setEscolhida] = useState<string | null>(null)
   const [botaoDoVideo, setBotaoDoVideo] = useState(false)
@@ -246,6 +253,13 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
     return () => { delete w.nextStep }
   }, [irPara])
 
+  // o quanto assistiu de cada vídeo: na central e no pixel (17/11/2026: públicos de "viu 75% da VSL" no Meta).
+  // 0 = começou a tocar; `mudo` separa quem viu sem som (o clique para ouvir volta ao começo e conta de novo)
+  const marcoDoVideo = (video: number, pct: number, mudo: boolean) => {
+    rastro('quiz-video-progresso', { etapa, video, pct, ...(mudo ? { mudo: true } : {}) })
+    pixel('AssistiuVSL', { video, percentual: pct, mudo }, true)
+    if (!mudo && pct === 75) pixel(`AssistiuVSL${video}_75`, undefined, true)
+  }
   const comecar = () => {
     rastro('quiz-comecou')
     pixel('QuizComecou', undefined, true)
@@ -260,12 +274,14 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
     pixel('QuizResposta', { etapa, resposta: opcao })
     window.setTimeout(() => irPara(etapa + 1), calma() ? 0 : 320)
   }
-  const whatsapp = linkDoWhatsapp(pagina)
+  const [codigo] = useState(() => codigoDoLead(visitante()))
+  const whatsapp = linkDoWhatsapp(pagina, codigo)
   const concluir = () => {
-    rastro('quiz-concluiu', { respostas: respostas.current, ...(whatsapp ? { destino: 'whatsapp' } : {}) })
+    rastro('quiz-concluiu', { respostas: respostas.current, ...(whatsapp ? { destino: 'whatsapp', codigo } : {}) })
     pixel('QuizConcluido', undefined, true)
     // o WhatsApp abre pelo próprio link (toque de verdade: celular e navegador do Instagram abrem o app)
-    if (whatsapp) pixel('Contact', { canal: 'whatsapp' }, true)
+    // o Contact vai também pelo servidor (bloqueador e iPhone perdem o do navegador); é o evento de otimizar
+    if (whatsapp) pixelComServidor('Contact', { canal: 'whatsapp' })
     else aoConcluir()
   }
 
@@ -355,7 +371,7 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
           <section className="qzt-painel qzt-centro qzt-com-video" key={etapa}>
             <p className="qzt-olho">Vídeo {atual.video + 1} de 3</p>
             <h2 ref={titulo} tabIndex={-1}>{atual.titulo}</h2>
-            <PlayerDoQuiz key={etapa} video={videos[atual.video]} aoMarco={(pct) => rastro('quiz-video-progresso', { etapa, video: atual.video + 1, pct })}
+            <PlayerDoQuiz key={etapa} video={videos[atual.video]} aoMarco={(pct, mudo) => marcoDoVideo(atual.video + 1, pct, mudo)}
               aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: atual.video + 1 }) }} />
             <div className={`qzt-depois ${botaoDoVideo ? 'qzt-visivel' : ''}`} aria-hidden={!botaoDoVideo}>
               <button type="button" className="qzt-btn qzt-btn-ouro qzt-grande" tabIndex={botaoDoVideo ? 0 : -1} onClick={() => irPara(etapa + 1)}>Continuar <Seta /></button>
@@ -381,7 +397,7 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
             <h2 ref={titulo} tabIndex={-1}>Parabéns! Seu perfil é <b className="qzt-verde">89% compatível.</b></h2>
             <p className="qzt-forte">Você foi selecionado para se tornar um dos meus sócios.</p>
             <p className="qzt-desc">Assista ao vídeo abaixo para entender os últimos detalhes da nossa parceria.</p>
-            <PlayerDoQuiz key={etapa} video={videos[2]} aoMarco={(pct) => rastro('quiz-video-progresso', { etapa, video: 3, pct })}
+            <PlayerDoQuiz key={etapa} video={videos[2]} aoMarco={(pct, mudo) => marcoDoVideo(3, pct, mudo)}
               aoLiberar={() => { setBotaoDoVideo(true); rastro('quiz-video-botao', { etapa, video: 3 }) }} />
             <div className={`qzt-depois ${botaoDoVideo ? 'qzt-visivel' : ''}`} aria-hidden={!botaoDoVideo}>
               {whatsapp

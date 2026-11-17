@@ -106,10 +106,18 @@ export function paginaComQuiz(): (PaginaDeTrafego & { quiz: QuizDoParceiro }) | 
   return p?.quiz ? (p as PaginaDeTrafego & { quiz: QuizDoParceiro }) : null
 }
 
-/** O link do WhatsApp da página com a mensagem pronta, ou null quando o parceiro não tem número. */
-export function linkDoWhatsapp(pagina: PaginaDeTrafego): string | null {
+/**
+ * O código do lead na mensagem do WhatsApp (17/11/2026): as 6 primeiras letras do id do navegador, em
+ * maiúsculas. No atendimento, o código leva à jornada da pessoa na central de rastreio (de que anúncio
+ * veio, o que respondeu, quanto viu dos vídeos): o `quiz-concluiu` guarda o mesmo código.
+ */
+export const codigoDoLead = (visitante: string): string => visitante.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()
+
+/** O link do WhatsApp da página com a mensagem pronta (e o código do lead, se houver), ou null quando o parceiro não tem número. */
+export function linkDoWhatsapp(pagina: PaginaDeTrafego, codigo = ''): string | null {
   const numero = pagina.quiz?.whatsapp
-  return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(MENSAGEM_DO_WHATSAPP)}` : null
+  const texto = codigo ? `${MENSAGEM_DO_WHATSAPP} (código ${codigo})` : MENSAGEM_DO_WHATSAPP
+  return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(texto)}` : null
 }
 
 export type EtapaDoQuiz =

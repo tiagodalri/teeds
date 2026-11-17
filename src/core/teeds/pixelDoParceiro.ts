@@ -109,6 +109,30 @@ export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, uma
   } catch { /* o pixel nunca atrapalha a plataforma */ }
 }
 
+/**
+ * Evento de quem ainda não deu e-mail (o "Garantir minha vaga" do quiz, que abre o WhatsApp), 17/11/2026:
+ * vai ao pixel no navegador e também pelo servidor (meta-conversoes), com o mesmo código, para não se
+ * perder em bloqueador e iPhone. Sem e-mail, o servidor confere pela central de rastreio que este
+ * navegador chegou mesmo ao fim do quiz, e a Meta reconhece a pessoa pelo navegador (fbp, fbc, IP).
+ */
+const PELO_SERVIDOR_SEM_EMAIL = new Set(['Contact'])
+const jaFoiAoServidor = new Set<string>()
+export function eventoComServidor(nome: string, dados?: Record<string, unknown>): void {
+  if (!PELO_SERVIDOR_SEM_EMAIL.has(nome) || jaFoiAoServidor.has(nome)) return
+  jaFoiAoServidor.add(nome)
+  if (paginaDeVenda === 'trafego') dados = { ...dados, pagina_de_venda: 'trafego' }
+  try {
+    if (typeof window === 'undefined' || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
+    const codigo = `${nome}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+    if (carregar() && window.fbq) window.fbq(PADRAO.has(nome) ? 'track' : 'trackCustom', nome, dados ?? {}, { eventID: codigo })
+    void fetch(`${SUPABASE.url}/functions/v1/meta-conversoes`, {
+      method: 'POST', keepalive: true, headers: { 'content-type': 'application/json', apikey: SUPABASE.anonKey },
+      body: JSON.stringify({ marca: MARCA.id, parceiro: vitrine(), evento: nome, event_id: codigo, url: location.origin + location.pathname,
+        fbp: cookie('_fbp'), fbc: cookie('_fbc'), visitante: lerJson<string>('globalfly.visitante') ?? '', dados: dados ?? {} }),
+    }).catch(() => { /* o pixel do navegador já contou */ })
+  } catch { /* o pixel nunca atrapalha a plataforma */ }
+}
+
 /*
   Central de rastreio (04/11/2026): o que a pessoa faz na plataforma entra na mesma jornada das
   páginas de cadastro (captura.js, gf_rastro). Liga pelo id do navegador (globalfly.visitante) e

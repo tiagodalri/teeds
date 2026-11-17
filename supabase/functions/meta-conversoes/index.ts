@@ -7,6 +7,11 @@
 //
 // POST { marca, parceiro, evento, event_id, email, url, fbp?, fbc?, externo? }
 //
+// 17/11/2026, sem e-mail: o Contact do quiz do /trafego ("Garantir minha vaga", que abre o WhatsApp).
+// POST { marca, parceiro, evento: 'Contact', event_id, visitante, url, fbp?, fbc?, dados? }. Vale só para
+// o navegador que chegou ao fim do quiz do parceiro nas últimas 2 h (rastreio_eventos: quiz-aprovado);
+// a Meta reconhece a pessoa pelo id do navegador, fbp, fbc, IP e aparelho.
+//
 // Só manda o que é de um cadastro de verdade: o e-mail tem de estar em
 // leads_capturados (últimas 48 h, pela página do parceiro). Cada event_id vai uma vez
 // só (meta_conversoes). Sem a chave do parceiro em config_servicos
@@ -27,6 +32,9 @@ const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo
 const PIXELS: Record<string, Record<string, string>> = { globalfly: { n: '1625935188283999', v: '1104312792216322' } }
 const SITES: Record<string, string> = { globalfly: 'https://globalflytrade.com/' }
 const EVENTOS = new Set(['Lead', 'CompleteRegistration'])
+const EVENTOS_DO_QUIZ = new Set(['Contact'])
+const ID_NAVEGADOR = /^[A-Za-z0-9]{8,40}$/
+const ID_META = /^fb\.\d\.\d+\.[\w-]+$/
 
 const rest = (caminho: string, init: RequestInit = {}) => fetch(`${SUPABASE_URL}/rest/v1/${caminho}`, {
   ...init,
@@ -44,6 +52,70 @@ async function anotar(id: number, situacao: string, detalhe: string | null) {
   await rest(`meta_conversoes?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ situacao, detalhe: detalhe?.slice(0, 300) ?? null }) })
 }
 
+// a chave só do pixel; sem ela, a da conta de anúncios (Administração › Anúncios), se tiver acesso ao pixel
+async function chaveDoPixel(marca: string, parceiro: string, pixel: string): Promise<{ chave: string | null; pixel: string }> {
+  const sufixo = `${marca.toUpperCase()}_${parceiro.toUpperCase()}`
+  const cfg = await rest(`config_servicos?chave=in.(META_CAPI_${sufixo},META_ADS_${sufixo},META_CONTA_${sufixo})&select=chave,valor`)
+  const chaves: Array<{ chave: string; valor: string }> = cfg.ok ? await cfg.json() : []
+  const chave = (chaves.find((c) => c.chave.startsWith('META_CAPI_')) ?? chaves.find((c) => c.chave.startsWith('META_ADS_')))?.valor ?? null
+  // o pixel da conta escolhida em Administração › Anúncios (03/11/2026), por cima do mapa
+  try { const o = JSON.parse(chaves.find((c) => c.chave.startsWith('META_CONTA_'))?.valor ?? 'null'); if (o?.pixel) pixel = String(o.pixel) } catch { /* fica o do mapa */ }
+  return { chave, pixel }
+}
+
+async function enviar(linha: number, pixel: string, chave: string, evento: Record<string, unknown>): Promise<Response> {
+  try {
+    const meta = await fetch(`${GRAPH}/${pixel}/events?access_token=${encodeURIComponent(chave)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: [evento] }),
+    })
+    const resposta = await meta.json().catch(() => ({}))
+    if (!meta.ok) { await anotar(linha, 'erro', resposta?.error?.message ?? `HTTP ${meta.status}`); return json({ ok: false, motivo: 'erro-meta' }) }
+    await anotar(linha, 'enviado', null)
+    return json({ ok: true })
+  } catch (e) {
+    await anotar(linha, 'erro', (e as Error).message)
+    return json({ ok: false, motivo: 'erro-rede' })
+  }
+}
+
+// o fim do quiz do /trafego, sem e-mail (ver o topo)
+async function contatoDoQuiz(req: Request, d: Record<string, unknown>, marca: string, parceiro: string, evento: string, eventId: string, pixelDoMapa: string): Promise<Response> {
+  const visitante = String(d.visitante ?? '')
+  if (!ID_NAVEGADOR.test(visitante)) return json({ ok: false }, 400)
+  const desde = new Date(Date.now() - 2 * 3600_000).toISOString()
+  const r = await rest(`rastreio_eventos?select=id&marca=eq.${marca}&parceiro=eq.${parceiro}&visitante=eq.${visitante}&evento=eq.quiz-aprovado&pagina=eq.${encodeURIComponent(`/${parceiro}/trafego`)}&criado_em=gte.${desde}&limit=1`)
+  const chegou = r.ok ? (await r.json())[0] : null
+  if (!chegou) return json({ ok: false, motivo: 'sem-quiz' })
+
+  // um Contact por navegador e por dia (o event_id do navegador vai junto para a Meta juntar os dois)
+  const ins = await rest('meta_conversoes?select=id&on_conflict=marca,parceiro,event_id', {
+    method: 'POST', headers: { Prefer: 'return=representation,resolution=ignore-duplicates' },
+    body: JSON.stringify({ marca, parceiro, evento, event_id: `${evento}-${visitante}-${new Date().toISOString().slice(0, 10)}`, lead_id: null, detalhe: eventId }),
+  })
+  const linha = ins.ok ? (await ins.json())[0] : null
+  if (!linha) return json({ ok: true, motivo: 'ja-enviado' })
+
+  const { chave, pixel } = await chaveDoPixel(marca, parceiro, pixelDoMapa)
+  if (!chave) { await anotar(linha.id, 'sem-chave', null); return json({ ok: true, motivo: 'sem-chave' }) }
+
+  const url = String(d.url ?? '')
+  const user_data: Record<string, unknown> = {
+    external_id: [await sha256(visitante)],
+    country: [await sha256('br')],
+    client_ip_address: (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim() || undefined,
+    client_user_agent: req.headers.get('user-agent') ?? undefined,
+  }
+  if (ID_META.test(String(d.fbp ?? ''))) user_data.fbp = d.fbp
+  if (ID_META.test(String(d.fbc ?? ''))) user_data.fbc = d.fbc
+  const extra = d.dados && typeof d.dados === 'object' ? d.dados as Record<string, unknown> : {}
+  const custom_data: Record<string, string> = {}
+  for (const [k, v] of Object.entries(extra).slice(0, 5)) if (/^[a-z_]{1,30}$/.test(k) && (typeof v === 'string' || typeof v === 'number')) custom_data[k] = String(v).slice(0, 60)
+  return enviar(linha.id, pixel, chave, {
+    event_name: evento, event_time: Math.floor(Date.now() / 1000), event_id: eventId, action_source: 'website',
+    event_source_url: url.startsWith(SITES[marca]) ? url.slice(0, 500) : `${SITES[marca]}${parceiro}/trafego`, user_data, custom_data,
+  })
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
   if (req.method !== 'POST') return json({ erro: 'Use POST' }, 405)
@@ -52,7 +124,8 @@ Deno.serve(async (req) => {
 
   const marca = String(d.marca ?? ''), parceiro = String(d.parceiro ?? ''), evento = String(d.evento ?? '')
   const eventId = String(d.event_id ?? ''), email = String(d.email ?? '').trim().toLowerCase()
-  let pixel = PIXELS[marca]?.[parceiro]
+  const pixel = PIXELS[marca]?.[parceiro]
+  if (pixel && EVENTOS_DO_QUIZ.has(evento) && /^[A-Za-z0-9-]{8,80}$/.test(eventId)) return contatoDoQuiz(req, d, marca, parceiro, evento, eventId, pixel)
   if (!pixel || !EVENTOS.has(evento) || !/^[A-Za-z0-9-]{8,80}$/.test(eventId) || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ ok: false }, 400)
   const url = String(d.url ?? '')
   const pagina = url.startsWith(SITES[marca]) ? url.slice(0, 500) : `${SITES[marca]}${parceiro}/cadastro/`
@@ -72,13 +145,7 @@ Deno.serve(async (req) => {
   const linha = ins.ok ? (await ins.json())[0] : null
   if (!linha) return json({ ok: true, motivo: 'ja-enviado' })
 
-  // a chave só do pixel; sem ela, a da conta de anúncios (Administração › Anúncios), se tiver acesso ao pixel
-  const sufixo = `${marca.toUpperCase()}_${parceiro.toUpperCase()}`
-  const cfg = await rest(`config_servicos?chave=in.(META_CAPI_${sufixo},META_ADS_${sufixo},META_CONTA_${sufixo})&select=chave,valor`)
-  const chaves: Array<{ chave: string; valor: string }> = cfg.ok ? await cfg.json() : []
-  const chave = (chaves.find((c) => c.chave.startsWith('META_CAPI_')) ?? chaves.find((c) => c.chave.startsWith('META_ADS_')))?.valor ?? null
-  // o pixel da conta escolhida em Administração › Anúncios (03/11/2026), por cima do mapa
-  try { const o = JSON.parse(chaves.find((c) => c.chave.startsWith('META_CONTA_'))?.valor ?? 'null'); if (o?.pixel) pixel = String(o.pixel) } catch { /* fica o do mapa */ }
+  const { chave, pixel: pixelFinal } = await chaveDoPixel(marca, parceiro, pixel)
   if (!chave) { await anotar(linha.id, 'sem-chave', null); return json({ ok: true, motivo: 'sem-chave' }) }
 
   const partes = String(lead.nome ?? '').trim().split(/\s+/)
@@ -98,17 +165,5 @@ Deno.serve(async (req) => {
   if (/^fb\.\d\.\d+\.[\w-]+$/.test(String(d.fbp ?? ''))) user_data.fbp = d.fbp
   if (/^fb\.\d\.\d+\.[\w-]+$/.test(String(d.fbc ?? ''))) user_data.fbc = d.fbc
 
-  try {
-    const meta = await fetch(`${GRAPH}/${pixel}/events?access_token=${encodeURIComponent(chave)}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: [{ event_name: evento, event_time: Math.floor(Date.now() / 1000), event_id: eventId, action_source: 'website', event_source_url: pagina, user_data }] }),
-    })
-    const resposta = await meta.json().catch(() => ({}))
-    if (!meta.ok) { await anotar(linha.id, 'erro', resposta?.error?.message ?? `HTTP ${meta.status}`); return json({ ok: false, motivo: 'erro-meta' }) }
-    await anotar(linha.id, 'enviado', null)
-    return json({ ok: true })
-  } catch (e) {
-    await anotar(linha.id, 'erro', (e as Error).message)
-    return json({ ok: false, motivo: 'erro-rede' })
-  }
+  return enviar(linha.id, pixelFinal, chave, { event_name: evento, event_time: Math.floor(Date.now() / 1000), event_id: eventId, action_source: 'website', event_source_url: pagina, user_data })
 })
