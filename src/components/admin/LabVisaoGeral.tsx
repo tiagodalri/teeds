@@ -1,4 +1,4 @@
-/** Laboratório (?tela=visao-geral(&cenario=real|vazio)(&periodo=hoje|ontem|7|30|mes|personalizado)(&metas=nenhuma)(&ia=vazia|pronta|sem-ia|erro)(&negocio=vazio)): a Visão geral com números de exemplo, sem banco. */
+/** Laboratório (?tela=visao-geral(&cenario=real|vazio)(&periodo=hoje|ontem|7|30|mes|personalizado)(&metas=nenhuma)(&ia=vazia|pronta|sem-ia|erro)(&motor=gemini)(&negocio=vazio)): a Visão geral com números de exemplo, sem banco. */
 import { VisaoGeralPainel } from './VisaoGeralPainel'
 import { PERIODO_AGORA, type AtalhoDoPeriodo } from './PeriodoDaVisaoGeral'
 
@@ -185,17 +185,27 @@ const LEITURA_DO_LAB = {
   alertas: ['O período tem só 11 dias com operação: as conclusões ainda podem mudar.', 'O horário de 7 das 9 lives é estimado pelos cliques no aviso.'],
 }
 let leituraDoLab: Record<string, unknown> | null = null
+let geminiDoLab = new URLSearchParams(location.search).get('motor') === 'gemini'
 let perguntas = 0
 function respostaDaIA(corpo: string) {
   const modo = new URLSearchParams(location.search).get('ia') ?? 'vazia'
   const { acao } = JSON.parse(corpo || '{}') as { acao: string }
-  if (modo === 'sem-ia') return { status: acao === 'analisar' ? 409 : 200, corpo: acao === 'analisar' ? { semIA: true, erro: 'Falta a chave da I.A.' } : { temIA: false, analise: null } }
+  // a chave do Gemini no laboratório: qualquer texto com 25 letras ou mais é aceito e liga o motor gratuito
+  if (acao === 'chave_gemini') {
+    const { valor } = JSON.parse(corpo || '{}') as { valor?: string }
+    if (String(valor ?? '').length < 25) return { status: 400, corpo: { erro: 'Isso não parece uma chave do Gemini. Copie a chave inteira no Google AI Studio.' } }
+    geminiDoLab = true; leituraDoLab = null
+    return { status: 200, corpo: { ok: true } }
+  }
+  if (acao === 'remover_gemini') { geminiDoLab = false; return { status: 200, corpo: { ok: true } } }
+  const motores = { motor: geminiDoLab ? 'gemini' : 'anthropic', podeColar: true }
+  if (modo === 'sem-ia' && !geminiDoLab) return { status: acao === 'analisar' ? 409 : 200, corpo: acao === 'analisar' ? { semIA: true, erro: 'Falta a chave da I.A.' } : { temIA: false, motor: null, podeColar: true, analise: null } }
   const base = { id: 'lab', erro: null, criadoEm: new Date().toISOString(), prontaEm: null, quem: 'Tiago', de: '', ate: '' }
   if (acao === 'analisar') { leituraDoLab = { ...base, situacao: 'analisando', dados: null }; perguntas = 0 }
   else if (leituraDoLab?.situacao === 'analisando' && ++perguntas >= 2) {
     leituraDoLab = modo === 'erro' ? { ...base, situacao: 'erro', dados: null, erro: 'A resposta da I.A. veio cortada. Tente de novo.' } : { ...base, situacao: 'pronta', dados: LEITURA_DO_LAB, prontaEm: new Date().toISOString() }
   } else if (!leituraDoLab && modo === 'pronta') leituraDoLab = { ...base, situacao: 'pronta', dados: LEITURA_DO_LAB, prontaEm: new Date().toISOString() }
-  return { status: 200, corpo: { temIA: true, analise: leituraDoLab } }
+  return { status: 200, corpo: { temIA: true, ...motores, analise: leituraDoLab } }
 }
 
 /* &aovivo: uma operação em conta real a cada 1,5 s (US$ 0,04 de markup), para ver o markup subir a cada
