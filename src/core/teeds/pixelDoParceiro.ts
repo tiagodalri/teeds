@@ -115,7 +115,7 @@ export function eventoDoPixel(nome: string, dados?: Record<string, unknown>, uma
  * perder em bloqueador e iPhone. Sem e-mail, o servidor confere pela central de rastreio que este
  * navegador chegou mesmo ao fim do quiz, e a Meta reconhece a pessoa pelo navegador (fbp, fbc, IP).
  */
-const PELO_SERVIDOR_SEM_EMAIL = new Set(['Contact'])
+const PELO_SERVIDOR_SEM_EMAIL = new Set(['Contact', 'QuizComecou', 'QuizAprovado', 'QuizConcluido', 'AssistiuVSL1_75', 'AssistiuVSL2_75', 'AssistiuVSL3_75'])
 const jaFoiAoServidor = new Set<string>()
 export function eventoComServidor(nome: string, dados?: Record<string, unknown>): void {
   if (!PELO_SERVIDOR_SEM_EMAIL.has(nome) || jaFoiAoServidor.has(nome)) return

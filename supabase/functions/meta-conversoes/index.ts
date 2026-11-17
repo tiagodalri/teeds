@@ -7,9 +7,11 @@
 //
 // POST { marca, parceiro, evento, event_id, email, url, fbp?, fbc?, externo? }
 //
-// 17/11/2026, sem e-mail: o Contact do quiz do /trafego ("Garantir minha vaga", que abre o WhatsApp).
-// POST { marca, parceiro, evento: 'Contact', event_id, visitante, url, fbp?, fbc?, dados? }. Vale só para
-// o navegador que chegou ao fim do quiz do parceiro nas últimas 2 h (rastreio_eventos: quiz-aprovado);
+// 17/11/2026, sem e-mail: o Contact do quiz do /trafego ("Garantir minha vaga", que abre o WhatsApp) e os
+// marcos do funil (QuizComecou, QuizAprovado, QuizConcluido, AssistiuVSL<n>_75), que o pixel do Naor descarta
+// no navegador por serem "eventos não verificados" e que por aqui chegam.
+// POST { marca, parceiro, evento, event_id, visitante, url, fbp?, fbc?, dados? }. Vale só para o navegador que
+// passou pela /trafego do parceiro nas últimas 2 h (Contact, aprovado e concluído: que chegou ao fim do quiz);
 // a Meta reconhece a pessoa pelo id do navegador, fbp, fbc, IP e aparelho.
 //
 // Só manda o que é de um cadastro de verdade: o e-mail tem de estar em
@@ -32,7 +34,9 @@ const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo
 const PIXELS: Record<string, Record<string, string>> = { globalfly: { n: '1625935188283999', v: '1104312792216322' } }
 const SITES: Record<string, string> = { globalfly: 'https://globalflytrade.com/' }
 const EVENTOS = new Set(['Lead', 'CompleteRegistration'])
-const EVENTOS_DO_QUIZ = new Set(['Contact'])
+const EVENTOS_DO_QUIZ = new Set(['Contact', 'QuizComecou', 'QuizAprovado', 'QuizConcluido', 'AssistiuVSL1_75', 'AssistiuVSL2_75', 'AssistiuVSL3_75'])
+// o que o navegador tem de ter registrado antes: o Contact e o concluído pedem o aprovado (que sai antes, ao chegar no fim); os outros, a visita à /trafego (o aprovado vai junto com o registro dele, então não pode esperar por ele)
+const PRE_REQUISITO: Record<string, string> = { Contact: 'quiz-aprovado', QuizConcluido: 'quiz-aprovado' }
 const ID_NAVEGADOR = /^[A-Za-z0-9]{8,40}$/
 const ID_META = /^fb\.\d\.\d+\.[\w-]+$/
 
@@ -83,11 +87,12 @@ async function contatoDoQuiz(req: Request, d: Record<string, unknown>, marca: st
   const visitante = String(d.visitante ?? '')
   if (!ID_NAVEGADOR.test(visitante)) return json({ ok: false }, 400)
   const desde = new Date(Date.now() - 2 * 3600_000).toISOString()
-  const r = await rest(`rastreio_eventos?select=id&marca=eq.${marca}&parceiro=eq.${parceiro}&visitante=eq.${visitante}&evento=eq.quiz-aprovado&pagina=eq.${encodeURIComponent(`/${parceiro}/trafego`)}&criado_em=gte.${desde}&limit=1`)
+  const exigido = PRE_REQUISITO[evento]
+  const r = await rest(`rastreio_eventos?select=id&marca=eq.${marca}&parceiro=eq.${parceiro}&visitante=eq.${visitante}${exigido ? `&evento=eq.${exigido}` : ''}&pagina=eq.${encodeURIComponent(`/${parceiro}/trafego`)}&criado_em=gte.${desde}&limit=1`)
   const chegou = r.ok ? (await r.json())[0] : null
   if (!chegou) return json({ ok: false, motivo: 'sem-quiz' })
 
-  // um Contact por navegador e por dia (o event_id do navegador vai junto para a Meta juntar os dois)
+  // cada evento uma vez por navegador e por dia (o event_id do navegador vai junto para a Meta juntar os dois)
   const ins = await rest('meta_conversoes?select=id&on_conflict=marca,parceiro,event_id', {
     method: 'POST', headers: { Prefer: 'return=representation,resolution=ignore-duplicates' },
     body: JSON.stringify({ marca, parceiro, evento, event_id: `${evento}-${visitante}-${new Date().toISOString().slice(0, 10)}`, lead_id: null, detalhe: eventId }),
@@ -125,7 +130,7 @@ Deno.serve(async (req) => {
   const marca = String(d.marca ?? ''), parceiro = String(d.parceiro ?? ''), evento = String(d.evento ?? '')
   const eventId = String(d.event_id ?? ''), email = String(d.email ?? '').trim().toLowerCase()
   const pixel = PIXELS[marca]?.[parceiro]
-  if (pixel && EVENTOS_DO_QUIZ.has(evento) && /^[A-Za-z0-9-]{8,80}$/.test(eventId)) return contatoDoQuiz(req, d, marca, parceiro, evento, eventId, pixel)
+  if (pixel && EVENTOS_DO_QUIZ.has(evento) && /^[A-Za-z0-9-_]{8,80}$/.test(eventId)) return contatoDoQuiz(req, d, marca, parceiro, evento, eventId, pixel)
   if (!pixel || !EVENTOS.has(evento) || !/^[A-Za-z0-9-]{8,80}$/.test(eventId) || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ ok: false }, 400)
   const url = String(d.url ?? '')
   const pagina = url.startsWith(SITES[marca]) ? url.slice(0, 500) : `${SITES[marca]}${parceiro}/cadastro/`

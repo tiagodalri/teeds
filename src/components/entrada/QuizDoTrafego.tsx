@@ -220,7 +220,7 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
     if (etapa === 0) return
     pixel('ViewContent', { content_name: `quiz-etapa-${etapa}` }, true)
     if (atual?.tipo === 'video') rastro('quiz-video', { etapa, video: atual.video + 1 })
-    if (atual?.tipo === 'aprovado') { rastro('quiz-aprovado', { etapa }); pixel('QuizAprovado', undefined, true) }
+    if (atual?.tipo === 'aprovado') { rastro('quiz-aprovado', { etapa }); pixelComServidor('QuizAprovado') }
   }, [etapa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // a análise conta até 67%
@@ -258,7 +258,7 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
   const marcoDoVideo = (video: number, pct: number, mudo: boolean) => {
     rastro('quiz-video-progresso', { etapa, video, pct, ...(mudo ? { mudo: true } : {}) })
     pixel('AssistiuVSL', { video, percentual: pct, mudo }, true)
-    if (!mudo && pct === 75) pixel(`AssistiuVSL${video}_75`, undefined, true)
+    if (!mudo && pct === 75) pixelComServidor(`AssistiuVSL${video}_75`)
     // 17/11/2026: o pixel do Naor bloqueia eventos próprios "não verificados" (QuizResposta, QuizComecou...
     // foram descartados pelo próprio fbevents). O vídeo vai também como evento padrão, que nunca é bloqueado:
     // ViewContent "vsl-<vídeo>-<%>", para públicos e conversões personalizadas no Meta.
@@ -266,7 +266,7 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
   }
   const comecar = () => {
     rastro('quiz-comecou')
-    pixel('QuizComecou', undefined, true)
+    pixelComServidor('QuizComecou')
     irPara(1)
   }
   const responder = (opcao: string) => {
@@ -282,7 +282,7 @@ export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pag
   const whatsapp = linkDoWhatsapp(pagina, codigo)
   const concluir = () => {
     rastro('quiz-concluiu', { respostas: respostas.current, ...(whatsapp ? { destino: 'whatsapp', codigo } : {}) })
-    pixel('QuizConcluido', undefined, true)
+    pixelComServidor('QuizConcluido')
     // o WhatsApp abre pelo próprio link (toque de verdade: celular e navegador do Instagram abrem o app)
     // o Contact vai também pelo servidor (bloqueador e iPhone perdem o do navegador); é o evento de otimizar
     if (whatsapp) pixelComServidor('Contact', { canal: 'whatsapp' })
