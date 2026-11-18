@@ -60,7 +60,7 @@ function useContador(alvo: number, ms = 900) {
   return v
 }
 
-export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, receber, cobrar, onVer, onFicha, simulacao }: {
+export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, receber, cobrar, onVer, onFicha, simulacao, planilha }: {
   painel: Painel; linhas: Linha[]; cotacao: number; nomeMes: string
   /** o "A receber" do mês (mesma conta do cartão de baixo) */
   receber: number; cobrar: number
@@ -69,6 +69,8 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
   onFicha?: (userId: string) => void
   /** modo simulado ligado (só admin): os termômetros que regulam a base simulada */
   simulacao?: { ajuste: AjusteSimulado; mudar: (a: AjusteSimulado) => void }
+  /** Baixar planilha Excel (18/11/2026); estado = 'Montando…' ou a mensagem de erro */
+  planilha?: { baixar: () => void; estado: string | null }
 }) {
   const palco = useRef<HTMLElement>(null)
   const adminOculto = useMenuAdminOculto()
@@ -145,6 +147,9 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
         <h2>O resultado dos clientes GlobalFly</h2>
       </div>
       <div className="cpo-controles">
+        {planilha && <button type="button" className="cpo-planilha" onClick={planilha.baixar} disabled={!!planilha.estado?.endsWith('…')} title="Baixar a planilha Excel do mês">
+          <svg viewBox="0 0 24 24" aria-hidden><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="m9.5 12.5 5 5M14.5 12.5l-5 5" /></svg>
+          {planilha.estado?.endsWith('…') ? 'Montando…' : 'Baixar planilha'}</button>}
         {mostrarAjuste && <button type="button" className={`cpo-sim-botao ${ajusteAberto ? 'on' : ''}`} aria-pressed={ajusteAberto} aria-expanded={ajusteAberto}
           onClick={() => setAjusteAberto((a) => !a)} title="Regular os números da simulação">
           <svg viewBox="0 0 24 24" aria-hidden><path d="M9 3h6M10 3v5.5L4.8 18a2 2 0 0 0 1.8 3h10.8a2 2 0 0 0 1.8-3L14 8.5V3" /><path d="M7.5 14h9" /></svg>
@@ -161,6 +166,7 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
           {cheia ? 'Sair da tela cheia' : 'Tela cheia'}</button>
       </div>
     </header>
+    {planilha?.estado && !planilha.estado.endsWith('…') && <p className="cpo-aviso" role="alert">{planilha.estado}</p>}
 
     {mostrarAjuste && ajusteAberto && <AjusteDoPalcoSimulado ajuste={simulacao!.ajuste} mudar={simulacao!.mudar} />}
 

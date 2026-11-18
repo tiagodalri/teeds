@@ -2,14 +2,15 @@ import { useEffect, useState } from 'react'
 import { AJUSTE_PADRAO, LIMITES, contagem, corrigir, type AjusteSimulado } from '../../core/teeds/compartilhamentoSimulado'
 
 /**
- * Os termômetros do Compartilhamento simulado (16/11/2026): quatro réguas que o admin arrasta (ou digita) e a
+ * Os termômetros do Compartilhamento simulado (16/11/2026; desde 18/11 oito: clientes, depósitos, negativos, lucro
+ * do mês e planos): réguas que o admin arrasta (ou digita) e a
  * tela inteira acompanha na hora. Fica dentro do palco, logo abaixo do título; some com o olhinho dos itens de
  * admin. Prefixo cpo-sim-.
  */
 
 const PASSOS = 1000
 type Regua = {
-  chave: 'clientes' | 'noLucro' | 'lucro' | 'prejuizo'
+  chave: 'clientes' | 'depMin' | 'depMax' | 'negativos' | 'lucroMin' | 'lucroMax' | 'gold' | 'black'
   rotulo: string
   /** posição da régua (0 a PASSOS) → valor, e o contrário */
   valor: (p: number) => number
@@ -33,30 +34,46 @@ function log(min: number, max: number, arred: (v: number) => number, zero = fals
     posicao: (v: number) => (zero && v <= 0 ? 0 : Math.round((zero ? 1 : 0) + Math.log(Math.max(a, v) / a) / Math.log(max / a) * (zero ? PASSOS - 1 : PASSOS))),
   }
 }
-const dinheiro = (v: number) => v < 1000 ? Math.round(v / 5) * 5 : v < 10_000 ? Math.round(v / 50) * 50 : v < 100_000 ? Math.round(v / 100) * 100 : Math.round(v / 500) * 500
 const usd = (v: number) => `US$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 })}`
 
+const pct = (v: number) => `${(Math.round(v * 1000) / 10).toLocaleString('pt-BR')}%`
+const lerPct = (t: string) => numero(t) / 100
+const editarPct = (v: number) => String(Math.round(v * 1000) / 10).replace('.', ',')
+const linear = (min: number, max: number, arred: (v: number) => number) => ({
+  valor: (p: number) => arred(min + (max - min) * p / PASSOS),
+  posicao: (v: number) => Math.round((v - min) / (max - min) * PASSOS),
+})
+const deposito = (v: number) => v < 1000 ? Math.round(v / 50) * 50 : v < 10_000 ? Math.round(v / 100) * 100 : Math.round(v / 500) * 500
+
+// 18/11/2026: a simulação parte de cada cliente (depósito, % do mês, negativos e plano)
 const REGUAS: Regua[] = [
   { chave: 'clientes', rotulo: 'Clientes', ...log(LIMITES.clientes[0], LIMITES.clientes[1], (v) => v < 100 ? Math.round(v) : v < 1000 ? Math.round(v / 5) * 5 : Math.round(v / 10) * 10),
     mostrar: (v) => v.toLocaleString('pt-BR'), ler: numero, editar: (v) => String(v) },
-  { chave: 'noLucro', rotulo: 'No lucro',
-    valor: (p) => Math.round((LIMITES.noLucro[0] + (LIMITES.noLucro[1] - LIMITES.noLucro[0]) * p / PASSOS) * 100) / 100,
-    posicao: (v) => Math.round((v - LIMITES.noLucro[0]) / (LIMITES.noLucro[1] - LIMITES.noLucro[0]) * PASSOS),
-    mostrar: (v) => `${Math.round(v * 100)}%`, ler: (t) => numero(t) / 100, editar: (v) => String(Math.round(v * 1000) / 10).replace('.', ',') },
-  { chave: 'lucro', rotulo: 'Lucro somado', ...log(LIMITES.lucro[0], LIMITES.lucro[1], dinheiro),
-    mostrar: usd, ler: numero, editar: (v) => v.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) },
-  { chave: 'prejuizo', rotulo: 'Prejuízo somado', ...log(10, LIMITES.prejuizo[1], dinheiro, true),
-    mostrar: usd, ler: numero, editar: (v) => v.toLocaleString('pt-BR', { maximumFractionDigits: 2 }) },
+  { chave: 'depMin', rotulo: 'Menor depósito', ...log(LIMITES.dep[0], LIMITES.dep[1], deposito),
+    mostrar: usd, ler: numero, editar: (v) => v.toLocaleString('pt-BR') },
+  { chave: 'depMax', rotulo: 'Maior depósito', ...log(LIMITES.dep[0], LIMITES.dep[1], deposito),
+    mostrar: usd, ler: numero, editar: (v) => v.toLocaleString('pt-BR') },
+  { chave: 'negativos', rotulo: 'No negativo', ...linear(0, 200, Math.round),
+    mostrar: (v) => `${v.toLocaleString('pt-BR')} ${v === 1 ? 'cliente' : 'clientes'}`, ler: numero, editar: (v) => String(v) },
+  { chave: 'lucroMin', rotulo: 'Menor lucro do mês', ...linear(LIMITES.lucro[0], LIMITES.lucro[1], (v) => Math.round(v * 100) / 100),
+    mostrar: (v) => `${pct(v)} do capital`, ler: lerPct, editar: editarPct },
+  { chave: 'lucroMax', rotulo: 'Maior lucro do mês', ...linear(LIMITES.lucro[0], LIMITES.lucro[1], (v) => Math.round(v * 100) / 100),
+    mostrar: (v) => `${pct(v)} do capital`, ler: lerPct, editar: editarPct },
+  { chave: 'gold', rotulo: 'No Gold (paga 10%)', ...linear(0, 1, (v) => Math.round(v * 100) / 100),
+    mostrar: pct, ler: lerPct, editar: editarPct },
+  { chave: 'black', rotulo: 'No Black (paga 5%)', ...linear(0, 1, (v) => Math.round(v * 100) / 100),
+    mostrar: pct, ler: lerPct, editar: editarPct },
 ]
 
 export function AjusteDoPalcoSimulado({ ajuste, mudar }: { ajuste: AjusteSimulado; mudar: (a: AjusteSimulado) => void }) {
-  const { ganham, perdem, zerados } = contagem(ajuste)
+  const c = contagem(ajuste)
+  const n = (v: number) => v.toLocaleString('pt-BR')
   return <div className="cpo-sim" role="group" aria-label="Ajuste da simulação">
     <div className="cpo-sim-reguas">
       {REGUAS.map((r) => <ReguaDoAjuste key={r.chave} regua={r} valor={ajuste[r.chave]} mudar={(v) => mudar(corrigir({ ...ajuste, [r.chave]: v }))} />)}
     </div>
     <div className="cpo-sim-pe">
-      <p><b>{ganham.toLocaleString('pt-BR')}</b> no lucro · <b>{perdem.toLocaleString('pt-BR')}</b> no prejuízo{zerados ? <> · <b>{zerados.toLocaleString('pt-BR')}</b> no zero</> : null}</p>
+      <p><b>{n(c.ganham)}</b> no lucro · <b>{n(c.perdem)}</b> no negativo · <b>{n(c.gold)}</b> Gold · <b>{n(c.black)}</b> Black · <b>{n(c.prestige)}</b> Prestige</p>
       <div>
         <button type="button" onClick={() => mudar({ ...ajuste, semente: (ajuste.semente + 1) >>> 0 })}>
           <svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="4" width="16" height="16" rx="3" /><circle cx="9" cy="9" r="1.2" /><circle cx="15" cy="15" r="1.2" /><circle cx="15" cy="9" r="1.2" /><circle cx="9" cy="15" r="1.2" /></svg>

@@ -173,3 +173,13 @@ button.cdr-kpi:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(
   .cdr-janela { width: 100%; max-height: 92vh; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; }
   .cdr-janela footer > * { flex: 1 1 auto; justify-content: center; }
 }
+
+/* Real | Simulado (18/11/2026): a mesma chave do modo simulado geral, à mão nesta tela */
+.cdr-modo { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); }
+.cdr-modo button { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border: 0; border-radius: 999px; color: var(--muted); background: none; font: inherit; font-size: 12px; font-weight: 750; cursor: pointer; }
+.cdr-modo button:hover { color: var(--text); }
+.cdr-modo button.on { color: #fff; background: var(--primary); }
+.cdr-modo button.on.sim { color: #2A1F10; background: #FB923C; }
+.cdr-modo button i { width: 8px; height: 8px; border-radius: 50%; background: #FB923C; }
+.cdr-modo button.on.sim i { background: #2A1F10; }
+@media (max-width: 760px) { .cdr-modo { align-self: stretch; } .cdr-modo button { flex: 1; justify-content: center; height: 38px; } }

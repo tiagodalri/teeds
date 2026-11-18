@@ -5,7 +5,7 @@ import { buscarCotacoes, cotacoesGuardadas } from '../ferramentas/cambio'
 import './compartilhamento.css'
 import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 import { PalcoDoCompartilhamento } from './PalcoDoCompartilhamento'
-import { useModoSimulado } from '../../core/teeds/modoSimulado'
+import { desligarModoSimulado, ligarModoSimulado, useModoSimulado, usePodeSimular } from '../../core/teeds/modoSimulado'
 import { guardarAjusteSimulado, lerAjusteSimulado, painelSimulado } from '../../core/teeds/compartilhamentoSimulado'
 
 /**
@@ -41,6 +41,9 @@ export interface Linha {
   cancelada: Fatura | null
   /** tem fatura viva no mês mas saiu da base de hoje (virou equipe ou trocou de parceiro) */
   fora_da_base?: boolean
+  /** para a planilha (18/11): 1º depósito (US$), quando entrou na plataforma e a corretora. Na base real vêm
+   *  à parte (movimentações da Deriv e o cadastro), na simulada já vêm preenchidos */
+  deposito_inicial?: number | null; entrou_em?: string | null; corretora?: string | null
 }
 export interface Painel {
   agora: string; hoje: string; mes: string; mes_atual: string; fechado: boolean; vencimento: string
@@ -88,7 +91,6 @@ const NOME_PLANO: Record<string, string> = { gold: 'Gold', black: 'Black', prest
 const nomePlano = (s: string) => NOME_PLANO[s] ?? (s ? s[0].toUpperCase() + s.slice(1) : '—')
 const planoDa = (l: Linha) => l.fatura?.subplano ?? l.subplano
 const numeroFatura = (n: number) => String(n).padStart(6, '0')
-const seloParceiro = (l: { parceiro: string | null; parceiro_nome: string | null }) => l.parceiro ? `${(l.parceiro_nome ?? l.parceiro).split(' ')[0]} /${l.parceiro}` : 'Direto'
 const lerNumero = (t: string) => { const v = Number(t.replace(/\s/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')); return Number.isFinite(v) ? v : NaN }
 
 function situacaoDa(l: Linha, p: Painel, cotacao: number, minimo: number): Situacao {
@@ -153,6 +155,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
   // modo simulado (16/11/2026, só admin): a tela inteira mostra a base simulada regulada nos termômetros do palco;
   // o painel real continua sendo lido por baixo (datas, percentuais e parceiros vêm dele), mas nada é gravado
   const simulado = useModoSimulado()
+  const podeSimular = usePodeSimular()
   const [ajuste, setAjuste] = useState(lerAjusteSimulado)
   useEffect(() => { guardarAjusteSimulado(ajuste) }, [ajuste])
   const cotacaoSim = dolar?.valor ?? 0
@@ -217,18 +220,26 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
   const quandoFecha = mesQueVem(mes)
   const nomeMes = mesCurto(mes)
 
-  const baixarPlanilha = () => {
-    if (!painel) return
-    const cab = ['Cliente', 'E-mail', 'Parceiro', 'Plano', 'Percentual', 'Operações', 'Resultado do mês (US$)', 'Compartilhamento (US$)', 'Em reais (R$)', 'Cotação', 'Situação', 'Fatura', 'Vencimento']
-    const linhasCsv = lista.map((l) => [l.nome ?? '', l.email ?? '', seloParceiro(l), nomePlano(l.subplano), pct(l.percentual), l.operacoes, l.resultado.toFixed(2).replace('.', ','),
-      l.valor_usd.toFixed(2).replace('.', ','), emReais(l).toFixed(2).replace('.', ','), (l.fatura?.cotacao ?? cotacao).toFixed(4).replace('.', ','), ROTULO[sit(l)],
-      l.fatura ? numeroFatura(l.fatura.numero) : '', l.fatura ? dataCurta(l.fatura.vencimento) : ''])
-    const csv = [cab, ...linhasCsv].map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\n')
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }))
-    a.download = `compartilhamento-${simulado ? 'simulado-' : ''}${mes.slice(0, 7)}.csv`
-    a.click()
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000)
+  /** Planilha Excel no padrão GF (18/11/2026): base real (uso interno) ou a simulada (para explicar ao aluno novo). */
+  const [baixando, setBaixando] = useState<string | null>(null)
+  const baixarPlanilha = async () => {
+    if (!painel || baixando) return
+    setBaixando('Montando a planilha…')
+    try {
+      let base = linhas
+      if (!simulado && linhas.length) base = await comDepositoEEntrada(sessao, marca, linhas)
+      const recorte = parceiro ? (linhas.find((l) => l.parceiro === parceiro)?.parceiro_nome ?? `/${parceiro}`) : 'Todos os parceiros'
+      const { baixarPlanilhaDoCompartilhamento } = await import('./planilhaCompartilhamento')
+      await baixarPlanilhaDoCompartilhamento({
+        simulado: !!simulado, mesNome: nomeDoMes(mes), fechado: painel.fechado, cotacao,
+        cotacaoTexto: dolar ? `Comercial ${dolar.fonte === 'ao vivo' ? 'ao vivo' : 'do dia'} · ${dataHora(new Date(dolar.quando).toISOString())}` : 'Cotação informada',
+        percentuais: painel.percentuais, linhas: base, recorte,
+      })
+      setBaixando(null)
+    } catch (e) {
+      setBaixando(`Não deu para montar a planilha: ${(e as Error).message}`)
+      window.setTimeout(() => setBaixando(null), 6000)
+    }
   }
 
   const aoMudarFatura = (f: Fatura) => {
@@ -246,6 +257,10 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
         {meses.map((m) => <button key={m} role="tab" aria-selected={m === mes} className={m === mes ? 'on' : ''} onClick={() => setMes(m)}>
           {mesCurto(m)}{m.slice(0, 4) !== mesDeHoje().slice(0, 4) ? ` ${m.slice(2, 4)}` : ''}{m === mesDeHoje() && <i>Ao vivo</i>}</button>)}
       </div>
+      {podeSimular && <div className="cdr-modo" role="group" aria-label="Base do painel">
+        <button type="button" className={!simulado ? 'on' : ''} aria-pressed={!simulado} onClick={() => desligarModoSimulado()}>Real</button>
+        <button type="button" className={simulado ? 'on sim' : ''} aria-pressed={!!simulado} onClick={() => ligarModoSimulado()}><i aria-hidden />Simulado</button>
+      </div>}
       <span className="cdr-dolar">
         <b>Dólar agora {cotacao ? reais(cotacao) : '—'}</b>
         <small>{dolar ? `Cotação comercial ${dolar.fonte === 'ao vivo' ? 'ao vivo' : 'do dia'} · ${dataHora(new Date(dolar.quando).toISOString())}` : 'Buscando a cotação…'}</small>
@@ -262,7 +277,8 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
     </div>}
 
     {painel && <PalcoDoCompartilhamento painel={painel} linhas={linhas} cotacao={cotacao} nomeMes={nomeMes} receber={numeros.receber} cobrar={numeros.cobrar}
-      onVer={(l) => setAberta(l)} onFicha={abrirFicha} simulacao={simulado ? { ajuste, mudar: setAjuste } : undefined} />}
+      onVer={(l) => setAberta(l)} onFicha={abrirFicha} simulacao={simulado ? { ajuste, mudar: setAjuste } : undefined}
+      planilha={{ baixar: () => void baixarPlanilha(), estado: baixando }} />}
 
     <div className="cdr-kpis">
       <article className="cdr-kpi destaque">
@@ -312,7 +328,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
 
     <section className="admin-card full cdr-card">
       <header><div><span className="rot">{nomeDoMes(mes)} · conta real, I.A. e manual</span><h3>O resultado de cada cliente e o que ele paga</h3></div>
-        <span className="cdr-acoes-tab"><small>{inteiro(lista.length)} {lista.length === 1 ? 'cliente' : 'clientes'}</small>{lista.length > 0 && <button type="button" onClick={baixarPlanilha}>Baixar planilha</button>}</span></header>
+        <span className="cdr-acoes-tab"><small>{inteiro(lista.length)} {lista.length === 1 ? 'cliente' : 'clientes'}</small>{linhas.length > 0 && <button type="button" onClick={() => void baixarPlanilha()} disabled={!!baixando && baixando.endsWith('…')}>{baixando?.endsWith('…') ? 'Montando…' : 'Baixar planilha Excel'}</button>}</span></header>
       <div className="cdr-filtros">
         <label className="cdr-busca"><svg viewBox="0 0 24 24" aria-hidden><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
           <input placeholder="Buscar cliente: nome, e-mail ou nº da fatura" value={busca} onChange={(e) => setBusca(e.target.value)} /></label>
@@ -494,4 +510,37 @@ function JanelaDaFatura({ sessao, linha, painel, cotacao, podeMexer, situacao, o
       </footer>
     </div>
   </div>
+}
+
+/**
+ * Para a planilha da base real: o 1º depósito de cada cliente (movimentações da Deriv, conta real) e quando ele
+ * entrou na plataforma (cadastro). Lidos na hora de baixar, para a tela não pesar.
+ */
+async function comDepositoEEntrada(sessao: SessaoTeeds, marca: string, linhas: Linha[]): Promise<Linha[]> {
+  const ids = linhas.map((l) => l.user_id)
+  const cab = { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` }
+  const hoje = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
+  const [movs, cads] = await Promise.all([
+    rpc<Array<{ user_id: string; tipo: string; valor: number; moeda: string; ocorrida_em: string }>>(sessao, 'teeds_movimentacoes_periodo',
+      { p_marca: marca, p_inicio: '2025-01-01', p_fim: hoje, p_limite: 20000, p_fuso: 'America/Sao_Paulo' }),
+    (async () => {
+      const fora: Array<{ user_id: string; criado_em: string | null }> = []
+      for (let i = 0; i < ids.length; i += 120) {
+        const r = await fetch(`${SUPABASE.url}/rest/v1/clientes?select=user_id,criado_em&marca=eq.${encodeURIComponent(marca)}&user_id=in.(${ids.slice(i, i + 120).join(',')})`, { headers: cab })
+        if (r.ok) fora.push(...await r.json() as typeof fora)
+      }
+      return fora
+    })(),
+  ])
+  const primeiro = new Map<string, { valor: number; em: string }>()
+  for (const m of movs) {
+    if (m.tipo !== 'deposit' || !(m.valor > 0)) continue
+    const j = primeiro.get(m.user_id)
+    if (!j || m.ocorrida_em < j.em) primeiro.set(m.user_id, { valor: Number(m.valor), em: m.ocorrida_em })
+  }
+  const entrou = new Map(cads.map((c) => [c.user_id, c.criado_em]))
+  return linhas.map((l) => ({
+    ...l, deposito_inicial: primeiro.get(l.user_id)?.valor ?? null,
+    entrou_em: entrou.get(l.user_id) ?? primeiro.get(l.user_id)?.em ?? null, corretora: 'Deriv',
+  }))
 }

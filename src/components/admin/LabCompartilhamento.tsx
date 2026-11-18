@@ -110,6 +110,14 @@ export default function LabCompartilhamento() {
     if (url.includes('teeds_compartilhamento')) return json(painel(corpo, vazio, geral))
     if (url.includes('teeds_gerar_faturas_compartilhamento')) return json(gerar(corpo, vazio))
     if (url.includes('teeds_fatura_compartilhamento_acao')) return json(acao(corpo))
+    // para a planilha da base real: 1º depósito e data de cadastro de exemplo
+    if (url.includes('teeds_movimentacoes_periodo')) return json(Array.from({ length: 400 }, (_, k) => ({
+      user_id: `u${k}`, tipo: 'deposit', valor: [200, 350, 500, 1000, 1500, 2500, 5000, 12000][k % 8], moeda: 'USD',
+      ocorrida_em: new Date(Date.now() - (10 + (k * 7) % 90) * 86_400_000).toISOString() })))
+    if (url.includes('/rest/v1/clientes?')) {
+      const ids = decodeURIComponent(url).match(/in\.\(([^)]*)\)/)?.[1].split(',') ?? []
+      return json(ids.map((id, k) => ({ user_id: id, criado_em: new Date(Date.now() - (12 + (k * 11) % 120) * 86_400_000).toISOString() })))
+    }
     return original(u, i)
   }) as typeof fetch
   return (

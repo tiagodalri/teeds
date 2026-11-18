@@ -232,3 +232,9 @@
   .cpo-sim-pe div, .cpo-sim-pe button { flex: 1 1 0; justify-content: center; }
   .cpo-sim-pe button { min-width: 0; padding: 0 8px; white-space: nowrap; font-size: 12.5px; }
 }
+
+/* Baixar planilha (18/11/2026) */
+.cpo-controles button.cpo-planilha { color: #051528; border-color: var(--cpo-ouro); background: linear-gradient(135deg, #F3D894, var(--cpo-ouro)); }
+.cpo-controles button.cpo-planilha:hover { border-color: #F3D894; background: linear-gradient(135deg, #FBEFC9, #E2BF74); }
+.cpo-controles button.cpo-planilha:disabled { opacity: .7; cursor: progress; }
+.cpo-aviso { margin: -6px 0 0; padding: 10px 12px; border-radius: 10px; color: #FFD5D8; background: rgba(255, 77, 88, .14); font-size: 12.5px; }
