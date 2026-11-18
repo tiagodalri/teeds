@@ -122,7 +122,7 @@ button, input, select, textarea { font-family: inherit; }
   .entrada .entrada-aceites { gap: 14px; margin-top: 2px; padding: 14px; }
   .entrada .entrada-termos { font-size: 14px; }
   .entrada .entrada-btn { min-height: 52px; margin-top: 4px; padding: 12px 18px; font-size: 16px; border-radius: 14px; }
-  .entrada .entrada-biometria { margin-top: 0; }
+  .entrada .entrada-biometria, .entrada .entrada-google { margin-top: 0; }
   .entrada .entrada-ou { margin: 2px 0; }
   .entrada .entrada-cadastro { margin-top: 0; font-size: 14px; }
   .entrada .entrada-corretora { margin-top: 28px; padding: 16px; }

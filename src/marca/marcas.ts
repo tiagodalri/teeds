@@ -190,6 +190,8 @@ export interface Marca {
   stories?: boolean
   /** Entrar com Face ID / digital (chaves de acesso) nesta plataforma (27/10/2026). */
   biometria?: boolean
+  /** Entrar com Google (17/11/2026): o ID do cliente OAuth desta plataforma (público). */
+  googleClientId?: string
   /** O compartilhamento de receita sobre o lucro do mês (0.10 = 10%); aparece nos Relatórios. */
   compartilhamento?: number
   /**
@@ -467,6 +469,7 @@ export const MARCAS: Record<string, Marca> = {
     notificacoes: true,
     stories: true,
     biometria: true,
+    googleClientId: '102239518654-4n3jnce409u3mn5p2l2cvsv5vh3h8pnt.apps.googleusercontent.com',
     compartilhamento: 0.10,
     menu: {
       nomes: { robos: 'I.A.' },

@@ -8,6 +8,7 @@ import { autenticacaoConfigurada } from '../core/teeds/config'
 import { inscreverFilaEspera, type DadosFilaEspera } from '../core/teeds/leads'
 import { eventoDoPixel, iniciarPixelDoParceiro } from '../core/teeds/pixelDoParceiro'
 import { entrarComBiometria as fazerLoginComBiometria } from '../core/teeds/biometria'
+import { entrarComGoogle as fazerLoginComGoogle } from '../core/teeds/google'
 import { MARCA } from '../marca'
 import { ACESSO_RECUSADO, vigiarAcessoRecusado } from '../core/teeds/acessoRecusado'
 
@@ -226,6 +227,21 @@ export function useTeedsAuth() {
     }
   }, [agendarRenovacao])
 
+  // Google (17/11/2026): a mesma sessão do login com senha, para quem já tem conta nesta marca
+  const entrarComGoogle = useCallback(async () => {
+    setOcupado(true); setErro(null)
+    try {
+      const s = await fazerLoginComGoogle()
+      setSessao(s); setStatus('logado'); agendarRenovacao(s)
+      return true
+    } catch (e) {
+      setErro((e as Error).message)
+      return false
+    } finally {
+      setOcupado(false)
+    }
+  }, [agendarRenovacao])
+
   const cadastrar = useCallback(async (dados: DadosFilaEspera) => {
     setOcupado(true); setErro(null)
     try {
@@ -296,6 +312,6 @@ export function useTeedsAuth() {
   return {
     atualizarUsuario,
     status, sessao, usuario: sessao?.usuario ?? null, erro, setErro, recado, setRecado,
-    ocupado, entrar, entrarComBiometria, cadastrar, esqueci, sair, redefinindo, precisaTrocarSenha, definirNovaSenha,
+    ocupado, entrar, entrarComBiometria, entrarComGoogle, cadastrar, esqueci, sair, redefinindo, precisaTrocarSenha, definirNovaSenha,
   }
 }

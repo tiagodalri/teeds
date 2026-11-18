@@ -6308,6 +6308,15 @@ body.aula-tocando .cine-ficha:hover, body.aula-tocando .cine-trilha:hover { opac
 :root .entrada .entrada-form .entrada-btn.entrada-biometria:hover:not(:disabled) { background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 10%, transparent); }
 .entrada-biometria svg { width: 20px; height: 20px; fill: none; stroke: var(--gf-ouro, var(--primary)); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
+/* Entrar com Google (17/11/2026): contorno discreto, o "G" nas cores do Google (regra de uso da marca deles). */
+:root .entrada .entrada-form .entrada-btn.entrada-google, :root .entrada-form .entrada-btn.entrada-google.entrada-google {
+  background: transparent; color: var(--text); box-shadow: none;
+  border: 1.5px solid color-mix(in srgb, var(--text) 28%, transparent);
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+}
+:root .entrada .entrada-form .entrada-btn.entrada-google:hover:not(:disabled) { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.entrada-google svg.entrada-google-g { width: 20px; height: 20px; flex: none; }
+
 /* Login (27/10/2026): "Esqueci a senha" logo abaixo da senha, as duas caixas
    num grupo só e o cadastro como link, sob o botão principal. */
 .entrada-esqueci { display: flex; justify-content: flex-end; margin: -6px 0 -6px; }

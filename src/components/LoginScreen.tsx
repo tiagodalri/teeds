@@ -14,6 +14,7 @@ import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
 import { marcarEmbarque } from '../core/decolagem'
 import { marcarAceiteNoLogin } from '../core/teeds/termos'
 import { biometriaDisponivel, biometriaLigadaAqui, rotuloDaBiometria } from '../core/teeds/biometria'
+import { prepararGoogle } from '../core/teeds/google'
 import './entrada/login.css'
 
 // 11/11/2026: na GlobalFly o cadastro abre com a escolha do plano (peça própria, só baixa nessa marca)
@@ -32,6 +33,8 @@ interface Props {
   onEsqueci: (email: string) => Promise<boolean>
   /** Face ID / digital (27/10/2026): aparece quando este aparelho já foi ligado no perfil. */
   onEntrarComBiometria?: () => Promise<boolean>
+  /** Entrar com Google (17/11/2026): só para quem já tem conta nesta marca. */
+  onEntrarComGoogle?: () => Promise<boolean>
   /** Só no laboratório: força a versão da cena (nuvens ou rastro). */
   cena?: VarianteDaCena
 }
@@ -78,7 +81,7 @@ const CAMPOS_DO_MODO: Record<Modo, string[]> = {
 const ehSenha = (chave: string) => chave === 'senha' || chave === 'repetir'
 const nomeCompleto = (v: string) => v.trim().split(/\s+/).filter((p) => p.length >= 2).length >= 2
 
-export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci, onEntrarComBiometria, cena = MARCA.cenaLogin }: Props) {
+export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, onEsqueci, onEntrarComBiometria, onEntrarComGoogle, cena = MARCA.cenaLogin }: Props) {
   // o botão do Face ID só aparece no aparelho que já ligou a biometria no perfil
   const [comBiometria, setComBiometria] = useState(false)
   useEffect(() => {
@@ -87,6 +90,8 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
     void biometriaDisponivel().then((ok) => { if (vivo) setComBiometria(ok) })
     return () => { vivo = false }
   }, [onEntrarComBiometria])
+  // o script do Google baixa já ao abrir a tela: no toque, a janelinha abre na hora (sem bloqueio de pop-up)
+  useEffect(() => { if (onEntrarComGoogle) prepararGoogle().catch(() => { /* o toque tenta de novo */ }) }, [onEntrarComGoogle])
   // Link de campanha de cadastro ou /cadastre-se: abre direto no formulário.
   const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : 'entrar')
   // o quiz só vale na /trafego de parceiro que já tem os vídeos (quizDoTrafego.ts); sem eles, direto aos planos
@@ -308,7 +313,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
               Ao continuar, você concorda com os <a href={`${import.meta.env.BASE_URL}termos/`} target="_blank" rel="noopener">Termos de Uso</a> e a <a href={`${import.meta.env.BASE_URL}termos/#politica-de-privacidade`} target="_blank" rel="noopener">Política de Privacidade</a>.
             </p>
           )}
-          {modo === 'entrar' && comBiometria && <div className="entrada-ou" aria-hidden="true"><span>ou</span></div>}
+          {modo === 'entrar' && (comBiometria || onEntrarComGoogle) && <div className="entrada-ou" aria-hidden="true"><span>ou</span></div>}
           {modo === 'entrar' && comBiometria && (
             <button className="entrada-btn entrada-biometria" type="button" disabled={ocupado}
               onClick={async (e) => {
@@ -319,6 +324,23 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
               }}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 012-2h2M16 4h2a2 2 0 012 2v2M20 16v2a2 2 0 01-2 2h-2M8 20H6a2 2 0 01-2-2v-2M9 9.5v1M15 9.5v1M12 9v4h-1M9.5 15.5c1.5 1.2 3.5 1.2 5 0" /></svg>
               Entrar com {rotuloDaBiometria()}
+            </button>
+          )}
+          {modo === 'entrar' && onEntrarComGoogle && (
+            <button className="entrada-btn entrada-google" type="button" disabled={ocupado}
+              onClick={async (e) => {
+                if (faltaAceite) { mostrarOQueFalta(true); return }
+                marcarEmbarque(e.currentTarget)
+                if (pedeTermos) marcarAceiteNoLogin()
+                await onEntrarComGoogle()
+              }}>
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="entrada-google-g">
+                <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5a5.6 5.6 0 01-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.8z" />
+                <path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0012 24z" />
+                <path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 010-4.6V6.6h-4a12 12 0 000 10.8l4-3.1z" />
+                <path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 001.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z" />
+              </svg>
+              Entrar com Google
             </button>
           )}
           {/* 27/10/2026 (print do Tiago, "tudo socado"): um botão principal só; cadastro vira link, como nos grandes apps */}
