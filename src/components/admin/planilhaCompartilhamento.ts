@@ -170,6 +170,131 @@ export async function baixarPlanilhaDoCompartilhamento(d: DadosDaPlanilha): Prom
   tot.getCell(7).numFmt = USD; tot.getCell(10).numFmt = USD; tot.getCell(12).numFmt = BRL; tot.getCell(14).numFmt = USD; tot.getCell(15).numFmt = BRL
   if (n) wc.autoFilter = { from: { row: iniC, column: 1 }, to: { row: fimC, column: COLS.length } }
 
+  /* ------------------------------------------------ rodapé: fechamento do mês (18/11/2026, Tiago: "um rodapé com
+     todas as somatórias bonitinho... quantidade de prejuízo, de lucro, valor em dólar, a conversão para reais e os
+     10% que a gente tem para receber... alto padrão"). Cartões em 4 blocos de colunas + a conta por plano alinhada
+     às colunas da tabela. Tudo em fórmula, lendo as linhas de cima e a cotação do Resumo. */
+  {
+    const faixa = (col: string) => `${col}${iniC + 1}:${col}${Math.max(iniC + 1, fimC)}`
+    const somaPaga = linhas.reduce((s, l) => s + (l.resultado > 0 ? l.resultado * perc(l) : 0), 0)
+    const lucroUsd = linhas.filter((l) => l.resultado > 0).reduce((s, l) => s + l.resultado, 0)
+    const perdaUsd = linhas.filter((l) => l.resultado < 0).reduce((s, l) => s + l.resultado, 0)
+    const borda = { style: 'thin' as const, color: { argb: 'FFD9C9A3' } }
+    let r0 = fimC + 3
+    // título da seção
+    wc.mergeCells(r0, 2, r0, COLS.length)
+    const tt = wc.getCell(r0, 2)
+    tt.value = `FECHAMENTO DO MÊS  ·  ${d.mesNome} · ${d.recorte}${d.simulado ? ' · simulação' : ''}`
+    tt.font = { bold: true, size: 13, color: { argb: OURO } }
+    tt.alignment = { vertical: 'middle', indent: 1 }
+    for (let c = 1; c <= COLS.length; c++) fundo(wc.getCell(r0, c), AZUL)
+    wc.getRow(r0).height = 30
+    // fio dourado embaixo do título
+    for (let c = 1; c <= COLS.length; c++) { fundo(wc.getCell(r0 + 1, c), OURO_ESCURO) }
+    wc.getRow(r0 + 1).height = 3
+    r0 += 3
+
+    // cartões: [coluna inicial, coluna final] — B:D, E:I, J:L, M:P
+    const BLOCOS: Array<[number, number]> = [[2, 4], [5, 9], [10, 12], [13, 16]]
+    type Cartao = { rot: string; valor: unknown; fmt: string; cor: string; sub?: unknown; subFmt?: string; destaque?: boolean }
+    const cartao = (linha: number, [a, b]: [number, number], k: Cartao) => {
+      wc.mergeCells(linha, a, linha, b); wc.mergeCells(linha + 1, a, linha + 1, b); wc.mergeCells(linha + 2, a, linha + 2, b)
+      const fundoCartao = k.destaque ? 'FF0A2340' : CREME
+      const r = wc.getCell(linha, a); r.value = k.rot.toUpperCase()
+      r.font = { bold: true, size: 9, color: { argb: k.destaque ? OURO : SUAVE } }
+      r.alignment = { vertical: 'bottom', horizontal: 'left', indent: 1 }
+      const v = wc.getCell(linha + 1, a); v.value = k.valor as never; v.numFmt = k.fmt
+      v.font = { bold: true, size: 18, color: { argb: k.destaque ? OURO : k.cor } }
+      v.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 }
+      const s = wc.getCell(linha + 2, a); s.value = (k.sub ?? '') as never; if (k.subFmt) s.numFmt = k.subFmt
+      s.font = { size: 10, italic: !k.subFmt, color: { argb: k.destaque ? 'FFF4EEDF' : SUAVE } }
+      s.alignment = { vertical: 'top', horizontal: 'left', indent: 1 }
+      for (let rr = linha; rr <= linha + 2; rr++) for (let c = a; c <= b; c++) {
+        const x = wc.getCell(rr, c); fundo(x, fundoCartao)
+        x.border = { top: rr === linha ? borda : undefined, bottom: rr === linha + 2 ? borda : undefined, left: c === a ? borda : undefined, right: c === b ? borda : undefined }
+      }
+      if (k.destaque) for (let c = a; c <= b; c++) wc.getCell(linha, c).border = { ...wc.getCell(linha, c).border, top: { style: 'medium', color: { argb: OURO } } }
+    }
+    const alturas = (linha: number) => { wc.getRow(linha).height = 18; wc.getRow(linha + 1).height = 30; wc.getRow(linha + 2).height = 18 }
+    const nLucro = linhas.filter((l) => l.resultado > 0).length, nNeg = linhas.filter((l) => l.resultado < 0).length
+
+    // 1ª fileira: quantos e quanto
+    alturas(r0)
+    cartao(r0, BLOCOS[0], { rot: 'Clientes no lucro', valor: { formula: `COUNTIF(${faixa('J')},">0")`, result: nLucro }, fmt: '0', cor: VERDE,
+      sub: `de ${n.toLocaleString('pt-BR')} que operaram no mês` })
+    cartao(r0, BLOCOS[1], { rot: 'Clientes no prejuízo', valor: { formula: `COUNTIF(${faixa('J')},"<0")`, result: nNeg }, fmt: '0', cor: VERMELHO,
+      sub: 'Não pagam nada e o mês zera' })
+    cartao(r0, BLOCOS[2], { rot: 'Lucro dos clientes (US$)', valor: { formula: `SUMIF(${faixa('J')},">0")`, result: lucroUsd }, fmt: USD, cor: VERDE,
+      sub: { formula: `SUMIF(${faixa('J')},"<0")`, result: perdaUsd }, subFmt: '"Prejuízo " "US$" #,##0.00;"Prejuízo " -"US$" #,##0.00' })
+    cartao(r0, BLOCOS[3], { rot: 'Lucro dos clientes em reais', valor: { formula: `${String.fromCharCode(64 + BLOCOS[2][0])}${r0 + 1}*${celCot}`, result: lucroUsd * d.cotacao }, fmt: BRL, cor: VERDE,
+      sub: { formula: celCot, result: d.cotacao }, subFmt: '"Cotação R$ "0.0000' })
+    // espaço entre as fileiras
+    wc.getRow(r0 + 3).height = 10
+    const r1 = r0 + 4
+    alturas(r1)
+    const pagaGold = linhas.filter((l) => plano(l) === 'gold' && l.resultado > 0).reduce((s, l) => s + l.resultado * perc(l), 0)
+    const pagaBlack = linhas.filter((l) => plano(l) === 'black' && l.resultado > 0).reduce((s, l) => s + l.resultado * perc(l), 0)
+    cartao(r1, BLOCOS[0], { rot: `Gold · ${Math.round((d.percentuais.gold ?? 0.1) * 100)}% do lucro`, fmt: USD, cor: OURO_ESCURO,
+      valor: { formula: `SUMIFS(${faixa('N')},${faixa('H')},"Gold")`, result: pagaGold },
+      sub: { formula: `${String.fromCharCode(64 + BLOCOS[0][0])}${r1 + 1}*${celCot}`, result: pagaGold * d.cotacao }, subFmt: '"Em reais R$ "#,##0.00' })
+    cartao(r1, BLOCOS[1], { rot: `Black · ${Math.round((d.percentuais.black ?? 0.05) * 100)}% do lucro`, fmt: USD, cor: 'FF111113',
+      valor: { formula: `SUMIFS(${faixa('N')},${faixa('H')},"Black")`, result: pagaBlack },
+      sub: { formula: `${String.fromCharCode(64 + BLOCOS[1][0])}${r1 + 1}*${celCot}`, result: pagaBlack * d.cotacao }, subFmt: '"Em reais R$ "#,##0.00' })
+    cartao(r1, BLOCOS[2], { rot: 'Compartilhamento (US$)', fmt: USD, cor: TEXTO,
+      valor: { formula: `SUM(${faixa('N')})`, result: somaPaga }, sub: 'Prestige é isento' })
+    cartao(r1, BLOCOS[3], { rot: d.fechado && !d.simulado ? 'A receber da equipe' : 'Total a receber', fmt: BRL, cor: OURO, destaque: true,
+      valor: { formula: `${String.fromCharCode(64 + BLOCOS[2][0])}${r1 + 1}*${celCot}`, result: somaPaga * d.cotacao },
+      sub: 'Gold + Black, convertido pela cotação' })
+
+    // conta por plano alinhada às colunas da tabela (Plano em H, US$ em J, R$ em L, % em M, paga em N e O)
+    const r2 = r1 + 4
+    const hp = wc.getRow(r2); hp.height = 24
+    const cabP: Array<[number, string]> = [[2, 'Conta por plano'], [8, 'Plano'], [9, 'No lucro'], [10, 'Lucro (US$)'], [12, 'Lucro em reais'], [13, 'Participação'], [14, 'Paga (US$)'], [15, 'Paga (R$)']]
+    for (let c = 2; c <= COLS.length; c++) { const x = hp.getCell(c); fundo(x, AZUL2); x.border = { bottom: { style: 'medium', color: { argb: OURO_ESCURO } } } }
+    for (const [c, t] of cabP) { const x = hp.getCell(c); x.value = t; x.font = { bold: true, size: 10, color: { argb: OURO } }; x.alignment = { vertical: 'middle', horizontal: c >= 9 ? 'right' : 'left', indent: c === 2 ? 1 : 0 } }
+    ;(['gold', 'black', 'prestige'] as const).forEach((p, k) => {
+      const r = r2 + 1 + k, nome = nomePlano(p), pc = d.percentuais[p] ?? 0
+      const lucroP = linhas.filter((l) => plano(l) === p && l.resultado > 0)
+      const sL = lucroP.reduce((s, l) => s + l.resultado, 0)
+      const row = wc.getRow(r); row.height = 22
+      row.getCell(2).value = k === 0 ? 'Quem lucrou, por plano' : ''
+      row.getCell(8).value = nome
+      row.getCell(9).value = { formula: `COUNTIFS(${faixa('H')},"${nome}",${faixa('J')},">0")`, result: lucroP.length }
+      row.getCell(10).value = { formula: `SUMIFS(${faixa('J')},${faixa('H')},"${nome}",${faixa('J')},">0")`, result: sL }
+      row.getCell(12).value = { formula: `J${r}*${celCot}`, result: sL * d.cotacao }
+      row.getCell(13).value = pc > 0 ? pc : 'Isento'
+      row.getCell(14).value = { formula: `SUMIFS(${faixa('N')},${faixa('H')},"${nome}")`, result: sL * pc }
+      row.getCell(15).value = { formula: `N${r}*${celCot}`, result: sL * pc * d.cotacao }
+      for (let c = 2; c <= COLS.length; c++) {
+        const x = row.getCell(c); if (k % 2 === 1) fundo(x, CREME)
+        x.border = { bottom: { style: 'hair', color: { argb: LINHA } } }
+        x.alignment = { vertical: 'middle', horizontal: c >= 9 ? 'right' : 'left', indent: c === 2 ? 1 : 0 }
+        x.font = { size: 10.5, color: { argb: TEXTO } }
+      }
+      row.getCell(2).font = { size: 10, italic: true, color: { argb: SUAVE } }
+      row.getCell(8).font = { size: 10.5, bold: true, color: { argb: p === 'gold' ? OURO_ESCURO : p === 'black' ? 'FF111113' : 'FF8A7550' } }
+      row.getCell(10).font = { size: 10.5, bold: true, color: { argb: VERDE } }; row.getCell(12).font = { size: 10.5, color: { argb: VERDE } }
+      row.getCell(15).font = { size: 10.5, bold: true, color: { argb: OURO_ESCURO } }
+      row.getCell(9).numFmt = '0'; row.getCell(10).numFmt = USD; row.getCell(12).numFmt = BRL; row.getCell(13).numFmt = '0%'; row.getCell(14).numFmt = USD; row.getCell(15).numFmt = BRL
+    })
+    const rt = r2 + 4, tr = wc.getRow(rt); tr.height = 26
+    tr.getCell(2).value = 'Total'
+    tr.getCell(9).value = { formula: `SUM(I${r2 + 1}:I${r2 + 3})`, result: nLucro }
+    tr.getCell(10).value = { formula: `SUM(J${r2 + 1}:J${r2 + 3})`, result: lucroUsd }
+    tr.getCell(12).value = { formula: `SUM(L${r2 + 1}:L${r2 + 3})`, result: lucroUsd * d.cotacao }
+    tr.getCell(14).value = { formula: `SUM(N${r2 + 1}:N${r2 + 3})`, result: somaPaga }
+    tr.getCell(15).value = { formula: `SUM(O${r2 + 1}:O${r2 + 3})`, result: somaPaga * d.cotacao }
+    for (let c = 2; c <= COLS.length; c++) {
+      const x = tr.getCell(c); fundo(x, AZUL)
+      x.font = { bold: true, size: 11.5, color: { argb: c === 15 ? OURO : 'FFF4EEDF' } }
+      x.alignment = { vertical: 'middle', horizontal: c >= 9 ? 'right' : 'left', indent: c === 2 ? 1 : 0 }
+    }
+    tr.getCell(9).numFmt = '0'; tr.getCell(10).numFmt = USD; tr.getCell(12).numFmt = BRL; tr.getCell(14).numFmt = USD; tr.getCell(15).numFmt = BRL
+    const pe = wc.getCell(rt + 2, 2)
+    pe.value = `Os totais acima são fórmulas: leem as linhas dos clientes e a cotação do Resumo. Gerada em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · GlobalFly Trade${d.simulado ? ' · simulação com nomes e números fictícios' : ''}.`
+    pe.font = { size: 9.5, italic: true, color: { argb: SUAVE } }
+  }
+
   /* ------------------------------------------------------------------------------------------- aba Resumo */
   ;[3, 30, 18, 16, 16, 16, 18, 18].forEach((w, i) => { wr.getColumn(i + 1).width = w })
   const iniR = cabecalho(wr, 8, 'Compartilhamento de receita', `${d.mesNome} · ${d.recorte}${d.simulado ? ' · simulação' : ''}`)
