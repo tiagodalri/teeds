@@ -60,6 +60,8 @@ const AdminAnuncios = lazy(() => import('./anuncios/AdminAnuncios').then((m) => 
 const VisaoGeralPainel = lazy(() => import('./admin/VisaoGeralPainel').then((m) => ({ default: m.VisaoGeralPainel })))
 const AdminLancamento = lazy(() => import('./lancamento/AdminLancamento').then((m) => ({ default: m.AdminLancamento })))
 const AdminTransmissao = lazy(() => import('./lancamento/AdminTransmissao').then((m) => ({ default: m.AdminTransmissao })))
+/** A tela Live de lançamento (Admin › Lançamento e contato). Inativa desde 18/11/2026, a pedido do Tiago; o código continua. */
+const LIVE_DE_LANCAMENTO_ATIVA = false
 const LiberarAcessoGeral = lazy(() => import('./lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const Organizacao = lazy(() => import('./organizacao/Organizacao').then((m) => ({ default: m.Organizacao })))
 const FinanceiroPainel = lazy(() => import('./financeiro/FinanceiroPainel').then((m) => ({ default: m.FinanceiroPainel })))
@@ -490,7 +492,8 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     { id: 'contato', titulo: 'Lançamento e contato', itens: [
       // 12/11/2026: o link da transmissão ao vivo, colado pelos próprios administradores (popup + Ao vivo piscando)
       ...(naGf ? [item('transmissao', 'Transmissão ao vivo', 'aovivo')] : []),
-      ...(naGf ? [item('lancamento', 'Live de lançamento', 'aovivo')] : []),
+      // 18/11/2026 (Tiago): a tela da live de lançamento fica inativa por enquanto — volta trocando LIVE_DE_LANCAMENTO_ATIVA para true
+      ...(naGf && LIVE_DE_LANCAMENTO_ATIVA ? [item('lancamento', 'Live de lançamento', 'aovivo')] : []),
       ...(MARCA.aoVivo ? [{ id: 'central-ao-vivo', nome: 'Central ao vivo', icone: 'aovivo' as NomeIcone, sai: true, onClick: () => { pedirCentral(); onNavigate('aovivo') } }] : []),
       ...(naGf ? [item('notificacoes', 'Notificações', 'sino')] : []),
       // os Stories (08/11/2026): toda a equipe publica; o admin do parceiro, só para os clientes dele
@@ -580,7 +583,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
         onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} /></Suspense>}
       {aba === 'notificacoes' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminNotificacoes key={parceiroDoAdmin(papel, parceiroFoco) ?? ''} sessao={sessao} soDoParceiro={parceiroDoAdmin(papel, parceiroFoco)} /></Suspense>}
       {aba === 'stories' && MARCA.stories && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminStories sessao={sessao} papel={papel} /></Suspense>}
-      {aba === 'lancamento' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminLancamento sessao={sessao} /></Suspense>}
+      {aba === 'lancamento' && LIVE_DE_LANCAMENTO_ATIVA && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminLancamento sessao={sessao} /></Suspense>}
       {aba === 'transmissao' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminTransmissao sessao={sessao} /></Suspense>}
       {aba === 'parceiros' && !naRede && pleno && <AdminParceiros key={chaveDoFoco} sessao={sessao} marca={marcaFoco} podeTrocar={souGeral} />}
       {aba === 'comissoes' && <section className="admin-commission" key={chaveDoFoco}>{comissoes}</section>}
