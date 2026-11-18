@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { clientesPorId, ehMaster, saldosDosClientes, type ClienteRegistro, type SaldosDoCliente } from '../core/teeds/clientes'
 import {
@@ -32,6 +33,9 @@ import { QuemEstaOnline, lerQuemEstaOnline, type Operando } from './monitorament
 import { NomeDoRobo } from './NomeDoRobo'
 import { FiltroDePeriodo, LimparFiltros, filtrosMudaram, TotaisDasEncerradas, TEMPO_PADRAO, noPeriodo, rotuloDoPeriodo, comoTerminou, ROTULO_DO_FIM, type FiltroDeTempo } from './monitoramento/PeriodoDasEncerradas'
 import { SeloDoParceiro } from './parceiros/SeloDoParceiro'
+import { PalcoDoCliente, TelaDoCliente, type DadosDaVisao } from './monitoramento/VisaoDoCliente'
+import { baixarArquivo, gravarElemento, pedirCapturaDaAba, podeGravarTela, type Gravador } from '../core/teeds/gravarTela'
+import { simboloMoeda } from '../core/dinheiro'
 
 /**
  * Monitoramento ao vivo — a central administrativa.
@@ -300,7 +304,7 @@ const VELOCIDADES = [0.25, 0.5, 1, 2, 4]
 /** Um intervalo maior que isto entre eventos é inatividade: o replay salta e avisa. */
 const INATIVIDADE_MS = 8000
 
-function Replay({ sessao, encerrada, clientes, selo, marca, aoFechar, aoErro, mostrarMarkup = false }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; selo?: { texto: string; codigo: string } | null; marca: string; aoFechar: () => void; aoErro: (e: unknown) => void; mostrarMarkup?: boolean }) {
+export function Replay({ sessao, encerrada, clientes, selo, marca, aoFechar, aoErro, mostrarMarkup = false }: { sessao: SessaoTeeds; encerrada: SessaoEncerrada; clientes: Map<string, ClienteRegistro>; selo?: { texto: string; codigo: string } | null; marca: string; aoFechar: () => void; aoErro: (e: unknown) => void; mostrarMarkup?: boolean }) {
   const [passos, setPassos] = useState<PassoReplay[]>([])
   const [eventos, setEventos] = useState<EventoEspelho[]>([])
   const [cabecalho, setCabecalho] = useState<SessaoEspelho | null>(null)
@@ -312,6 +316,19 @@ function Replay({ sessao, encerrada, clientes, selo, marca, aoFechar, aoErro, mo
   const [autorizado, setAutorizado] = useState<boolean | null>(null)
   const [saltou, setSaltou] = useState<number | null>(null)
   const relogio = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /* 18/11/2026 (Tiago): o replay é a visão do próprio cliente; a técnica (estratégia, eventos) fica a um clique. */
+  const [visao, setVisao] = useState<'cliente' | 'tecnica'>('cliente')
+  /* Baixar em MP4: escolher → preparando → gravando → salvando. */
+  const [grav, setGrav] = useState<null | 'escolher' | 'preparando' | 'gravando' | 'salvando'>(null)
+  const gravRef = useRef(grav); gravRef.current = grav
+  const [trechoGrav, setTrechoGrav] = useState<'inteira' | 'daqui'>('inteira')
+  const [velGrav, setVelGrav] = useState(1)
+  const [segGravados, setSegGravados] = useState(0)
+  const [avisoGrav, setAvisoGrav] = useState<{ tipo: 'ok' | 'erro'; texto: string } | null>(null)
+  const gravador = useRef<Gravador | null>(null)
+  const inicioGrav = useRef(0)
+  const moldura = useRef<HTMLDivElement>(null)
+  const rolagem = useRef<number | null>(null)
 
   useEffect(() => {
     const aborto = new AbortController()
@@ -371,6 +388,7 @@ function Replay({ sessao, encerrada, clientes, selo, marca, aoFechar, aoErro, mo
   useEffect(() => {
     const tecla = (e: KeyboardEvent) => {
       if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement)?.tagName ?? '')) return
+      if (gravRef.current) return
       if (e.key === ' ') { e.preventDefault(); setTocando((t) => !t) }
       if (e.key === 'ArrowRight') irPara(indice + 1)
       if (e.key === 'ArrowLeft') irPara(indice - 1)
@@ -386,12 +404,150 @@ function Replay({ sessao, encerrada, clientes, selo, marca, aoFechar, aoErro, mo
   const horaAtual = passo ? new Date(passo.evento.emitidoEm) : null
   const valorHora = horaAtual ? `${String(horaAtual.getHours()).padStart(2, '0')}:${String(horaAtual.getMinutes()).padStart(2, '0')}:${String(horaAtual.getSeconds()).padStart(2, '0')}` : ''
 
+  /* ------------------------------------------- a visão do cliente */
+  const cliente = clientes.get(encerrada.userId)
+  // O saldo da corretora em cada passo: o último conhecido até ali (antes da primeira leitura, a primeira).
+  const saldos = useMemo(() => {
+    const lista: Array<number | null> = []
+    let ultimo: number | null = null
+    for (const p of passos) { const v = p.estado.saldo; if (v != null && Number.isFinite(v)) ultimo = v; lista.push(ultimo) }
+    const primeiro = lista.find((v) => v != null) ?? null
+    return lista.map((v) => v ?? primeiro)
+  }, [passos])
+  const baseDaVisao = useMemo(() => {
+    if (!cabecalho) return null
+    const s = cabecalho
+    const { regra, ganhaCom, cor, corSuave } = regrasDoRobo(s.roboId)
+    const cfg = s.config
+    const dc = (v: number) => `${simboloMoeda(s.moeda)} ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const comModos = temModos(s.roboId, cfg.parametros)
+    const modo = comModos ? NOME_DO_MODO[modoDaConfig(s.roboId, cfg.fatorGale, cfg.lucroSobrePrejuizo, cfg)].toLowerCase() : null
+    const nomeAtivo = nomeDoAtivo(NOME_DO_ATIVO[s.ativo] ?? s.ativo)
+    let roboNome = s.roboNome
+    try { roboNome = identidade(s.roboId).nome || s.roboNome } catch { /* nome gravado na sessão */ }
+    // os mesmos rótulos da cabine do cliente (LocalRobotPanel), não os do admin
+    const parametros = [
+      { rot: 'Ativo', valor: nomeAtivo.replace(' Index', '') },
+      { rot: 'Entrada', valor: dc(cfg.valorAoVencer || cfg.valorInicial) },
+      { rot: 'Recuperação', valor: cfg.fatorGale === 0 ? 'Desligada' : modo ? `Modo ${modo}` : 'Automática' },
+      { rot: 'Valor máximo por entrada', valor: cfg.valorMaximo > 0 ? dc(cfg.valorMaximo) : 'Sem máximo' },
+      { rot: 'Meta de ganho', valor: cfg.takeProfit > 0 ? dc(cfg.takeProfit) : 'Sem meta' },
+      { rot: 'Limite de perda', valor: cfg.stopLoss > 0 ? dc(cfg.stopLoss) : 'Sem limite' },
+    ]
+    return { s, regra, ganhaCom, cor, corSuave, modo, nomeAtivo, roboNome, parametros }
+  }, [cabecalho])
+  const dadosDaVisao: DadosDaVisao | null = baseDaVisao && passo ? {
+    estado: paraEstadoMotor(passo.estado), config: baseDaVisao.s.config, moeda: baseDaVisao.s.moeda, demo: baseDaVisao.s.demo, contaId: baseDaVisao.s.contaId,
+    saldo: saldos[indice] ?? null, instante: passo.evento.emitidoEm, inicio: passos[0]?.evento.emitidoEm ?? null,
+    roboId: baseDaVisao.s.roboId, roboNome: baseDaVisao.roboNome, cor: baseDaVisao.cor, corSuave: baseDaVisao.corSuave, ativo: baseDaVisao.nomeAtivo,
+    regra: baseDaVisao.regra, ganhaCom: baseDaVisao.ganhaCom, parametros: baseDaVisao.parametros, modo: baseDaVisao.modo,
+    cliente: { nome: cliente?.nome ?? '', email: cliente?.email ?? '', categoria: cliente?.categoria ?? null }, mostrarMarkup,
+  } : null
+
+  /* ------------------------------------------- baixar em MP4 */
+  // Quanto o vídeo vai durar: o mesmo ritmo do play (inatividade longa vira 1,2 s), dividido pela velocidade.
+  const duracaoDoVideo = useCallback((de: number, vel: number) => {
+    let ms = 0
+    for (let i = de; i < passos.length - 1; i++) {
+      const real = Math.max(80, passos[i + 1].evento.emitidoEm - passos[i].evento.emitidoEm)
+      ms += (real > INATIVIDADE_MS ? 1200 : real) / vel
+    }
+    return ms / 1000 + 3.7
+  }, [passos])
+  const terminarGravacao = useCallback(async (salvar: boolean) => {
+    const g = gravador.current
+    gravador.current = null
+    setTocando(false)
+    if (!g) { setGrav(null); return }
+    if (!salvar) { g.cancelar(); setGrav(null); return }
+    setGrav('salvando')
+    try {
+      const blob = await g.parar()
+      const quando = passos[inicioGrav.current] ? new Date(passos[inicioGrav.current].evento.emitidoEm) : new Date()
+      const dois = (n: number) => String(n).padStart(2, '0')
+      const quem = (cliente?.nome || 'cliente').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'cliente'
+      baixarArquivo(blob, `sessao-${quem}-${quando.getFullYear()}-${dois(quando.getMonth() + 1)}-${dois(quando.getDate())}-${dois(quando.getHours())}h${dois(quando.getMinutes())}.mp4`)
+      setAvisoGrav({ tipo: 'ok', texto: `Vídeo baixado: ${g.largura}×${g.altura}, ${(blob.size / 1048576).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB.` })
+    } catch (e) { setAvisoGrav({ tipo: 'erro', texto: `Não consegui fechar o vídeo: ${(e as Error).message}` }) }
+    setGrav(null)
+  }, [passos, cliente])
+  const terminarRef = useRef(terminarGravacao); terminarRef.current = terminarGravacao
+  // descarta a gravação se o replay fechar no meio
+  useEffect(() => () => { gravador.current?.cancelar(); gravador.current = null }, [])
+  // chegou ao fim: segura o último quadro 2,5 s e salva
+  useEffect(() => {
+    if (grav !== 'gravando' || tocando || indice < passos.length - 1) return
+    const t = setTimeout(() => void terminarRef.current(true), 2500)
+    return () => clearTimeout(t)
+  }, [grav, tocando, indice, passos.length])
+  useEffect(() => {
+    if (grav !== 'gravando') return
+    const id = setInterval(() => setSegGravados(gravador.current?.segundos() ?? 0), 500)
+    return () => clearInterval(id)
+  }, [grav])
+  async function comecarGravacao() {
+    setAvisoGrav(null)
+    let fluxo: MediaStream
+    // primeiro a captura: o navegador só pergunta dentro do clique
+    try { fluxo = await pedirCapturaDaAba() } catch (e) {
+      const nome = (e as Error).name
+      setAvisoGrav({ tipo: 'erro', texto: nome === 'NotAllowedError' || nome === 'AbortError' ? 'Gravação cancelada: a captura da aba não foi permitida.' : (e as Error).message })
+      setGrav(null); return
+    }
+    // sem registro na auditoria, sem vídeo (como o próprio replay)
+    try { await auditar(sessao, { tipo: 'replay', acao: 'exportou', sessaoId: encerrada.id, clienteId: encerrada.userId, marca }) } catch {
+      fluxo.getTracks().forEach((t) => t.stop())
+      setAvisoGrav({ tipo: 'erro', texto: 'Não foi possível registrar a exportação na auditoria. Sem registro, o vídeo não é gerado.' })
+      setGrav(null); return
+    }
+    const de = trechoGrav === 'inteira' ? 0 : indice
+    inicioGrav.current = de
+    setTocando(false); setVisao('cliente'); setSaltou(null); setIndice(de); setVelocidade(velGrav); setSegGravados(0)
+    setGrav('preparando')
+    // o palco em tela cheia monta e assenta antes do primeiro quadro
+    await new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(ok)))
+    await new Promise((ok) => setTimeout(ok, 700))
+    if (!moldura.current) { fluxo.getTracks().forEach((t) => t.stop()); setGrav(null); return }
+    try {
+      gravador.current = await gravarElemento(fluxo, moldura.current, { aoInterromper: () => void terminarRef.current(true) })
+    } catch (e) {
+      setAvisoGrav({ tipo: 'erro', texto: (e as Error).message || 'Não consegui começar a gravação.' })
+      setGrav(null); return
+    }
+    setGrav('gravando')
+    // um instante no primeiro quadro, e o play
+    setTimeout(() => { if (gravRef.current === 'gravando') setTocando(true) }, 1200)
+  }
+  const mmss = (seg: number) => `${Math.floor(seg / 60)}:${String(Math.floor(seg % 60)).padStart(2, '0')}`
+  const gravandoAgora = grav === 'preparando' || grav === 'gravando' || grav === 'salvando'
+  const telaDoCliente = dadosDaVisao && <TelaDoCliente d={dadosDaVisao} rolagem={rolagem} />
+
   return (
     <div className="mon-replay">
       {autorizado === false && <div className="mon-estado erro" role="alert"><b>Replay não aberto</b>Não foi possível registrar a auditoria deste acesso. Sem registro, a sessão não é exibida.<button onClick={aoFechar}>Voltar</button></div>}
       {autorizado && carregando && <div className="mon-estado" role="status"><b>Carregando histórico…</b>{carregados ? `${carregados} eventos lidos` : 'Lendo a sessão'}<button onClick={aoFechar}>Cancelar</button></div>}
       {autorizado && !carregando && !passos.length && <div className="mon-estado" role="status"><b>Histórico indisponível</b>Esta sessão não tem eventos guardados: é anterior ao espelho, ou os eventos já passaram da retenção.<button onClick={aoFechar}>Voltar</button></div>}
-      {cabecalho && passo && (
+      {cabecalho && passo && visao === 'cliente' && !gravandoAgora && (
+        <section className="mon-foco replay" role="region" aria-label={`Replay na visão de ${cliente?.nome || mascararEmail(cliente?.email)}, somente visualização`}>
+          <CabecalhoDaCabine aoFechar={aoFechar} nome={cliente?.nome || mascararEmail(cliente?.email)} selo={selo} email={cliente?.email} contaId={cabecalho.contaId} demo={cabecalho.demo}
+            moeda={cabecalho.moeda} saldo={saldos[indice] ?? null} modo="replay" saude="encerrada" idade={null} rtt={null} desvio={null} integridade={integridade}
+            passo={{ indice, total: passos.length, horaOriginal: passo.evento.emitidoEm, lacuna: passo.lacuna }} />
+          <PalcoDoCliente refMoldura={moldura} alturaMaxima={Math.max(380, window.innerHeight - 300)}>{telaDoCliente}</PalcoDoCliente>
+        </section>
+      )}
+      {gravandoAgora && telaDoCliente && createPortal(
+        <div className="vc-gravando" role="dialog" aria-label="Gravando o replay em MP4">
+          <PalcoDoCliente refMoldura={moldura}>{telaDoCliente}</PalcoDoCliente>
+          <div className="vc-gravando-barra">
+            <span className="rec"><i />{grav === 'salvando' ? 'Fechando o arquivo…' : grav === 'preparando' ? 'Preparando…' : `Gravando ${mmss(segGravados)}`}</span>
+            <small>de ~{mmss(duracaoDoVideo(inicioGrav.current, velocidade))} · {velocidade}×</small>
+            <progress max={Math.max(1, passos.length - 1 - inicioGrav.current)} value={Math.max(0, indice - inicioGrav.current)} />
+            <small>Não troque de aba nem minimize a janela até terminar.</small>
+            <button onClick={() => void terminarGravacao(false)} disabled={grav === 'salvando'}>Cancelar</button>
+            <button className="principal" onClick={() => void terminarGravacao(true)} disabled={grav !== 'gravando'}>Parar e baixar</button>
+          </div>
+        </div>, document.body)}
+      {cabecalho && passo && visao === 'tecnica' && !gravandoAgora && (
         <CabineEspelho s={cabecalho} estado={passo.estado} cliente={clientes.get(encerrada.userId)} selo={selo} modo="replay" saude="encerrada" idade={null} rtt={null} desvio={null}
           eventos={passos.slice(0, indice + 1).map((p) => p.evento)} aoFechar={aoFechar} integridade={integridade}
           passo={{ indice, total: passos.length, horaOriginal: passo.evento.emitidoEm, lacuna: passo.lacuna }} mostrarMarkup={mostrarMarkup} />
@@ -410,6 +566,36 @@ function Replay({ sessao, encerrada, clientes, selo, marca, aoFechar, aoErro, mo
           </div>
           <label className="mon-ir">Ir para<input type="time" step={1} value={valorHora} onChange={(e) => irParaHora(e.target.value)} aria-label="Ir para o instante" /></label>
           <div className="mon-vel" role="group" aria-label="Velocidade">{VELOCIDADES.map((v) => <button key={v} className={v === velocidade ? 'on' : ''} onClick={() => setVelocidade(v)} aria-pressed={v === velocidade}>{v}×</button>)}</div>
+          <div className="mon-vel" role="group" aria-label="Visão">
+            <button className={visao === 'cliente' ? 'on' : ''} aria-pressed={visao === 'cliente'} onClick={() => setVisao('cliente')} title="A tela do cliente, como ele via">Cliente</button>
+            <button className={visao === 'tecnica' ? 'on' : ''} aria-pressed={visao === 'tecnica'} onClick={() => setVisao('tecnica')} title="Estratégia e linha do tempo de eventos">Técnica</button>
+          </div>
+          <button className="mon-baixar" onClick={() => { setAvisoGrav(null); setGrav('escolher') }} disabled={!podeGravarTela() || !dadosDaVisao}
+            title={podeGravarTela() ? 'Baixar o replay em vídeo MP4, na visão do cliente' : 'Gravar vídeo pede o Chrome ou o Edge no computador'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>MP4
+          </button>
+        </div>
+      )}
+      {avisoGrav && <div className={`mon-estado ${avisoGrav.tipo === 'erro' ? 'erro' : ''}`} role={avisoGrav.tipo === 'erro' ? 'alert' : 'status'}><b>{avisoGrav.tipo === 'erro' ? 'Vídeo não gerado' : 'Pronto'}</b>{avisoGrav.texto}<button onClick={() => setAvisoGrav(null)}>Ok</button></div>}
+      {grav === 'escolher' && (
+        <div className="vc-dialogo-fundo" onClick={(e) => { if (e.target === e.currentTarget) setGrav(null) }}>
+          <div className="vc-dialogo" role="dialog" aria-modal="true" aria-labelledby="vc-dlg-titulo">
+            <h3 id="vc-dlg-titulo">Baixar o replay em MP4</h3>
+            <p>O vídeo sai como uma gravação da tela do cliente: o topo com o saldo da corretora, o menu e a cabine, em 1080p, nítido e leve. O enquadramento é o que está no palco agora (role dentro dele para ajustar).</p>
+            <fieldset><legend>Trecho</legend><div className="opcoes">
+              <button className={trechoGrav === 'inteira' ? 'on' : ''} onClick={() => setTrechoGrav('inteira')}>Sessão inteira</button>
+              <button className={trechoGrav === 'daqui' ? 'on' : ''} onClick={() => setTrechoGrav('daqui')} disabled={indice === 0}>Daqui ({valorHora}) até o fim</button>
+            </div></fieldset>
+            <fieldset><legend>Velocidade do vídeo</legend><div className="opcoes">
+              {[1, 2, 4].map((v) => <button key={v} className={velGrav === v ? 'on' : ''} onClick={() => setVelGrav(v)}>{v === 1 ? 'Normal (1×)' : `${v}×`}</button>)}
+            </div></fieldset>
+            <p>Duração do vídeo: <b>~{mmss(duracaoDoVideo(trechoGrav === 'inteira' ? 0 : indice, velGrav))}</b>. A gravação acontece em tempo real: deixe esta aba aberta e à vista até terminar. Inatividade longa é saltada.</p>
+            <p className="aviso">O navegador vai pedir para compartilhar <b>esta aba</b>: é assim que ele grava. Nada sai do seu computador; o arquivo é baixado direto.</p>
+            <div className="acoes">
+              <button onClick={() => setGrav(null)}>Cancelar</button>
+              <button className="principal" onClick={() => void comecarGravacao()}>Gravar e baixar</button>
+            </div>
+          </div>
         </div>
       )}
       {passos.length > 0 && (

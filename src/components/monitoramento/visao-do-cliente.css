@@ -1,0 +1,51 @@
+/* A visão do cliente no replay (18/11/2026). O palco tem tamanho de tela de
+   computador e é só reduzido para caber; a gravação recorta este quadro. */
+.vc-caixa { width: 100%; display: flex; justify-content: center; }
+.vc-moldura { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); box-shadow: 0 24px 60px -30px rgba(0,0,0,.7); flex-shrink: 0; }
+.vc-palco { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+/* A casca do app, presa ao palco (o transform faz o menu "fixed" ficar dentro dele). */
+.vc-tela.workspace-app { position: relative; display: flex; flex-direction: column; overflow: hidden; min-height: 0; background: var(--bg); color: var(--text); padding-left: 236px; text-align: left; }
+.vc-tela .workspace-sidebar { position: absolute; inset: 0 auto 0 0; }
+.vc-tela .workspace-mobile-toggle, .vc-tela .workspace-shade { display: none !important; }
+.vc-tela > .topbar { position: relative; flex-shrink: 0; margin: 0; }
+.vc-tela .vc-rolo { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
+.vc-tela .vc-rolo::-webkit-scrollbar { display: none; }
+.vc-tela .vc-rolo > .ger.rob { margin: 0 auto; }
+.vc-tela .conta-chip, .vc-tela .avatar-botao, .vc-tela .tema-btn { cursor: default; }
+/* nada de cursor ou foco desenhado dentro do quadro */
+.vc-tela :focus-visible { outline: none !important; }
+
+/* Gravando: só o palco, na tela inteira, e a barrinha embaixo (fora do recorte). */
+.vc-gravando { position: fixed; inset: 0; z-index: 2147483000; background: #000; display: grid; grid-template-rows: 1fr auto; }
+.vc-gravando .vc-caixa { height: 100%; align-items: center; }
+.vc-gravando .vc-moldura { border: 0; border-radius: 0; box-shadow: none; }
+.vc-gravando-barra { display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: #0b0d14; color: #e8eaf2; font: 600 13px/1.3 system-ui, sans-serif; border-top: 1px solid #23273a; }
+.vc-gravando-barra .rec { display: inline-flex; align-items: center; gap: 8px; color: #ff5d6c; }
+.vc-gravando-barra .rec i { width: 10px; height: 10px; border-radius: 50%; background: #ff3b4f; animation: vc-pisca 1s ease-in-out infinite; }
+.vc-gravando-barra progress { flex: 1; height: 6px; accent-color: #7c5cff; }
+.vc-gravando-barra button { border: 1px solid #3a3f58; background: #171a27; color: inherit; border-radius: 9px; padding: 7px 14px; font: inherit; cursor: pointer; }
+.vc-gravando-barra button.principal { background: #7c5cff; border-color: #7c5cff; color: #fff; }
+.vc-gravando-barra small { color: #9aa0b8; font-weight: 500; }
+@keyframes vc-pisca { 50% { opacity: .25; } }
+
+/* Visão do cliente / visão técnica, e o botão do MP4, na barra do replay */
+.mon-replay-topo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
+.mon-replay-topo .mon-vel button { min-width: 0; padding: 0 12px; }
+.mon-baixar { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #5b3fbf; background: #5b3fbf; color: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.mon-baixar:disabled { opacity: .55; cursor: not-allowed; }
+.mon-baixar svg { width: 16px; height: 16px; }
+
+.vc-dialogo-fundo { position: fixed; inset: 0; z-index: 2147482000; background: #0009; display: grid; place-items: center; padding: 16px; }
+.vc-dialogo { width: min(460px, 100%); background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 16px; padding: 22px; display: grid; gap: 14px; box-shadow: 0 30px 80px -30px #000; }
+.vc-dialogo h3 { margin: 0; font-size: 18px; }
+.vc-dialogo p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.vc-dialogo fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.vc-dialogo legend { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+.vc-dialogo .opcoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.vc-dialogo .opcoes button { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 10px; padding: 8px 12px; font: inherit; cursor: pointer; }
+.vc-dialogo .opcoes button.on { border-color: #7c5cff; background: #7c5cff22; color: var(--text); font-weight: 650; }
+.vc-dialogo .acoes { display: flex; justify-content: flex-end; gap: 8px; }
+.vc-dialogo .acoes button { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 10px; padding: 9px 16px; font: inherit; cursor: pointer; }
+.vc-dialogo .acoes button.principal { background: #5b3fbf; border-color: #5b3fbf; color: #fff; font-weight: 650; }
+.vc-dialogo .aviso { color: #ffb44d; }

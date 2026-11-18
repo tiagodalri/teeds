@@ -217,6 +217,7 @@ const LabVisaoGeral = lazy(() => import('./components/admin/LabVisaoGeral'))
 const LabResultadosClientes = lazy(() => import('./components/LabResultadosClientes'))
 const LabCompartilhamento = lazy(() => import('./components/admin/LabCompartilhamento'))
 const LabCabineTopo = lazy(() => import('./components/monitoramento/LabCabineTopo'))
+const LabReplay = lazy(() => import('./components/monitoramento/LabReplay'))
 const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
@@ -655,6 +656,8 @@ function Laboratorio() {
   // ?tela=compartilhamento(&parceiro=1)(&vazio): o Compartilhamento de receita com clientes de exemplo; gerar e dar baixa em memória
   if (qual === 'compartilhamento') return <Suspense fallback={null}><LabCompartilhamento /></Suspense>
   // ?tela=cabine-topo(&vazio): cabeçalho da cabine espelho e o aviso "Em conta real agora", com exemplo
+  // ?tela=replay: replay na visão do cliente e o MP4 (exemplo em public/lab-local, fora do git)
+  if (qual === 'replay') return <Suspense fallback={null}><LabReplay /></Suspense>
   if (qual === 'cabine-topo') return <Suspense fallback={null}><LabCabineTopo /></Suspense>
   if (qual === 'liberar-geral' && (new URLSearchParams(location.search).has('parceiro') || new URLSearchParams(location.search).has('esperando'))) {
     const f = window.fetch
