@@ -93,12 +93,13 @@ function MedidorDoMic({ ligado }: { ligado: boolean }) {
 
 function Aparelhos() {
   const e = useEstudio()
-  void e.capturas
+  // a tela no ar leva o microfone? (Abertura, Intervalo e Encerramento nascem sem)
+  const micNaTela = !!cenaPorId(e.config.programa, e.config)?.fontes.some((f) => f.tipo === 'microfone' && f.visivel)
   const item = (a: Aparelho, rotulo: string, icone: string) => {
     const s = situacaoDoAparelho(a)
     const mudo = a === 'microfone' && s === 'ok' && microfoneMudo()
     const on = s === 'ok' && !mudo
-    const legenda = s === 'ligando' ? 'Ligando…' : s === 'erro' ? (e.errosDeCaptura[a === 'camera' ? 'camera:padrao' : a === 'tela' ? 'tela' : 'mic:padrao'] ?? 'Não ligou') : mudo ? 'Mudo' : on ? (a === 'tela' ? 'Compartilhando' : 'Ligado') : a === 'tela' ? 'Clique para escolher' : 'Desligado'
+    const legenda = s === 'ligando' ? 'Ligando…' : s === 'erro' ? (e.errosDeCaptura[a === 'camera' ? 'camera:padrao' : a === 'tela' ? 'tela' : 'mic:padrao'] ?? 'Não ligou') : mudo ? 'Mudo' : on ? (a === 'tela' ? 'Compartilhando' : a === 'microfone' && !micNaTela ? 'Ligado · os alunos não ouvem nesta tela' : 'Ligado') : a === 'tela' ? 'Clique para escolher' : 'Desligado'
     return (
       <button type="button" className={`ps-aparelho ${on ? 'on' : ''} ${s === 'erro' ? 'erro' : ''}`} aria-pressed={on} onClick={() => alternarAparelho(a)} title={s === 'erro' ? legenda : undefined}>
         <span className="ps-aparelho-ico"><Icone d={icone} tamanho={18} />{!on && <span className="ps-risco"><Icone d={ICONES.riscar} tamanho={18} /></span>}</span>
@@ -113,7 +114,7 @@ function Aparelhos() {
       {item('tela', 'Tela', ICONES.tela)}
       {item('camera', 'Câmera', ICONES.camera)}
       {item('microfone', 'Microfone', ICONES.microfone)}
-      <div className="ps-volume"><span><b>Volume</b><small>{micOk ? 'Do microfone' : 'Microfone desligado'}</small></span><MedidorDoMic ligado={micOk} /></div>
+      <div className="ps-volume"><span><b>Volume</b><small>{!micOk ? 'Microfone desligado' : micNaTela ? 'Do microfone' : 'Só você ouve nesta tela'}</small></span><MedidorDoMic ligado={micOk} /></div>
     </div>
   )
 }
@@ -150,7 +151,7 @@ function CampoDeMidia({ rotulo, dica, campos, prefixo, mudar, padrao }: {
       <div className="ps-midia">
         <span className="ps-midia-nome">{tem ? <>{campos[`${prefixo}Tipo`] === 'video' ? 'Vídeo' : 'Imagem'}: <b>{ePadrao ? 'o padrão da plataforma' : nome}</b></> : <em>Nenhum arquivo</em>}</span>
         <button type="button" className="ps-botao" onClick={() => input.current?.click()} disabled={enviando}><Icone d={ICONES.enviar} />{enviando ? 'Guardando…' : tem ? 'Trocar' : 'Escolher'}</button>
-        {tem && !ePadrao && padrao && <button type="button" className="ps-link" onClick={() => mudar({ [prefixo]: '', [`${prefixo}Url`]: padrao[`${prefixo}Url`] ?? '', [`${prefixo}Tipo`]: padrao[`${prefixo}Tipo`] ?? '', [`${prefixo}Nome`]: padrao[`${prefixo}Nome`] ?? '' })}>Voltar ao padrão</button>}
+        {tem && !ePadrao && padrao?.[`${prefixo}Url`] && <button type="button" className="ps-link" onClick={() => mudar({ [prefixo]: '', [`${prefixo}Url`]: padrao[`${prefixo}Url`] ?? '', [`${prefixo}Tipo`]: padrao[`${prefixo}Tipo`] ?? '', [`${prefixo}Nome`]: padrao[`${prefixo}Nome`] ?? '' })}>Voltar ao padrão</button>}
         {tem && <button type="button" className="ps-link" onClick={() => mudar({ [prefixo]: '', [`${prefixo}Url`]: '', [`${prefixo}Tipo`]: '', [`${prefixo}Nome`]: '' })}>Tirar</button>}
         <input ref={input} type="file" accept={ACEITA} hidden onChange={(ev) => { void escolher(ev.target.files?.[0]); ev.target.value = '' }} />
       </div>
@@ -192,14 +193,23 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
   const previa = useRef<HTMLCanvasElement>(null)
   const timer = useRef<number | undefined>(undefined)
   const [confirmar, setConfirmar] = useState(false)
+  // o valor mais novo de tudo (o envio de um arquivo termina depois e não pode desfazer o que foi digitado)
+  const atual = useRef({ campos, nome })
 
   // aplica enquanto digita (um respiro para não remontar a cada letra)
-  const aplicar = (c: CamposDoModelo, n = nome) => {
+  const aplicar = () => {
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => aplicarModelo(id, c, n), 220)
+    timer.current = window.setTimeout(() => { timer.current = undefined; aplicarModelo(id, atual.current.campos, atual.current.nome) }, 220)
   }
-  const mudar = (p: CamposDoModelo) => { const c = { ...campos, ...p }; setCampos(c); aplicar(c) }
-  useEffect(() => () => window.clearTimeout(timer.current), [])
+  /** Grava agora o que ainda estava esperando (ao fechar, ao pôr no ar, ao duplicar). */
+  const gravarJa = () => {
+    if (timer.current === undefined) return
+    window.clearTimeout(timer.current); timer.current = undefined
+    aplicarModelo(id, atual.current.campos, atual.current.nome)
+  }
+  const mudar = (p: CamposDoModelo) => { const c = { ...atual.current.campos, ...p }; atual.current = { ...atual.current, campos: c }; setCampos(c); aplicar() }
+  const mudarNome = (n: string) => { atual.current = { ...atual.current, nome: n }; setNome(n); aplicar() }
+  useEffect(() => () => gravarJa(), []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     const t = window.setInterval(() => { const x = previa.current?.getContext('2d'); if (x) desenharMiniatura(id, x, 640) }, 100)
     return () => window.clearInterval(t)
@@ -227,10 +237,10 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
           <div className="ps-editor-previa">
             <canvas ref={previa} width={640} height={360} />
             {noAr && <p className="ps-aviso-ar" role="status"><i aria-hidden />Esta tela está no ar{sala.ativa ? ': o que você mudar aparece na hora para os alunos.' : '.'}</p>}
-            {!noAr && <button type="button" className="ps-botao ps-botao-ouro" onClick={() => { colocarNoAr(id); fechar() }}>Colocar no ar</button>}
+            {!noAr && <button type="button" className="ps-botao ps-botao-ouro" onClick={() => { gravarJa(); colocarNoAr(id); fechar() }}>Colocar no ar</button>}
           </div>
           <div className="ps-editor-campos">
-            <Texto rotulo="Nome da tela" valor={nome} max={40} dica="Só para você: aparece no cartão." mudar={(v) => { setNome(v); aplicar(campos, v) }} />
+            <Texto rotulo="Nome da tela" valor={nome} max={40} dica="Só para você: aparece no cartão." mudar={mudarNome} />
 
             {(tipo === 'abertura' || tipo === 'intervalo' || tipo === 'encerramento') && <>
               <Texto rotulo="Título" valor={campos.titulo ?? ''} max={60} placeholder="LIVE INICIANDO" mudar={(v) => mudar({ titulo: v })} dica="O texto grande, em dourado. Deixe vazio para não mostrar." />
@@ -240,6 +250,7 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
             </>}
 
             {tipo === 'aovivo' && <>
+              <SimNao rotulo="Som do computador" dica="Leva junto o som da tela compartilhada (vídeo, gráfico com som). Vale na próxima vez que você compartilhar a tela." valor={sim(campos.somDaTela)} mudar={(v) => mudar({ somDaTela: v ? 'sim' : 'nao' })} />
               <SimNao rotulo="Você no canto" dica="A câmera aparece por cima da tela compartilhada." valor={sim(campos.camera)} mudar={(v) => mudar({ camera: v ? 'sim' : 'nao' })} />
               {sim(campos.camera) && (
                 <div className="ps-campo">
@@ -258,9 +269,9 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
 
             {tipo === 'depoimento' && <>
               <CampoDeMidia rotulo="Foto ou vídeo do cliente" prefixo="midia" campos={campos} mudar={mudar} dica="Opcional. Sem foto, a frase fica no centro da tela." />
-              <Texto rotulo="Frase do cliente" linhas={3} max={220} valor={campos.frase ?? ''} mudar={(v) => mudar({ frase: v })} dica="Use as palavras do cliente, como ele disse." />
-              <Texto rotulo="Nome" valor={campos.nome ?? ''} max={40} mudar={(v) => mudar({ nome: v })} />
-              <Texto rotulo="Cidade" valor={campos.cidade ?? ''} max={40} mudar={(v) => mudar({ cidade: v })} />
+              <Texto rotulo="Frase do cliente" linhas={3} max={220} placeholder="Em 30 dias eu entendi o que fazia de errado…" valor={campos.frase ?? ''} mudar={(v) => mudar({ frase: v })} dica="Use as palavras do cliente, como ele disse." />
+              <Texto rotulo="Nome" placeholder="Ana Souza" valor={campos.nome ?? ''} max={40} mudar={(v) => mudar({ nome: v })} />
+              <Texto rotulo="Cidade" placeholder="Curitiba, PR" valor={campos.cidade ?? ''} max={40} mudar={(v) => mudar({ cidade: v })} />
             </>}
 
             {tipo === 'arte' && <>
@@ -272,7 +283,7 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
           </div>
         </div>
         <footer className="ps-janela-rodape">
-          <button type="button" className="ps-botao" onClick={() => { duplicarTela(id); fechar() }}><Icone d={ICONES.copiar} />Duplicar</button>
+          <button type="button" className="ps-botao" onClick={() => { gravarJa(); duplicarTela(id); fechar() }}><Icone d={ICONES.copiar} />Duplicar</button>
           {confirmar
             ? <span className="ps-confirmar">Apagar esta tela? <button type="button" className="ps-botao perigo" onClick={() => { if (apagarCena(id)) fechar() }}>Apagar</button><button type="button" className="ps-link" onClick={() => setConfirmar(false)}>Cancelar</button></span>
             : <button type="button" className="ps-botao" onClick={() => setConfirmar(true)} disabled={!podeApagar} title={noAr ? 'Coloque outra tela no ar antes de apagar esta' : undefined}><Icone d={ICONES.lixo} />Apagar</button>}
@@ -286,6 +297,11 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
 }
 
 function NovaTela({ escolher, fechar }: { escolher: (t: TipoDeModelo) => void; fechar: () => void }) {
+  useEffect(() => {
+    const f = (ev: KeyboardEvent) => { if (ev.key === 'Escape') fechar() }
+    window.addEventListener('keydown', f)
+    return () => window.removeEventListener('keydown', f)
+  }, [fechar])
   return (
     <div className="ps-fundo" onMouseDown={(ev) => { if (ev.target === ev.currentTarget) fechar() }}>
       <div className="ps-janela ps-janela-estreita" role="dialog" aria-modal="true" aria-labelledby="ps-nova-titulo">
@@ -326,9 +342,11 @@ export function PainelDaSala() {
   // atalhos: 1 a 9 põem a tela no ar (fora de campos de texto e de janelas)
   useEffect(() => {
     const f = (ev: KeyboardEvent) => {
-      if (editando || novaAberta || ev.metaKey || ev.ctrlKey || ev.altKey) return
+      if (editando || novaAberta || ev.metaKey || ev.ctrlKey || ev.altKey || ev.repeat) return
       const alvo = ev.target as HTMLElement | null
-      if (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.isContentEditable)) return
+      if (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable)) return
+      // outra janela aberta (a dos roteiros da I.A., por exemplo): os números não trocam a tela no ar
+      if (document.querySelector('[aria-modal="true"]')) return
       const n = Number(ev.key)
       if (n >= 1 && n <= 9 && cenas[n - 1]) { ev.preventDefault(); colocarNoAr(cenas[n - 1].id) }
     }
@@ -386,12 +404,12 @@ export function PainelDaSala() {
               <button type="button" className="ps-tela-botao" onClick={() => colocarNoAr(c.id)} aria-label={`${esta ? 'No ar: ' : 'Colocar no ar: '}${c.nome}`} aria-current={esta ? 'true' : undefined}>
                 <span className="ps-mini">
                   <canvas ref={ref(c.id)} width={LARGURA_MINI} height={LARGURA_MINI * 9 / 16} aria-hidden />
+                  {i < 9 && <span className="ps-tecla" aria-hidden>{i + 1}</span>}
                   {precisa(c) && <em className="ps-mini-falta">{precisa(c) === 'tela' ? 'Tela desligada' : 'Câmera desligada'}</em>}
                 </span>
                 <span className="ps-tela-nome"><b>{c.nome}</b><small>{esta ? (sala.ativa ? 'No ar agora' : 'Na prévia') : vem ? 'Entrando…' : !sala.ativa && c.id === abertura?.id ? 'Abre a live' : c.modelo ? infoDoModelo(c.modelo.tipo).dica : 'Tela'}</small></span>
               </button>
-              <span className="ps-tecla" aria-hidden>{i < 9 ? i + 1 : ''}</span>
-              {esta && <span className="ps-tag">{sala.ativa ? 'NO AR' : 'PRÉVIA'}</span>}
+              {esta && <span className="ps-tag">{sala.ativa ? 'No ar' : 'Prévia'}</span>}
               <div className="ps-tela-acoes">
                 {i > 0 && <button type="button" className="ps-ico" aria-label={`Mover ${c.nome} para a esquerda`} title="Mover para a esquerda" onClick={() => moverCena(c.id, -1)}><Icone d={ICONES.esq} tamanho={14} /></button>}
                 {i < cenas.length - 1 && <button type="button" className="ps-ico" aria-label={`Mover ${c.nome} para a direita`} title="Mover para a direita" onClick={() => moverCena(c.id, 1)}><Icone d={ICONES.dir} tamanho={14} /></button>}

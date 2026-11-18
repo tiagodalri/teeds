@@ -10,7 +10,7 @@
  * alunos congelaria. O Worker segue batendo 30 vezes por segundo.
  */
 import { useSyncExternalStore } from 'react'
-import { apagarArquivo, guardarArquivo, idsDosArquivos, lerArquivo, lerConfig, salvarConfig } from './arquivos'
+import { apagarArquivo, guardarArquivo, guardarConfigAntiga, idsDosArquivos, lerArquivo, lerConfig, lerConfigAntiga, salvarConfig } from './arquivos'
 import { cenasProntas, montarFontes, telaDoModelo } from './modelo'
 import { criarMisturador, type Misturador } from './stinger'
 import {
@@ -228,7 +228,7 @@ export async function ligarCaptura(f: Fonte): Promise<void> {
     sincronizar()
   } catch (e) {
     const m = e instanceof Error ? e.message : ''
-    marcarCaptura(chave, 'erro', /Permission|NotAllowed|denied/i.test(m) ? MSG_PERMISSAO : /NotFound|Overconstrained/i.test(m) ? 'Não achei esse aparelho. Escolha outro nas propriedades.' : 'Não consegui ligar. Tente de novo.')
+    marcarCaptura(chave, 'erro', /Permission|NotAllowed|denied/i.test(m) ? MSG_PERMISSAO : /NotFound|Overconstrained/i.test(m) ? 'Não achei esse aparelho. Confira se ele está ligado ao computador.' : 'Não consegui ligar. Tente de novo.')
   }
 }
 
@@ -282,7 +282,10 @@ async function prepararMidia(f: Fonte) {
   if (!chave) return
   midias.set(f.id, { el: document.createElement('audio'), chave, url: '', doArquivo: false }) // reserva (evita abrir duas vezes)
   const u = await urlDaFonte(f)
-  if (!u) { midias.delete(f.id); mudar({ aviso: `O arquivo de "${f.nome}" não está neste computador. Envie de novo nas propriedades.` }); return }
+  // trocaram o arquivo enquanto este carregava: quem vale é a troca mais nova
+  const reserva = midias.get(f.id)
+  if (!reserva || reserva.chave !== chave || reserva.url) { if (u?.doArquivo) URL.revokeObjectURL(u.url); return }
+  if (!u) { midias.delete(f.id); mudar({ aviso: `O arquivo de "${f.nome}" não está neste computador. Envie de novo pelo lápis da tela.` }); return }
   const el = document.createElement(f.tipo === 'video' ? 'video' : 'audio')
   el.preload = 'auto'; el.loop = !!f.repetir
   if (el instanceof HTMLVideoElement) el.playsInline = true
@@ -318,7 +321,12 @@ async function prepararImagem(f: Fonte) {
     mudar({ tamanhos: estado.tamanhos + 1 })
   } catch {
     mudar({ aviso: `Não consegui abrir a imagem "${f.nomeDoArquivo ?? f.nome}". Use PNG, JPG ou WebP.` })
-  } finally { carregandoImagem.delete(f.id) }
+  } finally {
+    carregandoImagem.delete(f.id)
+    // trocaram a imagem enquanto esta carregava: carrega a mais nova
+    const agora = todasAsFontes().find((x) => x.id === f.id)
+    if (agora && (agora.arquivo ?? agora.url ?? '') !== chave) void prepararImagem(agora)
+  }
 }
 
 const familiaDaMarca = () => { try { return getComputedStyle(document.body).fontFamily || 'sans-serif' } catch { return 'sans-serif' } }
@@ -713,6 +721,8 @@ function ligarRelogio() {
   relogio.postMessage(1000 / 30)
 }
 
+const APARELHOS_DO_PAINEL = new Set(['camera:padrao', 'tela', 'mic:padrao'])
+
 /** Toda mudança de cena ou fonte passa por aqui: prepara o que faltar e solta o que sobrou. */
 function sincronizar() {
   const c = estado.config
@@ -726,9 +736,10 @@ function sincronizar() {
   for (const id of [...midias.keys()]) if (!vivas.has(id)) descartarMidia(id)
   for (const [id, i] of [...imagens]) if (!vivas.has(id)) { i.img.close(); imagens.delete(id) }
   for (const id of [...textos.keys()]) if (!vivas.has(id)) textos.delete(id)
-  // capturas que nenhuma cena usa mais: desliga
+  // capturas que nenhuma cena usa mais: desliga (18/11/2026: menos a câmera, a tela e o microfone
+  // padrão, que o painel liga e desliga pelos botões e valem para todas as telas)
   const usadas = new Set(todasAsFontes(c).map(chaveDaCaptura).filter(Boolean) as string[])
-  for (const chave of [...capturas.keys()]) if (!usadas.has(chave)) desligarCaptura(chave)
+  for (const chave of [...capturas.keys()]) if (!usadas.has(chave) && !APARELHOS_DO_PAINEL.has(chave)) desligarCaptura(chave)
   // canais: os de áudio em uso; o resto sai
   const somEmUso = new Set(todasAsFontes(c).map(chaveDoAudio).filter(Boolean) as string[])
   for (const chave of [...canaisVivos.keys()]) {
@@ -748,7 +759,20 @@ export function iniciarEstudio(): Promise<void> {
   iniciando ??= (async () => {
     let config = await lerConfig()
     // 18/11/2026: o estúdio estilo OBS (versão 1) dá lugar às telas prontas do painel
-    if (!config || config.versao !== 2 || !config.cenas?.length) { config = cenasProntas(); void salvarConfig(config).catch(() => undefined) }
+    if (!config || config.versao !== 2 || !config.cenas?.length) {
+      // as cenas do estúdio antigo ficam guardadas (e os arquivos delas não são apagados)
+      if (config?.versao === 1 && config.cenas?.length) await guardarConfigAntiga(config).catch(() => undefined)
+      config = cenasProntas(); void salvarConfig(config).catch(() => undefined)
+    }
+    // 18/11/2026: o depoimento nascia com "Nome do cliente" de exemplo como texto de verdade (iria ao ar)
+    config = { ...config, cenas: config.cenas.map((c) => {
+      const k = c.modelo?.tipo === 'depoimento' ? c.modelo.campos : null
+      if (!k || (k.nome !== 'Nome do cliente' && k.cidade !== 'Cidade, UF' && k.frase !== 'Escreva aqui o que o cliente disse.')) return c
+      const campos = { ...k, nome: k.nome === 'Nome do cliente' ? '' : k.nome, cidade: k.cidade === 'Cidade, UF' ? '' : k.cidade, frase: k.frase === 'Escreva aqui o que o cliente disse.' ? '' : k.frase }
+      return { ...c, modelo: { tipo: 'depoimento' as const, campos } }
+    }) }
+    // as telas se remontam pelos campos a cada abertura: um ajuste de layout chega a quem já tinha telas salvas
+    config = { ...config, cenas: config.cenas.map((c) => (c.modelo ? { ...c, fontes: montarFontes(c.id, c.modelo.tipo, c.modelo.campos) } : c)) }
     // 31/10/2026: a cena pronta aberta no tema claro nasceu com o título no azul do tema (invisível no fundo escuro)
     config = { ...config, cenas: config.cenas.map((c) => ({ ...c, fontes: c.fontes.map((f) => (f.tipo === 'texto' && f.nome === 'Live iniciando' && f.texto?.cor.toLowerCase() === '#051528' ? { ...f, texto: { ...f.texto, cor: '#D6AE5B' } } : f)) })) }
     ;[saida, saidaCtx] = tela2d(LARGURA, ALTURA)
@@ -780,8 +804,13 @@ export function saidaDoEstudio(): { video: MediaStreamTrack; audio: MediaStreamT
 
 /** Arquivos guardados que nenhuma cena (nem o stinger) usa mais. */
 async function limparArquivosSoltos() {
-  const usados = new Set([...todasAsFontes().map((f) => f.arquivo), estado.config.stinger.arquivo].filter(Boolean) as string[])
-  for (const id of await idsDosArquivos()) if (!usados.has(id)) void apagarArquivo(id)
+  const ids = await idsDosArquivos()
+  const antiga = await lerConfigAntiga().catch(() => undefined)
+  const fontes = [...todasAsFontes(), ...(antiga?.cenas.flatMap((c) => c.fontes) ?? [])]
+  // os campos das telas também contam (o arquivo pode estar só no campo, esperando a tela remontar)
+  const nosCampos = estado.config.cenas.flatMap((c) => Object.values(c.modelo?.campos ?? {}))
+  const usados = new Set([...fontes.map((f) => f.arquivo), estado.config.stinger.arquivo, antiga?.stinger.arquivo, ...nosCampos].filter(Boolean) as string[])
+  for (const id of ids) if (!usados.has(id)) void apagarArquivo(id)
 }
 
 /* ============================================================ edição */

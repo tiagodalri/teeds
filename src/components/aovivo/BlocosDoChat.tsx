@@ -62,7 +62,7 @@ export function BlocosDoChat({ sessao, embutido = false }: { sessao: SessaoTeeds
       <span className="tr-legenda">{embutido ? 'Mensagens que você aprova antes. Na hora certa, dê o play e elas entram no chat.' : 'Prepare e aprove as mensagens antes. Na hora certa, dê o play e elas entram no chat.'}</span>
 
       <span className="tr-rotulo">{embutido ? 'Velocidade do roteiro' : 'Velocidade'}</span>
-      <div className="tr-seg" role="radiogroup" aria-label="Velocidade do bloco">
+      <div className="tr-seg" role="radiogroup" aria-label={embutido ? 'Velocidade do roteiro' : 'Velocidade do bloco'}>
         {VELOCIDADES.map(([v, r]) => <button key={v} role="radio" aria-checked={sim.velocidade === v} className={sim.velocidade === v ? 'on' : ''} onClick={() => mudarVelocidade(v)}>{r}</button>)}
       </div>
 

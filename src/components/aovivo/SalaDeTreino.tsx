@@ -182,7 +182,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
   const ligar = async (qual: 'tela' | 'camera' | 'mic') => { setErro(null); setErro(await alternarFonte(qual)) }
   // 18/11/2026: no computador, sempre o painel da sala (telas prontas); no celular, tela e câmera
-  const computador = typeof window !== 'undefined' && !ehCelular()
+  // decidido uma vez ao abrir: estreitar a janela no meio da live não troca o modo (a imagem do painel segue indo)
+  const [computador] = useState(() => typeof window !== 'undefined' && !ehCelular())
   const comEstudio = computador
   const [pop, setPop] = useState<'destino' | 'sala' | 'historico' | null>(null)
   const verDestino = pop === 'destino'

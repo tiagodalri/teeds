@@ -31,10 +31,10 @@ const FUNDO_GF: CamposDoModelo = GF ? { fundoUrl: `${BASE}estudio-globalfly/fund
 /** Os modelos, na ordem em que aparecem no painel. */
 export const MODELOS: InfoDoModelo[] = [
   { tipo: 'abertura', nome: 'Começa em instantes', dica: 'A primeira tela, sempre', campos: { titulo: 'LIVE INICIANDO', subtitulo: 'EM INSTANTES', mic: 'nao', ...FUNDO_GF } },
-  { tipo: 'aovivo', nome: 'Ao vivo', dica: 'Sua tela com você no canto', campos: { canto: 'inf-dir', camera: 'sim', mic: 'sim' } },
+  { tipo: 'aovivo', nome: 'Ao vivo', dica: 'Sua tela com você no canto', campos: { canto: 'inf-dir', camera: 'sim', mic: 'sim', somDaTela: 'nao' } },
   { tipo: 'camera', nome: 'Só câmera', dica: 'Conversa de frente', campos: { legenda: '', mic: 'sim' } },
   { tipo: 'intervalo', nome: 'Intervalo', dica: 'Pausa rápida', campos: { titulo: 'VOLTAMOS JÁ', subtitulo: 'FIQUE POR AQUI', mic: 'nao', ...FUNDO_GF } },
-  { tipo: 'depoimento', nome: 'Depoimento', dica: 'Foto ou vídeo de um cliente', campos: { nome: 'Nome do cliente', cidade: 'Cidade, UF', frase: 'Escreva aqui o que o cliente disse.', mic: 'sim' } },
+  { tipo: 'depoimento', nome: 'Depoimento', dica: 'Foto ou vídeo de um cliente', campos: { nome: '', cidade: '', frase: '', mic: 'sim' } },
   {
     tipo: 'encerramento', nome: 'Encerramento', dica: GF ? 'Vídeo da GlobalFly' : 'Agradecimento final',
     campos: GF
@@ -101,17 +101,24 @@ const CANTOS: Record<string, { x: number; y: number }> = {
 export function montarFontes(cenaId: string, tipo: TipoDeModelo, c: CamposDoModelo): Fonte[] {
   const id = cenaId
   const mic = sim(c.mic) ? [microfone(id)] : []
-  const logo = GF ? [base(`${id}-logo`, { tipo: 'imagem', nome: 'Logo', url: `${BASE}globalfly-assinatura.png`, nomeDoArquivo: 'globalfly-assinatura.png', x: LARGURA / 2 - 210, y: 200, w: 420, h: 132 })] : []
+  const logoEm = (y: number) => GF ? [base(`${id}-logo`, { tipo: 'imagem', nome: 'Logo', url: `${BASE}globalfly-assinatura.png`, nomeDoArquivo: 'globalfly-assinatura.png', x: LARGURA / 2 - 210, y, w: 420, h: 132 })] : []
 
   // telas de letreiro: título dourado, linha de baixo e o fundo
   const letreiro = (tamanhoTitulo: number): Fonte[] => {
     const f = midia(c, 'fundo')
     const titulo = (c.titulo ?? '').trim(), sub = (c.subtitulo ?? '').trim()
-    const comLogo = !f || f.tipo === 'imagem' ? logo : []
+    // título comprido: quebra em linhas e diminui a letra para caber; a linha de baixo desce junto
+    const linhas = quebrar(titulo, 18)
+    const maior = Math.max(1, ...linhas.split('\n').map((l) => l.length))
+    const tamanho = Math.max(64, Math.min(tamanhoTitulo, Math.floor(1700 / (maior * 0.68))))
+    const n = linhas ? linhas.split('\n').length : 0
+    const yTitulo = n > 2 ? 300 : n > 1 ? 340 : 400
+    const comLogo = !f || f.tipo === 'imagem' ? logoEm(yTitulo - 200) : []
+    const ySub = titulo ? yTitulo + Math.round(n * tamanho * 1.22) + 40 : 500
     return [
       ...mic,
-      ...(sub ? [texto(`${id}-sub`, 'Linha de baixo', estilo({ conteudo: sub, tamanho: 44, espacamento: 14 }), titulo ? 610 : 500)] : []),
-      ...(titulo ? [texto(`${id}-titulo`, 'Título', estilo({ conteudo: quebrar(titulo, 22), tamanho: tamanhoTitulo, cor: OURO, espacamento: 4 }), 400)] : []),
+      ...(sub ? [texto(`${id}-sub`, 'Linha de baixo', estilo({ conteudo: sub, tamanho: 44, espacamento: 14 }), ySub)] : []),
+      ...(titulo ? [texto(`${id}-titulo`, 'Título', estilo({ conteudo: linhas, tamanho, cor: OURO, espacamento: 4 }), yTitulo)] : []),
       ...(titulo || sub ? comLogo : []),
       ...(f ? [fonteDaMidia(`${id}-fundo`, f, { repetir: true })] : [fundoLiso(id)]),
     ]
@@ -126,7 +133,7 @@ export function montarFontes(cenaId: string, tipo: TipoDeModelo, c: CamposDoMode
       return [
         ...mic,
         ...(sim(c.camera) ? [base(`${id}-camera`, { tipo: 'camera', nome: 'Câmera', dispositivo: '', x: p.x, y: p.y, w: 480, h: 270, caber: 'cobrir' })] : []),
-        base(`${id}-tela`, { tipo: 'tela', nome: 'Tela compartilhada', audioDaTela: false, caber: 'conter' }),
+        base(`${id}-tela`, { tipo: 'tela', nome: 'Tela compartilhada', audioDaTela: sim(c.somDaTela), caber: 'conter' }),
         fundoLiso(id),
       ]
     }
@@ -148,6 +155,9 @@ export function montarFontes(cenaId: string, tipo: TipoDeModelo, c: CamposDoMode
       const nome = (c.nome ?? '').trim(), cidade = (c.cidade ?? '').trim(), frase = (c.frase ?? '').trim()
       const fundo = midia(c, 'fundo') ?? (GF ? midia(FUNDO_GF, 'fundo') : null)
       const fundoF = fundo ? fonteDaMidia(`${id}-fundo`, fundo) : fundoLiso(id)
+      if (!m && !frase && !nome) {
+        return [...mic, texto(`${id}-vazio`, 'Aviso', estilo({ conteudo: 'Escreva o depoimento no lápis desta tela', tamanho: 56, cor: '#8a8f99', negrito: false }), 500), fundoF]
+      }
       if (!m) {
         // sem foto: a frase no centro
         const linhas = quebrar(frase, 34)

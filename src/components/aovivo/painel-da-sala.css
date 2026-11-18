@@ -81,7 +81,8 @@
 .ps-telas-topo h3 { margin: 0; font-size: 14px; color: var(--text); }
 .ps-telas-topo small { flex: 1; color: var(--muted); font-size: 12px; }
 .ps-nova { height: 28px; padding: 0 10px; }
-.ps-telas { display: grid; grid-template-columns: repeat(auto-fill, minmax(102px, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ps-telas { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ps-telas > .ps-tela { flex: 1 1 102px; min-width: 0; max-width: 190px; }
 .ps-tela { position: relative; border: 1px solid var(--border); border-radius: 12px; background: var(--ps-card); transition: border-color .15s, transform .15s; }
 .ps-tela:hover { border-color: color-mix(in srgb, var(--ps-ouro) 55%, var(--border)); }
 .ps-tela.no-ar { border-color: var(--ps-ouro); box-shadow: 0 0 0 1px var(--ps-ouro); }
@@ -92,13 +93,14 @@
 .ps-tela-botao canvas { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; border-radius: 8px; background: #000; }
 .ps-mini-falta { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 8px; color: #8e96a6; font-size: 11px; font-style: normal; font-weight: 600; }
 .ps-tela-nome { display: grid; gap: 1px; padding: 7px 4px 3px; min-width: 0; }
-.ps-tela-nome b { font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ps-tela-nome b { font-size: 12.5px; line-height: 1.25; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .ps-tela-nome small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ps-tela.no-ar .ps-tela-nome small { color: var(--ps-ouro); }
 .ps-app.no-ar .ps-tela.no-ar .ps-tela-nome small { color: var(--down); }
 .ps-tag { position: absolute; top: 11px; left: 11px; padding: 2px 6px; border-radius: 5px; background: var(--ps-ouro); color: #15110a; font-size: 10px; font-weight: 800; letter-spacing: .04em; pointer-events: none; }
 .ps-app.no-ar .ps-tela.no-ar .ps-tag { background: var(--down); color: #fff; }
-.ps-tecla { position: absolute; bottom: 9px; right: 9px; min-width: 18px; height: 18px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); font-size: 10.5px; font-weight: 700; pointer-events: none; }
+/* a tecla fica no canto de baixo da miniatura (não briga com o nome) */
+.ps-tecla { position: absolute; left: 5px; bottom: 5px; z-index: 1; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center; box-sizing: border-box; border-radius: 5px; background: rgba(0, 0, 0, .7); color: #c8ccd4; font-size: 10.5px; font-weight: 700; font-style: normal; pointer-events: none; }
 .ps-tela-acoes { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
 /* o lápis sempre à vista; as setas de mudar a ordem só ao passar o mouse */
 .ps-tela .ps-tela-acoes .ps-ico:not(.ps-lapis) { display: none; }
