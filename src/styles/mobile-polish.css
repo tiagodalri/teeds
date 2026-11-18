@@ -654,3 +654,26 @@
      que havia mais. A borda direita esmaece, como em toda lista que continua para o lado. */
   .go-consultoria .go-consulta-scroll { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); }
 }
+
+/* ==========================================================================
+   Fileiras que rolam de lado (18/11/2026, revisão do celular): o filtro de
+   parceiro (Todos · Douglas · Naor · Victor) e as abas da Administração
+   cortavam o último item sem sinal de que havia mais. Como nos apps nativos,
+   a borda esmaece do lado em que ainda há o que rolar (direita no começo,
+   as duas no meio, esquerda no fim).
+   Só quando a fileira de fato rola: sem rolagem a linha do tempo não existe
+   e a animação não vale (navegador sem suporte: tudo como antes).
+   ========================================================================== */
+@media (max-width: 900px) {
+  @supports (animation-timeline: scroll(self inline)) {
+    .fp, .admin-sidebar nav {
+      animation: borda-que-rola linear both;
+      animation-timeline: scroll(self inline);
+    }
+  }
+  @keyframes borda-que-rola {
+    0%, 4% { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent); }
+    5%, 94% { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(90deg, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+    95%, 100% { -webkit-mask-image: linear-gradient(90deg, transparent, #000 36px); mask-image: linear-gradient(90deg, transparent, #000 36px); }
+  }
+}
