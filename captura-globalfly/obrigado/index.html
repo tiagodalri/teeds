@@ -83,8 +83,9 @@
             <p>Não lembra? Toque em <b>“Esqueci a senha”</b> na tela de entrada e crie uma nova.</p>
           </div>
           <div data-acesso="provisoria" hidden>
-            <p>Enviamos a <b>senha de entrada</b> para o seu e-mail . Não encontrou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
-            <p>Entre com o e-mail do cadastro e essa senha. No primeiro acesso, você escolhe a&nbsp;sua.</p>
+            <!-- 18/11/2026 (Tiago): cadastro sem senha; a senha nasce no Primeiro acesso, por um link no e-mail -->
+            <p>Agora é só <b>criar a sua senha</b>: toque em <b>Entrar na GlobalFly</b>, digite o <b>e-mail do cadastro</b> e enviamos um link para ele.</p>
+            <p>Abra o e-mail, toque no link e crie a senha. Não chegou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
           </div>
         </div>
       </section>
@@ -224,6 +225,14 @@
       var conta = dados.conta === 'criada' || dados.conta === 'existente' ? dados.conta : 'provisoria'
       document.querySelector('[data-acesso="' + conta + '"]').hidden = false
       if (conta !== 'criada') document.querySelector('[data-acesso-curto]').textContent = 'Os dados de entrada estão logo abaixo.'
+      // 18/11/2026: sem senha no cadastro, o botão abre direto o Primeiro acesso (criar a senha pelo e-mail)
+      if (conta === 'provisoria') {
+        var plat = document.getElementById('plataforma')
+        plat.href = plat.getAttribute('href') + '?acesso=primeiro'
+        plat.textContent = 'Criar minha senha'
+        document.querySelector('[data-chamada]').innerHTML = document.querySelector('[data-chamada]').innerHTML.replace('entre com o e-mail e a senha que você criou', 'crie a sua senha e conheça')
+          .replace('conheça e conheça', 'conheça')
+      }
       // os números seguem só os passos que aparecem neste aparelho
       var n = 0
       Array.prototype.forEach.call(document.querySelectorAll('.o-passos > li'), function (li) {

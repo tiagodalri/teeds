@@ -7,7 +7,7 @@ import { SENHA_NO_CADASTRO, type ContaDoCadastro, type DadosFilaEspera } from '.
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
 import { MARCA } from '../marca'
-import { abrirNoCadastro, paginaDeVenda } from '../core/teeds/entradaInicial'
+import { abrirNoCadastro, abrirNoPrimeiroAcesso, paginaDeVenda } from '../core/teeds/entradaInicial'
 import { paginaComQuiz } from '../core/teeds/quizDoTrafego'
 import { vitrine } from '../core/teeds/parceiro'
 import { CenaDoLogin, type VarianteDaCena } from './entrada/CenaDoLogin'
@@ -22,7 +22,7 @@ const CadastroComPlanos = lazy(() => import('./entrada/CadastroComPlanos').then(
 // 16/11/2026: a /trafego (anúncios) começa pelo quiz; no fim, "Garantir minha vaga" abre os planos
 const QuizDoTrafego = lazy(() => import('./entrada/QuizDoTrafego').then((m) => ({ default: m.QuizDoTrafego })))
 
-type Modo = 'entrar' | 'criar' | 'esqueci'
+type Modo = 'entrar' | 'criar' | 'esqueci' | 'primeiro'
 
 interface Props {
   ocupado: boolean
@@ -64,6 +64,12 @@ const TEXTOS: Record<Modo, { titulo: string; linha: string; acao: string }> = {
       : 'Deixe seus dados. Você não cria senha agora: em instantes chega no seu e-mail a senha provisória para entrar (confira também o Spam).',
     acao: 'Confirmar cadastro',
   },
+  // 18/11/2026: quem se cadastrou sem senha cria a dela aqui, pelo link que chega no e-mail do cadastro
+  primeiro: {
+    titulo: 'Primeiro acesso',
+    linha: 'Digite o e-mail que você usou no cadastro. Enviamos para ele um link para você criar a sua senha.',
+    acao: 'Receber o link',
+  },
   esqueci: {
     titulo: 'Esqueceu a senha?',
     linha: 'Informe o seu e-mail e enviamos um link para você criar uma senha nova.',
@@ -76,6 +82,7 @@ const CAMPOS_DO_MODO: Record<Modo, string[]> = {
   entrar: ['email', 'senha'],
   criar: SENHA_NO_CADASTRO ? ['nome', 'email', 'telefone', 'senha', 'repetir'] : ['nome', 'email', 'telefone'],
   esqueci: ['email'],
+  primeiro: ['email'],
 }
 
 const ehSenha = (chave: string) => chave === 'senha' || chave === 'repetir'
@@ -93,7 +100,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   // o script do Google baixa já ao abrir a tela: no toque, a janelinha abre na hora (sem bloqueio de pop-up)
   useEffect(() => { if (onEntrarComGoogle) prepararGoogle().catch(() => { /* o toque tenta de novo */ }) }, [onEntrarComGoogle])
   // Link de campanha de cadastro ou /cadastre-se: abre direto no formulário.
-  const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : 'entrar')
+  const [modo, setModo] = useState<Modo>(abrirNoCadastro ? 'criar' : abrirNoPrimeiroAcesso ? 'primeiro' : 'entrar')
   // o quiz só vale na /trafego de parceiro que já tem os vídeos (quizDoTrafego.ts); sem eles, direto aos planos
   const [quizDaVisita] = useState(() => (paginaDeVenda === 'trafego' ? paginaComQuiz() : null))
   const [quizFeito, setQuizFeito] = useState(false)
@@ -136,7 +143,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
   const problemas = avaliar(tentou)
   const faltaAceite = modo === 'entrar' && pedeTermos && !(concordo && maior)
 
-  const valido = modo === 'esqueci'
+  const valido = modo === 'esqueci' || modo === 'primeiro'
     ? email.includes('@')
     : modo === 'entrar'
       ? email.includes('@') && senha.length >= 6 && !faltaAceite
@@ -198,6 +205,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       return
     }
     const ok = await onEsqueci(email)
+    if (ok && modo === 'primeiro') { setRecado(`Pronto! Se ${email} tem cadastro, o link para criar a sua senha está a caminho. Abra o e-mail, toque no link e crie a senha. Não chegou em alguns minutos? Confira o Spam ou peça de novo (vale sempre o último link).`); return }
     if (ok) setRecado(`Se existir uma conta com ${email}, o link está a caminho. Use o e-mail mais recente: pedir de novo faz os links anteriores pararem de valer. Confira também o Spam.`)
   }
 
@@ -344,6 +352,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
             </button>
           )}
           {/* 27/10/2026 (print do Tiago, "tudo socado"): um botão principal só; cadastro vira link, como nos grandes apps */}
+          {modo === 'entrar' && <p className="entrada-cadastro">Fez o cadastro e ainda não tem senha? <button type="button" disabled={ocupado} onClick={() => trocarModo('primeiro')}>Primeiro acesso</button></p>}
           {modo === 'entrar' && <p className="entrada-cadastro">Ainda não tem conta? <button type="button" disabled={ocupado} onClick={() => trocarModo('criar')}>Cadastre-se</button></p>}
         </form>
 

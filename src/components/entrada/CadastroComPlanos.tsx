@@ -585,7 +585,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
 
             <form className="cpl-form" onSubmit={enviar} onFocus={aoComecar} noValidate aria-busy={ocupado}>
               <h1>Garanta o seu cartão de membro</h1>
-              <p className="cpl-lead">Depois é só entrar com o e-mail e a senha que você criar aqui.</p>
+              <p className="cpl-lead">{SENHA_NO_CADASTRO ? 'Depois é só entrar com o e-mail e a senha que você criar aqui.' : 'Sem senha agora: depois, no Primeiro acesso, você recebe no e-mail um link e cria a sua.'}</p>
               {campo('nome', 'Nome completo', nome, setNome, 'user', { auto: 'name', dica: 'Como está no documento' })}
               {campo('email', 'E-mail', email, setEmail, 'mail', { tipo: 'email', auto: 'email', dica: 'voce@email.com', modo: 'email' })}
               {campo('telefone', 'Telefone com DDD', telefone, (v) => setTelefone(formatarTelefone(v)), 'phone', { tipo: 'tel', auto: 'tel', dica: '(11) 91234-5678', modo: 'tel' })}

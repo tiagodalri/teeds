@@ -37,6 +37,23 @@ function decidir(): boolean {
 export const abrirNoCadastro: boolean = typeof location === 'undefined' ? false : decidir()
 
 /**
+ * Primeiro acesso (18/11/2026, Tiago: "deixa pra pessoa criar a senha depois, no primeiro login, onde ela
+ * coloca somente o email"): `?acesso=primeiro` abre a tela de entrada direto no Primeiro acesso, que manda
+ * ao e-mail do cadastro o link para criar a senha. Lido uma vez e tirado da barra, como o `cadastro=1`.
+ */
+function decidirPrimeiroAcesso(): boolean {
+  try {
+    const u = new URL(location.href)
+    if (!u.searchParams.has('acesso')) return false
+    const sim = u.searchParams.get('acesso') === 'primeiro'
+    u.searchParams.delete('acesso')
+    history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash)
+    return sim
+  } catch { return false }
+}
+export const abrirNoPrimeiroAcesso: boolean = typeof location === 'undefined' ? false : decidirPrimeiroAcesso()
+
+/**
  * Qual página de venda abriu o cadastro (16/11/2026, Tiago: "duplicar a /cadastro com outra
  * especificação na URL, /trafego, para a gente saber que é o que vai usar no tráfego pago").
  *

@@ -13,7 +13,8 @@ const todas:any[]=[];let r:Response|null=null;for(let de=0;de<20000;de+=1000){r=
  * digitada seria ignorada e a conta nasceria com a provisória. Ligar junto com a
  * chave GF.SENHA de captura-globalfly/captura.js, e só depois de reiniciar o servidor.
  */
-export const SENHA_NO_CADASTRO = true
+// 18/11/2026 (Tiago): "tira a senha" — a pessoa cria a senha no Primeiro acesso (link no e-mail), depois do cadastro
+export const SENHA_NO_CADASTRO = false
 
 export interface DadosFilaEspera { nome: string; email: string; telefone: string; consentiu: boolean; senha?: string }
 /** O que o servidor fez com a conta (28/10/2026): criada com a senha da pessoa, já existia, ou ficou para a provisória. */
