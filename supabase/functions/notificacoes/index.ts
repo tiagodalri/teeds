@@ -362,6 +362,35 @@ const usdComissao = (v: number, moeda: string) => new Intl.NumberFormat('pt-BR',
   style: 'currency', currency: moeda || 'USD', minimumFractionDigits: 2, maximumFractionDigits: v > 0 && v < 0.01 ? 4 : 2,
 }).format(v)
 
+/*
+  18/11/2026 (Tiago: "queria que os valores de comissão chegassem em R$, com a cotação do dia. Somente nos
+  adms"). A mesma cotação do Financeiro (fin_cotacoes, uma por dia de Brasília, dólar comercial de compra da
+  AwesomeAPI): a primeira comissão do dia que não achar a do dia busca e grava; as outras só leem. Sem
+  resposta da AwesomeAPI, vale a última guardada. Sem nenhuma, o aviso sai em US$ como antes.
+*/
+const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+let cotacaoGuardada: { dia: string; valor: number } | null = null
+async function cotacaoDoDia(): Promise<number | null> {
+  const hoje = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(Date.now())
+  if (cotacaoGuardada?.dia === hoje) return cotacaoGuardada.valor
+  const valido = (v: number) => v > 1 && v < 50
+  const r = await rest(`fin_cotacoes?dia=eq.${hoje}&select=usd_brl`)
+  const doDia = Number((r.ok ? await r.json() : [])[0]?.usd_brl)
+  if (valido(doDia)) { cotacaoGuardada = { dia: hoje, valor: doDia }; return doDia }
+  try {
+    const a = await fetch('https://economia.awesomeapi.com.br/json/last/USD-BRL', { signal: AbortSignal.timeout(4000) })
+    const v = a.ok ? Number((await a.json() as { USDBRL?: { bid?: string } }).USDBRL?.bid) : NaN
+    if (valido(v)) {
+      await rest('fin_cotacoes?on_conflict=dia', { method: 'POST', headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' }, body: JSON.stringify({ dia: hoje, usd_brl: v }) })
+      cotacaoGuardada = { dia: hoje, valor: v }
+      return v
+    }
+  } catch { /* sem resposta: a última guardada */ }
+  const u = await rest('fin_cotacoes?select=usd_brl&order=dia.desc&limit=1')
+  const ultima = Number((u.ok ? await u.json() : [])[0]?.usd_brl)
+  return valido(ultima) ? ultima : null
+}
+
 async function avisarComissao(corpo: Record<string, unknown>) {
   const userId = String(corpo.user_id ?? '')
   if (!UUID.test(userId)) return json({ erro: 'sem cliente' }, 400)
@@ -400,9 +429,12 @@ async function avisarComissao(corpo: Record<string, unknown>) {
   const deOnde = origem === 'manual'
     ? 'Operação manual'
     : `${robo ? `I.A. ${robo.replace(/^GF\s+/i, 'GF ')}` : 'I.A.'} · ${operacoes} ${operacoes === 1 ? 'operação' : 'operações'}`
+  const cotacao = (moeda || 'USD').toUpperCase() === 'USD' ? await cotacaoDoDia() : null
+  const valor = cotacao ? `${brl.format(markup * cotacao)} de comissão` : `${usdComissao(markup, moeda)} de comissão`
+  const conversao = cotacao ? `\n${usdComissao(markup, moeda)} · dólar a ${brl.format(cotacao)}` : ''
   const aviso: Aviso = {
     titulo: '💰 Comissão gerada',
-    corpo: `${nome} · ${usdComissao(markup, moeda)} de comissão\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}`,
+    corpo: `${nome} · ${valor}\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}${conversao}`,
     tag: `comissao-${chave}`, url: './',
   }
   // rastreio de teste (13/11/2026): com `rastro` (id de push_disparos), o aparelho avisa o banco quando a
@@ -420,7 +452,7 @@ async function avisarComissao(corpo: Record<string, unknown>) {
   const detalhes: string[] = []
   for (const id of destino) { const r = await enviar(id, marca, comEco); enviados += r.enviados; detalhes.push(...r.detalhes) }
   console.log('comissao', origem, parceiro, markup.toFixed(4), { admins: destino.length, enviados, detalhes })
-  return json({ admins: destino.length, enviados, markup, detalhes })
+  return json({ admins: destino.length, enviados, markup, cotacao, detalhes })
 }
 
 /* ------------------------------------------------------- chat da equipe */
