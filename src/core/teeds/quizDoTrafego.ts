@@ -52,7 +52,8 @@ export interface PaginaDeTrafego {
 }
 
 const PASTA = `${SUPABASE.url}/storage/v1/object/public/aulas/globalfly/vsl-trafego`
-export const MENSAGEM_DO_WHATSAPP = 'Olá, quero garantir minha vaga na GlobalFly Trade.'
+// 18/11/2026 (Tiago): "essa é a msg que deve chegar no whats". O código do lead segue no fim, entre parênteses.
+export const MENSAGEM_DO_WHATSAPP = 'Quero fazer parte da próxima live ao vivo Naor'
 
 export const PAGINAS_DE_TRAFEGO: Record<string, PaginaDeTrafego> = {
   /* ---------------------------------------------------------------- /n/trafego · Naor Bezerra
@@ -73,7 +74,8 @@ export const PAGINAS_DE_TRAFEGO: Record<string, PaginaDeTrafego> = {
         { src: `${PASTA}/naor-2-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-2.webp', botaoAos: 157, duracao: 166 },
         { src: `${PASTA}/naor-3-v1.mp4`, capa: '/aulas-globalfly/vsl/naor-3.webp', botaoAos: 301, duracao: 315 },
       ],
-      whatsapp: '5511994437461',
+      // 18/11/2026 (Tiago): o novo número do atendimento, para onde todas as campanhas vão (era 5511994437461)
+      whatsapp: '5511927067387',
     },
   },
 
