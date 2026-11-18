@@ -2,18 +2,18 @@
   Lançar ou editar: despesa, receita, aporte ou retirada de sócio. Num lançamento novo dá para repetir
   todo mês ou parcelar. Comprovantes (PDF ou imagem, até 10 MB) sobem junto.
 */
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   FORMAS, ROTULO_TIPO, dataCurta, ehEntrada, ehOperacional, fonteDe, fontesPagadoras, hoje, reais, regraDoPagamento, somarMeses,
   type Anexo, type DadosFin, type FinApi, type Lancamento, type NovoLancamento, type TipoLancamento,
 } from '../../core/teeds/financeiro'
 import { Campo, Interruptor, Janela, Segmentado, escreverValor, lerValor } from './ui'
+import { Comprovantes, type ItemComprovante } from './Comprovantes'
 
 export interface Rascunho { tipo?: TipoLancamento; socio_id?: string | null; valor?: number; descricao?: string; projeto_id?: string | null; pago_por?: string | null }
 type Repeticao = 'nao' | 'mensal' | 'parcelado'
 
 const novoId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12}).*$/, '$1-$2-$3-$4-$5'))
-const tamanho = (b: number) => b > 1e6 ? `${(b / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(b / 1e3))} kB`
 
 export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar, aoFechar, aoSalvar, nomeDoCaixa = 'Caixa da plataforma' }: {
   api: FinApi; dados: DadosFin
@@ -165,10 +165,26 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
     } catch (x) { setErro((x as Error).message); setSalvando(false) }
   }
 
-  const abrirAnexo = async (a: Anexo) => {
-    const janela = window.open('', '_blank')
-    try { const url = await api.linkDoAnexo(a); if (janela) janela.location.href = url; else window.location.href = url }
-    catch (x) { janela?.close(); setErro((x as Error).message) }
+  // links assinados valem 5 min: guarda por 4 e pede outro depois
+  const links = useRef(new Map<string, { url: string; em: number }>())
+  const linkDe = async (a: Anexo) => {
+    const g = links.current.get(a.path)
+    if (g && Date.now() - g.em < 240_000) return g.url
+    const url = await api.linkDoAnexo(a)
+    links.current.set(a.path, { url, em: Date.now() })
+    return url
+  }
+  const locais = useMemo(() => novos.map((f) => URL.createObjectURL(f)), [novos])
+  useEffect(() => () => locais.forEach((u) => URL.revokeObjectURL(u)), [locais])
+  const itensDosComprovantes: ItemComprovante[] = [
+    ...anexos.map((a) => ({ chave: a.path, nome: a.nome, tipo: a.tipo, tamanho: a.tamanho, novo: false, url: () => linkDe(a) })),
+    ...novos.map((f, i) => ({ chave: `novo:${i}:${f.name}:${f.size}:${f.lastModified}`, nome: f.name, tipo: f.type, tamanho: f.size, novo: true, url: async () => locais[i] })),
+  ]
+  const tirarComprovante = (chave: string) => {
+    const a = anexos.find((x) => x.path === chave)
+    if (a) { setAnexos((x) => x.filter((y) => y !== a)); setRemovidos((x) => [...x, a]); return }
+    const i = itensDosComprovantes.findIndex((x) => x.chave === chave) - anexos.length
+    if (i >= 0) setNovos((x) => x.filter((_, j) => j !== i))
   }
   const escolherArquivos = (fs: FileList | null) => {
     if (!fs) return
@@ -316,19 +332,10 @@ export function EditorLancamento({ api, dados, lancamento, rascunho, podeEditar,
 
           <div className="fin-campo largo">
             <span className="fin-campo-rot">Comprovantes</span>
-            <div className="fin-anexos">
-              {anexos.map((a) => <span key={a.path} className="fin-anexo">
-                <button type="button" onClick={() => void abrirAnexo(a)} title="Abrir">{a.tipo === 'application/pdf' ? 'PDF' : 'IMG'}<b>{a.nome}</b><small>{tamanho(a.tamanho)}</small></button>
-                {!somenteLeitura && <button type="button" className="fin-anexo-tirar" aria-label={`Tirar ${a.nome}`} onClick={() => { setAnexos((x) => x.filter((y) => y !== a)); setRemovidos((x) => [...x, a]) }}>×</button>}
-              </span>)}
-              {novos.map((f, i) => <span key={`${f.name}-${i}`} className="fin-anexo novo">
-                <button type="button" disabled>{f.type === 'application/pdf' ? 'PDF' : 'IMG'}<b>{f.name}</b><small>{tamanho(f.size)} · sobe ao salvar</small></button>
-                <button type="button" className="fin-anexo-tirar" aria-label={`Tirar ${f.name}`} onClick={() => setNovos((x) => x.filter((_, j) => j !== i))}>×</button>
-              </span>)}
-              {!somenteLeitura && <button type="button" className="fin-anexar" onClick={() => arquivo.current?.click()}>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Anexar comprovante</button>}
-              <input ref={arquivo} type="file" hidden multiple accept="application/pdf,image/*,.heic,.heif" onChange={(e) => { escolherArquivos(e.target.files); e.target.value = '' }} />
-            </div>
+            <Comprovantes itens={itensDosComprovantes} aoErro={setErro}
+              aoTirar={somenteLeitura ? undefined : tirarComprovante}
+              aoAnexar={somenteLeitura ? undefined : () => arquivo.current?.click()} />
+            <input ref={arquivo} type="file" hidden multiple accept="application/pdf,image/*,.heic,.heif" onChange={(e) => { escolherArquivos(e.target.files); e.target.value = '' }} />
           </div>
 
           {l?.grupo && doGrupo.length > 1 && !somenteLeitura && <div className="fin-campo largo">

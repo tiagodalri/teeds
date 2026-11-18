@@ -54,7 +54,7 @@ function semente(vazio: boolean): DadosFin {
   })
   // as cobranças do Facebook (as 31 dos prints de 10/11/2026), pagas no cartão do Tiago
   const fb = [12.68, 13.7, 12.79, 13.78, 20.83, 13.48, 21.34, 17.11, 13.83, 12.81, 17.51, 13.42, 17.06, 49.5, 42.87, 42.84, 12.76, 12.53, 75.18, 71.37, 44.35, 47.13, 111.51, 114.57, 102.45, 75.25, 63.8, 63.78, 73.27, 80.62, 68.31]
-  fb.forEach((v, i) => { const d = somarDias(h, -Math.floor(i / 4)); add({ tipo: 'despesa', descricao: 'Anúncios do Facebook', valor: v, vencimento: d, pago_em: d, categoria_id: c('Anúncios'), conta_id: null, socio_id: socios[0].id, contraparte: 'Meta Platforms', forma: 'Cartão de crédito', projeto_id: projetos[0].id, anexos: i === 0 ? [{ path: 'x', nome: 'fatura-meta.pdf', tipo: 'application/pdf', tamanho: 182000 }] : [] }) })
+  fb.forEach((v, i) => { const d = somarDias(h, -Math.floor(i / 4)); add({ tipo: 'despesa', descricao: 'Anúncios do Facebook', valor: v, vencimento: d, pago_em: d, categoria_id: c('Anúncios'), conta_id: null, socio_id: socios[0].id, contraparte: 'Meta Platforms', forma: 'Cartão de crédito', projeto_id: projetos[0].id, anexos: i === 0 ? [{ path: 'lab/fatura-meta', nome: 'Fatura Meta Ads novembro.pdf', tipo: 'application/pdf', tamanho: 182000 }, { path: 'lab/recibo-meta', nome: 'Recibo do cartao FACEBK 2GL5TE6PX4.pdf', tipo: 'application/pdf', tamanho: 64000 }, { path: 'lab/extrato', nome: 'Extrato Infinite Pay.pdf', tipo: 'application/pdf', tamanho: 31000 }] : [] }) })
   for (let m = 0; m < 6; m++) {
     const d = somarMeses(h, -m)
     add({ tipo: 'receita', descricao: 'Markup da Deriv', valor: [4820.5, 3910.2, 3120, 2280.4, 1650, 980][m], vencimento: d, pago_em: m === 0 ? null : d, categoria_id: c('Markup da Deriv'), contraparte: 'Deriv', forma: 'Transferência', origem: 'markup-deriv', origem_id: `m${m}` })
@@ -151,10 +151,43 @@ function apiEmMemoria(): FinApi {
     tirarAcesso: async (email) => { acessos = acessos.map((a) => a.email === email ? { ...a, ativo: false } : a) },
     limitarProjetos: async (email, projetos) => { acessos = acessos.map((a) => a.email === email ? { ...a, projetos } : a) },
     enviarAnexo: async (_l, f): Promise<Anexo> => espera({ path: `lab/${f.name}`, nome: f.name, tipo: f.type, tamanho: f.size }),
-    linkDoAnexo: async () => 'about:blank',
+    linkDoAnexo: async (a) => {
+      let u = pdfsDeExemplo.get(a.path)
+      if (!u) { u = pdfDeExemplo(a.nome.replace(/\.pdf$/i, ''), ['Fornecedor: Exemplo Ltda.', `Arquivo: ${a.nome}`, 'Data: 10/11/2026', 'Forma de pagamento: Cartao de credito', 'Comprovante de exemplo do laboratorio']); pdfsDeExemplo.set(a.path, u) }
+      return espera(u)
+    },
     apagarAnexo: async () => undefined,
   }
 }
+
+
+/** PDF de exemplo montado na hora (só no laboratório), para a miniatura e a prévia terem o que mostrar. */
+function pdfDeExemplo(titulo: string, linhas: string[]): string {
+  const esc = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[()\\]/g, '\\$&')
+  const corpo = [
+    'BT /F2 22 Tf 56 770 Td (' + esc(titulo) + ') Tj ET',
+    '0.85 g 56 750 500 2 re f 0 g',
+    ...linhas.map((l, i) => `BT /F1 12 Tf 56 ${720 - i * 22} Td (${esc(l)}) Tj ET`),
+    '0.95 g 56 420 500 60 re f 0 g',
+    'BT /F2 16 Tf 72 444 Td (Total pago) Tj ET',
+  ].join('\n')
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>',
+    `<< /Length ${corpo.length} >>\nstream\n${corpo}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
+  ]
+  let pdf = '%PDF-1.4\n'
+  const pos: number[] = []
+  objs.forEach((o, i) => { pos.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n` })
+  const xref = pdf.length
+  pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${pos.map((p) => `${String(p).padStart(10, '0')} 00000 n \n`).join('')}`
+  pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+  return URL.createObjectURL(new Blob([pdf], { type: 'application/pdf' }))
+}
+const pdfsDeExemplo = new Map<string, string>()
 
 export default function LabFinanceiro() {
   const api = useMemo(apiEmMemoria, [])
