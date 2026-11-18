@@ -578,9 +578,9 @@
 }
 
 /* ==========================================================================
-   iPhone com iOS 26, app instalado (10/11/2026): depois que o teclado ou um
-   seletor fecha, o iOS às vezes deixa os fixos deslocados (barra de baixo no
-   meio da tela, topo fora dela). A classe e o tamanho do desvio vêm de
+   iPhone com iOS 26, app instalado (10/11/2026, refeito em 18/11/2026): depois
+   que o teclado ou um seletor fecha, o iOS às vezes deixa os fixos deslocados
+   (barra de baixo no meio da tela, topo fora dela). A classe e o tamanho do desvio vêm de
    src/core/iphoneDesalinhado.ts; só existem enquanto o defeito está na tela.
    A propriedade `translate` soma com o `transform` que o elemento já tenha.
    ========================================================================== */
@@ -592,7 +592,14 @@
   html.vv-desalinhado .mcb,
   html.vv-desalinhado .av-pilula,
   html.vv-desalinhado .app-convite,
-  html.vv-desalinhado .mon-replay-controles { translate: 0 var(--vv-baixo, 0px); }
+  html.vv-desalinhado .mon-replay-controles,
+  /* 18/11/2026: o resto do que fica preso no pé da tela (o print do Tiago mostrou o chat da equipe subindo junto) */
+  html.vv-desalinhado .eq-lancador-area,
+  html.vv-desalinhado .eq-painel,
+  html.vv-desalinhado .mp-salvar,
+  html.vv-desalinhado .cpl-barra-fixa,
+  html.vv-desalinhado .ac-placar,
+  html.vv-desalinhado #aviso-versao { translate: 0 var(--vv-baixo, 0px); }
   html.vv-desalinhado .workspace-app .topbar,
   html.vv-desalinhado .workspace-app .workspace-mobile-toggle,
   html.vv-desalinhado body::before { translate: 0 var(--vv-cima, 0px); }
