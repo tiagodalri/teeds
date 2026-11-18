@@ -839,7 +839,8 @@ export default function App() {
     const atual = (history.state as { tela?: WorkspacePage } | null)?.tela
     if (atual === tela) { if (location.pathname !== caminhoDaTela(tela)) history.replaceState(history.state, '', url); return }
     if (atual === undefined) history.replaceState({ ...(history.state ?? {}), tela }, '', url)
-    else history.pushState({ ...(history.state ?? {}), tela }, '', url)
+    // a entrada do chat da equipe (eq) não passa para a tela nova (18/11/2026)
+    else { const { eq: _eq, ...resto } = (history.state ?? {}) as { eq?: number }; history.pushState({ ...resto, tela }, '', url) }
   }, [tela])
 
   useEffect(() => {

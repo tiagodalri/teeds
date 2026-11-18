@@ -260,6 +260,11 @@ export async function sair(token?: string): Promise<void> {
     /* o servidor pode recusar um token ja vencido: sair localmente basta */
   }
   guardar(null)
+  // o chat da equipe guardado no aparelho (mensagens e mídias) sai junto (18/11/2026)
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && /\.equipe\.v2\./.test(k)) localStorage.removeItem(k) }
+  } catch { /* sem armazenamento */ }
+  try { void caches.keys().then((ks) => Promise.all(ks.filter((k) => k.endsWith('-equipe-midia')).map((k) => caches.delete(k)))).catch(() => undefined) } catch { /* sem cache */ }
 }
 
 /**

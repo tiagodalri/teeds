@@ -147,7 +147,7 @@ export function assinarMudancas(op: Opcoes): AssinaturaRealtime {
         const d = msg.payload?.data
         if (!d) return
         // Deduplicação de entrega: a mesma mudança pode chegar duas vezes numa reconexão.
-        const chave = `${d.table}|${d.commit_timestamp ?? ''}|${JSON.stringify(d.record?.sessao_id ?? d.old_record?.sessao_id ?? '')}|${d.record?.seq ?? ''}|${d.record?.id ?? ''}`
+        const chave = `${d.table}|${d.commit_timestamp ?? ''}|${JSON.stringify(d.record?.sessao_id ?? d.old_record?.sessao_id ?? '')}|${d.record?.seq ?? ''}|${d.record?.id ?? ''}|${d.record?.user_id ?? ''}|${d.record?.conversa_id ?? ''}|${d.type ?? ''}`
         if (vistos.has(chave)) return
         vistos.add(chave); if (vistos.size > 2000) { const primeiro = vistos.values().next().value; if (primeiro) vistos.delete(primeiro) }
         op.aoMudar({ tipo: d.type, tabela: d.table, linha: d.record ?? {}, antiga: d.old_record ?? null, confirmadaEm: d.commit_timestamp ?? '' })
@@ -208,7 +208,13 @@ export function assinarMudancas(op: Opcoes): AssinaturaRealtime {
   }, batimentoMs)
   ;(batimento as any).unref?.()
 
-  const aoVoltar = () => { if (typeof document !== 'undefined' && document.visibilityState === 'visible' && vivo && (!ws || ws.readyState !== 1)) { if (religando) { clearTimeout(religando); religando = null }; tentativas = 0; ligar() } }
+  const aoVoltar = () => {
+    if (typeof document === 'undefined' || document.visibilityState !== 'visible' || !vivo) return
+    // o iPhone suspende a aba e o socket continua "aberto" sem ninguém do outro lado: mudo há
+    // mais de um batimento, religa já, em vez de esperar o próximo batimento descobrir
+    if (ws && ws.readyState === 1 && agora() - ultimoSinal > batimentoMs) { tentativas = 0; agendarReligar('voltou do segundo plano'); return }
+    if (!ws || ws.readyState !== 1) { if (religando) { clearTimeout(religando); religando = null }; tentativas = 0; ligar() }
+  }
   if (typeof document !== 'undefined') document.addEventListener('visibilitychange', aoVoltar)
 
   ligar()

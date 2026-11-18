@@ -586,3 +586,6 @@ body:has(.av-flutuante.embaixo[data-canto$='dir']):has(.sp-lancador-area) .eq-la
 :root:not([data-tema='escuro']) .eq-avatar { background: color-mix(in srgb, var(--tom) 26%, #fff); }
 :root:not([data-tema='escuro']) :is(.eq-citada, .eq-respondendo > span) { border-left-color: color-mix(in srgb, var(--tom, var(--eq-ouro)) 75%, #1b1b1b); }
 :root:not([data-tema='escuro']) .eq-conversa::before { opacity: .09; }
+
+/* só para o leitor de tela: a mensagem que chegou com a conversa aberta */
+.eq-so-leitor { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

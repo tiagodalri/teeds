@@ -152,6 +152,22 @@ async function daCaixa(caminho: string): Promise<Blob | null> {
 async function paraCaixa(caminho: string, b: Blob) {
   try { const c = await caches.open(CAIXA_DE_MIDIA); await c.put(`/equipe-midia/${caminho}`, new Response(b, { headers: { 'Content-Type': b.type || 'application/octet-stream' } })) } catch { /* sem cache: baixa de novo da próxima vez */ }
 }
+/** Mídia apagada: sai do aparelho também. */
+export function esquecerMidia(caminho: string) {
+  const p = midiasAbertas.get(caminho)
+  midiasAbertas.delete(caminho)
+  void p?.then((u) => URL.revokeObjectURL(u)).catch(() => undefined)
+  void caches.open(CAIXA_DE_MIDIA).then((c) => c.delete(`/equipe-midia/${caminho}`)).catch(() => undefined)
+}
+/** Saiu da conta: o chat guardado no aparelho vai embora (as mensagens e as mídias). */
+export function esquecerChatDoAparelho() {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith(`${MARCA.id}.equipe.v2.`)) localStorage.removeItem(k) }
+  } catch { /* sem armazenamento */ }
+  for (const p of midiasAbertas.values()) void p.then((u) => URL.revokeObjectURL(u)).catch(() => undefined)
+  midiasAbertas.clear()
+  try { void caches.delete(CAIXA_DE_MIDIA) } catch { /* sem cache */ }
+}
 /** O que acabou de subir já fica guardado (quem mandou não baixa de novo). */
 export function guardarMidia(caminho: string, b: Blob) {
   void paraCaixa(caminho, b)
@@ -161,10 +177,15 @@ export function guardarMidia(caminho: string, b: Blob) {
 // ------------------------------------------------------------ banco
 export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): EquipeApi {
   const cabeca = () => ({ apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` })
+  // rede ruim no celular: um pedido nunca fica pendurado para sempre (vira "não enviou" e tenta de novo)
+  const comPrazo = (ms: number, init: RequestInit = {}): RequestInit => {
+    if (init.keepalive || typeof AbortSignal === 'undefined' || !('timeout' in AbortSignal)) return init
+    return { ...init, signal: (AbortSignal as unknown as { timeout: (ms: number) => AbortSignal }).timeout(ms) }
+  }
   const rest = async <T>(caminho: string, init: RequestInit = {}): Promise<T> => {
-    const r = await fetch(`${SUPABASE.url}/rest/v1${caminho}`, {
+    const r = await fetch(`${SUPABASE.url}/rest/v1${caminho}`, comPrazo(20_000, {
       ...init, headers: { ...cabeca(), 'Content-Type': 'application/json', ...(init.headers as Record<string, string> ?? {}) },
-    })
+    }))
     if (!r.ok) {
       const c = await r.json().catch(() => ({}))
       const e = new Error(String(c?.message || `Não consegui falar com o servidor agora (${r.status}). Tente de novo.`)) as Error & { status?: number; codigo?: string }
@@ -175,7 +196,7 @@ export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): Eq
   }
   const rpc = <T>(nome: string, corpo: Record<string, unknown>, init: RequestInit = {}) => rest<T>(`/rpc/${nome}`, { method: 'POST', body: JSON.stringify(corpo), ...init })
   const subir = async (caminho: string, b: Blob, tipo: string) => {
-    const r = await fetch(`${SUPABASE.url}/storage/v1/object/equipe/${caminho}`, { method: 'POST', headers: { ...cabeca(), 'Content-Type': tipo }, body: b })
+    const r = await fetch(`${SUPABASE.url}/storage/v1/object/equipe/${caminho}`, comPrazo(90_000, { method: 'POST', headers: { ...cabeca(), 'Content-Type': tipo }, body: b }))
     if (!r.ok) throw new Error(r.status === 413 ? 'O arquivo ficou grande demais.' : 'Não consegui enviar o arquivo agora. Tente de novo.')
     guardarMidia(caminho, b)
   }
@@ -239,6 +260,7 @@ export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): Eq
     async apagar(id) {
       const arquivo = await rpc<string | null>('equipe_apagar', { p_mensagem: id })
       if (arquivo) {
+        esquecerMidia(arquivo)
         await fetch(`${SUPABASE.url}/storage/v1/object/equipe`, {
           method: 'DELETE', headers: { ...cabeca(), 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: [arquivo] }),
         }).catch(() => undefined)
@@ -343,8 +365,9 @@ export function guardar(eu: string, g: Guardado) {
   try {
     const msgs: Record<string, MensagemEq[]> = {}
     for (const [k, l] of Object.entries(g.msgs)) {
-      // só o que já foi para o banco; os últimos 80 de cada conversa
-      msgs[k] = l.filter((m) => !m.enviando && !m.falhou && !m.id.startsWith('tmp-')).slice(-80).map(({ local: _l, arquivo: _a, ...m }) => m)
+      // os últimos 80 de cada conversa; o texto que ainda não foi (sem rede) também fica, e volta como "não enviou"
+      msgs[k] = l.filter((m) => !m.id.startsWith('tmp-') && (!(m.enviando || m.falhou) || (!m.arquivo && !m.local)))
+        .slice(-80).map(({ local: _l, arquivo: _a, ...m }) => (m.enviando || m.falhou ? { ...m, enviando: false, falhou: true } : m))
     }
     localStorage.setItem(chaveGuardada(eu), JSON.stringify({ ...g, msgs }))
   } catch { /* sem espaço: abre pelo banco */ }

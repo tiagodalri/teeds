@@ -61,6 +61,21 @@ function juntar(atuais: MensagemEq[], novas: MensagemEq[]): MensagemEq[] {
   return [...porId.values()].sort((a, b) => Date.parse(a.criadaEm) - Date.parse(b.criadaEm))
 }
 
+/**
+ * A página mais nova que veio do banco. Se ela não encosta no que estava guardado (muita coisa
+ * chegou com o app fechado), o guardado sai: senão ficaria um buraco no meio da conversa.
+ */
+function juntarPagina(atuais: MensagemEq[], pagina: MensagemEq[]): { lista: MensagemEq[]; buraco: boolean } {
+  const ids = new Set(atuais.map((m) => m.id))
+  const reais = atuais.filter((m) => !m.enviando && !m.falhou)
+  const buraco = pagina.length >= POR_PAGINA && reais.length > 0 && !pagina.some((m) => ids.has(m.id))
+    && Date.parse(pagina[0].criadaEm) > Date.parse(reais[reais.length - 1].criadaEm)
+  return { lista: juntar(buraco ? atuais.filter((m) => m.enviando || m.falhou) : atuais, pagina), buraco }
+}
+
+/** Está mesmo vendo: a aba na frente e, no computador, a janela com o foco (atrás de outro app não conta). */
+const vendoDeVerdade = () => visivel() && (celular() || typeof document.hasFocus !== 'function' || document.hasFocus())
+
 const previaDe = (m: Pick<MensagemEq, 'texto' | 'anexo' | 'midia' | 'apagada'>): string | null => {
   if (m.apagada) return null
   if (m.midia?.tipo === 'audio') return `🎤 Mensagem de voz (${duracaoCurta(m.midia.duracao)})`
@@ -114,6 +129,12 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
   // onde cada conversa estava rolada, e desde quando esta está aberta (as mensagens novas entram animadas)
   const posicoes = useRef<Record<string, number>>({})
   const abertaEm = useRef(Date.now())
+  // histórico do celular: a camada por cima (foto, menu, prévia, apagar) e um voltar em andamento
+  const camadaNoHistorico = useRef(false)
+  const voltando = useRef(false)
+  const enviandoIds = useRef(new Set<string>())
+  const [erroDeCarga, setErroDeCarga] = useState<string | null>(null)
+  const [anuncio, setAnuncio] = useState('')
   // computador: a janela do canto ou a tela inteira, como o WhatsApp Web (fica lembrado neste navegador)
   const [telaCheia, setTelaCheia] = useState(() => { try { return localStorage.getItem(`${MARCA.id}.equipe.telaCheia`) === '1' } catch { return false } })
   const alternarTelaCheia = () => setTelaCheia((v) => {
@@ -133,6 +154,8 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
 
   const porId = useMemo(() => new Map(contatos.map((c) => [c.id, c])), [contatos])
   const nomeDe = useCallback((id: string | null) => (id && porId.get(id)?.nome) || 'Alguém da equipe', [porId])
+  const nomeDeRef = useRef(nomeDe)
+  nomeDeRef.current = nomeDe
   // o primeiro nome; com dois "Victor" na equipe, vai a inicial do sobrenome junto ("Victor C.", "Victor D.")
   const curto = useCallback((id: string | null) => {
     const nome = nomeDe(id)
@@ -234,8 +257,9 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
         // quem mandou parou de digitar
         setSinais((s) => (s[x.conversaId]?.[x.autor ?? ''] ? { ...s, [x.conversaId]: Object.fromEntries(Object.entries(s[x.conversaId]).filter(([u]) => u !== x.autor)) } : s))
         if (x.autor === eu) return
-        if (ab && at === x.conversaId && visivel()) {
+        if (ab && at === x.conversaId && vendoDeVerdade()) {
           marcarLida(x.conversaId)
+          setAnuncio(`${nomeDeRef.current(x.autor)}: ${previaDe(x) || 'mensagem'}`)
           if (lista.current && -lista.current.scrollTop > 200) setNovasAbaixo((n) => n + 1)
           return
         }
@@ -269,7 +293,7 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
         caiu = false
         void sincronizar()
         const at = estado.current.atual
-        if (at) api.mensagens(at).then((l) => setMsgs((t) => ({ ...t, [at]: juntar(t[at] ?? [], l) }))).catch(() => undefined)
+        if (at) atualizarConversa(at)
         reenviarFalhas.current()
       }
     })
@@ -335,13 +359,22 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
   */
   const nivel = () => ((history.state as { eq?: number } | null)?.eq ?? 0)
   const empurrar = (eq: number) => { try { history.pushState({ ...(history.state ?? {}), eq }, '') } catch { /* nada */ } }
+  const voltar = (n = 1) => { if (voltando.current) return; voltando.current = true; history.go(-n) }
   useEffect(() => {
-    if (nivel()) { try { const { eq: _eq, ...resto } = history.state ?? {}; history.replaceState(resto, '') } catch { /* nada */ } }
+    // recarregou (ou o app voltou do fundo) com entradas do chat no histórico: volta para antes delas
+    if (nivel()) { voltando.current = true; history.go(-nivel()) }
     const aoVoltar = (e: PopStateEvent) => {
+      voltando.current = false
       const eq = (e.state as { eq?: number } | null)?.eq ?? 0
       const { aberto: ab } = estado.current
       if (!ab) return
-      setMenu(null); setAmpliada(null); setPrevia(null)
+      // com uma camada por cima, o voltar só fecha a camada (como no WhatsApp)
+      if (camadaNoHistorico.current) {
+        camadaNoHistorico.current = false
+        setMenu(null); setAmpliada(null); setPrevia(null); setApagando(null)
+        return
+      }
+      setMenu(null); setAmpliada(null); setPrevia(null); setApagando(null)
       if (eq <= 0) setAberto(false)
       if (eq <= 1) setAtual((a) => (celular() ? null : a))
     }
@@ -349,19 +382,48 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     return () => window.removeEventListener('popstate', aoVoltar)
   }, [])
 
+  // a camada por cima entra no histórico no celular; fechada pelo botão, sai dele
+  const temCamada = !!(ampliada || menu || previa || apagando)
+  useEffect(() => {
+    if (!aberto || !celular()) return
+    if (temCamada && !camadaNoHistorico.current && nivel() > 0) { empurrar(nivel() + 1); camadaNoHistorico.current = true }
+    else if (!temCamada && camadaNoHistorico.current) { camadaNoHistorico.current = false; voltar() }
+  }, [temCamada, aberto])
+
+  // virou celular (ou computador) com o chat aberto: o histórico acompanha
+  useEffect(() => {
+    if (typeof matchMedia !== 'function') return
+    const mq = matchMedia('(max-width: 720px)')
+    const mudou = () => {
+      if (!estado.current.aberto) return
+      if (mq.matches && nivel() === 0) { empurrar(1); if (estado.current.atual) empurrar(2) }
+    }
+    mq.addEventListener?.('change', mudou)
+    return () => mq.removeEventListener?.('change', mudou)
+  }, [])
+
   const abrirConversa = useCallback((id: string) => {
     if (celular() && nivel() === 1) empurrar(2)
     setAtual(id)
   }, [])
   const voltarParaLista = useCallback(() => {
-    if (celular() && nivel() === 2) history.back()
+    if (celular() && nivel() >= 2) voltar(nivel() - 1)
     else setAtual(null)
   }, [])
   const fecharChat = useCallback(() => {
     const n = nivel()
-    if (celular() && n > 0) history.go(-n)
+    if (celular() && n > 0) voltar(n)
     else setAberto(false)
   }, [])
+
+  /** Busca o mais novo da conversa e junta (voltou do fundo, reconectou, tocou na notificação dela). */
+  const atualizarConversa = useCallback((id: string) => {
+    api.mensagens(id).then((l) => {
+      let buraco = false
+      setMsgs((t) => { const r = juntarPagina(t[id] ?? [], l); buraco = r.buraco; return { ...t, [id]: r.lista } })
+      if (buraco) setTemMais((t) => ({ ...t, [id]: true }))
+    }).catch(() => undefined)
+  }, [api])
 
   // no computador a janela já abre numa conversa (a com não lidas, ou a do grupo)
   const abrirChat = useCallback((conversaId?: string) => {
@@ -373,12 +435,13 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     }
     if (conversaId) {
       if (cel && nivel() === 1) empurrar(2)
+      if (estado.current.atual === conversaId) atualizarConversa(conversaId)
       setAtual(conversaId)
     } else if (!estado.current.atual && !cel) {
       const comNaoLida = Object.entries(naoLidas).find(([, n]) => n > 0)?.[0]
       setAtual(comNaoLida ?? grupo ?? null)
     }
-  }, [naoLidas, grupo])
+  }, [naoLidas, grupo, atualizarConversa])
 
   // tocou na notificação: abre a conversa (app aberto pelo service worker; app fechado pelo ?equipe=)
   const abrirChatRef = useRef(abrirChat)
@@ -406,9 +469,10 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     setNovasAbaixo(0); setLongeDoFim(false)
     abertaEm.current = Date.now()
     // mostra o guardado na hora e busca o mais novo por trás
+    setErroDeCarga(null)
     api.mensagens(atual)
       .then(async (l) => {
-        setMsgs((t) => ({ ...t, [atual]: juntar(t[atual] ?? [], l) }))
+        setMsgs((t) => ({ ...t, [atual]: juntarPagina(t[atual] ?? [], l).lista }))
         setTemMais((t) => ({ ...t, [atual]: l.length >= POR_PAGINA }))
         // veio da busca: garante a mensagem na tela e vai até ela
         const alvo = irDepois.current
@@ -422,8 +486,8 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
           window.setTimeout(() => acoesAtuais.current?.irPara(alvo.id), 120)
         }
       })
-      .catch((e) => { if (!estado.current.msgs[atual]) avisar(e instanceof Error ? e.message : 'Não consegui carregar as mensagens.') })
-    if (visivel()) marcarLida(atual)
+      .catch(() => { if (!estado.current.msgs[atual]) setErroDeCarga(atual) })
+    if (vendoDeVerdade()) marcarLida(atual)
     setResposta(null); setEditando(null); setMenu(null)
   }, [aberto, atual]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -432,17 +496,27 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     if (!aberto || !atual) return
     const l = lista.current
     const antes = posicoes.current[atual]
-    if (l && antes && !(naoLidas[atual] ?? 0) && !irDepois.current) l.scrollTop = antes
+    if (l && !irDepois.current) {
+      const voltarPara = antes && !(naoLidas[atual] ?? 0) ? antes : 0
+      l.scrollTop = voltarPara
+      setLongeDoFim(-voltarPara > 200)
+    }
     return () => { if (lista.current) posicoes.current[atual] = lista.current.scrollTop }
   }, [aberto, atual]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // voltou para a aba com a conversa aberta: conta como lida
   useEffect(() => {
     if (!aberto || !atual) return
-    const aoVoltar = () => { if (visivel() && naoLidas[atual]) marcarLida(atual) }
+    const aoVoltar = () => {
+      if (!visivel()) return
+      if (document.visibilityState === 'visible') atualizarConversa(atual)
+      if (vendoDeVerdade() && naoLidas[atual]) marcarLida(atual)
+    }
+    const aoFocar = () => { if (vendoDeVerdade() && naoLidas[atual]) marcarLida(atual) }
     document.addEventListener('visibilitychange', aoVoltar)
-    return () => document.removeEventListener('visibilitychange', aoVoltar)
-  }, [aberto, atual, naoLidas, marcarLida])
+    window.addEventListener('focus', aoFocar)
+    return () => { document.removeEventListener('visibilitychange', aoVoltar); window.removeEventListener('focus', aoFocar) }
+  }, [aberto, atual, naoLidas, marcarLida, atualizarConversa])
 
   // celular: janela inteira acompanhando o teclado; Esc fecha
   useEffect(() => {
@@ -459,7 +533,8 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     vv?.addEventListener('resize', ajustar); vv?.addEventListener('scroll', ajustar)
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
-      if (ampliada || menu || previa || apagando) return
+      if (apagando) { setApagando(null); return }
+      if (ampliada || menu || previa) return
       if (editando) setEditando(null)
       else if (resposta) setResposta(null)
       else if (!celular()) setAberto(false)
@@ -510,7 +585,7 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
   const mensagens = (atual && msgs[atual]) || null
   // a linha das não lidas: rola até ela na primeira vez
   useLayoutEffect(() => {
-    if (divisor && divisor.conversaId === atual && linhaDivisor.current) linhaDivisor.current.scrollIntoView({ block: 'center' })
+    if (divisor && divisor.conversaId === atual && linhaDivisor.current) centralizar(linhaDivisor.current)
   }, [divisor, atual, !!mensagens]) // eslint-disable-line react-hooks/exhaustive-deps
   const aoRolar = () => {
     const l = lista.current; if (!l) return
@@ -532,10 +607,16 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     } catch { /* tenta de novo ao rolar */ } finally { setCarregandoAntigas(false) }
   }
 
+  // rola só a lista (o scrollIntoView do iPhone mexe também a página atrás do chat)
+  function centralizar(el: Element, suave = false) {
+    const l = lista.current; if (!l) return
+    const r = el.getBoundingClientRect(), lr = l.getBoundingClientRect()
+    l.scrollBy({ top: r.top - lr.top - lr.height / 2 + r.height / 2, behavior: suave ? 'smooth' : 'auto' })
+  }
   const irPara = useCallback((id: string) => {
     const alvo = lista.current?.querySelector(`[data-id="${id}"]`)
     if (!alvo) { avisar('Essa mensagem é mais antiga. Role para cima para encontrá-la.'); return }
-    alvo.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    centralizar(alvo, true)
     setDestaque(id)
     window.setTimeout(() => setDestaque((d) => (d === id ? null : d)), 1600)
   }, [avisar])
@@ -546,6 +627,9 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     setMsgs((t) => ({ ...t, [conversaId]: (t[conversaId] ?? []).map((m) => (m.id === id ? f(m) : m)) }))
 
   const enviar = useCallback(async (m: MensagemEq) => {
+    // a rede voltou e o Realtime religou ao mesmo tempo: a mesma mensagem não sobe duas vezes
+    if (enviandoIds.current.has(m.id)) return
+    enviandoIds.current.add(m.id)
     const conversaId = m.conversaId
     colocar(conversaId, { ...m, enviando: true, falhou: false })
     setConversas((l) => l.map((c) => (c.id === conversaId ? { ...c, ultimaEm: m.criadaEm, ultimaTexto: previaDe(m), ultimaAutor: eu } : c)))
@@ -562,10 +646,11 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
       colocar(conversaId, { ...real, local: m.local })
     } catch {
       mudar(conversaId, m.id, (x) => ({ ...x, enviando: false, falhou: true }))
-    }
+    } finally { enviandoIds.current.delete(m.id) }
   }, [api, eu]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // o que não foi tenta de novo sozinho quando a rede volta
+  useEffect(() => { if (pronto && navigator.onLine !== false) { const t = window.setTimeout(() => reenviarFalhas.current(), 1500); return () => window.clearTimeout(t) } }, [pronto])
   reenviarFalhas.current = () => {
     for (const l of Object.values(estado.current.msgs)) for (const m of l) if (m.falhou) void enviar(m)
   }
@@ -618,9 +703,8 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     void enviar(m)
   }
 
-  async function mandarFoto(arquivo: File, legenda: string) {
+  async function mandarFoto(arquivo: File, legenda: string, local: string) {
     if (!atual) return
-    const local = URL.createObjectURL(arquivo)
     let l = 0, a = 0
     try { const b = await createImageBitmap(arquivo); l = b.width; a = b.height; b.close?.() } catch { /* a medida vem da subida */ }
     const m = nova(atual, { texto: legenda.trim(), midia: { tipo: 'imagem', l, a }, local, arquivo })
@@ -653,7 +737,7 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
   const escolherImagem = (f: File | undefined | null) => {
     if (!f) return
     if (!f.type.startsWith('image/') && !/\.hei[cf]$/i.test(f.name)) { avisar('Mande uma imagem (print da tela, JPG ou PNG).'); return }
-    setPrevia({ arquivo: f, url: URL.createObjectURL(f) })
+    setPrevia((p) => { if (p) URL.revokeObjectURL(p.url); return { arquivo: f, url: URL.createObjectURL(f) } })
   }
 
   async function reagir(m: MensagemEq, emoji: string | null) {
@@ -999,8 +1083,10 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
               </header>
 
               <div className="eq-mensagens" ref={lista} onScroll={aoRolar}>
-                <div className="eq-trilho" aria-live="polite">
-                  {!mensagensDaVista ? <div className="eq-carregando"><i /><i /><i /></div> : (
+                <div className="eq-trilho">
+                  {!mensagensDaVista ? (erroDeCarga === conversa.id
+                    ? <div className="eq-vazio"><p>Não consegui carregar as mensagens.</p><button type="button" className="eq-btn" onClick={() => { setErroDeCarga(null); api.mensagens(conversa.id).then((l) => { setMsgs((t) => ({ ...t, [conversa.id]: juntar(t[conversa.id] ?? [], l) })); setTemMais((t) => ({ ...t, [conversa.id]: l.length >= POR_PAGINA })) }).catch(() => setErroDeCarga(conversa.id)) }}>Tentar de novo</button></div>
+                    : <div className="eq-carregando"><i /><i /><i /></div>) : (
                     <>
                       {temMais[conversa.id] && <div className="eq-antigas">{carregandoAntigas ? <span className="eq-girando" /> : <button type="button" onClick={() => void carregarAntigas()}>Carregar mensagens anteriores</button>}</div>}
                       {!temMais[conversa.id] && (
@@ -1059,9 +1145,10 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
         {previa && (
           <PreviaDaFoto previa={previa} para={tituloDaConversa} legendaInicial={(atual && rascunhos.current[atual]) || ''}
             aoFechar={() => { URL.revokeObjectURL(previa.url); setPrevia(null) }}
-            aoMandar={(legenda) => { const p = previa; setPrevia(null); if (atual) rascunhos.current[atual] = ''; window.dispatchEvent(new Event('eq:limpar')); void mandarFoto(p.arquivo, legenda) }} />
+            aoMandar={(legenda) => { const p = previa; setPrevia(null); if (atual) rascunhos.current[atual] = ''; window.dispatchEvent(new Event('eq:limpar')); void mandarFoto(p.arquivo, legenda, p.url) }} />
         )}
         {nota && <p className="eq-nota" role="status">{nota}</p>}
+        <p className="eq-so-leitor" role="log" aria-live="polite">{anuncio}</p>
       </div>
 
       {menu && (
@@ -1073,7 +1160,7 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
           <div className="eq-dialogo" role="alertdialog" aria-label="Apagar mensagem">
             <b>Apagar mensagem?</b>
             <p>Ela some para todos da conversa. No lugar fica "Você apagou esta mensagem".</p>
-            <div><button type="button" onClick={() => setApagando(null)}>Cancelar</button><button type="button" className="perigo" onClick={() => void apagar(apagando)}>Apagar para todos</button></div>
+            <div><button type="button" autoFocus onClick={() => setApagando(null)}>Cancelar</button><button type="button" className="perigo" onClick={() => void apagar(apagando)}>Apagar para todos</button></div>
           </div>
         </div>
       )}
@@ -1162,7 +1249,7 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
 
   const setTexto = (v: string) => {
     setTextoLocal(v)
-    rascunhos.current[conversaId] = v
+    if (!editando) rascunhos.current[conversaId] = v
     if (v.trim()) aoDigitar('digitando')
   }
   useEffect(() => {
@@ -1175,7 +1262,10 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
   // editar: o texto da mensagem entra no campo; cancelar devolve o rascunho
   useEffect(() => {
     if (editando) { textoAntesDeEditar.current = texto; setTextoLocal(editando.texto) }
-    else if (textoAntesDeEditar.current !== null) { setTextoLocal(textoAntesDeEditar.current); textoAntesDeEditar.current = null }
+    else if (textoAntesDeEditar.current !== null) {
+      // terminou de editar (salvou ou cancelou): o rascunho de antes volta
+      setTextoLocal(textoAntesDeEditar.current); rascunhos.current[conversaId] = textoAntesDeEditar.current; textoAntesDeEditar.current = null
+    }
   }, [editando]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // a caixa cresce com o que a pessoa escreve
@@ -1189,7 +1279,6 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
     if (!t) return
     aoMandar(t)
     if (!editando) { setTextoLocal(''); rascunhos.current[conversaId] = '' }
-    else textoAntesDeEditar.current = ''
   }
   const colar = (e: React.ClipboardEvent) => {
     const img = Array.from(e.clipboardData.files).find((f) => f.type.startsWith('image/'))
@@ -1213,12 +1302,17 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
     const mouse = e.pointerType === 'mouse'
     if (!mouse) { e.currentTarget.setPointerCapture(e.pointerId); gesto.current = { x: e.clientX, y: e.clientY, id: e.pointerId } }
     mandarAoParar.current = false
+    const pediuEm = Date.now()
     try {
       const ok = await gravador.iniciar()
       if (!ok) return
       if (mouse) setTravado(true)
-      // soltou enquanto o microfone ligava
-      if (!mouse && !gesto.current) void terminarGravacao(mandarAoParar.current)
+      // soltou enquanto o microfone ligava: se foi a pergunta da permissão que demorou, grava travado
+      // (a pessoa decide enviar ou descartar); se foi só um toque rápido, ensina a segurar
+      else if (!gesto.current) {
+        if (Date.now() - pediuEm > 300) setTravado(true)
+        else void terminarGravacao(false).then(() => aoAvisar('Segure o microfone para gravar e solte para enviar.'))
+      }
     } catch (err) { gesto.current = null; aoAvisar(err instanceof Error ? err.message : 'Não consegui gravar.') }
   }
   const aoMoverMic = (e: React.PointerEvent) => {
@@ -1274,7 +1368,7 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
               </button>
             )}
             {emojis && <PainelDeEmoji aoEscolher={porEmoji} aoFechar={() => setEmojis(false)} />}
-            <textarea ref={campo} rows={1} value={texto} placeholder={placeholder} enterKeyHint={toque() ? 'enter' : 'send'}
+            <textarea ref={campo} rows={1} aria-label="Mensagem" value={texto} placeholder={placeholder} enterKeyHint={toque() ? 'enter' : 'send'}
               onChange={(e) => setTexto(e.target.value)} onPaste={colar} maxLength={4000}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey && !toque() && !e.nativeEvent.isComposing) { e.preventDefault(); enviar() }
@@ -1306,7 +1400,7 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
             )}
             <button type="button" className={`eq-enviar eq-mic ${gravando ? 'ativo' : ''}`} aria-label="Segure para gravar um áudio" title="Gravar áudio"
               style={gravando && !travado ? { transform: `translate(${puxar.x * 0.35}px, ${puxar.y * 0.35}px) scale(1.5)` } : undefined}
-              onPointerDown={(e) => void aoDescerMic(e)} onPointerMove={aoMoverMic} onPointerUp={aoSubirMic} onPointerCancel={aoSubirMic}
+              onPointerDown={(e) => void aoDescerMic(e)} onPointerMove={aoMoverMic} onPointerUp={aoSubirMic} onPointerCancel={() => { gesto.current = null; if (gravador.estado !== 'parado') setTravado(true) }}
               onContextMenu={(e) => e.preventDefault()}>
               <Ic d={I.mic} />
             </button>

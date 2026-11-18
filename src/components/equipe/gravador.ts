@@ -35,8 +35,8 @@ export function useGravador(aoPassarDoLimite: () => void) {
   const [nivel, setNivel] = useState(0)
   const r = useRef<{
     rec: MediaRecorder | null; stream: MediaStream | null; ctx: AudioContext | null; pedacos: Blob[]; amostras: number[]
-    inicio: number; relogio: number | null; cancelado: boolean; fim: ((g: Gravacao | null) => void) | null
-  }>({ rec: null, stream: null, ctx: null, pedacos: [], amostras: [], inicio: 0, relogio: null, cancelado: false, fim: null })
+    inicio: number; relogio: number | null; cancelado: boolean; fim: ((g: Gravacao | null) => void) | null; limite: boolean
+  }>({ rec: null, stream: null, ctx: null, pedacos: [], amostras: [], inicio: 0, relogio: null, cancelado: false, fim: null, limite: false })
   const limite = useRef(aoPassarDoLimite)
   limite.current = aoPassarDoLimite
 
@@ -55,7 +55,13 @@ export function useGravador(aoPassarDoLimite: () => void) {
     if (x.rec || estado !== 'parado') return false
     if (!gravaAudio()) throw new Error('Este navegador não grava áudio.')
     setEstado('pedindo')
-    x.cancelado = false; x.pedacos = []; x.amostras = []
+    x.cancelado = false; x.pedacos = []; x.amostras = []; x.limite = false
+    // o iPhone só liga o áudio criado dentro do toque: nasce aqui, antes de esperar o microfone
+    let ctx: AudioContext | null = null
+    try {
+      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      ctx = new Ctx(); void ctx.resume().catch(() => undefined)
+    } catch { ctx = null }
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
@@ -65,7 +71,7 @@ export function useGravador(aoPassarDoLimite: () => void) {
       throw new Error(nome === 'NotAllowedError' ? 'O microfone está bloqueado. Libere o microfone para o app nos ajustes do aparelho.' : 'Não consegui ligar o microfone.')
     }
     // soltou antes de o microfone ligar (a permissão demorou): não grava
-    if (x.cancelado) { stream.getTracks().forEach((t) => t.stop()); setEstado('parado'); return false }
+    if (x.cancelado) { stream.getTracks().forEach((t) => t.stop()); void ctx?.close().catch(() => undefined); setEstado('parado'); return false }
     x.stream = stream
     const tipo = tipoQueGrava()
     const rec = new MediaRecorder(stream, { ...(tipo ? { mimeType: tipo } : {}), audioBitsPerSecond: 48_000 })
@@ -82,8 +88,8 @@ export function useGravador(aoPassarDoLimite: () => void) {
     }
     // o volume, para a onda
     try {
-      const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      const ctx = new Ctx()
+      if (!ctx) throw new Error('sem áudio')
+      void ctx.resume().catch(() => undefined)
       const fonte = ctx.createMediaStreamSource(stream)
       const an = ctx.createAnalyser(); an.fftSize = 512
       fonte.connect(an)
@@ -97,13 +103,14 @@ export function useGravador(aoPassarDoLimite: () => void) {
         x.amostras.push(rms); setNivel(Math.min(1, rms * 4))
         const s = Math.floor((Date.now() - x.inicio) / 1000)
         setSegundos(s)
-        if (s >= MAXIMO_DE_AUDIO_S) limite.current()
+        if (s >= MAXIMO_DE_AUDIO_S && !x.limite) { x.limite = true; limite.current() }
       }, 100)
     } catch {
+      void ctx?.close().catch(() => undefined)
       x.relogio = window.setInterval(() => {
         const s = Math.floor((Date.now() - x.inicio) / 1000)
         setSegundos(s); x.amostras.push(0.3)
-        if (s >= MAXIMO_DE_AUDIO_S) limite.current()
+        if (s >= MAXIMO_DE_AUDIO_S && !x.limite) { x.limite = true; limite.current() }
       }, 100)
     }
     x.inicio = Date.now()

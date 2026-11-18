@@ -153,7 +153,13 @@ function Voz({ api, m, minha, nome, id }: { api: EquipeApi; m: MensagemEq; minha
         {!url && !erro ? <span className="eq-girando" /> : <Ic d={tocando ? I.pausa : I.play} cheio />}
       </button>
       <span className="eq-voz-meio">
-        <span className="eq-voz-onda" onPointerDown={buscar} role="slider" aria-label="Posição do áudio" aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(pos)}>
+        <span className="eq-voz-onda" onPointerDown={buscar} tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+            e.preventDefault(); e.stopPropagation()
+            const a = garantir(); if (!a) return
+            a.currentTime = Math.min(total, Math.max(0, a.currentTime + (e.key === 'ArrowRight' ? 5 : -5))); setPos(a.currentTime)
+          }} role="slider" aria-label="Posição do áudio" aria-valuemin={0} aria-valuemax={Math.round(total)} aria-valuenow={Math.round(pos)}>
           {ondas.map((h, i) => <i key={i} className={i / ondas.length < progresso ? 'ja' : ''} style={{ height: `${Math.max(12, (h / 31) * 100)}%` }} />)}
           <b style={{ left: `${progresso * 100}%` }} />
         </span>
@@ -218,7 +224,8 @@ export const Balao = memo(function Balao(p: PropsDoBalao) {
 
   // toque: segurar abre o menu; arrastar para a direita responde
   const aoDescer = (e: React.PointerEvent) => {
-    if (e.pointerType === 'mouse' || !pode) return
+    // perto da borda esquerda o gesto é o de voltar para a lista, não o de responder
+    if (e.pointerType === 'mouse' || !pode || e.clientX <= 24) return
     gesto.current = {
       x: e.clientX, y: e.clientY, id: e.pointerId, horizontal: null, abriu: false,
       segurar: window.setTimeout(() => {
@@ -336,6 +343,8 @@ export function MenuDaMensagem({ ancora, minha, minhaReacao, itens, rodape, aoRe
   useEffect(() => {
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); aoFechar() } }
     document.addEventListener('keydown', esc, true)
+    // o teclado entra no menu (leitor de tela e quem usa Tab)
+    if (!toque()) caixa.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true })
     return () => document.removeEventListener('keydown', esc, true)
   }, [aoFechar])
   return (
