@@ -279,6 +279,12 @@
     background: linear-gradient(90deg, var(--plv-azul) 0%, rgba(5, 21, 40, .86) 46%, rgba(5, 21, 40, .4) 100%), linear-gradient(180deg, rgba(5, 21, 40, 0) 55%, rgba(5, 21, 40, .9) 100%); }
   .plv-topo.com-foto .plv-topo-linha { min-height: 92px; align-items: flex-start; }
   .plv-topo.com-foto .plv-titulo b { font-size: 26px; letter-spacing: -.01em; }
+  /* 18/11/2026 (revisão do celular): ao lado do selo da conta sobravam ~144 px para o nome da I.A., e o
+     logotipo de 202 px saía cortado ("RAPTC"). O nome encolhe com a coluna (cabe inteiro de 375 a 640 px)
+     e a frase de baixo usa duas linhas em vez de reticências. */
+  .plv-topo.com-foto .plv-titulo { container-type: inline-size; }
+  .plv-topo.com-foto .plv-titulo b { font-size: min(26px, 12.4cqi); overflow: visible; }
+  .plv-titulo-sub { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
   .plv-eixo { display: none; }
   .plv-passos { display: none; }
   .plv-progresso { display: grid; gap: 8px; padding: 12px 0 14px; }

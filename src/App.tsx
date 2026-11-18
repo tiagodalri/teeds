@@ -340,7 +340,9 @@ export default function App() {
     // o endereço manda (globalflytrade.com/ia abre a I.A.); sem endereço, a tela em que a pessoa estava
     const doEndereco = telaDoCaminho(location.pathname) ?? telaDoNome(new URLSearchParams(location.search).get('tela'))
     const antes = doEndereco ?? (history.state as { tela?: WorkspacePage } | null)?.tela
-    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'assistente', 'gestao', 'insights', 'monitoramento', 'multiplicadores'] as WorkspacePage[] : [])]
+    const QUE_VOLTAM: WorkspacePage[] = ['inicio', 'operar', 'robos', 'aulas', 'gerenciamento', ...(MARCA.relatorios ? ['relatorios' as const] : []), 'marketplace', 'noticias', 'perfil', 'ajuda', ...(doEndereco ? ['aovivo', 'gestao', 'insights', 'monitoramento', 'multiplicadores'] as WorkspacePage[] : []),
+      // o Assistente pede o código antes: pelo endereço, sem ter liberado, a página abria em branco (18/11/2026)
+      ...(doEndereco && assistenteBetaJaLiberado() ? ['assistente' as const] : [])]
     return antes && QUE_VOLTAM.includes(antes) && (antes !== 'inicio' || MARCA.inicio) && (antes !== 'noticias' || MARCA.noticias) && (antes !== 'aovivo' || MARCA.aoVivo) ? antes : padrao
   })
   // Na janela solta a tela não muda: um link de outra tela abre na plataforma principal.
