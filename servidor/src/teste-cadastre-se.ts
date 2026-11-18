@@ -39,7 +39,7 @@ conferir('e leva a UTM do link junto (usa a busca original)', /new URLSearchPara
 conferir('e não aparece em buscador', /name="robots" content="noindex"/.test(pagina), true)
 
 const tela = leia('src/components/LoginScreen.tsx')
-conferir('a tela de entrada abre no modo cadastro quando pedido', /useState<Modo>\(abrirNoCadastro \? 'criar' : 'entrar'\)/.test(tela), true)
+conferir('a tela de entrada abre no modo cadastro quando pedido', /useState<Modo>\(abrirNoCadastro \? 'criar' : abrirNoPrimeiroAcesso \? 'primeiro' : 'entrar'\)/.test(tela), true)
 
 const vite = leia('vite.config.ts')
 conferir('o app guardado para uso sem rede é só a raiz', /if\(x\.ok&&raiz\)caches\.open\(CACHE\)/.test(vite), true)
