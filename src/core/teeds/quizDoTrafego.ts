@@ -52,7 +52,7 @@ export interface PaginaDeTrafego {
 }
 
 const PASTA = `${SUPABASE.url}/storage/v1/object/public/aulas/globalfly/vsl-trafego`
-// 18/11/2026 (Tiago): "essa é a msg que deve chegar no whats". O código do lead segue no fim, entre parênteses.
+// 18/11/2026 (Tiago): "essa é a msg que deve chegar no whats", sem o código do lead.
 export const MENSAGEM_DO_WHATSAPP = 'Quero fazer parte da próxima live ao vivo Naor'
 
 export const PAGINAS_DE_TRAFEGO: Record<string, PaginaDeTrafego> = {
@@ -118,7 +118,9 @@ export const codigoDoLead = (visitante: string): string => visitante.replace(/[^
 /** O link do WhatsApp da página com a mensagem pronta (e o código do lead, se houver), ou null quando o parceiro não tem número. */
 export function linkDoWhatsapp(pagina: PaginaDeTrafego, codigo = ''): string | null {
   const numero = pagina.quiz?.whatsapp
-  const texto = codigo ? `${MENSAGEM_DO_WHATSAPP} (código ${codigo})` : MENSAGEM_DO_WHATSAPP
+  // 18/11/2026 (Tiago: "não precisa do código"): a mensagem vai limpa; o código segue só no rastreio (quiz-concluiu)
+  void codigo
+  const texto = MENSAGEM_DO_WHATSAPP
   return numero ? `https://wa.me/${numero}?text=${encodeURIComponent(texto)}` : null
 }
 
