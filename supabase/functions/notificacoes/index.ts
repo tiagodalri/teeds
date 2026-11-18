@@ -430,11 +430,11 @@ async function avisarComissao(corpo: Record<string, unknown>) {
     ? 'Operação manual'
     : `${robo ? `I.A. ${robo.replace(/^GF\s+/i, 'GF ')}` : 'I.A.'} · ${operacoes} ${operacoes === 1 ? 'operação' : 'operações'}`
   const cotacao = (moeda || 'USD').toUpperCase() === 'USD' ? await cotacaoDoDia() : null
+  // 18/11/2026 (Tiago): "pode ser só o valor em reais mesmo, não precisa ser em dólar nem a cotação"
   const valor = cotacao ? `${brl.format(markup * cotacao)} de comissão` : `${usdComissao(markup, moeda)} de comissão`
-  const conversao = cotacao ? `\n${usdComissao(markup, moeda)} · dólar a ${brl.format(cotacao)}` : ''
   const aviso: Aviso = {
     titulo: '💰 Comissão gerada',
-    corpo: `${nome} · ${valor}\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}${conversao}`,
+    corpo: `${nome} · ${valor}\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}`,
     tag: `comissao-${chave}`, url: './',
   }
   // rastreio de teste (13/11/2026): com `rastro` (id de push_disparos), o aparelho avisa o banco quando a
