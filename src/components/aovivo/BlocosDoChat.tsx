@@ -28,7 +28,8 @@ const ICONES = {
   girar: 'M20 11a8 8 0 10-2.3 5.7M20 4v7h-7',
 }
 
-export function BlocosDoChat({ sessao }: { sessao: SessaoTeeds | null }) {
+/** `embutido` (18/11/2026): dentro do cartão "Comentários da I.A." do painel da sala, como "Roteiros prontos". */
+export function BlocosDoChat({ sessao, embutido = false }: { sessao: SessaoTeeds | null; embutido?: boolean }) {
   const sim = useSimulacao()
   const [blocos, setBlocos] = useState<BlocoDoChat[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -56,11 +57,11 @@ export function BlocosDoChat({ sessao }: { sessao: SessaoTeeds | null }) {
   const tocando = sim.bloco
 
   return (
-    <section className="cv-card bc">
-      <h4>Blocos de mensagens {blocos && blocos.length > 0 && <small className="cv-num" title={`${total} mensagens aprovadas`}>{blocos.length} {blocos.length === 1 ? 'bloco' : 'blocos'}</small>}</h4>
-      <span className="tr-legenda">Prepare e aprove as mensagens antes. Na hora certa, dê o play e elas entram no chat.</span>
+    <section className={embutido ? 'bc bc-embutido' : 'cv-card bc'}>
+      <h4>{embutido ? 'Roteiros prontos' : 'Blocos de mensagens'} {blocos && blocos.length > 0 && <small className="cv-num" title={`${total} mensagens aprovadas`}>{blocos.length} {embutido ? (blocos.length === 1 ? 'roteiro' : 'roteiros') : blocos.length === 1 ? 'bloco' : 'blocos'}</small>}</h4>
+      <span className="tr-legenda">{embutido ? 'Mensagens que você aprova antes. Na hora certa, dê o play e elas entram no chat.' : 'Prepare e aprove as mensagens antes. Na hora certa, dê o play e elas entram no chat.'}</span>
 
-      <span className="tr-rotulo">Velocidade</span>
+      <span className="tr-rotulo">{embutido ? 'Velocidade do roteiro' : 'Velocidade'}</span>
       <div className="tr-seg" role="radiogroup" aria-label="Velocidade do bloco">
         {VELOCIDADES.map(([v, r]) => <button key={v} role="radio" aria-checked={sim.velocidade === v} className={sim.velocidade === v ? 'on' : ''} onClick={() => mudarVelocidade(v)}>{r}</button>)}
       </div>
@@ -79,7 +80,7 @@ export function BlocosDoChat({ sessao }: { sessao: SessaoTeeds | null }) {
 
       {!sessao ? <span className="tr-legenda">Entre na sua conta para usar os blocos.</span>
         : blocos === null ? <span className="tr-legenda">Carregando os blocos…</span>
-          : blocos.length === 0 ? <div className="bc-vazio">Nenhum bloco ainda. Crie o primeiro: dê um tema, descreva as mensagens e gere com a I.A.</div>
+          : blocos.length === 0 ? <div className="bc-vazio">{embutido ? 'Nenhum roteiro ainda. Crie o primeiro: dê um tema, descreva as mensagens e gere com a I.A.' : 'Nenhum bloco ainda. Crie o primeiro: dê um tema, descreva as mensagens e gere com a I.A.'}</div>
             : (
               <ul className="bc-lista">
                 {blocos.map((b) => {
@@ -105,7 +106,7 @@ export function BlocosDoChat({ sessao }: { sessao: SessaoTeeds | null }) {
             )}
 
       {erro && <p className="av-erro" role="alert">{erro}</p>}
-      {sessao && <button type="button" className="bc-novo" onClick={() => setEditando('novo')}><Icone d={ICONES.mais} />Novo bloco</button>}
+      {sessao && <button type="button" className="bc-novo" onClick={() => setEditando('novo')}><Icone d={ICONES.mais} />{embutido ? 'Criar roteiro com a I.A.' : 'Novo bloco'}</button>}
       {sessao && !sim.ativa && blocos && blocos.length > 0 && <span className="tr-legenda">O play fica liberado quando a transmissão começar.</span>}
 
       {editando && sessao && (

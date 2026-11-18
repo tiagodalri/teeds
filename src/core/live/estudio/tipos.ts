@@ -54,10 +54,20 @@ export interface Fonte {
   cor?: string
   /** Ao descobrir o tamanho real (câmera, tela, vídeo), encaixa na tela uma vez. */
   encaixar?: 'ajustar' | 'canto' | null
+  /** Painel da sala (18/11/2026): a imagem preenche a caixa cortando as sobras, ou cabe inteira nela. */
+  caber?: 'cobrir' | 'conter'
 }
 
+/**
+ * Painel da sala de treino (18/11/2026, o Tiago não gostou do estúdio estilo OBS):
+ * cada tela nasce de um modelo pronto e se edita só pelos campos dele
+ * (texto, foto, vídeo); as fontes saem montadas do modelo.
+ */
+export type TipoDeModelo = 'abertura' | 'aovivo' | 'camera' | 'intervalo' | 'depoimento' | 'encerramento' | 'arte'
+export type CamposDoModelo = Record<string, string>
+
 /** As fontes da cena: a primeira da lista é a que fica por cima. */
-export interface Cena { id: string; nome: string; fontes: Fonte[] }
+export interface Cena { id: string; nome: string; fontes: Fonte[]; modelo?: { tipo: TipoDeModelo; campos: CamposDoModelo } }
 
 /** Para onde vai o som de um canal. */
 export type Monitoramento = 'alunos' | 'fone' | 'ambos'
@@ -83,7 +93,8 @@ export interface ConfigDoStinger {
 }
 
 export interface ConfigDoEstudio {
-  versao: 1
+  /** 2 = painel da sala (telas por modelo). A versão 1 (estúdio estilo OBS) é trocada pelas telas prontas. */
+  versao: 1 | 2
   cenas: Cena[]
   /** A cena no ar (o que os alunos recebem). */
   programa: string

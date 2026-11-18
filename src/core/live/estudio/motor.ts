@@ -11,11 +11,11 @@
  */
 import { useSyncExternalStore } from 'react'
 import { apagarArquivo, guardarArquivo, idsDosArquivos, lerArquivo, lerConfig, salvarConfig } from './arquivos'
-import { cenasProntas } from './modelo'
+import { cenasProntas, montarFontes, telaDoModelo } from './modelo'
 import { criarMisturador, type Misturador } from './stinger'
 import {
   ALTURA, CANAL_PADRAO, LARGURA, chaveDaCaptura, chaveDoAudio, novoId,
-  type Canal, type Cena, type ConfigDoEstudio, type ConfigDoStinger, type EstiloDeTexto, type Fonte, type Monitoramento, type TipoDeFonte,
+  type CamposDoModelo, type Canal, type Cena, type ConfigDoEstudio, type ConfigDoStinger, type EstiloDeTexto, type Fonte, type Monitoramento, type TipoDeFonte, type TipoDeModelo,
 } from './tipos'
 
 export type SituacaoDaCaptura = 'desligada' | 'ligando' | 'ok' | 'erro'
@@ -443,6 +443,18 @@ function desenharCena(x: CanvasRenderingContext2D, cena: Cena | undefined) {
     const sw = nw - esq - dir, sh = nh - topo - baixo
     if (sw <= 0 || sh <= 0) continue
     try {
+      if (f.caber) {
+        // painel da sala: preenche a caixa cortando as sobras (cobrir) ou cabe inteira nela (conter)
+        const e = f.caber === 'cobrir' ? Math.max(f.w / sw, f.h / sh) : Math.min(f.w / sw, f.h / sh)
+        if (f.caber === 'cobrir') {
+          const cw = f.w / e, ch = f.h / e
+          x.drawImage(img, esq + (sw - cw) / 2, topo + (sh - ch) / 2, cw, ch, f.x, f.y, f.w, f.h)
+        } else {
+          const dw = sw * e, dh = sh * e
+          x.drawImage(img, esq, topo, sw, sh, f.x + (f.w - dw) / 2, f.y + (f.h - dh) / 2, dw, dh)
+        }
+        continue
+      }
       if (f.espelhar) {
         x.save(); x.translate(f.x + f.w, f.y); x.scale(-1, 1)
         x.drawImage(img, esq, topo, sw, sh, 0, 0, f.w, f.h)
@@ -735,7 +747,8 @@ let iniciando: Promise<void> | null = null
 export function iniciarEstudio(): Promise<void> {
   iniciando ??= (async () => {
     let config = await lerConfig()
-    if (!config || config.versao !== 1 || !config.cenas?.length) { config = cenasProntas(); void salvarConfig(config).catch(() => undefined) }
+    // 18/11/2026: o estúdio estilo OBS (versão 1) dá lugar às telas prontas do painel
+    if (!config || config.versao !== 2 || !config.cenas?.length) { config = cenasProntas(); void salvarConfig(config).catch(() => undefined) }
     // 31/10/2026: a cena pronta aberta no tema claro nasceu com o título no azul do tema (invisível no fundo escuro)
     config = { ...config, cenas: config.cenas.map((c) => ({ ...c, fontes: c.fontes.map((f) => (f.tipo === 'texto' && f.nome === 'Live iniciando' && f.texto?.cor.toLowerCase() === '#051528' ? { ...f, texto: { ...f.texto, cor: '#D6AE5B' } } : f)) })) }
     ;[saida, saidaCtx] = tela2d(LARGURA, ALTURA)
@@ -1038,3 +1051,76 @@ export async function listarAparelhos(tipo: MediaDeviceKind): Promise<MediaDevic
 }
 
 export type { Monitoramento }
+
+/* ================================================ painel da sala (18/11/2026) */
+
+/** Monta de novo as fontes de uma tela a partir dos campos do modelo (texto, foto, vídeo). */
+export function aplicarModelo(id: string, campos: CamposDoModelo, nome?: string): void {
+  const cena = cenaPorId(id)
+  if (!cena?.modelo) return
+  const tipo = cena.modelo.tipo
+  const fontes = montarFontes(id, tipo, campos).map((f) => (f.tipo === 'texto' ? caixaDoTexto(f, null) : f))
+  mudarConfig((c) => ({
+    ...c,
+    cenas: c.cenas.map((x) => (x.id === id ? { ...x, nome: (nome ?? x.nome).trim().slice(0, 40) || x.nome, modelo: { tipo, campos }, fontes } : x)),
+  }))
+  void limparArquivosSoltos()
+}
+
+/** Uma tela nova a partir de um modelo; volta o id. */
+export function criarTela(tipo: TipoDeModelo, nome?: string, campos?: CamposDoModelo): string {
+  const t = telaDoModelo(tipo, nome, campos)
+  const nova = { ...t, fontes: t.fontes.map((f) => (f.tipo === 'texto' ? caixaDoTexto(f, null) : f)) }
+  mudarConfig((c) => ({ ...c, cenas: [...c.cenas, nova] }))
+  return nova.id
+}
+
+/** Cópia de uma tela, logo depois dela. */
+export function duplicarTela(id: string): string | null {
+  const o = cenaPorId(id)
+  if (!o?.modelo) { duplicarCena(id); return null }
+  const t = telaDoModelo(o.modelo.tipo, `${o.nome} (cópia)`.slice(0, 40), { ...o.modelo.campos })
+  const nova = { ...t, fontes: t.fontes.map((f) => (f.tipo === 'texto' ? caixaDoTexto(f, null) : f)) }
+  mudarConfig((c) => {
+    const i = c.cenas.findIndex((x) => x.id === id)
+    const cenas = [...c.cenas]; cenas.splice(i + 1, 0, nova)
+    return { ...c, cenas }
+  })
+  return nova.id
+}
+
+/** Põe a tela no ar: com o esmaecer, ou na hora (ao começar a transmissão). */
+export function colocarNoAr(id: string, naHora = false): void {
+  if (!cenaPorId(id)) return
+  if (naHora) {
+    if (transicao && !transicao.teste) { transicao = null; mudar({ transicao: null }) }
+    reiniciarMidiasDa(id)
+    mudarConfig((c) => ({ ...c, programa: id }))
+    return
+  }
+  transicionar(id)
+}
+
+/** A miniatura de uma tela (os cartões do painel). */
+export function desenharMiniatura(id: string, alvo: CanvasRenderingContext2D, largura: number): void {
+  const k = largura / LARGURA
+  alvo.setTransform(k, 0, 0, k, 0, 0)
+  desenharCena(alvo, cenaPorId(id))
+  alvo.setTransform(1, 0, 0, 1, 0, 0)
+}
+
+/** Câmera, tela e microfone do painel: liga ou desliga para todas as telas. */
+export type Aparelho = 'camera' | 'tela' | 'microfone'
+const CHAVE_DO_APARELHO: Record<Aparelho, string> = { camera: 'camera:padrao', tela: 'tela', microfone: 'mic:padrao' }
+export const situacaoDoAparelho = (a: Aparelho): SituacaoDaCaptura => estado.capturas[CHAVE_DO_APARELHO[a]] ?? 'desligada'
+export const microfoneMudo = () => !!estado.config?.canais['mic:padrao']?.mudo
+export function alternarAparelho(a: Aparelho): void {
+  const chave = CHAVE_DO_APARELHO[a]
+  if (a === 'microfone' && situacaoDoAparelho(a) === 'ok') { ajustarCanal(chave, { mudo: !microfoneMudo() }); return }
+  if (situacaoDoAparelho(a) === 'ok') { desligarCaptura(chave); return }
+  if (a === 'microfone' && microfoneMudo()) ajustarCanal(chave, { mudo: false })
+  const tipo: TipoDeFonte = a
+  const f = todasAsFontes().find((x) => x.tipo === tipo && chaveDaCaptura(x) === chave)
+    ?? { id: 'aparelho', tipo, nome: tipo, visivel: true, bloqueada: true, x: 0, y: 0, w: LARGURA, h: ALTURA, recorte: { esq: 0, topo: 0, dir: 0, baixo: 0 }, dispositivo: '' }
+  void ligarCaptura(f)
+}

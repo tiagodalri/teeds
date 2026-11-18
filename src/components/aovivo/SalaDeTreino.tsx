@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CantoDaCamera } from '../../core/live/api'
 import {
   abrirChatDoTreino, ajustar, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, pararSimulacao, useSimulacao,
@@ -13,12 +13,12 @@ import { ehCelular } from '../../core/celular'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
   alternarFonte, cantoDoTreino, cantoNoTreino, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, voltarATreinar, prepararSalaDoAdmin, sairDoTreino,
-  trocarFundoDoTreino, trocarTeste, usarEstudioNoTreino, useTreino,
+  trocarFundoDoTreino, trocarTeste, useTreino,
 } from '../../core/live/treino'
 import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
 
-// o estúdio de cenas (31/10/2026) só baixa quando é usado
-const Estudio = lazy(() => import('./estudio/Estudio'))
+import { PainelDaSala, telaDeAbertura } from './PainelDaSala'
+import { colocarNoAr, estudioAgora } from '../../core/live/estudio/motor'
 
 /**
  * Sala de treino (plano "treino"): o influenciador ensaia a live com a tela,
@@ -52,7 +52,7 @@ const fmt = (n: number) => n.toLocaleString('pt-BR')
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 const MOMENTOS: Array<{ id: Momento; rotulo: string; dica: string }> = [
-  { id: 'abertura', rotulo: 'Abertura', dica: 'Chuva de saudações' },
+  { id: 'abertura', rotulo: 'Boas-vindas', dica: 'Chuva de saudações' },
   { id: 'meta', rotulo: 'Bateu a meta', dica: 'Comemoração e gestão' },
   { id: 'stop', rotulo: 'Tomou stop', dica: 'Apoio e disciplina' },
   { id: 'lateral', rotulo: 'Mercado lento', dica: 'Paciência' },
@@ -181,21 +181,12 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   }, [sim.mensagens.length, aba])
 
   const ligar = async (qual: 'tela' | 'camera' | 'mic') => { setErro(null); setErro(await alternarFonte(qual)) }
-  // Estúdio de cenas (como o OBS) ou só tela e câmera, como antes (31/10/2026)
-  const CHAVE_MODO = `${MARCA.id}.central.modo`
+  // 18/11/2026: no computador, sempre o painel da sala (telas prontas); no celular, tela e câmera
   const computador = typeof window !== 'undefined' && !ehCelular()
-  const [modo, setModoEstado] = useState<'estudio' | 'simples'>(() => {
-    try { const g = localStorage.getItem(CHAVE_MODO); if (g === 'estudio' || g === 'simples') return g } catch { /* sem armazenamento */ }
-    return computador ? 'estudio' : 'simples'
-  })
-  const setModo = (m: 'estudio' | 'simples') => {
-    setModoEstado(m)
-    try { localStorage.setItem(CHAVE_MODO, m) } catch { /* só agora */ }
-    if (m === 'simples') void usarEstudioNoTreino(null)
-  }
-  const comEstudio = modo === 'estudio' && computador
-  const [abaLado, setAbaLado] = useState<'chat' | 'sala' | 'simulacao' | 'historico'>('chat')
-  const [verDestino, setVerDestino] = useState(false)
+  const comEstudio = computador
+  const [pop, setPop] = useState<'destino' | 'sala' | 'historico' | null>(null)
+  const verDestino = pop === 'destino'
+  const setVerDestino = (v: boolean) => setPop(v ? 'destino' : null)
   const [nomesDasPlataformas, setNomes] = useState<Record<string, string>>({})
   useEffect(() => { if (sessao && MARCA.parceiros?.length) void plataformasDaMarca(sessao).then((l) => setNomes(Object.fromEntries(l.map((p) => [p.codigo, p.nome])))) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [cheia, setCheia] = useState(false)
@@ -223,7 +214,11 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     </div>
   )
 
-  const comecar = () => { iniciarSimulacao(apresentador); setAba('chat'); setAbaLado('chat') }
+  const comecar = () => {
+    // 18/11/2026: a live sempre abre pela tela "Começa em instantes"
+    if (comEstudio) { const c = estudioAgora().config; const ab = c ? telaDeAbertura(c.cenas) : undefined; if (ab) colocarNoAr(ab.id, true) }
+    iniciarSimulacao(apresentador); setAba('chat')
+  }
   const temImagem = !!tela || !!camera || comEstudio
   // tela inteira: sem prévia aqui por padrão (evita o espelho infinito e poupa o computador)
   const [verPrevia, setVerPrevia] = useState(false)
@@ -420,28 +415,22 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     </section>
   )
 
-  /* A Central como um aplicativo de transmissão (31/10/2026, "como se fosse
-     um OBS nativo"): tela inteira, sempre noturna, estúdio no meio, chat e
-     sala na coluna da direita, barra de estado embaixo. */
+  /* O painel da sala (18/11/2026, "um layout só, muito intuitivo"): tela
+     inteira, sempre noturna. À esquerda o público e os comentários da I.A.;
+     no meio o que os alunos veem e as telas prontas; à direita o chat. */
   if (comEstudio) {
     const destino = tr.teste ? 'Teste com link privado' : !tr.vitrines ? 'Todas as plataformas' : tr.vitrines.map((v) => (v === 'direto' ? 'Direto' : nomesDasPlataformas[v] ?? `/${v}`)).join(', ')
+    const publicoNaTela = sim.ativa ? sim.publicoAgora : sim.publicoAlvo
     return (
-      <div className={`cv-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
+      <div className={`cv-app ps-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
         <header className="cv-app-topo">
           <div className="cv-app-marca">
             {MARCA.id === 'globalfly' && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
-            <span><b>Central ao vivo</b><small>Sala de treino</small></span>
+            <span><b>Sala de treino</b><small>Painel da transmissão</small></span>
           </div>
           <span className={`cv-app-estado ${sim.ativa ? 'vivo' : ''}`} role="status">
             <i aria-hidden />{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'}{sim.ativa && <b className="cv-num">{relogio(Date.now() - central.noArDesde)}</b>}
           </span>
-          {sessao && (
-            <span className={`cv-app-conexao ${tr.fase === 'conectada' ? 'on' : tr.fase === 'erro' ? 'erro' : tr.fase === 'fora' ? 'fora' : ''}`} title={tr.fase === 'erro' ? tr.erro ?? undefined : undefined}>
-              {tr.fase === 'conectada' ? <><b className="cv-num">{tr.membros}</b> {tr.membros === 1 ? 'membro na sala' : 'membros na sala'}</>
-                : tr.fase === 'erro' ? <><span className="cv-app-conexao-msg">{tr.erro ?? 'Sem conexão com a sala'}</span><button type="button" className="cv-app-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button></>
-                  : tr.fase === 'fora' ? <><span className="cv-app-conexao-msg">Fora da sala</span><button type="button" className="cv-app-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button></> : 'Abrindo a sala…'}
-            </span>
-          )}
           {sessao && (
             <div className="cv-app-destino">
               <button type="button" className={`cv-app-pill ${verDestino ? 'on' : ''} ${tr.teste ? 'teste' : ''}`} aria-expanded={verDestino} onClick={() => setVerDestino(!verDestino)}>
@@ -450,55 +439,102 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
               {verDestino && (
                 <div className="cv-app-pop" role="dialog" aria-label="Quem recebe a transmissão">
                   <DestinoDaTransmissao sessao={sessao} noAr={sim.ativa} />
-                  <button type="button" className="av-link" onClick={() => setVerDestino(false)}>Fechar</button>
+                  <button type="button" className="av-link" onClick={() => setPop(null)}>Fechar</button>
+                </div>
+              )}
+            </div>
+          )}
+          {sessao && (
+            <div className="cv-app-destino">
+              <button type="button" className={`cv-app-pill ${pop === 'sala' ? 'on' : ''} ${tr.fase === 'erro' || tr.fase === 'fora' ? 'ps-pill-erro' : ''}`} aria-expanded={pop === 'sala'} onClick={() => setPop(pop === 'sala' ? null : 'sala')}
+                title={tr.fase === 'erro' ? tr.erro ?? undefined : undefined}>
+                <small>Na sala</small>
+                {tr.fase === 'conectada' ? <><b className="cv-num">{tr.membros}</b>&nbsp;{tr.membros === 1 ? 'membro' : 'membros'}</> : tr.fase === 'erro' || tr.fase === 'fora' ? 'Fora da sala' : 'Abrindo…'}
+                <i aria-hidden>▾</i>
+              </button>
+              {pop === 'sala' && (
+                <div className="cv-app-pop ps-pop-sala" role="dialog" aria-label="Quem está na sala">
+                  {(tr.fase === 'erro' || tr.fase === 'fora') && <p className="av-erro">{tr.erro ?? 'Você saiu da sala.'} <button type="button" className="cv-app-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button></p>}
+                  {naSalaCard}
+                  {movimento}
+                  <button type="button" className="av-link" onClick={() => setPop(null)}>Fechar</button>
+                </div>
+              )}
+            </div>
+          )}
+          {sessao && (
+            <div className="cv-app-destino">
+              <button type="button" className={`cv-app-pill ${pop === 'historico' ? 'on' : ''}`} aria-expanded={pop === 'historico'} onClick={() => setPop(pop === 'historico' ? null : 'historico')}>Histórico<i aria-hidden>▾</i></button>
+              {pop === 'historico' && (
+                <div className="cv-app-pop ps-pop-historico" role="dialog" aria-label="Histórico das transmissões">
+                  <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto />
+                  <button type="button" className="av-link" onClick={() => setPop(null)}>Fechar</button>
                 </div>
               )}
             </div>
           )}
           <span className="cv-app-espaco" />
-          {computador && <div className="tr-seg cv-modo" role="radiogroup" aria-label="De onde vem a imagem">
-            <button role="radio" aria-checked={comEstudio} className={comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('estudio')}>Estúdio de cenas</button>
-            <button role="radio" aria-checked={!comEstudio} className={!comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('simples')}>Tela e câmera</button>
-          </div>}
           {sim.ativa
             ? <button className="av-botao-encerrar" onClick={() => pararSimulacao()}>Encerrar transmissão</button>
             : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar transmissão</button>}
           <button type="button" className="cv-app-ico" aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'} onClick={alternarTelaCheia}>
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={cheia ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} /></svg>
           </button>
-          <button type="button" className="cv-app-sair" onClick={sairDaSala}>Sair da Central</button>
+          <button type="button" className="cv-app-sair" onClick={sairDaSala}>Sair</button>
         </header>
         {erro && <p className="av-erro cv-app-erro" role="alert">{erro}</p>}
 
-        <div className="cv-app-corpo">
-          <Suspense fallback={<section className="eo eo-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio app /></Suspense>
-          <aside className="cv-app-lado" aria-label="Chat e sala">
-            <div className="cv-app-abas" role="tablist" aria-label="Painéis">
-              {(['chat', 'sala', 'simulacao', 'historico'] as const).map((a) => (
-                <button key={a} role="tab" aria-selected={abaLado === a} className={abaLado === a ? 'on' : ''} onClick={() => setAbaLado(a)}>
-                  {a === 'chat' ? 'Chat' : a === 'sala' ? 'Sala' : a === 'simulacao' ? 'Simulação' : 'Histórico'}
-                  {a === 'chat' && naoRespondidas > 0 && <span className="av-badge-aba">{naoRespondidas > 99 ? '99+' : naoRespondidas}</span>}
-                </button>
-              ))}
+        <div className="ps-corpo">
+          <aside className="ps-lado ps-esquerda" aria-label="Público e comentários">
+            <section className="ps-card">
+              <h3>Público na tela <small>O que os alunos veem</small></h3>
+              <div className="ps-numero"><b className="cv-num">{fmt(publicoNaTela)}</b><span>pessoas{sim.ativa && sim.publicoAgora !== sim.publicoAlvo ? ` · indo para ${fmt(sim.publicoAlvo)}` : ''}</span></div>
+              <input className="ps-barra" type="range" min={50} max={10000} step={50} value={Math.min(10000, sim.publicoAlvo)} aria-label="Pessoas na tela"
+                onChange={(e) => ajustar({ publicoAlvo: Number(e.target.value) })} />
+              <div className="ps-prontos" role="group" aria-label="Tamanhos prontos">
+                {[100, 500, 1000, 2000, 5000].map((n) => <button key={n} type="button" className={sim.publicoAlvo === n ? 'on' : ''} onClick={() => ajustar({ publicoAlvo: n })}>{fmt(n)}</button>)}
+                <label className="ps-outro"><span className="av-oculto">Outro número</span><input type="number" min={1} max={50000} value={sim.publicoAlvo} onChange={(e) => { const n = Math.round(Number(e.target.value)); if (n > 0) ajustar({ publicoAlvo: Math.min(50000, n) }) }} /></label>
+              </div>
+              <span className="ps-rotulo">Variação do número</span>
+              {segmentado<Oscilacao>(sim.oscilacao, [['baixa', 'Pouca'], ['media', 'Média'], ['alta', 'Muita']], (v) => ajustar({ oscilacao: v }), 'Variação do público')}
+            </section>
+
+            <section className="ps-card ps-card-ia">
+              <h3>Comentários da I.A.
+                <small className={sim.ativa && !sim.pausada ? 'ps-ligado' : ''}>{!sim.ativa ? 'Começam com a transmissão' : sim.pausada ? 'Pausados' : 'Ligados'}</small>
+              </h3>
+              {sim.ativa && <button type="button" className="ps-pausar" onClick={() => ajustar({ pausada: !sim.pausada })}>{sim.pausada ? 'Retomar os comentários' : 'Pausar os comentários'}</button>}
+              <span className="ps-rotulo">Velocidade</span>
+              {segmentado<Ritmo>(sim.ritmo, [['calmo', 'Calmo'], ['normal', 'Normal'], ['agitado', 'Agitado']], (v) => ajustar({ ritmo: v }), 'Velocidade dos comentários')}
+              <span className="ps-rotulo">Assunto agora <small>Um toque muda o assunto por alguns segundos</small></span>
+              <div className="ps-chips">
+                {MOMENTOS.map((m) => (
+                  <button key={m.id} type="button" className={sim.momento === m.id ? 'on' : ''} disabled={!sim.ativa} title={sim.ativa ? m.dica : 'Liberado quando a transmissão começar'} onClick={() => dispararMomento(m.id)}>{m.rotulo}</button>
+                ))}
+              </div>
+              <BlocosDoChat sessao={sessao} embutido />
+              <button type="button" className="av-link ps-limpar" onClick={limparChat}>Limpar o chat</button>
+            </section>
+          </aside>
+
+          <main className="ps-centro"><PainelDaSala /></main>
+
+          <aside className="ps-lado ps-direita" aria-label="Chat">
+            <div className="ps-chat-topo">
+              <span>Membros podem escrever</span>
+              <button className={`av-chave-chat ${sim.chatAberto ? 'on' : ''}`} aria-pressed={sim.chatAberto} onClick={() => abrirChatDoTreino(!sim.chatAberto)}><i aria-hidden />{sim.chatAberto ? 'Aberto' : 'Fechado'}</button>
             </div>
-            <div className={`cv-app-painel aba-${abaLado}`}>
-              {abaLado === 'chat' && chatDaSala}
-              {abaLado === 'sala' && <>{naSalaCard}{movimento}</>}
-              {abaLado === 'simulacao' && controles}
-              {abaLado === 'historico' && (sessao ? <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto /> : <p className="tr-legenda">Entre na sua conta para ver o histórico das transmissões.</p>)}
-            </div>
+            {chatDaSala}
           </aside>
         </div>
 
         <footer className="cv-app-status" aria-label="Estado da transmissão">
           <span className={sim.ativa ? 'vivo' : ''}><i aria-hidden />{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'} <b className="cv-num">{sim.ativa ? relogio(Date.now() - central.noArDesde) : '00:00:00'}</b></span>
-          <span>Membros <b className="cv-num">{tr.membros}</b></span>
+          <span>Membros reais <b className="cv-num">{tr.membros}</b></span>
           <span>Pico <b className="cv-num">{central.pico}</b></span>
           <span>Passaram <b className="cv-num">{central.pessoas.size}</b></span>
           <span>Para a equipe <b className="cv-num">{central.paraEquipe}</b>{naoRespondidas > 0 && <em> · {naoRespondidas} sem resposta</em>}</span>
-          <span>Público simulado <b className="cv-num">{sim.ativa ? fmt(sim.publicoAgora) : '—'}</b></span>
-          <span className="cv-app-espaco" />
-          <span>Saída <b className="cv-num">1920×1080 · 30 fps</b></span>
+          <span>Público na tela <b className="cv-num">{sim.ativa ? fmt(sim.publicoAgora) : '—'}</b></span>
         </footer>
       </div>
     )
@@ -518,10 +554,6 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           )}
         </div>
         <div className="av-mesa-fontes" role="group" aria-label="O que entra na transmissão">
-          {computador && <div className="tr-seg cv-modo" role="radiogroup" aria-label="De onde vem a imagem">
-            <button role="radio" aria-checked={comEstudio} className={comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('estudio')}>Estúdio de cenas</button>
-            <button role="radio" aria-checked={!comEstudio} className={!comEstudio ? 'on' : ''} disabled={sim.ativa} title={sim.ativa ? 'Encerre a transmissão para trocar' : undefined} onClick={() => setModo('simples')}>Tela e câmera</button>
-          </div>}
           {!comEstudio && <>
             {fonte('tela', 'Tela', !!tela)}
             {fonte('camera', 'Câmera', !!camera)}
@@ -549,8 +581,6 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           ))}
         </ol>
       )}
-
-      {comEstudio && <Suspense fallback={<section className="eo eo-carregando"><p>Abrindo o estúdio…</p></section>}><Estudio /></Suspense>}
 
       <div className="cv-numeros" role="group" aria-label="Números da transmissão">
         <div><small>Membros na sala</small><b className="cv-num">{tr.membros}</b><em>reais, sem a simulação</em></div>
