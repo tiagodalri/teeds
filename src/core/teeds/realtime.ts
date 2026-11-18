@@ -37,6 +37,8 @@ export interface AssinaturaRealtime {
   atualizarToken: (token: string) => void
   /** Está aberto e inscrito agora? */
   aoVivo: () => boolean
+  /** Manda um sinal de broadcast no canal (só com `transmissao`). Sem conexão, não manda. */
+  sinalizar: (evento: string, carga: Record<string, unknown>) => void
 }
 
 interface Opcoes {
@@ -54,6 +56,12 @@ interface Opcoes {
    */
   transmissao?: string
   aoMudar: (m: MudancaDeLinha) => void
+  /**
+   * Sinais livres no canal de transmissão (17/11/2026, "digitando…" do chat da
+   * equipe): com isto, todo broadcast do canal chega aqui (evento + carga) em vez
+   * de virar mudança de linha. Mandar é com `sinalizar` da assinatura.
+   */
+  aoSinal?: (evento: string, carga: Record<string, unknown>) => void
   aoEstado?: (estado: EstadoDoCanal, detalhe?: string) => void
   /** Cada batimento respondido informa o RTT medido, em ms. */
   aoRtt?: (rttMs: number) => void
@@ -145,6 +153,11 @@ export function assinarMudancas(op: Opcoes): AssinaturaRealtime {
         op.aoMudar({ tipo: d.type, tabela: d.table, linha: d.record ?? {}, antiga: d.old_record ?? null, confirmadaEm: d.commit_timestamp ?? '' })
         return
       }
+      if (msg.event === 'broadcast' && msg.topic === topico && op.transmissao && op.aoSinal) {
+        const d = msg.payload?.payload
+        if (d && typeof d === 'object') { try { op.aoSinal(String(msg.payload?.event ?? ''), d) } catch { /* a tela decide */ } }
+        return
+      }
       if (msg.event === 'broadcast' && msg.topic === topico && op.transmissao) {
         const d = msg.payload?.payload
         if (!d || typeof d.tabela !== 'string' || !d.linha) return
@@ -202,6 +215,11 @@ export function assinarMudancas(op: Opcoes): AssinaturaRealtime {
 
   return {
     aoVivo: () => Boolean(ws && ws.readyState === 1 && inscrito),
+    sinalizar: (evento, carga) => {
+      if (!inscrito || !op.transmissao) return
+      ref += 1
+      mandar({ topic: topico, event: 'broadcast', payload: { type: 'broadcast', event: evento, payload: carga }, ref: String(ref), join_ref: joinRef })
+    },
     fechar: () => {
       if (!vivo) return
       vivo = false

@@ -591,9 +591,13 @@ export default defineConfig({
           `const eco=(d,tipo)=>d&&d.disparo&&d.eco?self.registration.pushManager.getSubscription().then(s=>s&&fetch(d.eco,{method:'POST',headers:{'content-type':'application/json',apikey:d.eco_chave,authorization:'Bearer '+d.eco_chave},body:JSON.stringify({p_disparo:d.disparo,p_endpoint:s.endpoint,p_tipo:tipo})})).catch(()=>{}):Promise.resolve();`,
           `self.addEventListener('push',e=>{let d={};try{d=e.data?e.data.json():{}}catch(_){d={corpo:e.data?e.data.text():''}}`,
           `const r=d.disparo?{disparo:d.disparo,eco:d.eco,eco_chave:d.eco_chave}:null;`,
-          `e.waitUntil(Promise.all([self.registration.showNotification(d.titulo||${JSON.stringify(nome)},{body:d.corpo||'',icon:'./${pwaDir}/icon-192.png',${existsSync(join('public', pwaDir, 'badge-96.png')) ? `badge:'./${pwaDir}/badge-96.png',` : ''}tag:d.tag||undefined,renotify:!!d.tag,data:{url:d.url||'./',rastro:r}}),eco(r,'recebeu')]))});`,
+          `e.waitUntil(Promise.all([self.registration.showNotification(d.titulo||${JSON.stringify(nome)},{body:d.corpo||'',icon:'./${pwaDir}/icon-192.png',${existsSync(join('public', pwaDir, 'badge-96.png')) ? `badge:'./${pwaDir}/badge-96.png',` : ''}tag:d.tag||undefined,renotify:!!d.tag,data:{url:d.url||'./',rastro:r,equipe:d.equipe||null}}),eco(r,'recebeu'),`,
+          // Chat da equipe (17/11/2026): o número de não lidas vai para o ícone do app, como no WhatsApp.
+          `typeof d.contador==='number'&&self.navigator&&self.navigator.setAppBadge?self.navigator.setAppBadge(d.contador).catch(()=>{}):null]))});`,
           `self.addEventListener('notificationclick',e=>{e.notification.close();const dd=e.notification.data||{};const alvo=new URL(dd.url||'./',self.registration.scope).href;`,
-          `e.waitUntil(Promise.all([eco(dd.rastro,'clicou'),self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{if(!alvo.startsWith(self.registration.scope))return self.clients.openWindow(alvo);for(const c of cs){if(c.url.startsWith(self.registration.scope)&&'focus' in c)return c.focus()}return self.clients.openWindow(alvo)})]))});`,
+          `e.waitUntil(Promise.all([eco(dd.rastro,'clicou'),self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{if(!alvo.startsWith(self.registration.scope))return self.clients.openWindow(alvo);for(const c of cs){if(c.url.startsWith(self.registration.scope)&&'focus' in c){if(dd.equipe)c.postMessage({tipo:'equipe-abrir',conversa:dd.equipe});return c.focus()}}return self.clients.openWindow(alvo)})]))});`,
+          // a mensagem nova ficou lida em outro aparelho (ou nesta tela): a notificação daquela conversa sai
+          `self.addEventListener('message',e=>{const d=e.data||{};if(d.tipo==='equipe-lida'&&d.conversa)e.waitUntil(self.registration.getNotifications({tag:'equipe-'+d.conversa}).then(ns=>ns.forEach(n=>n.close())).catch(()=>{}))});`,
           '',
         ].join('\n'))
       },

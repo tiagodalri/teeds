@@ -14,6 +14,8 @@
 //   { acao: 'comissao', ... }         do gatilho do banco (x-gatilho): uma sessão de I.A. ou uma operação
 //                                      manual em conta real encerrou; avisa SÓ a administração a comissão gerada
 //                                      (11/11/2026, substitui o antigo 'operacao_real')
+//   { acao: 'equipe', id }            do gatilho do banco (x-gatilho): mensagem nova no chat da equipe;
+//                                      avisa os outros da conversa que ainda não leram (17/11/2026)
 //
 // A chave VAPID de cada plataforma nasce aqui na primeira vez e fica em
 // config_servicos (VAPID_<MARCA>), que só a chave de serviço lê. O segredo do
@@ -69,7 +71,7 @@ const SITE: Record<string, string> = { globalfly: 'https://globalflytrade.com' }
 /** O depósito na Deriv: o MESMO endereço de DERIV.deposito (src/core/deriv/config.ts), obrigatório onde se fala em depositar. */
 const DEPOSITO_DERIV = 'https://home.deriv.com/dashboard/deposit?from=home&depositSheet=1&returnTo=%2Fhome&currency=USD'
 
-interface Aviso { titulo: string; corpo: string; tag: string; url?: string }
+interface Aviso { titulo: string; corpo: string; tag: string; url?: string; equipe?: string; contador?: number }
 
 /** Manda para todos os aparelhos da pessoa naquela plataforma; tira os que não existem mais. */
 async function enviar(userId: string, marca: string, aviso: Aviso): Promise<{ enviados: number; falhas: number; detalhes: string[] }> {
@@ -421,6 +423,44 @@ async function avisarComissao(corpo: Record<string, unknown>) {
   return json({ admins: destino.length, enviados, markup, detalhes })
 }
 
+/* ------------------------------------------------------- chat da equipe */
+
+/*
+  17/11/2026 (Tiago: "experiência nível WhatsApp"). Cada mensagem nova do chat da equipe vira
+  uma notificação nos aparelhos de quem está na conversa, como no WhatsApp: no grupo, o título é
+  "Equipe GlobalFly" e o corpo "Victor: texto"; na direta, o título é o nome da pessoa. A mesma tag
+  por conversa substitui a anterior (com "3 mensagens novas"). Fica de fora quem escreveu, quem já
+  leu e quem está com a conversa aberta agora (equipe_quem_avisar). Tocar abre a conversa.
+*/
+const NOME_DA_MARCA: Record<string, string> = { globalfly: 'GlobalFly', teeds: 'Teeds', omni: 'Omni' }
+
+async function avisarEquipe(id: string) {
+  if (!UUID.test(id)) return json({ erro: 'sem mensagem' }, 400)
+  // quem está com a conversa aberta marca como lida em instantes: espera um pouco antes de decidir
+  await new Promise((ok) => setTimeout(ok, 2500))
+  const r = await rest('rpc/equipe_quem_avisar', { method: 'POST', body: JSON.stringify({ p_mensagem: id }) })
+  const lista: Array<{ user_id: string; marca: string; conversa_id: string; tipo: string; autor_nome: string; texto: string; nao_lidas_conversa: number; nao_lidas_total: number }> = r.ok ? await r.json() : []
+  let enviados = 0
+  await Promise.all(lista.map(async (p) => {
+    const quem = (p.autor_nome || 'Alguém da equipe').trim()
+    const primeiro = quem.split(/\s+/)[0]
+    const grupo = p.tipo === 'grupo'
+    const n = Number(p.nao_lidas_conversa) || 1
+    const aviso: Aviso = {
+      titulo: grupo ? `Equipe ${NOME_DA_MARCA[p.marca] ?? ''}`.trim() : quem,
+      corpo: `${grupo ? `${primeiro}: ` : ''}${p.texto || 'Mensagem'}${n > 1 ? `\n${n} mensagens novas` : ''}`,
+      tag: `equipe-${p.conversa_id}`,
+      url: `./?equipe=${p.conversa_id}`,
+      equipe: p.conversa_id,
+      contador: Number(p.nao_lidas_total) || n,
+    }
+    const res = await enviar(p.user_id, p.marca, aviso)
+    enviados += res.enviados
+  }))
+  console.log('equipe', id, { pessoas: lista.length, enviados })
+  return json({ pessoas: lista.length, enviados })
+}
+
 /* ------------------------------------------------------------------ entrada */
 
 Deno.serve(async (req) => {
@@ -463,6 +503,12 @@ Deno.serve(async (req) => {
     const segredo = await lerConfig('PUSH_GATILHO')
     if (!segredo || req.headers.get('x-gatilho') !== segredo) return json({ erro: 'não autorizado' }, 401)
     return avisarComissao(corpo as Record<string, unknown>)
+  }
+
+  if (corpo.acao === 'equipe') {
+    const segredo = await lerConfig('PUSH_GATILHO')
+    if (!segredo || req.headers.get('x-gatilho') !== segredo) return json({ erro: 'não autorizado' }, 401)
+    return avisarEquipe(String(corpo.id ?? ''))
   }
 
   if (corpo.acao === 'sessao') {

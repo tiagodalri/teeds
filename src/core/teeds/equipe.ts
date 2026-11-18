@@ -1,12 +1,16 @@
 /**
  * Chat da equipe (27/10/2026, Tiago: "um chat interno, como se fosse um
- * WhatsApp... só para os administradores se conversarem").
+ * WhatsApp... só para os administradores se conversarem"). Nível WhatsApp em
+ * 17/11/2026: abre na hora (o que já foi visto fica guardado no aparelho),
+ * mensagem de voz, reações, editar, "digitando…", notificação no celular a
+ * cada mensagem e o número de não lidas no ícone do app.
  *
  * Cada marca tem o seu: o grupo da equipe (todos os administradores da marca)
  * e as conversas diretas de duas pessoas. Quem não é administrador DAQUELA
- * marca não lê nada (RLS em equipe_participo, ver a migração
- * 20261027180000_chat_da_equipe.sql). As mensagens chegam ao vivo pelo
- * Realtime; os prints vão para o bucket privado "equipe".
+ * marca não lê nada (RLS em equipe_participo, ver as migrações
+ * 20261027180000_chat_da_equipe.sql e 20261117200000_chat_da_equipe_nivel_whatsapp.sql).
+ * As mensagens chegam ao vivo pelo Realtime; prints e áudios vão para o
+ * bucket privado "equipe"; o "digitando…" passa no canal privado equipe:<marca>.
  *
  * A tela fala com `EquipeApi`: o site usa o banco (`equipeDoBanco`); o
  * laboratório usa uma equipe de mentira em memória.
@@ -27,18 +31,28 @@ export interface ConversaEq {
   ultimaAutor: string | null
   participantes: Participante[]
 }
+/** Imagem: largura e altura (reserva o espaço antes de carregar). Áudio: segundos e as barrinhas da onda (0–31). */
+export type Midia = { tipo: 'imagem'; l: number; a: number } | { tipo: 'audio'; duracao: number; ondas: number[] }
 export interface MensagemEq {
   id: string
   conversaId: string
   autor: string | null
   texto: string
   anexo: string | null
+  midia: Midia | null
   respostaA: string | null
   apagada: boolean
   criadaEm: string
+  /** user_id → emoji */
+  reacoes: Record<string, string>
+  editadaEm: string | null
   /** Só nesta tela: ainda indo para o banco, ou não foi. */
   enviando?: boolean
   falhou?: boolean
+  /** Só nesta tela: a imagem ou o áudio ainda no aparelho (enquanto sobe). */
+  local?: string
+  /** Só nesta tela: o arquivo, para tentar de novo se a subida falhar. */
+  arquivo?: Blob
 }
 export interface Abertura { grupo: string; contatos: Contato[]; conversas: ConversaEq[]; naoLidas: Record<string, number> }
 
@@ -47,6 +61,11 @@ export type MudancaEq =
   | { tipo: 'leitura'; conversaId: string; userId: string; lidaEm: string }
   | { tipo: 'conversa'; item: Omit<ConversaEq, 'participantes'> }
 
+/** "digitando…" e "gravando áudio…" de alguém numa conversa. */
+export interface SinalEq { tipo: 'digitando' | 'gravando' | 'parou'; userId: string; conversaId: string }
+
+export interface EnvioEq { id: string; texto: string; anexo?: string | null; midia?: Midia | null; respostaA?: string | null }
+
 export interface EquipeApi {
   euId: string
   abrir(): Promise<Abertura>
@@ -54,29 +73,86 @@ export interface EquipeApi {
   conversas(): Promise<ConversaEq[]>
   /** As últimas mensagens da conversa (ou as de antes de `antesDe`), da mais velha para a mais nova. */
   mensagens(conversaId: string, antesDe?: string): Promise<MensagemEq[]>
-  mandar(conversaId: string, d: { texto: string; anexo?: string | null; respostaA?: string | null }): Promise<MensagemEq>
+  /** O id vem da tela: mandar de novo o mesmo id não duplica. */
+  mandar(conversaId: string, d: EnvioEq): Promise<MensagemEq>
   direta(outro: string): Promise<string>
   ler(conversaId: string): Promise<void>
   apagar(id: string): Promise<void>
-  estouAqui(): Promise<void>
-  enviarPrint(conversaId: string, arquivo: File): Promise<string>
+  reagir(id: string, emoji: string | null): Promise<void>
+  editar(id: string, texto: string): Promise<void>
+  /** Estou aqui (e com esta conversa aberta, ou nenhuma). `saindo`: a aba vai sumir, manda mesmo assim. */
+  estouAqui(vendo?: string | null, saindo?: boolean): Promise<void>
+  /** Prepara a imagem (reduz) e sobe. Devolve o caminho e a medida. */
+  enviarPrint(conversaId: string, arquivo: Blob): Promise<{ caminho: string; l: number; a: number }>
+  enviarAudio(conversaId: string, audio: Blob): Promise<string>
+  /** Endereço local (blob:) do print ou do áudio, guardado no aparelho depois da primeira vez. */
   abrirPrint(caminho: string): Promise<string>
   /** Mudanças ao vivo. Devolve como parar. */
   acompanhar(aoMudar: (m: MudancaEq) => void, aoEstado?: (aoVivo: boolean) => void): () => void
+  /** "digitando…": ouvir os outros e avisar o meu. */
+  sinais(aoSinal: (s: SinalEq) => void): { mandar: (tipo: SinalEq['tipo'], conversaId: string) => void; parar: () => void }
 }
 
 export const POR_PAGINA = 60
 /** Visto há menos disso = "online agora" (o navegador avisa a cada minuto). */
 export const ONLINE_MS = 150_000
+/** Editar a própria mensagem: até 15 minutos depois (a mesma regra do banco). */
+export const EDITAR_MS = 15 * 60_000
 
 // ------------------------------------------------------------ conversão
+const daMidia = (m: any): Midia | null => {
+  if (!m || typeof m !== 'object') return null
+  if (m.tipo === 'audio') return { tipo: 'audio', duracao: Number(m.duracao) || 0, ondas: Array.isArray(m.ondas) ? m.ondas.map((x: unknown) => Number(x) || 0) : [] }
+  if (m.tipo === 'imagem') return { tipo: 'imagem', l: Number(m.l) || 0, a: Number(m.a) || 0 }
+  return null
+}
 export const daMensagem = (l: any): MensagemEq => ({
-  id: l.id, conversaId: l.conversa_id, autor: l.autor ?? null, texto: l.texto ?? '', anexo: l.anexo ?? null,
+  id: l.id, conversaId: l.conversa_id, autor: l.autor ?? null, texto: l.texto ?? '', anexo: l.anexo ?? null, midia: daMidia(l.midia),
   respostaA: l.resposta_a ?? null, apagada: !!l.apagada, criadaEm: l.criado_em,
+  reacoes: l.reacoes && typeof l.reacoes === 'object' ? l.reacoes : {}, editadaEm: l.editada_em ?? null,
 })
 const daConversa = (l: any): Omit<ConversaEq, 'participantes'> => ({
   id: l.id, tipo: l.tipo, ultimaEm: l.ultima_em ?? null, ultimaTexto: l.ultima_texto ?? null, ultimaAutor: l.ultima_autor ?? null,
 })
+
+/** A medida da imagem já reduzida (para reservar o espaço do balão). */
+async function medida(b: Blob): Promise<{ l: number; a: number }> {
+  try {
+    const bmp = await createImageBitmap(b)
+    const r = { l: bmp.width, a: bmp.height }; bmp.close?.()
+    return r
+  } catch { return { l: 0, a: 0 } }
+}
+
+/** O tipo que vai para o armazenamento (sem ";codecs=…") e a extensão do áudio. */
+export function tipoDoAudio(b: Blob): { tipo: string; ext: string } {
+  const t = (b.type || 'audio/mp4').split(';')[0].trim().toLowerCase()
+  if (t === 'audio/webm') return { tipo: t, ext: 'webm' }
+  if (t === 'audio/ogg') return { tipo: t, ext: 'ogg' }
+  if (t === 'audio/mpeg') return { tipo: t, ext: 'mp3' }
+  if (t === 'audio/aac') return { tipo: t, ext: 'aac' }
+  return { tipo: 'audio/mp4', ext: 'm4a' }
+}
+
+// ------------------------------------------------------------ guardado no aparelho
+/*
+  Prints e áudios: depois de baixados uma vez, ficam no Cache Storage do aparelho
+  (só quem tem acesso baixou; o caminho tem um uuid). Abrir de novo é instantâneo,
+  mesmo sem rede.
+*/
+const CAIXA_DE_MIDIA = `${MARCA.id}-equipe-midia`
+const midiasAbertas = new Map<string, Promise<string>>()
+async function daCaixa(caminho: string): Promise<Blob | null> {
+  try { const c = await caches.open(CAIXA_DE_MIDIA); const r = await c.match(`/equipe-midia/${caminho}`); return r ? await r.blob() : null } catch { return null }
+}
+async function paraCaixa(caminho: string, b: Blob) {
+  try { const c = await caches.open(CAIXA_DE_MIDIA); await c.put(`/equipe-midia/${caminho}`, new Response(b, { headers: { 'Content-Type': b.type || 'application/octet-stream' } })) } catch { /* sem cache: baixa de novo da próxima vez */ }
+}
+/** O que acabou de subir já fica guardado (quem mandou não baixa de novo). */
+export function guardarMidia(caminho: string, b: Blob) {
+  void paraCaixa(caminho, b)
+  if (!midiasAbertas.has(caminho)) midiasAbertas.set(caminho, Promise.resolve(URL.createObjectURL(b)))
+}
 
 // ------------------------------------------------------------ banco
 export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): EquipeApi {
@@ -87,11 +163,18 @@ export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): Eq
     })
     if (!r.ok) {
       const c = await r.json().catch(() => ({}))
-      throw new Error(String(c?.message || `Não consegui falar com o servidor agora (${r.status}). Tente de novo.`))
+      const e = new Error(String(c?.message || `Não consegui falar com o servidor agora (${r.status}). Tente de novo.`)) as Error & { status?: number; codigo?: string }
+      e.status = r.status; e.codigo = c?.code
+      throw e
     }
     return r.status === 204 ? (undefined as T) : ((await r.json().catch(() => undefined)) as T)
   }
-  const rpc = <T>(nome: string, corpo: Record<string, unknown>) => rest<T>(`/rpc/${nome}`, { method: 'POST', body: JSON.stringify(corpo) })
+  const rpc = <T>(nome: string, corpo: Record<string, unknown>, init: RequestInit = {}) => rest<T>(`/rpc/${nome}`, { method: 'POST', body: JSON.stringify(corpo), ...init })
+  const subir = async (caminho: string, b: Blob, tipo: string) => {
+    const r = await fetch(`${SUPABASE.url}/storage/v1/object/equipe/${caminho}`, { method: 'POST', headers: { ...cabeca(), 'Content-Type': tipo }, body: b })
+    if (!r.ok) throw new Error(r.status === 413 ? 'O arquivo ficou grande demais.' : 'Não consegui enviar o arquivo agora. Tente de novo.')
+    guardarMidia(caminho, b)
+  }
 
   const api: EquipeApi = {
     euId: sessao.usuario.id,
@@ -121,39 +204,64 @@ export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): Eq
       return (l ?? []).map(daMensagem).reverse()
     },
     async mandar(conversaId, d) {
-      const l = await rest<any[]>('/equipe_mensagens', {
-        method: 'POST', headers: { Prefer: 'return=representation' },
-        body: JSON.stringify({ conversa_id: conversaId, marca, texto: d.texto.trim(), anexo: d.anexo ?? null, resposta_a: d.respostaA ?? null }),
-      })
-      if (!l?.length) throw new Error('A mensagem não foi. Tente de novo.')
-      return daMensagem(l[0])
+      try {
+        const l = await rest<any[]>('/equipe_mensagens', {
+          method: 'POST', headers: { Prefer: 'return=representation' },
+          body: JSON.stringify({ id: d.id, conversa_id: conversaId, marca, texto: d.texto.trim(), anexo: d.anexo ?? null, midia: d.midia ?? null, resposta_a: d.respostaA ?? null }),
+        })
+        if (!l?.length) throw new Error('A mensagem não foi. Tente de novo.')
+        return daMensagem(l[0])
+      } catch (e) {
+        // a primeira tentativa chegou e a resposta é que se perdeu: a mensagem já está lá
+        if ((e as { codigo?: string }).codigo === '23505' || (e as { status?: number }).status === 409) {
+          const l = await rest<any[]>(`/equipe_mensagens?id=eq.${d.id}&select=*`)
+          if (l?.length) return daMensagem(l[0])
+        }
+        throw e
+      }
     },
     direta: (outro) => rpc<string>('equipe_direta', { p_marca: marca, p_outro: outro }),
     async ler(conversaId) { await rpc('equipe_ler', { p_conversa: conversaId }) },
     async apagar(id) {
-      const print = await rpc<string | null>('equipe_apagar', { p_mensagem: id })
-      if (print) {
+      const arquivo = await rpc<string | null>('equipe_apagar', { p_mensagem: id })
+      if (arquivo) {
         await fetch(`${SUPABASE.url}/storage/v1/object/equipe`, {
-          method: 'DELETE', headers: { ...cabeca(), 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: [print] }),
+          method: 'DELETE', headers: { ...cabeca(), 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: [arquivo] }),
         }).catch(() => undefined)
       }
     },
-    async estouAqui() { await rpc('equipe_estou_aqui', { p_marca: marca }).catch(() => undefined) },
+    async reagir(id, emoji) { await rpc('equipe_reagir', { p_mensagem: id, p_emoji: emoji }) },
+    async editar(id, texto) { await rpc('equipe_editar', { p_mensagem: id, p_texto: texto }) },
+    async estouAqui(vendo = null, saindo = false) {
+      await rpc('equipe_estou_aqui', { p_marca: marca, p_vendo: vendo }, saindo ? { keepalive: true } : {}).catch(() => undefined)
+    },
     async enviarPrint(conversaId, arquivo) {
       if (!ehImagem(arquivo)) throw new Error('Mande uma imagem (print da tela, JPG ou PNG).')
-      const { blob, tipo, ext } = await reduzirImagem(arquivo, 1600, false, 0.85)
+      const { blob, tipo, ext } = await reduzirImagem(arquivo as File, 1600, false, 0.85)
+      const { l, a } = await medida(blob)
       const caminho = `${marca}/${conversaId}/${crypto.randomUUID()}.${ext}`
-      const r = await fetch(`${SUPABASE.url}/storage/v1/object/equipe/${caminho}`, { method: 'POST', headers: { ...cabeca(), 'Content-Type': tipo }, body: blob })
-      if (!r.ok) throw new Error(r.status === 413 ? 'A imagem ficou grande demais. Mande um print da tela.' : 'Não consegui enviar a imagem agora. Tente de novo.')
+      await subir(caminho, blob, tipo)
+      return { caminho, l, a }
+    },
+    async enviarAudio(conversaId, audio) {
+      const { tipo, ext } = tipoDoAudio(audio)
+      const caminho = `${marca}/${conversaId}/${crypto.randomUUID()}.${ext}`
+      await subir(caminho, audio, tipo)
       return caminho
     },
     abrirPrint(caminho) {
-      let p = printsAbertos.get(caminho)
+      let p = midiasAbertas.get(caminho)
       if (!p) {
-        p = fetch(`${SUPABASE.url}/storage/v1/object/authenticated/equipe/${caminho}`, { headers: cabeca() })
-          .then((r) => { if (!r.ok) throw new Error('print'); return r.blob() }).then((b) => URL.createObjectURL(b))
-        p.catch(() => printsAbertos.delete(caminho))
-        printsAbertos.set(caminho, p)
+        p = daCaixa(caminho).then(async (guardado) => {
+          if (guardado) return URL.createObjectURL(guardado)
+          const r = await fetch(`${SUPABASE.url}/storage/v1/object/authenticated/equipe/${caminho}`, { headers: cabeca() })
+          if (!r.ok) throw new Error('midia')
+          const b = await r.blob()
+          void paraCaixa(caminho, b)
+          return URL.createObjectURL(b)
+        })
+        p.catch(() => midiasAbertas.delete(caminho))
+        midiasAbertas.set(caminho, p)
       }
       return p
     },
@@ -181,10 +289,52 @@ export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): Eq
       })
       return () => a.fechar()
     },
+    sinais(aoSinal) {
+      const eu = sessao.usuario.id
+      const a = assinarMudancas({
+        token: sessao.token, canal: '', tabelas: [], transmissao: `equipe:${marca}`,
+        aoMudar: () => undefined,
+        aoSinal: (evento, c) => {
+          if (evento !== 'sinal' || typeof c.u !== 'string' || typeof c.c !== 'string' || c.u === eu) return
+          const tipo = c.t === 'gravando' ? 'gravando' : c.t === 'parou' ? 'parou' : 'digitando'
+          aoSinal({ tipo, userId: c.u, conversaId: c.c })
+        },
+      })
+      return {
+        mandar: (tipo, conversaId) => a.sinalizar('sinal', { t: tipo, u: eu, c: conversaId }),
+        parar: () => a.fechar(),
+      }
+    },
   }
   return api
 }
-const printsAbertos = new Map<string, Promise<string>>()
+
+// ------------------------------------------------------------ guardado para abrir na hora
+/*
+  O chat abre como o WhatsApp: na hora, com o que já estava na tela da última vez
+  (conversas, contatos e as últimas mensagens de cada conversa), e atualiza por
+  trás. Fica no aparelho de quem é da equipe, por pessoa e por marca.
+*/
+export interface Guardado extends Abertura { msgs: Record<string, MensagemEq[]>; rascunhos: Record<string, string> }
+const chaveGuardada = (eu: string) => `${MARCA.id}.equipe.v2.${eu}`
+export function lerGuardado(eu: string): Guardado | null {
+  try {
+    const t = localStorage.getItem(chaveGuardada(eu))
+    if (!t) return null
+    const g = JSON.parse(t) as Guardado
+    return g && typeof g.grupo === 'string' && Array.isArray(g.conversas) ? { ...g, msgs: g.msgs ?? {}, rascunhos: g.rascunhos ?? {} } : null
+  } catch { return null }
+}
+export function guardar(eu: string, g: Guardado) {
+  try {
+    const msgs: Record<string, MensagemEq[]> = {}
+    for (const [k, l] of Object.entries(g.msgs)) {
+      // só o que já foi para o banco; os últimos 80 de cada conversa
+      msgs[k] = l.filter((m) => !m.enviando && !m.falhou && !m.id.startsWith('tmp-')).slice(-80).map(({ local: _l, arquivo: _a, ...m }) => m)
+    }
+    localStorage.setItem(chaveGuardada(eu), JSON.stringify({ ...g, msgs }))
+  } catch { /* sem espaço: abre pelo banco */ }
+}
 
 // ------------------------------------------------------------ apoio da tela
 export const horaCurta = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -244,4 +394,40 @@ export function lidaPorTodos(m: MensagemEq, c: ConversaEq | undefined, euId: str
   if (!c) return false
   const outros = c.participantes.filter((p) => p.userId !== euId)
   return outros.length > 0 && outros.every((p) => Date.parse(p.lidaEm) >= Date.parse(m.criadaEm))
+}
+
+/** Quem da conversa já leu esta mensagem (para o "Lida por" do grupo). */
+export function quemLeu(m: MensagemEq, c: ConversaEq | undefined, euId: string): string[] {
+  if (!c) return []
+  return c.participantes.filter((p) => p.userId !== euId && Date.parse(p.lidaEm) >= Date.parse(m.criadaEm)).map((p) => p.userId)
+}
+
+/** Só emoji (até 3): o balão mostra grande, como no WhatsApp. */
+export function soEmoji(t: string): boolean {
+  const s = t.trim()
+  if (!s || s.length > 24) return false
+  try {
+    const Seg = (Intl as unknown as { Segmenter?: new (l: string, o: { granularity: 'grapheme' }) => { segment: (t: string) => Iterable<{ segment: string }> } }).Segmenter
+    // sem o Segmenter: separa pelos emoji com os modificadores e o "zero width joiner" juntos
+    const partes = Seg ? [...new Seg('pt-BR', { granularity: 'grapheme' }).segment(s)].map((x) => x.segment).filter((x) => x.trim())
+      : s.match(/\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic})*|\S/gu) ?? []
+    return partes.length <= 3 && partes.every((x) => /\p{Extended_Pictographic}/u.test(x))
+  } catch { return false }
+}
+
+/** "0:07", "1:23". */
+export const duracaoCurta = (s: number) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`
+
+/** Os links do texto, para virarem clicáveis (o resto fica texto puro: nada de HTML vindo do banco). */
+export function partesDoTexto(t: string): Array<{ texto: string; link?: string }> {
+  const out: Array<{ texto: string; link?: string }> = []
+  const re = /\b(https?:\/\/[^\s<]+[^\s<.,;:!?)\]'"]|www\.[^\s<]+[^\s<.,;:!?)\]'"])/gi
+  let i = 0
+  for (const m of t.matchAll(re)) {
+    if (m.index! > i) out.push({ texto: t.slice(i, m.index) })
+    out.push({ texto: m[0], link: m[0].startsWith('www.') ? `https://${m[0]}` : m[0] })
+    i = m.index! + m[0].length
+  }
+  if (i < t.length) out.push({ texto: t.slice(i) })
+  return out
 }
