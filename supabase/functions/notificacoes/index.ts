@@ -433,7 +433,8 @@ async function avisarComissao(corpo: Record<string, unknown>) {
   const valor = cotacao ? `${brl.format(markup * cotacao)} de comissão` : `${usdComissao(markup, moeda)} de comissão`
   const aviso: Aviso = {
     titulo: '💰 Comissão',  // 18/11/2026 (Tiago): sem o "gerada"
-    corpo: `${nome} · ${valor}\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}`,
+    // 18/11/2026 (Tiago): no fim, só o nome do parceiro ("Victor", "Naor"), sem "Cliente do"
+    corpo: `${nome} · ${valor}\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? NOME_DO_PARCEIRO[parceiro] : 'Direto'}`,
     tag: `comissao-${chave}`, url: './',
   }
   // rastreio de teste (13/11/2026): com `rastro` (id de push_disparos), o aparelho avisa o banco quando a
