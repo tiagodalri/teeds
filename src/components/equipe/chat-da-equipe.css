@@ -30,6 +30,13 @@
 body:has(.sp-lancador-area) .eq-lancador-area { bottom: calc(92px + var(--sab, 0px)); }
 body:has(.av-pilula):has(.sp-lancador-area) .eq-lancador-area { bottom: calc(140px + var(--sab, 0px)); }
 body.aovivo-lado .eq-lancador-area { right: 400px; }
+/* 18/11/2026: no celular o botão sai de lado enquanto a pessoa rola para baixo e volta ao rolar para cima
+   (core/direcaoDaRolagem.ts): ele cobria campos e textos em todas as telas. Com mensagem nova ele fica. */
+@media (max-width: 900px) {
+  .eq-lancador-area { transition: bottom .25s ease, right .25s ease, transform .28s cubic-bezier(.2, .8, .2, 1), opacity .2s; }
+  html.rolando-para-baixo .eq-lancador-area:not(.aberto):not(:has(.eq-selo, .eq-aviso)) { transform: translateX(calc(100% + 28px)); opacity: 0; pointer-events: none; }
+  html.rolando-para-baixo .eq-lancador-area:not(.aberto):not(:has(.eq-selo, .eq-aviso)) > * { pointer-events: none; }
+}
 .eq-lancador { position: relative; display: flex; align-items: center; gap: 10px; padding: 0; border: 0; background: none; color: var(--text); cursor: pointer; font: inherit; -webkit-tap-highlight-color: transparent; }
 .eq-lancador-circulo {
   display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: var(--eq-tinta);

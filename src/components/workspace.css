@@ -302,6 +302,27 @@
   }
 }
 
+/* 18/11/2026 (print do Tiago): a 393 px, com o frasco do simulado e o selo, a caixa do saldo encolhia mas
+   o número não: "1.449,21" passava por baixo do botão da lua. Até 480 px tudo aperta o necessário para o
+   saldo caber inteiro (conferido a 375, 393 e 430 px, de admin e de cliente, com saldo de 5 dígitos):
+   a setinha do avatar sai (o avatar continua abrindo o menu, com toque de 44 px, como em app nativo),
+   o saldo perde o recuo interno, e os vãos ficam justos. */
+@media (max-width: 480px) {
+  .workspace-app .topbar .topbar-right { gap: 3px; }
+  .workspace-app .topbar-right .avatar-botao .conta-seta { display: none; }
+  .workspace-app .topbar-right .avatar-botao { min-width: 44px; min-height: 44px; justify-content: center; padding-inline: 0; }
+  .workspace-app .topbar .conta-chip { gap: 6px; padding-inline: 9px 6px; }
+  .workspace-app .topbar .conta-chip .saldo { padding-inline: 1px; font-size: 15px; letter-spacing: -.02em; }
+  .workspace-app .topbar-right > .tema-btn:not(.tela-cheia-btn) { width: 34px; min-width: 34px; height: 34px; }
+}
+@media (max-width: 389px) {
+  .workspace-app .topbar .conta-chip .saldo { font-size: 14px; }
+  .workspace-app .topbar .conta-chip { gap: 5px; padding-inline: 8px 5px; }
+  .workspace-app .topbar { padding-right: 10px; }
+  .workspace-app .topbar .topbar-right { gap: 2px; }
+  .workspace-app .topbar-right > .tema-btn:not(.tela-cheia-btn) { width: 32px; min-width: 32px; height: 32px; }
+}
+
 /* conversor e calculadora no menu (11/11/2026): só no celular; no computador estão no topo */
 .workspace-link.so-celular { display: none; }
 @media (max-width: 900px) { .workspace-sidebar .workspace-link.so-celular { display: flex; } }

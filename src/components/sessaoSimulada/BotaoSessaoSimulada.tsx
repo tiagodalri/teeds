@@ -1,3 +1,4 @@
+import './botao-sessao-simulada.css'
 /** O ícone laranja do topo da aba das I.A. no modo simulado: abre a mesa de termômetros (ou edita a sessão que está na tela). */
 export function BotaoSessaoSimulada({ ativo, aoAbrir }: { ativo: boolean; aoAbrir: () => void }) {
   const rotulo = ativo ? 'Editar a sessão simulada' : 'Abrir a simulação'

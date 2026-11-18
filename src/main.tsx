@@ -20,6 +20,7 @@ import { haTrocaEmAndamento } from './core/trocaEmAndamento'
 import './core/appNativo'
 import { ligarEscala } from './core/escala'
 import { ligarCorrecaoDoIphone } from './core/iphoneDesalinhado'
+import { ligarDirecaoDaRolagem } from './core/direcaoDaRolagem'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { JANELA, ligarJanelaSolta } from './core/janelaSolta'
 
@@ -95,6 +96,8 @@ aplicarTema(temaGuardado())
 ligarEscala()
 // iOS 26 no app instalado: fixos deslocados depois do teclado (ver o arquivo)
 ligarCorrecaoDoIphone()
+// no celular, os botões flutuantes saem de lado enquanto a pessoa rola para baixo (ver o arquivo)
+ligarDirecaoDaRolagem()
 if (MARCA.vocabularioIA) ligarVocabularioIA()
 
 // Quem abriu o site, e por qual caminho chegou. Fora do React de propósito:

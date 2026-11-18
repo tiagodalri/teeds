@@ -1,0 +1,9 @@
+/* O ícone da sessão simulada (I.A.) com os próprios estilos (18/11/2026): ele aproveitava os do relatório
+   simulado (.rsim-abrir, relatorios.css), que só carregam quando a pessoa abre Relatórios. Quem abria as
+   I.A. direto (sempre, no celular) via um quadradinho vazio no lugar do ícone. */
+.ssim-abrir { display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; cursor: pointer; flex: none; transition: background .15s; }
+.ssim-abrir svg { width: 18px; height: 18px; fill: none; stroke: #FB923C; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ssim-abrir svg path:last-child { fill: #FB923C; stroke: none; }
+.ssim-abrir:hover, .ssim-abrir.on { background: color-mix(in srgb, #FB923C 14%, transparent); }
+.ssim-abrir:focus-visible { outline: 2px solid #FB923C; outline-offset: 2px; }
+@media (max-width: 900px) { .ssim-abrir { width: 44px; height: 44px; } }
