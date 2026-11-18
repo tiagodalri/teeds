@@ -95,6 +95,7 @@ const LabGraficoPro = lazy(() => import('./components/grafico/LabGraficoPro'))
 const LabOperar = lazy(() => import('./components/operar/LabOperar'))
 const LabRelatorios = lazy(() => import('./components/relatorios/LabRelatorios'))
 const LabMultiplicador = lazy(() => import('./components/operar/LabMultiplicador'))
+const AdminLeadsLab = lazy(() => import('./components/AdminLeads').then((m) => ({ default: m.AdminLeads })))
 const LabMultitela = lazy(() => import('./components/operar/multitela/LabMultitela'))
 const LabFinanceiro = lazy(() => import('./components/financeiro/LabFinanceiro'))
 const LabPainelDeComando = lazy(() => import('./components/grafico/LabPainelDeComando'))
@@ -602,6 +603,24 @@ function LabUltimas() {
 function Laboratorio() {
   const qual = new URLSearchParams(location.search).get('tela') ?? 'cabine'
   // a home vem com a casca inteira da plataforma: fora da moldura do laboratório
+  // ?tela=leads: Administração › Leads com cadastros de exemplo (período, "De onde vieram", Veio de) — 18/11/2026
+  if (qual === 'leads') {
+    const f = window.fetch, agora = Date.now(), H = 3600e3
+    const ex = [
+      ['Ana Souza', 'meta', 'pago', '120252169022520383', 'GF | Victor | Cadastro 09/11', 2], ['Bruno Lima', 'ig', 'social', 'link_in_bio', null, 5],
+      ['Carla Dias', 'instagram', 'referencia', null, null, 20], ['Diego Rocha', null, null, null, null, 30], ['Elisa Prado', 'instagram', 'manychat', null, 'sorteio-0911-story', 50],
+      ['Fábio Nunes', 'meta', 'pago', '52543678172676', 'GF | Naor | Cadastro 09/11', 26], ['Gabi Torres', 'ig', 'social', 'link_in_bio', null, 80], ['Hugo Melo', null, null, null, null, 200],
+      ['Íris Campos', 'facebook', 'referencia', null, null, 300], ['João Reis', 'google', 'referencia', null, null, 400], ['Kátia Luz', null, null, null, null, 4],
+    ] as const
+    const linhas = ex.map(([nome, origem, meio, conteudo, campanha, h], i) => ({ id: `lead-${i}`, nome, email: nome.split(' ')[0].toLowerCase() + '@exemplo.com', telefone: '+55 51 99999-00' + String(i).padStart(2, '0'), origem, meio, conteudo, campanha, pagina: 'https://globalflytrade.com/v/inicio?parceiro=v&origem_cadastro=login', temperatura: ['quente', 'morno', 'frio'][i % 3], pontuacao: 90 - i * 6, tempo_na_pagina: 40 + i * 7, profundidade: 60 + i * 3, visitas: 1 + (i % 3), convertido_em: new Date(agora - (h as number) * H).toISOString(), ex_cliente: i % 4 === 0 ? true : false, produtos_anteriores: i % 4 === 0 ? ['stark'] : [] }))
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
+      const url = String(u)
+      if (url.includes('leads_capturados')) return new Response(JSON.stringify(url.includes('offset=0') ? linhas : []), { status: 200 })
+      if (url.includes('teeds_origem_dos_leads')) return new Response(JSON.stringify([{ lead_id: 'lead-3', canal: 'instagram', link: null, ref: 'l.instagram.com' }, { lead_id: 'lead-7', canal: 'anuncio-meta', link: null, ref: 'instagram.com' }, { lead_id: 'lead-10', canal: 'direto', link: null, ref: null }]), { status: 200 })
+      return f(u, i)
+    }) as typeof fetch
+    return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminLeadsLab sessao={{ token: 'lab' } as never} marca="globalfly" /></div></Suspense>
+  }
   if (qual === 'ultimas') return <LabUltimas />
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>

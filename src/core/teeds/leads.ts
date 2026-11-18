@@ -3,9 +3,9 @@ import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
 import { origemDoVisitante, visitante } from './visitas'
 import { paginaComParceiro } from './parceiro'
-export interface LeadCapturado { pagina:string|null;id:string;nome:string;email:string;telefone:string;campanha:string|null;origem:string|null;meio:string|null;temperatura:'frio'|'morno'|'quente';pontuacao:number;tempo:number;profundidade:number;visitas:number;convertidoEm:string;exCliente:boolean|null;produtosAnteriores:string[] }
+export interface LeadCapturado { pagina:string|null;id:string;nome:string;email:string;telefone:string;campanha:string|null;origem:string|null;meio:string|null;conteudo:string|null;temperatura:'frio'|'morno'|'quente';pontuacao:number;tempo:number;profundidade:number;visitas:number;convertidoEm:string;exCliente:boolean|null;produtosAnteriores:string[] }
 export async function listarLeads(sessao:SessaoTeeds,marca:string=MARCA.id):Promise<LeadCapturado[]>{const h={apikey:SUPABASE.anonKey,Authorization:`Bearer ${sessao.token}`};// o banco devolve no máximo 1.000 por vez: lê em páginas até acabar (09/11/2026)
-const todas:any[]=[];let r:Response|null=null;for(let de=0;de<20000;de+=1000){r=await fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=*&marca=eq.${encodeURIComponent(marca)}&order=convertido_em.desc,id.desc&offset=${de}&limit=1000`,{headers:h});if(!r.ok)break;const p=await r.json();todas.push(...p);if(p.length<1000)break}if(r?.ok||todas.length)return todas.map((l:any)=>({pagina:l.pagina??null,id:l.id,nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura,pontuacao:l.pontuacao,tempo:l.tempo_na_pagina,profundidade:l.profundidade,visitas:l.visitas,convertidoEm:l.convertido_em,exCliente:l.ex_cliente??null,produtosAnteriores:l.produtos_anteriores??[]}));const a=await fetch(`${SUPABASE.url}/rest/v1/auditoria_admin?select=id,detalhes,criado_em&marca=eq.${encodeURIComponent(marca)}&acao=eq.lead_capturado&order=criado_em.desc&limit=2000`,{headers:h});if(!a.ok)throw new Error('Não foi possível carregar os interessados.');return(await a.json()).map((x:any)=>{const l=x.detalhes||{};return{pagina:l.pagina??null,id:String(x.id),nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,temperatura:l.temperatura||'morno',pontuacao:l.pontuacao||50,tempo:l.tempo_na_pagina||0,profundidade:l.profundidade||0,visitas:l.visitas||1,convertidoEm:x.criado_em,exCliente:null,produtosAnteriores:[]}})}
+const todas:any[]=[];let r:Response|null=null;for(let de=0;de<20000;de+=1000){r=await fetch(`${SUPABASE.url}/rest/v1/leads_capturados?select=*&marca=eq.${encodeURIComponent(marca)}&order=convertido_em.desc,id.desc&offset=${de}&limit=1000`,{headers:h});if(!r.ok)break;const p=await r.json();todas.push(...p);if(p.length<1000)break}if(r?.ok||todas.length)return todas.map((l:any)=>({pagina:l.pagina??null,id:l.id,nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,conteudo:l.conteudo??null,temperatura:l.temperatura,pontuacao:l.pontuacao,tempo:l.tempo_na_pagina,profundidade:l.profundidade,visitas:l.visitas,convertidoEm:l.convertido_em,exCliente:l.ex_cliente??null,produtosAnteriores:l.produtos_anteriores??[]}));const a=await fetch(`${SUPABASE.url}/rest/v1/auditoria_admin?select=id,detalhes,criado_em&marca=eq.${encodeURIComponent(marca)}&acao=eq.lead_capturado&order=criado_em.desc&limit=2000`,{headers:h});if(!a.ok)throw new Error('Não foi possível carregar os interessados.');return(await a.json()).map((x:any)=>{const l=x.detalhes||{};return{pagina:l.pagina??null,id:String(x.id),nome:l.nome,email:l.email,telefone:l.telefone,campanha:l.campanha,origem:l.origem,meio:l.meio,conteudo:l.conteudo??null,temperatura:l.temperatura||'morno',pontuacao:l.pontuacao||50,tempo:l.tempo_na_pagina||0,profundidade:l.profundidade||0,visitas:l.visitas||1,convertidoEm:x.criado_em,exCliente:null,produtosAnteriores:[]}})}
 
 /**
  * Senha criada no cadastro (28/10/2026). Fica DESLIGADA até o servidor rodar o código
@@ -79,3 +79,60 @@ export function origemCadastro(pagina: string | null): string {
 /** Os produtos do questionário da GlobalFly (cadastro -> questionário), com o nome que a pessoa viu. */
 export const PRODUTOS_ANTERIORES:Record<string,string>={b3:'B3',fast:'Universidade Trading (Fast)',calculadora_fast:'Calculadora Fast',stark:'Stark / Starkbot',plano_socio:'Plano Sócio',mentoria:'Mentoria',grande_revolucao:'A Grande Revolução',n_compartilhamento:'Compartilhamento de Receita (Naor)',n_sala_b3:'Sala ao vivo B3 (Naor)',n_clube_3:'Clube dos 3% (Naor)',n_mentoria_gps:'Mentoria GPS (Naor)',n_rtp:'Indicador RTP (Naor)',n_goatwin:'Indicador GoatWin (Naor)',outro:'Outro'}
 export function respostaDoQuestionario(l:LeadCapturado):string|null{if(l.exCliente===null)return null;if(!l.exCliente)return 'Novo, nunca foi cliente';return 'Ex-cliente: '+(l.produtosAnteriores.map(p=>p.startsWith('outro: ')?p.slice(7):PRODUTOS_ANTERIORES[p]??p).join(', ')||'sem produto marcado')}
+
+/**
+ * DE ONDE O LEAD VEIO, em palavras (18/11/2026, Victor: "e também da onde o cara veio, porque já está na
+ * minha bio o link do nosso site"). Vale a marcação gravada no cadastro; sem ela, o canal da 1ª visita do
+ * mesmo navegador (teeds_origem_dos_leads). O Instagram põe utm_content=link_in_bio sozinho no link da bio.
+ */
+export interface PrimeiraVisita { canal: string | null; link: string | null; ref: string | null }
+export type CanalDoLead = 'anuncio' | 'bio' | 'manychat' | 'instagram' | 'facebook' | 'google' | 'whatsapp' | 'telegram' | 'youtube' | 'tiktok' | 'email' | 'direto' | 'outro'
+export interface VeioDe { canal: CanalDoLead; rotulo: string; detalhe: string }
+export const ROTULO_DO_CANAL: Record<CanalDoLead, string> = {
+  anuncio: 'Anúncio (Meta)', bio: 'Link da bio (Instagram)', manychat: 'ManyChat (Instagram)', instagram: 'Instagram',
+  facebook: 'Facebook', google: 'Google', whatsapp: 'WhatsApp', telegram: 'Telegram', youtube: 'YouTube', tiktok: 'TikTok',
+  email: 'E-mail', direto: 'Direto', outro: 'Outro site',
+}
+const PAGOS = ['pago', 'paid', 'cpc', 'ads', 'anuncio', 'paid_social', 'ppc']
+function canalDaMarcacao(origem: string, meio: string, conteudo: string, link: string): CanalDoLead | null {
+  const o = origem.toLowerCase().trim(), m = meio.toLowerCase().trim(), c = conteudo.toLowerCase().trim(), k = link.toLowerCase()
+  if (!o && !k) return null
+  if (o === 'anuncio-meta') return 'anuncio'
+  if (o === 'direto' || o === 'site') return 'direto'
+  if (o === 'meta' || (['facebook', 'fb', 'instagram', 'ig', 'an', 'messenger'].includes(o) && PAGOS.includes(m))) return 'anuncio'
+  if (c === 'link_in_bio' || m === 'bio' || o === 'bio-instagram' || /bio/.test(k)) return 'bio'
+  if (m === 'manychat') return 'manychat'
+  if (o === 'ig' || o === 'instagram') return 'instagram'
+  if (o === 'fb' || o === 'facebook') return 'facebook'
+  if (o === 'google') return 'google'
+  if (['whatsapp', 'wa', 'zap'].includes(o)) return 'whatsapp'
+  if (['telegram', 'tg'].includes(o)) return 'telegram'
+  if (['youtube', 'yt'].includes(o)) return 'youtube'
+  if (['tiktok', 'tt'].includes(o)) return 'tiktok'
+  if (['email', 'e-mail', 'mail'].includes(o)) return 'email'
+  return o ? 'outro' : null
+}
+export function veioDe(l: LeadCapturado, visita?: PrimeiraVisita): VeioDe {
+  const marcado = canalDaMarcacao(l.origem ?? '', l.meio ?? '', l.conteudo ?? '', '')
+  const pelaVisita = marcado ? null : canalDaMarcacao(visita?.canal ?? '', '', '', visita?.link ?? '')
+  const canal: CanalDoLead = marcado ?? pelaVisita ?? 'direto'
+  let detalhe = ''
+  if (canal === 'anuncio' || canal === 'manychat') detalhe = l.campanha || ''
+  else if (canal === 'bio') detalhe = l.campanha && l.campanha !== 'cadastro-planos' ? l.campanha : 'Clicou no link do perfil'
+  else if (canal === 'instagram' && (l.meio === 'referencia' || pelaVisita)) detalhe = 'Link no perfil, story ou direct'
+  else if (canal === 'direto') detalhe = 'Link digitado ou sem rastro'
+  else if (canal === 'outro') detalhe = l.origem || visita?.canal || ''
+  else detalhe = l.campanha || ''
+  if (pelaVisita && canal !== 'direto') detalhe = detalhe ? `${detalhe} · pela 1ª visita` : 'Pela 1ª visita'
+  return { canal, rotulo: ROTULO_DO_CANAL[canal], detalhe }
+}
+export async function origemDosLeads(sessao: SessaoTeeds, marca: string = MARCA.id): Promise<Map<string, PrimeiraVisita>> {
+  const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_origem_dos_leads`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_marca: marca }),
+  })
+  if (!r.ok) return new Map()
+  const linhas = await r.json() as Array<{ lead_id: string; canal: string | null; link: string | null; ref: string | null }>
+  return new Map(linhas.map((x) => [x.lead_id, { canal: x.canal, link: x.link, ref: x.ref }]))
+}
