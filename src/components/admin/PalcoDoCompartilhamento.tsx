@@ -68,7 +68,7 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
   onVer: (l: Linha) => void
   onFicha?: (userId: string) => void
   /** modo simulado ligado (só admin): os termômetros que regulam a base simulada */
-  simulacao?: { ajuste: AjusteSimulado; mudar: (a: AjusteSimulado) => void }
+  simulacao?: { ajuste: AjusteSimulado; mudar: (a: AjusteSimulado) => void; recorte?: string }
   /** Baixar planilha Excel (18/11/2026); estado = 'Montando…' ou a mensagem de erro */
   planilha?: { baixar: () => void; estado: string | null }
 }) {
@@ -168,7 +168,8 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
     </header>
     {planilha?.estado && !planilha.estado.endsWith('…') && <p className="cpo-aviso" role="alert">{planilha.estado}</p>}
 
-    {mostrarAjuste && ajusteAberto && <AjusteDoPalcoSimulado ajuste={simulacao!.ajuste} mudar={simulacao!.mudar} />}
+    {mostrarAjuste && ajusteAberto && <AjusteDoPalcoSimulado ajuste={simulacao!.ajuste} mudar={simulacao!.mudar} recorte={simulacao!.recorte ?? 'Todos os parceiros'}
+      resumo={{ depositoMedio: linhas.length ? linhas.reduce((t, l) => t + (l.deposito_inicial ?? 0), 0) / linhas.length : 0, lucro: n.lucroUsd, receber }} />}
 
     <div className="cpo-heroi">
       <div className="cpo-numero">

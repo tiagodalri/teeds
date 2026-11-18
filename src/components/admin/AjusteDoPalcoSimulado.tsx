@@ -65,15 +65,38 @@ const REGUAS: Regua[] = [
     mostrar: pct, ler: lerPct, editar: editarPct },
 ]
 
-export function AjusteDoPalcoSimulado({ ajuste, mudar }: { ajuste: AjusteSimulado; mudar: (a: AjusteSimulado) => void }) {
+/** 18/11/2026: os termômetros em quatro grupos, na ordem em que a conta é feita. */
+const GRUPOS: Array<{ titulo: string; dica: string; chaves: Regua['chave'][] }> = [
+  { titulo: 'Clientes', dica: 'Quantos operaram no mês e quantos fecharam no negativo.', chaves: ['clientes', 'negativos'] },
+  { titulo: 'Depósito inicial', dica: 'Cada cliente começa com um valor nesta faixa (mais gente nos menores).', chaves: ['depMin', 'depMax'] },
+  { titulo: 'Lucro do mês', dica: 'Quem lucrou fica nesta faixa, em % do próprio depósito.', chaves: ['lucroMin', 'lucroMax'] },
+  { titulo: 'Planos', dica: 'Quem não é Gold nem Black é Prestige (isento).', chaves: ['gold', 'black'] },
+]
+
+export function AjusteDoPalcoSimulado({ ajuste, mudar, recorte, resumo }: {
+  ajuste: AjusteSimulado; mudar: (a: AjusteSimulado) => void
+  /** de quem é esta simulação: "Naor /n", "Victor /v" ou "Todos os parceiros" (cada um guarda a sua) */
+  recorte: string
+  resumo?: { depositoMedio: number; lucro: number; receber: number }
+}) {
   const c = contagem(ajuste)
   const n = (v: number) => v.toLocaleString('pt-BR')
+  const porChave = new Map(REGUAS.map((r) => [r.chave, r]))
   return <div className="cpo-sim" role="group" aria-label="Ajuste da simulação">
-    <div className="cpo-sim-reguas">
-      {REGUAS.map((r) => <ReguaDoAjuste key={r.chave} regua={r} valor={ajuste[r.chave]} mudar={(v) => mudar(corrigir({ ...ajuste, [r.chave]: v }))} />)}
+    <header className="cpo-sim-topo">
+      <p><b>Simulação de {recorte}</b> · os números ficam guardados para este parceiro, neste aparelho. A tela e a planilha saem com eles.</p>
+    </header>
+    <div className="cpo-sim-grupos">
+      {GRUPOS.map((g, k) => <section key={g.titulo} className="cpo-sim-grupo">
+        <h4><i>{k + 1}</i>{g.titulo}</h4>
+        <small>{g.dica}</small>
+        {g.chaves.map((ch) => { const r = porChave.get(ch)!; return <ReguaDoAjuste key={ch} regua={r} valor={ajuste[ch]} mudar={(v) => mudar(corrigir({ ...ajuste, [ch]: v }))} /> })}
+        {g.chaves.includes('gold') && <p className="cpo-sim-resto">Prestige: <b>{Math.round((1 - ajuste.gold - ajuste.black) * 100)}%</b> · {n(c.prestige)} {c.prestige === 1 ? 'cliente' : 'clientes'}</p>}
+      </section>)}
     </div>
     <div className="cpo-sim-pe">
-      <p><b>{n(c.ganham)}</b> no lucro · <b>{n(c.perdem)}</b> no negativo · <b>{n(c.gold)}</b> Gold · <b>{n(c.black)}</b> Black · <b>{n(c.prestige)}</b> Prestige</p>
+      <p><b>{n(c.ganham)}</b> no lucro · <b>{n(c.perdem)}</b> no negativo · <b>{n(c.gold)}</b> Gold · <b>{n(c.black)}</b> Black · <b>{n(c.prestige)}</b> Prestige
+        {resumo && <><br />Depósito médio <b>US$ {resumo.depositoMedio.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</b> · lucro somado <b>US$ {resumo.lucro.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</b> · compartilhamento <b>{resumo.receber.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</b></>}</p>
       <div>
         <button type="button" onClick={() => mudar({ ...ajuste, semente: (ajuste.semente + 1) >>> 0 })}>
           <svg viewBox="0 0 24 24" aria-hidden><rect x="4" y="4" width="16" height="16" rx="3" /><circle cx="9" cy="9" r="1.2" /><circle cx="15" cy="15" r="1.2" /><circle cx="15" cy="9" r="1.2" /><circle cx="9" cy="15" r="1.2" /></svg>

@@ -1,5 +1,5 @@
 /**
- * Laboratório (?tela=compartilhamento(&parceiro=1)(&vazio)(&muitos)(&simulado)): o Compartilhamento de receita com clientes de
+ * Laboratório (?tela=compartilhamento(&recorte=n)(&proprio=v)(&parceiro=1)(&vazio)(&muitos)(&simulado)): o Compartilhamento de receita com clientes de
  * exemplo, sem banco. Gerar, dar baixa, cancelar e reabrir funcionam em memória. &parceiro=1 mostra a visão
  * do admin do parceiro (vê, mas não mexe).
  */
@@ -45,13 +45,13 @@ function clientes(mes: string, vazio: boolean) {
   }).sort((a, b) => b.resultado - a.resultado)
 }
 
-function painel(corpo: { p_mes: string }, vazio: boolean, geral: boolean) {
+function painel(corpo: { p_mes: string; p_parceiro?: string | null }, vazio: boolean, geral: boolean) {
   const mes = corpo.p_mes.slice(0, 7) + '-01', atual = mesSp(), hoje = hojeSp()
   const vivas = [...faturas.values()].filter((f) => f.situacao !== 'cancelada')
   return {
     agora: new Date().toISOString(), hoje, mes, mes_atual: atual, fechado: mes < atual, vencimento: proximo(mes) > hoje ? proximo(mes) : hoje,
     parceiro: geral ? null : 'n', geral, percentuais: PERC,
-    clientes: clientes(mes, vazio).map((c) => ({ ...c, fatura: vivas.find((f) => f.mes === mes && f.user_id === c.user_id) ?? null,
+    clientes: clientes(mes, vazio).filter((c) => !corpo.p_parceiro || c.parceiro === corpo.p_parceiro).map((c) => ({ ...c, fatura: vivas.find((f) => f.mes === mes && f.user_id === c.user_id) ?? null,
       canceladas: [...faturas.values()].filter((f) => f.mes === mes && f.situacao === 'cancelada' && f.user_id === c.user_id).length,
       cancelada: [...faturas.values()].filter((f) => f.mes === mes && f.situacao === 'cancelada' && f.user_id === c.user_id).pop() ?? null })),
     carteira: {
@@ -123,7 +123,8 @@ export default function LabCompartilhamento() {
   return (
     <div className="app workspace-app" style={{ minHeight: '100dvh' }}>
       <main className="admin-main" style={{ padding: 24 }}>
-        <CompartilhamentoDeReceita sessao={{ token: 'lab' } as never} marca="globalfly" parceiro={null} onAbrirCliente={() => undefined} />
+        <CompartilhamentoDeReceita sessao={{ token: 'lab' } as never} marca="globalfly" onAbrirCliente={() => undefined}
+          parceiro={busca.get('recorte') || null} parceiroProprio={busca.get('proprio') || null} nomeDoParceiroProprio={({ v: 'Victor', n: 'Naor' } as Record<string, string>)[busca.get('proprio') ?? ''] ?? null} />
       </main>
     </div>
   )

@@ -104,8 +104,11 @@ function situacaoDa(l: Linha, p: Painel, cotacao: number, minimo: number): Situa
   return 'a-gerar'
 }
 
-export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0, onAbrirCliente }: {
+export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0, onAbrirCliente, parceiroProprio = null, nomeDoParceiroProprio = null }: {
   sessao: SessaoTeeds; marca: string; parceiro: string | null
+  /** 18/11/2026: o admin de parceiro (Naor /n, Victor /v) só extrai a planilha dos clientes DELE, mesmo quando
+   *  está olhando a tela de outro parceiro (o Victor vê o /n). null = admin geral (extrai o recorte da tela). */
+  parceiroProprio?: string | null; nomeDoParceiroProprio?: string | null
   /** Sobe quando o Atualizar do topo do Admin é clicado: relê na hora. */
   pedido?: number
   onAbrirCliente?: (userId: string) => void
@@ -156,14 +159,16 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
   // o painel real continua sendo lido por baixo (datas, percentuais e parceiros vêm dele), mas nada é gravado
   const simulado = useModoSimulado()
   const podeSimular = usePodeSimular()
-  const [ajuste, setAjuste] = useState(lerAjusteSimulado)
-  useEffect(() => { guardarAjusteSimulado(ajuste) }, [ajuste])
+  // cada recorte guarda a própria simulação (a tela é recriada quando o parceiro muda)
+  const [ajuste, setAjuste] = useState(() => lerAjusteSimulado(parceiro))
+  useEffect(() => { guardarAjusteSimulado(ajuste, parceiro) }, [ajuste, parceiro])
   const cotacaoSim = dolar?.valor ?? 0
   const painel = useMemo(() => {
     if (!simulado) return painelReal
     const base = painelReal && painelReal.mes.slice(0, 7) === mes.slice(0, 7) ? painelReal : null
-    return painelSimulado(ajuste, mes, base, cotacaoSim)
-  }, [simulado, painelReal, ajuste, mes, cotacaoSim])
+    const nomeDoRecorte = parceiro ? (painelReal?.clientes.find((c) => c.parceiro === parceiro)?.parceiro_nome ?? (parceiro === parceiroProprio ? nomeDoParceiroProprio : null)) : null
+    return painelSimulado(ajuste, mes, base, cotacaoSim, parceiro ? { codigo: parceiro, nome: nomeDoRecorte } : null)
+  }, [simulado, painelReal, ajuste, mes, cotacaoSim, parceiro, parceiroProprio, nomeDoParceiroProprio])
   const abrirFicha = simulado ? undefined : onAbrirCliente
 
   const meses = useMemo(() => {
@@ -224,11 +229,19 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
   const [baixando, setBaixando] = useState<string | null>(null)
   const baixarPlanilha = async () => {
     if (!painel || baixando) return
+    // admin de parceiro: só os clientes dele (o Victor olhando o /n não extrai os clientes do Naor)
+    if (parceiroProprio && parceiro !== parceiroProprio) {
+      setBaixando(`A planilha sai só com os seus clientes. Volte para ${nomeDoParceiroProprio?.split(' ')[0] ?? `/${parceiroProprio}`} no seletor de parceiro do topo para baixar.`)
+      window.setTimeout(() => setBaixando(null), 7000)
+      return
+    }
     setBaixando('Montando a planilha…')
     try {
-      let base = linhas
-      if (!simulado && linhas.length) base = await comDepositoEEntrada(sessao, marca, linhas)
-      const recorte = parceiro ? (linhas.find((l) => l.parceiro === parceiro)?.parceiro_nome ?? `/${parceiro}`) : 'Todos os parceiros'
+      // a trava vale também aqui: nenhuma linha de outro parceiro entra no arquivo
+      const doRecorte = parceiroProprio ? linhas.filter((l) => l.parceiro === parceiroProprio) : parceiro ? linhas.filter((l) => l.parceiro === parceiro) : linhas
+      let base = doRecorte
+      if (!simulado && doRecorte.length) base = await comDepositoEEntrada(sessao, marca, doRecorte)
+      const recorte = parceiro ? `Clientes de ${(doRecorte[0]?.parceiro_nome ?? nomeDoParceiroProprio ?? '').split(' ')[0] || `/${parceiro}`}` : 'Todos os parceiros'
       const { baixarPlanilhaDoCompartilhamento } = await import('./planilhaCompartilhamento')
       await baixarPlanilhaDoCompartilhamento({
         simulado: !!simulado, mesNome: nomeDoMes(mes), fechado: painel.fechado, cotacao,
@@ -277,7 +290,7 @@ export function CompartilhamentoDeReceita({ sessao, marca, parceiro, pedido = 0,
     </div>}
 
     {painel && <PalcoDoCompartilhamento painel={painel} linhas={linhas} cotacao={cotacao} nomeMes={nomeMes} receber={numeros.receber} cobrar={numeros.cobrar}
-      onVer={(l) => setAberta(l)} onFicha={abrirFicha} simulacao={simulado ? { ajuste, mudar: setAjuste } : undefined}
+      onVer={(l) => setAberta(l)} onFicha={abrirFicha} simulacao={simulado ? { ajuste, mudar: setAjuste, recorte: parceiro ? `${(painel.clientes.find((c) => c.parceiro === parceiro)?.parceiro_nome ?? nomeDoParceiroProprio ?? parceiro).split(' ')[0]} /${parceiro}` : 'Todos os parceiros' } : undefined}
       planilha={{ baixar: () => void baixarPlanilha(), estado: baixando }} />}
 
     <div className="cdr-kpis">

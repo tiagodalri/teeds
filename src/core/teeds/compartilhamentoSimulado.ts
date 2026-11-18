@@ -48,15 +48,17 @@ export const AJUSTE_PADRAO: AjusteSimulado = {
 const CHAVE = `${MARCA.id}.compartilhamento.simulado.v2`
 const limitar = (v: number, [a, b]: readonly [number, number]) => Math.min(b, Math.max(a, v))
 
-export function lerAjusteSimulado(): AjusteSimulado {
+/** 18/11/2026: cada recorte (todos, /n, /v…) guarda a própria simulação — a do Naor não mexe na do Victor. */
+const chaveDo = (recorte: string | null) => `${CHAVE}.${recorte || 'todos'}`
+export function lerAjusteSimulado(recorte: string | null = null): AjusteSimulado {
   try {
-    const v = JSON.parse(localStorage.getItem(CHAVE) || 'null') as Partial<AjusteSimulado> | null
+    const v = JSON.parse(localStorage.getItem(chaveDo(recorte)) || 'null') as Partial<AjusteSimulado> | null
     if (v && typeof v === 'object') return corrigir({ ...AJUSTE_PADRAO, ...v })
   } catch { /* sem armazenamento: o padrão */ }
   return { ...AJUSTE_PADRAO }
 }
-export function guardarAjusteSimulado(a: AjusteSimulado): void {
-  try { localStorage.setItem(CHAVE, JSON.stringify(a)) } catch { /* vale até recarregar */ }
+export function guardarAjusteSimulado(a: AjusteSimulado, recorte: string | null = null): void {
+  try { localStorage.setItem(chaveDo(recorte), JSON.stringify(a)) } catch { /* vale até recarregar */ }
 }
 export function corrigir(a: AjusteSimulado): AjusteSimulado {
   const n = (x: unknown, p: number) => (typeof x === 'number' && Number.isFinite(x) ? x : p)
@@ -121,14 +123,16 @@ const mesAnterior = (mes: string, k: number) => {
  * O painel simulado. `base` é o painel real (datas, percentuais dos planos, parceiros, se é o admin geral); sem
  * ele, os valores padrão. A semente mistura o mês: cada mês mostra outros clientes com as mesmas regras.
  */
-export function painelSimulado(ajuste: AjusteSimulado, mes: string, base: Painel | null, cotacao: number): Painel {
+export function painelSimulado(ajuste: AjusteSimulado, mes: string, base: Painel | null, cotacao: number,
+  /** o parceiro do recorte: todos os clientes simulados saem dele (mesmo antes do painel real chegar) */
+  fixo: { codigo: string; nome: string | null } | null = null): Painel {
   const a = corrigir(ajuste)
   const acaso = gerador(a.semente * 7919 + Number(mes.slice(0, 4)) * 13 + Number(mes.slice(5, 7)))
   const { perdem, gold, black } = contagem(a)
 
   const percentuais = base?.percentuais && Object.keys(base.percentuais).length ? base.percentuais : { gold: 0.1, black: 0.05, prestige: 0 }
   // parceiros: os mesmos da base real (com o filtro de parceiro, só ele)
-  const parceiros: Array<[string | null, string | null]> = base?.parceiro ? [[base.parceiro, base.clientes.find((c) => c.parceiro === base.parceiro)?.parceiro_nome ?? null]]
+  const parceiros: Array<[string | null, string | null]> = fixo ? [[fixo.codigo, fixo.nome]] : base?.parceiro ? [[base.parceiro, base.clientes.find((c) => c.parceiro === base.parceiro)?.parceiro_nome ?? null]]
     : (() => {
       const m = new Map<string, [string | null, string | null]>()
       for (const c of base?.clientes ?? []) m.set(c.parceiro ?? '', [c.parceiro, c.parceiro_nome])
@@ -202,7 +206,7 @@ export function painelSimulado(ajuste: AjusteSimulado, mes: string, base: Painel
   }).reverse()
   return {
     agora: base?.agora ?? new Date().toISOString(), hoje, mes, mes_atual: mesAtual, fechado: mes < mesAtual,
-    vencimento: proximo > hoje ? proximo : hoje, parceiro: base?.parceiro ?? null, geral: base?.geral ?? true, percentuais, clientes,
+    vencimento: proximo > hoje ? proximo : hoje, parceiro: fixo?.codigo ?? base?.parceiro ?? null, geral: base?.geral ?? true, percentuais, clientes,
     carteira: {
       abertas: 0, a_receber_brl: 0, vencidas: 0, vencidas_brl: 0,
       pagas: meses.reduce((s, m) => s + m.pagas, 0), recebido_brl: Math.round(meses.reduce((s, m) => s + m.recebido_brl, 0) * 100) / 100,
