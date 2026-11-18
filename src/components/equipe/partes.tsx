@@ -35,6 +35,8 @@ export const I = {
   pausa: 'M7 5h3.5v14H7zM13.5 5H17v14h-3.5z',
   seta: 'M12 19V5M6 11l6-6 6 6',
   alerta: 'M12 8v5M12 16h.01M10.3 3.9L2.4 17.5A2 2 0 004.1 20.5h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z',
+  ampliar: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+  reduzir: 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5',
 }
 export const Ic = ({ d, className, cheio }: { d: string; className?: string; cheio?: boolean }) => (
   <svg className={`${className ?? ''} ${cheio ? 'cheio' : ''}`} viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
@@ -84,6 +86,15 @@ function Foto({ api, m, aoAmpliar }: { api: EquipeApi; m: MensagemEq; aoAmpliar:
 /* ------------------------------------------------ mensagem de voz */
 let tocandoAgora: HTMLAudioElement | null = null
 const VELOCIDADES = [1, 1.5, 2]
+const CHAVE_VEL = 'equipe.velocidadeDoAudio'
+const velGuardada = () => { try { const v = Number(localStorage.getItem(CHAVE_VEL)); return VELOCIDADES.includes(v) ? v : 1 } catch { return 1 } }
+/** Terminou um áudio: se a mensagem seguinte também é de voz, toca ela (como no WhatsApp). */
+function tocarSeguinte(id: string) {
+  const todas = [...document.querySelectorAll<HTMLElement>('.eq-msg[data-id]')]
+  const i = todas.findIndex((x) => x.dataset.id === id)
+  const prox = i >= 0 ? todas[i + 1] : null
+  prox?.querySelector<HTMLButtonElement>('.eq-voz-play:not(:disabled)')?.click()
+}
 
 function Voz({ api, m, minha, nome, id }: { api: EquipeApi; m: MensagemEq; minha: boolean; nome: string; id: string | null }) {
   const midia = m.midia?.tipo === 'audio' ? m.midia : null
@@ -91,7 +102,7 @@ function Voz({ api, m, minha, nome, id }: { api: EquipeApi; m: MensagemEq; minha
   const audio = useRef<HTMLAudioElement | null>(null)
   const [tocando, setTocando] = useState(false)
   const [pos, setPos] = useState(0)
-  const [vel, setVel] = useState(1)
+  const [vel, setVel] = useState(velGuardada)
   const total = midia?.duracao || audio.current?.duration || 0
   const ondas = midia?.ondas?.length ? midia.ondas : Array(48).fill(6)
 
@@ -102,7 +113,7 @@ function Voz({ api, m, minha, nome, id }: { api: EquipeApi; m: MensagemEq; minha
       const a = new Audio(url)
       a.preload = 'auto'
       a.ontimeupdate = () => setPos(a.currentTime)
-      a.onended = () => { setTocando(false); setPos(0) }
+      a.onended = () => { setTocando(false); setPos(0); tocarSeguinte(m.id) }
       a.onpause = () => setTocando(false)
       a.onplay = () => setTocando(true)
       audio.current = a
@@ -129,6 +140,7 @@ function Voz({ api, m, minha, nome, id }: { api: EquipeApi; m: MensagemEq; minha
     e.stopPropagation()
     const v = VELOCIDADES[(VELOCIDADES.indexOf(vel) + 1) % VELOCIDADES.length]
     setVel(v); if (audio.current) audio.current.playbackRate = v
+    try { localStorage.setItem(CHAVE_VEL, String(v)) } catch { /* sem armazenamento */ }
   }
   const progresso = total ? pos / total : 0
 
@@ -176,12 +188,18 @@ interface PropsDoBalao {
   situacao: 'enviando' | 'falhou' | 'enviada' | 'entregue' | 'lida'
   destacada: boolean
   acoes: AcoesDoBalao
+  /** Chegou (ou saiu) com a conversa aberta: entra animada. */
+  nova?: boolean
 }
 
+const LONGO = 900
 function Texto({ t }: { t: string }) {
-  return <>{partesDoTexto(t).map((p, i) => (p.link
+  const [inteiro, setInteiro] = useState(false)
+  const corte = !inteiro && t.length > LONGO ? t.slice(0, 700).replace(/\s+\S*$/, '') : null
+  return <>{partesDoTexto(corte ?? t).map((p, i) => (p.link
     ? <a key={i} href={p.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{p.texto}</a>
-    : <span key={i}>{p.texto}</span>))}</>
+    : <span key={i}>{p.texto}</span>))}
+    {corte && <>… <button type="button" className="eq-ler-mais" onClick={(e) => { e.stopPropagation(); setInteiro(true) }}>Ler mais</button></>}</>
 }
 
 export const Balao = memo(function Balao(p: PropsDoBalao) {
@@ -242,7 +260,7 @@ export const Balao = memo(function Balao(p: PropsDoBalao) {
 
   return (
     <div ref={el} data-id={m.id}
-      className={`eq-msg ${minha ? 'minha' : 'dele'} ${p.primeiraDaSequencia ? 'primeira' : 'seguida'} ${p.ultimaDaSequencia ? 'ultima' : ''} ${m.falhou ? 'falhou' : ''} ${p.destacada ? 'destacada' : ''} ${reacoes.length ? 'com-reacoes' : ''}`}
+      className={`eq-msg ${minha ? 'minha' : 'dele'} ${p.primeiraDaSequencia ? 'primeira' : 'seguida'} ${p.ultimaDaSequencia ? 'ultima' : ''} ${m.falhou ? 'falhou' : ''} ${p.destacada ? 'destacada' : ''} ${reacoes.length ? 'com-reacoes' : ''} ${p.nova ? 'nova' : ''}`}
       onPointerDown={aoDescer} onPointerMove={aoMover} onPointerUp={aoSubir} onPointerCancel={aoSubir}
       onContextMenu={(e) => { if (!pode || toque()) { if (toque()) e.preventDefault(); return } e.preventDefault(); if (balao.current) acoes.menu(m, balao.current) }}>
       <span className="eq-msg-resposta-icone" style={{ opacity: arrasto / 56, transform: `scale(${0.6 + Math.min(1, arrasto / 56) * 0.4})` }} aria-hidden="true"><Ic d={I.responder} /></span>
@@ -346,26 +364,42 @@ export function MenuDaMensagem({ ancora, minha, minhaReacao, itens, rodape, aoRe
   )
 }
 
-/* ------------------------------------------------ ver a foto em tela cheia */
-export function Visualizador({ url, titulo, subtitulo, aoFechar }: { url: string; titulo: string; subtitulo: string; aoFechar: () => void }) {
+/* ------------------------------------------------ ver as fotos em tela cheia (galeria da conversa) */
+export function Visualizador({ api, fotos, inicial, tituloDe, subtituloDe, aoFechar }: {
+  api: EquipeApi; fotos: MensagemEq[]; inicial: string
+  tituloDe: (m: MensagemEq) => string; subtituloDe: (m: MensagemEq) => string; aoFechar: () => void
+}) {
+  const [indice, setIndice] = useState(() => Math.max(0, fotos.findIndex((f) => f.id === inicial)))
+  const foto = fotos[indice] ?? fotos[0]
+  const { url } = useMidia(api, foto?.anexo ?? null, foto?.local)
   const [escala, setEscala] = useState(1)
   const [desl, setDesl] = useState({ x: 0, y: 0 })
-  const [descendo, setDescendo] = useState(0)
+  const [arrasto, setArrasto] = useState({ x: 0, y: 0 })
   const pontos = useRef(new Map<number, { x: number; y: number }>())
   const inicio = useRef<{ dist: number; escala: number; x: number; y: number; desl: { x: number; y: number } } | null>(null)
   const ultimoToque = useRef(0)
+  const eixo = useRef<'x' | 'y' | null>(null)
 
+  const ir = (d: number) => {
+    setIndice((i) => Math.min(fotos.length - 1, Math.max(0, i + d)))
+    setEscala(1); setDesl({ x: 0, y: 0 })
+  }
   useEffect(() => {
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); aoFechar() } }
-    document.addEventListener('keydown', esc, true)
-    return () => document.removeEventListener('keydown', esc, true)
-  }, [aoFechar])
+    const tecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopPropagation(); aoFechar() }
+      else if (e.key === 'ArrowLeft') { e.stopPropagation(); ir(-1) }
+      else if (e.key === 'ArrowRight') { e.stopPropagation(); ir(1) }
+    }
+    document.addEventListener('keydown', tecla, true)
+    return () => document.removeEventListener('keydown', tecla, true)
+  }, [aoFechar]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dist = () => { const [a, b] = [...pontos.current.values()]; return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0 }
   const aoDescer = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     pontos.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
     inicio.current = { dist: dist(), escala, x: e.clientX, y: e.clientY, desl }
+    eixo.current = null
     if (pontos.current.size === 1) {
       const agora = Date.now()
       if (agora - ultimoToque.current < 280) { setEscala((s) => (s > 1 ? 1 : 2.5)); setDesl({ x: 0, y: 0 }); ultimoToque.current = 0 } else ultimoToque.current = agora
@@ -377,28 +411,38 @@ export function Visualizador({ url, titulo, subtitulo, aoFechar }: { url: string
     const i = inicio.current
     if (pontos.current.size >= 2 && i.dist) { setEscala(Math.min(5, Math.max(1, (i.escala * dist()) / i.dist))); return }
     const dx = e.clientX - i.x, dy = e.clientY - i.y
-    if (escala > 1) setDesl({ x: i.desl.x + dx, y: i.desl.y + dy })
-    else setDescendo(Math.max(0, dy))
+    if (escala > 1) { setDesl({ x: i.desl.x + dx, y: i.desl.y + dy }); return }
+    // sem zoom: para o lado troca de foto, para baixo fecha
+    if (!eixo.current && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) eixo.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+    if (eixo.current === 'x') setArrasto({ x: dx, y: 0 })
+    else if (eixo.current === 'y') setArrasto({ x: 0, y: Math.max(0, dy) })
   }
   const aoSubir = (e: React.PointerEvent) => {
     pontos.current.delete(e.pointerId)
-    if (descendo > 110) { aoFechar(); return }
-    setDescendo(0)
+    if (arrasto.y > 110) { aoFechar(); return }
+    if (arrasto.x < -70) ir(1); else if (arrasto.x > 70) ir(-1)
+    setArrasto({ x: 0, y: 0 })
     if (escala <= 1.02) { setEscala(1); setDesl({ x: 0, y: 0 }) }
-    inicio.current = pontos.current.size ? { dist: dist(), escala, x: [...pontos.current.values()][0].x, y: [...pontos.current.values()][0].y, desl } : null
+    const resto = [...pontos.current.values()][0]
+    inicio.current = resto ? { dist: dist(), escala, x: resto.x, y: resto.y, desl } : null
   }
+  if (!foto) return null
   return (
-    <div className="eq-visualizador" role="dialog" aria-label="Foto" style={{ background: `rgba(2, 8, 20, ${Math.max(0.35, 0.96 - descendo / 400)})` }}>
+    <div className="eq-visualizador" role="dialog" aria-label="Foto" style={{ background: `rgba(2, 8, 20, ${Math.max(0.35, 0.96 - arrasto.y / 400)})` }}>
       <header>
         <button type="button" className="eq-icone-btn" onClick={aoFechar} aria-label="Fechar"><Ic d={I.voltar} /></button>
-        <span><b>{titulo}</b><small>{subtitulo}</small></span>
-        <a className="eq-icone-btn" href={url} download="foto-da-equipe" aria-label="Baixar a foto"><Ic d={I.baixar} /></a>
+        <span><b>{tituloDe(foto)}</b><small>{subtituloDe(foto)}{fotos.length > 1 ? ` · ${indice + 1} de ${fotos.length}` : ''}</small></span>
+        {url && <a className="eq-icone-btn" href={url} download="foto-da-equipe" aria-label="Baixar a foto"><Ic d={I.baixar} /></a>}
       </header>
       <div className="eq-visualizador-area" onPointerDown={aoDescer} onPointerMove={aoMover} onPointerUp={aoSubir} onPointerCancel={aoSubir}
         onWheel={(e) => setEscala((s) => Math.min(5, Math.max(1, s - e.deltaY * 0.002)))}>
-        <img src={url} alt="" draggable={false}
-          style={{ transform: `translate(${desl.x}px, ${desl.y + descendo}px) scale(${escala * (1 - descendo / 1500)})`, transition: pontos.current.size ? 'none' : undefined }} />
+        {url ? <img key={foto.id} src={url} alt="" draggable={false}
+          style={{ transform: `translate(${desl.x + arrasto.x}px, ${desl.y + arrasto.y}px) scale(${escala * (1 - arrasto.y / 1500)})`, transition: pontos.current.size ? 'none' : undefined }} />
+          : <span className="eq-girando" />}
+        {indice > 0 && <button type="button" className="eq-galeria-seta esquerda" onClick={(e) => { e.stopPropagation(); ir(-1) }} onPointerDown={(e) => e.stopPropagation()} aria-label="Foto anterior"><Ic d={I.voltar} /></button>}
+        {indice < fotos.length - 1 && <button type="button" className="eq-galeria-seta direita" onClick={(e) => { e.stopPropagation(); ir(1) }} onPointerDown={(e) => e.stopPropagation()} aria-label="Próxima foto"><Ic d={I.voltar} /></button>}
       </div>
+      {foto.texto && <p className="eq-visualizador-legenda">{foto.texto}</p>}
     </div>
   )
 }

@@ -102,6 +102,24 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
   const [ativandoNotif, setAtivandoNotif] = useState(false)
   const [arrastandoArquivo, setArrastandoArquivo] = useState(false)
   const [voltarArrasto, setVoltarArrasto] = useState(0)
+  // conexão: "Conectando…" no alto, como o WhatsApp; sem internet, um aviso acima do campo
+  const [conexao, setConexao] = useState<'ok' | 'conectando' | 'offline'>(() => (typeof navigator !== 'undefined' && navigator.onLine === false ? 'offline' : 'ok'))
+  const quedaRef = useRef<number | null>(null)
+  // a busca (nomes na lista e o texto de todas as conversas, no banco)
+  const [busca, setBusca] = useState('')
+  const [achadas, setAchadas] = useState<MensagemEq[] | null>(null)
+  const [buscando, setBuscando] = useState(false)
+  const campoBusca = useRef<HTMLInputElement>(null)
+  const irDepois = useRef<{ conversaId: string; id: string; criadaEm: string } | null>(null)
+  // onde cada conversa estava rolada, e desde quando esta está aberta (as mensagens novas entram animadas)
+  const posicoes = useRef<Record<string, number>>({})
+  const abertaEm = useRef(Date.now())
+  // computador: a janela do canto ou a tela inteira, como o WhatsApp Web (fica lembrado neste navegador)
+  const [telaCheia, setTelaCheia] = useState(() => { try { return localStorage.getItem(`${MARCA.id}.equipe.telaCheia`) === '1' } catch { return false } })
+  const alternarTelaCheia = () => setTelaCheia((v) => {
+    try { localStorage.setItem(`${MARCA.id}.equipe.telaCheia`, v ? '0' : '1') } catch { /* sem armazenamento */ }
+    return !v
+  })
 
   const painel = useRef<HTMLDivElement>(null)
   const lista = useRef<HTMLDivElement>(null)
@@ -238,7 +256,14 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
       }
     }
     const parar = api.acompanhar(aoMudar, (vivo) => {
-      if (!vivo) { caiu = true; return }
+      if (quedaRef.current) { window.clearTimeout(quedaRef.current); quedaRef.current = null }
+      if (!vivo) {
+        caiu = true
+        // só mostra "Conectando…" se demorar: uma piscada de rede não vira aviso
+        quedaRef.current = window.setTimeout(() => setConexao(navigator.onLine === false ? 'offline' : 'conectando'), 1800)
+        return
+      }
+      setConexao('ok')
       // voltou depois de cair: busca o que passou enquanto estava fora e manda o que ficou preso
       if (caiu) {
         caiu = false
@@ -379,15 +404,36 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     // "N mensagens não lidas": a linha fica onde parei de ler
     setDivisor((naoLidas[atual] ?? 0) > 0 && minhaLeitura ? { conversaId: atual, desde: minhaLeitura } : null)
     setNovasAbaixo(0); setLongeDoFim(false)
+    abertaEm.current = Date.now()
     // mostra o guardado na hora e busca o mais novo por trás
     api.mensagens(atual)
-      .then((l) => {
+      .then(async (l) => {
         setMsgs((t) => ({ ...t, [atual]: juntar(t[atual] ?? [], l) }))
         setTemMais((t) => ({ ...t, [atual]: l.length >= POR_PAGINA }))
+        // veio da busca: garante a mensagem na tela e vai até ela
+        const alvo = irDepois.current
+        if (alvo && alvo.conversaId === atual) {
+          irDepois.current = null
+          if (!l.some((m) => m.id === alvo.id)) {
+            const desde = await api.mensagensDesde(atual, alvo.criadaEm).catch(() => [] as MensagemEq[])
+            setMsgs((t) => ({ ...t, [atual]: juntar(t[atual] ?? [], desde) }))
+            setTemMais((t) => ({ ...t, [atual]: true }))
+          }
+          window.setTimeout(() => acoesAtuais.current?.irPara(alvo.id), 120)
+        }
       })
       .catch((e) => { if (!estado.current.msgs[atual]) avisar(e instanceof Error ? e.message : 'Não consegui carregar as mensagens.') })
     if (visivel()) marcarLida(atual)
     setResposta(null); setEditando(null); setMenu(null)
+  }, [aberto, atual]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // cada conversa volta para onde estava (a não ser que tenha não lidas: aí vai para a linha delas)
+  useLayoutEffect(() => {
+    if (!aberto || !atual) return
+    const l = lista.current
+    const antes = posicoes.current[atual]
+    if (l && antes && !(naoLidas[atual] ?? 0) && !irDepois.current) l.scrollTop = antes
+    return () => { if (lista.current) posicoes.current[atual] = lista.current.scrollTop }
   }, [aberto, atual]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // voltou para a aba com a conversa aberta: conta como lida
@@ -421,6 +467,28 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     document.addEventListener('keydown', esc)
     return () => { raiz.classList.remove('eq-aberto'); vv?.removeEventListener('resize', ajustar); vv?.removeEventListener('scroll', ajustar); document.removeEventListener('keydown', esc) }
   }, [aberto, ampliada, resposta, editando, menu, previa, apagando])
+
+  // atalhos do computador: Ctrl/Cmd+K busca; Alt+↑/↓ troca de conversa
+  const ordemRef = useRef<string[]>([])
+  useEffect(() => {
+    if (!aberto) return
+    const tecla = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        if (celular()) setAtual(null)
+        window.setTimeout(() => { campoBusca.current?.focus(); campoBusca.current?.select() }, 30)
+      } else if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+        const ordem = ordemRef.current
+        if (!ordem.length) return
+        e.preventDefault()
+        const i = estado.current.atual ? ordem.indexOf(estado.current.atual) : -1
+        const prox = ordem[Math.min(ordem.length - 1, Math.max(0, i + (e.key === 'ArrowDown' ? 1 : -1)))]
+        if (prox) setAtual(prox)
+      }
+    }
+    document.addEventListener('keydown', tecla)
+    return () => document.removeEventListener('keydown', tecla)
+  }, [aberto])
 
   // o recado do canto some sozinho
   useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(null), 7000); return () => window.clearTimeout(t) }, [aviso])
@@ -502,10 +570,23 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     for (const l of Object.values(estado.current.msgs)) for (const m of l) if (m.falhou) void enviar(m)
   }
   useEffect(() => {
-    const voltou = () => reenviarFalhas.current()
-    window.addEventListener('online', voltou)
-    return () => window.removeEventListener('online', voltou)
+    const voltou = () => { setConexao((c) => (c === 'offline' ? 'conectando' : c)); reenviarFalhas.current() }
+    const caiu = () => setConexao('offline')
+    window.addEventListener('online', voltou); window.addEventListener('offline', caiu)
+    return () => { window.removeEventListener('online', voltou); window.removeEventListener('offline', caiu) }
   }, [])
+
+  // a busca no banco (espera a pessoa parar de digitar)
+  useEffect(() => {
+    const t = busca.trim()
+    if (t.length < 2) { setAchadas(null); setBuscando(false); return }
+    setBuscando(true)
+    let vivo = true
+    const id = window.setTimeout(() => {
+      api.buscar(t).then((l) => { if (vivo) setAchadas(l) }).catch(() => { if (vivo) setAchadas([]) }).finally(() => { if (vivo) setBuscando(false) })
+    }, 280)
+    return () => { vivo = false; window.clearTimeout(id) }
+  }, [busca, api])
 
   const nova = (conversaId: string, extra: Partial<MensagemEq>): MensagemEq => ({
     id: novoId(), conversaId, autor: eu, texto: '', anexo: null, midia: null, respostaA: resposta?.id ?? null, apagada: false,
@@ -552,6 +633,21 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     const m = nova(atual, { midia: { tipo: 'audio', duracao: g.duracao, ondas: g.ondas }, local: URL.createObjectURL(g.blob), arquivo: g.blob })
     depoisDeMandar(atual)
     void enviar(m)
+  }
+
+  const editarUltima = () => {
+    const l = (atual && msgs[atual]) || []
+    const m = [...l].reverse().find((x) => x.autor === eu && !x.apagada && !x.enviando && !x.falhou && x.texto && !x.midia && Date.now() - Date.parse(x.criadaEm) < EDITAR_MS)
+    if (!m) return false
+    setResposta(null); setEditando(m)
+    return true
+  }
+
+  const abrirAchada = (m: MensagemEq) => {
+    irDepois.current = { conversaId: m.conversaId, id: m.id, criadaEm: m.criadaEm }
+    setBusca(''); setAchadas(null)
+    if (atual === m.conversaId) { const a = irDepois.current; irDepois.current = null; if (msgs[m.conversaId]?.some((x) => x.id === m.id)) irPara(m.id); else { void api.mensagensDesde(m.conversaId, m.criadaEm).then((d) => { setMsgs((t) => ({ ...t, [m.conversaId]: juntar(t[m.conversaId] ?? [], d) })); window.setTimeout(() => irPara(a.id), 120) }) } return }
+    abrirConversa(m.conversaId)
   }
 
   const escolherImagem = (f: File | undefined | null) => {
@@ -647,6 +743,11 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     diretas.sort((a, b) => (b.quando ? Date.parse(b.quando) : 0) - (a.quando ? Date.parse(a.quando) : 0) || a.nome.localeCompare(b.nome, 'pt-BR'))
     return [...out, ...diretas]
   }, [conversas, contatos, grupo, naoLidas, eu, agora, nomeDe, nomeDoGrupo])
+
+  ordemRef.current = linhas.map((l) => l.conversa?.id).filter((x): x is string => !!x)
+  const termo = busca.trim().toLowerCase()
+  const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  const linhasVisiveis = termo ? linhas.filter((l) => semAcento(l.nome).includes(semAcento(termo))) : linhas
 
   // ------------------------------------------------ gesto da borda (voltar arrastando, no celular)
   const borda = useRef<{ x: number; id: number } | null>(null)
@@ -764,14 +865,16 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
     }
   }
 
-  const statusDaCabeca = sinalDaConversa
+  const statusDaCabeca = conexao !== 'ok'
+    ? <small className="conectando">{conexao === 'offline' ? 'Sem internet' : 'Conectando…'}</small>
+    : sinalDaConversa
     ? <small className="digitando">{sinalDaConversa.texto}</small>
     : <small className={!ehGrupo && estaOnline(outro, agora) ? 'online' : ''}>{ehGrupo ? membros.join(', ') : situacaoDoContato(outro, agora)}</small>
 
   return (
     <>
       {lancador}
-      <div ref={painel} className={`eq-painel ${vista && atual ? 'com-conversa' : 'so-lista'}`} role="dialog" aria-modal="false" aria-label="Chat da equipe"
+      <div ref={painel} className={`eq-painel ${vista && atual ? 'com-conversa' : 'so-lista'} ${telaCheia ? 'tela-cheia' : ''}`} role="dialog" aria-modal="false" aria-label="Chat da equipe"
         style={voltarArrasto ? { ['--eq-arrasto' as string]: `${voltarArrasto}px` } : undefined}>
         {/* ---------- conversas ---------- */}
         <aside className="eq-lado">
@@ -779,8 +882,14 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
             <button type="button" className="eq-icone-btn eq-so-cel" onClick={fecharChat} aria-label="Voltar para a plataforma"><Ic d={I.voltar} /></button>
             <span>
               <b>Conversas</b>
-              <small><Ic d={I.cadeado} />Só a equipe {MARCA.prosa} · {contatos.length} {contatos.length === 1 ? 'pessoa' : 'pessoas'}</small>
+              {conexao !== 'ok'
+                ? <small className="conectando"><span className="eq-girando" />{conexao === 'offline' ? 'Sem internet' : 'Conectando…'}</small>
+                : <small><Ic d={I.cadeado} />Só a equipe {MARCA.prosa} · {contatos.length} {contatos.length === 1 ? 'pessoa' : 'pessoas'}</small>}
             </span>
+            <button type="button" className="eq-icone-btn eq-so-pc" onClick={alternarTelaCheia} aria-pressed={telaCheia}
+              aria-label={telaCheia ? 'Voltar para a janela' : 'Abrir em tela cheia'} title={telaCheia ? 'Voltar para a janela' : 'Tela cheia'}>
+              <Ic d={telaCheia ? I.reduzir : I.ampliar} />
+            </button>
             <button type="button" className="eq-icone-btn eq-so-pc" onClick={fecharChat} aria-label="Fechar o chat"><Ic d={I.fechar} /></button>
           </header>
           {(estadoNotif === 'desligadas' || estadoNotif === 'instalar' || estadoNotif === 'bloqueadas') && (
@@ -793,11 +902,23 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
               {estadoNotif === 'desligadas' && <button type="button" className="eq-btn ouro" onClick={() => void ligarNotificacoes()} disabled={ativandoNotif}>{ativandoNotif ? 'Ativando…' : 'Ativar'}</button>}
             </div>
           )}
+          <div className="eq-busca">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 18a7 7 0 100-14 7 7 0 000 14zM20 20l-4-4" /></svg>
+            <input ref={campoBusca} type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquisar nomes e mensagens"
+              aria-label="Pesquisar nomes e mensagens" enterKeyHint="search"
+              onKeyDown={(e) => { if (e.key === 'Escape' && busca) { e.stopPropagation(); setBusca('') } }} />
+            {busca ? <button type="button" className="eq-icone-btn" onClick={() => { setBusca(''); campoBusca.current?.focus() }} aria-label="Limpar a pesquisa"><Ic d={I.fechar} /></button>
+              : !toque() && <kbd className="eq-atalho" aria-hidden="true">{/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'}</kbd>}
+          </div>
           {!pronto ? (
-            <div className="eq-vazio">{erroGeral ? <><p>{erroGeral}</p><button type="button" className="eq-btn" onClick={() => void sincronizar()}>Tentar de novo</button></> : <div className="eq-carregando"><i /><i /><i /></div>}</div>
+            erroGeral
+              ? <div className="eq-vazio"><p>{erroGeral}</p><button type="button" className="eq-btn" onClick={() => void sincronizar()}>Tentar de novo</button></div>
+              : <div className="eq-esqueleto" aria-busy="true" aria-label="Carregando as conversas">{[0, 1, 2, 3].map((i) => <span key={i}><i /><b><em /><em /></b></span>)}</div>
           ) : (
             <nav className="eq-conversas" aria-label="Conversas">
-              {linhas.map((l) => {
+              {termo && !linhasVisiveis.length && !achadas?.length && !buscando && <p className="eq-sem-resultado">Nada encontrado para "{busca.trim()}".</p>}
+              {termo && linhasVisiveis.length > 0 && <h3 className="eq-secao">Conversas</h3>}
+              {linhasVisiveis.map((l) => {
                 const ativa = !!l.conversa && l.conversa.id === atual
                 const grupoDaLinha = l.chave === grupo
                 const sinal = quemSinaliza(l.conversa?.id ?? null)
@@ -814,6 +935,8 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
                       <span className="eq-linha-baixo">
                         {abrindoContato === l.contato?.id ? <small>Abrindo…</small>
                           : sinal ? <small className="digitando">{sinal.texto}</small>
+                          : l.conversa && l.conversa.id !== atual && rascunhos.current[l.conversa.id]?.trim()
+                            ? <small><em className="eq-rascunho">Rascunho:</em> {rascunhos.current[l.conversa.id].trim()}</small>
                             : <small>{l.minhaUltima && <Ic d={l.lidaUltima ? I.visto : I.enviada} className={`eq-tique ${l.lidaUltima ? 'lida' : ''}`} />}{l.previa}</small>}
                         {l.naoLidas > 0 ? <i className="eq-linha-selo">{l.naoLidas > 99 ? '99+' : l.naoLidas}</i>
                           : grupoDaLinha ? <Ic d={I.fixar} className="eq-fixada" /> : null}
@@ -822,6 +945,27 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
                   </button>
                 )
               })}
+              {termo && (achadas?.length || buscando) ? (
+                <>
+                  <h3 className="eq-secao">Mensagens {buscando && <span className="eq-girando" />}</h3>
+                  {(achadas ?? []).map((m) => {
+                    const c = conversas.find((x) => x.id === m.conversaId)
+                    const onde = c?.tipo === 'grupo' ? nomeDoGrupo : nomeDe(c ? outroDaDireta(c, eu) : null)
+                    const t = m.texto
+                    const i = semAcento(t).indexOf(semAcento(termo))
+                    const ini = Math.max(0, i - 24)
+                    return (
+                      <button key={m.id} type="button" className="eq-achada" onClick={() => abrirAchada(m)}>
+                        <span className="eq-linha-topo"><b>{onde}</b><time>{quandoNaLista(m.criadaEm)}</time></span>
+                        <small>
+                          {m.autor === eu ? 'Você: ' : c?.tipo === 'grupo' ? `${curto(m.autor)}: ` : ''}
+                          {ini > 0 && '…'}{t.slice(ini, i)}<mark>{t.slice(i, i + termo.length)}</mark>{t.slice(i + termo.length, i + termo.length + 80)}
+                        </small>
+                      </button>
+                    )
+                  })}
+                </>
+              ) : null}
               <p className="eq-rodape-lista"><Ic d={I.cadeado} />Só os administradores da {MARCA.prosa} veem estas conversas. Nenhum cliente tem acesso.</p>
             </nav>
           )}
@@ -878,7 +1022,8 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
                               <Balao key={m.id} api={api} m={m} eu={eu} minha={m.autor === eu} grupo={ehGrupo}
                                 primeiraDaSequencia={!junto(anterior, m)} ultimaDaSequencia={!junto(m, proxima)}
                                 nomeAutor={nomeDe(m.autor)} citada={citada} nomeCitada={citada ? (citada.autor === eu ? 'Você' : nomeDe(citada.autor)) : 'Mensagem'}
-                                situacao={situacaoDe(m)} destacada={destaque === m.id} acoes={acoes} />,
+                                situacao={situacaoDe(m)} destacada={destaque === m.id} acoes={acoes}
+                                nova={Date.parse(m.criadaEm) > abertaEm.current || !!m.enviando} />,
                             ]
                           })}
                         </section>
@@ -897,6 +1042,7 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
                   <Ic d={I.baixo} />{novasAbaixo > 0 && <i>{novasAbaixo}</i>}
                 </button>
               )}
+              {conexao === 'offline' && <p className="eq-offline" role="status"><Ic d={I.alerta} />Sem internet. O que você mandar sai assim que a conexão voltar.</p>}
               {arrastandoArquivo && <div className="eq-soltar"><Ic d={I.camera} /><b>Solte a imagem para mandar</b></div>}
 
               <Escrever key={conversa.id} conversaId={conversa.id} rascunhos={rascunhos}
@@ -904,7 +1050,7 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
                 resposta={resposta} editando={editando} nomeDe={nomeDe} eu={eu}
                 aoCancelarResposta={() => setResposta(null)} aoCancelarEdicao={() => setEditando(null)}
                 aoMandar={(t) => void mandarTexto(t)} aoImagem={escolherImagem} aoAudio={mandarAudio}
-                aoDigitar={(tipo) => sinalizar(tipo, conversa.id)} aoAvisar={avisar} />
+                aoDigitar={(tipo) => sinalizar(tipo, conversa.id)} aoAvisar={avisar} aoEditarUltima={editarUltima} />
             </>
           )}
         </section>
@@ -932,15 +1078,54 @@ export function ChatDaEquipe({ api, escondido = false, notificacoes }: Props) {
         </div>
       )}
       {ampliada && (
-        <Visualizador url={ampliada.url} titulo={ampliada.m.autor === eu ? 'Você' : nomeDe(ampliada.m.autor)}
-          subtitulo={`${diaDaMensagem(ampliada.m.criadaEm)}, ${horaCurta(ampliada.m.criadaEm)}`} aoFechar={() => setAmpliada(null)} />
+        <Visualizador api={api} inicial={ampliada.m.id}
+          fotos={(mensagensDaVista ?? []).filter((m) => !m.apagada && m.midia?.tipo !== 'audio' && (m.anexo || m.local))}
+          tituloDe={(m) => (m.autor === eu ? 'Você' : nomeDe(m.autor))}
+          subtituloDe={(m) => `${diaDaMensagem(m.criadaEm)}, ${horaCurta(m.criadaEm)}`} aoFechar={() => setAmpliada(null)} />
       )}
     </>
   )
 }
 
+/* ------------------------------------------------ emoji (no computador; no celular o teclado já tem) */
+const EMOJIS: Array<[string, string]> = [
+  ['Carinhas', '😀 😃 😄 😁 😆 😅 😂 🤣 😊 🙂 😉 😍 🥰 😘 😎 🤩 🥳 🤔 🤨 😐 😏 🙄 😬 😮 😯 😲 😳 🥺 😢 😭 😤 😡 🤯 😱 😴 🤤 😷 🤒 🤑 🤝'],
+  ['Gestos', '👍 👎 👌 ✌️ 🤞 🤟 🤙 👏 🙌 🙏 💪 👊 ✊ 🤛 🤜 👋 ✋ 👀 🫡 🫶'],
+  ['Trabalho', '✅ ❌ ⚠️ ❗ ❓ 💯 🔥 🚀 📈 📉 💰 💵 💸 🏆 🎯 📌 📎 📝 📊 📅 ⏰ ⏳ 💡 🔔 📣 🔒 🔑 🛠️ ⚡ ✈️'],
+  ['Corações', '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 💔 ❤️‍🔥 💖 ✨ ⭐ 🌟 🎉 🎊 🎁 🍾 🥂 ☕'],
+]
+const CHAVE_RECENTES = 'equipe.emojisRecentes'
+function PainelDeEmoji({ aoEscolher, aoFechar }: { aoEscolher: (e: string) => void; aoFechar: () => void }) {
+  const [recentes, setRecentes] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(CHAVE_RECENTES) ?? '[]') } catch { return [] } })
+  const caixa = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const fora = (e: PointerEvent) => { if (caixa.current && !caixa.current.contains(e.target as Node) && !(e.target as HTMLElement).closest('.eq-emoji-btn')) aoFechar() }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); aoFechar() } }
+    document.addEventListener('pointerdown', fora); document.addEventListener('keydown', esc, true)
+    return () => { document.removeEventListener('pointerdown', fora); document.removeEventListener('keydown', esc, true) }
+  }, [aoFechar])
+  const escolher = (e: string) => {
+    const novos = [e, ...recentes.filter((x) => x !== e)].slice(0, 16)
+    setRecentes(novos)
+    try { localStorage.setItem(CHAVE_RECENTES, JSON.stringify(novos)) } catch { /* sem armazenamento */ }
+    aoEscolher(e)
+  }
+  const grupos: Array<[string, string[]]> = [...(recentes.length ? [['Usados recentemente', recentes] as [string, string[]]] : []), ...EMOJIS.map(([n, l]) => [n, l.split(' ')] as [string, string[]])]
+  return (
+    <div ref={caixa} className="eq-emojis" role="dialog" aria-label="Emoji">
+      {grupos.map(([nome, lista]) => (
+        <section key={nome}>
+          <b>{nome}</b>
+          <div>{lista.map((e) => <button key={nome + e} type="button" onPointerDown={(x) => x.preventDefault()} onClick={() => escolher(e)} aria-label={e}>{e}</button>)}</div>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 /* ------------------------------------------------ o campo de escrever (com a gravação de voz) */
-function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nomeDe, eu, aoCancelarResposta, aoCancelarEdicao, aoMandar, aoImagem, aoAudio, aoDigitar, aoAvisar }: {
+function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nomeDe, eu, aoCancelarResposta, aoCancelarEdicao, aoMandar, aoImagem, aoAudio, aoDigitar, aoAvisar, aoEditarUltima }: {
+  aoEditarUltima: () => boolean
   conversaId: string
   rascunhos: React.MutableRefObject<Record<string, string>>
   placeholder: string
@@ -962,6 +1147,14 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
   const camera = useRef<HTMLInputElement>(null)
   const textoAntesDeEditar = useRef<string | null>(null)
   const [travado, setTravado] = useState(false)
+  const [emojis, setEmojis] = useState(false)
+  const porEmoji = (e: string) => {
+    const c = campo.current
+    const ini = c?.selectionStart ?? texto.length, fim = c?.selectionEnd ?? texto.length
+    const v = texto.slice(0, ini) + e + texto.slice(fim)
+    setTexto(v)
+    requestAnimationFrame(() => { if (c) { c.focus({ preventScroll: true }); c.setSelectionRange(ini + e.length, ini + e.length) } })
+  }
   const [puxar, setPuxar] = useState({ x: 0, y: 0 })
   const gesto = useRef<{ x: number; y: number; id: number } | null>(null)
   const mandarAoParar = useRef(false)
@@ -1075,9 +1268,19 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
           </div>
         ) : (
           <div className="eq-campo">
+            {!toque() && (
+              <button type="button" className={`eq-icone-btn eq-emoji-btn ${emojis ? 'ativo' : ''}`} onClick={() => setEmojis((v) => !v)} aria-label="Emoji" aria-expanded={emojis} title="Emoji">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21a9 9 0 100-18 9 9 0 000 18zM8.5 14.5a4.5 4.5 0 007 0M9 9.5h.01M15 9.5h.01" /></svg>
+              </button>
+            )}
+            {emojis && <PainelDeEmoji aoEscolher={porEmoji} aoFechar={() => setEmojis(false)} />}
             <textarea ref={campo} rows={1} value={texto} placeholder={placeholder} enterKeyHint={toque() ? 'enter' : 'send'}
               onChange={(e) => setTexto(e.target.value)} onPaste={colar} maxLength={4000}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !toque() && !e.nativeEvent.isComposing) { e.preventDefault(); enviar() } }} />
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !toque() && !e.nativeEvent.isComposing) { e.preventDefault(); enviar() }
+                // ↑ com o campo vazio: edita a última mensagem (como no WhatsApp Web e no Slack)
+                else if (e.key === 'ArrowUp' && !texto && !editando && !toque() && aoEditarUltima()) e.preventDefault()
+              }} />
             {!editando && (
               <>
                 <button type="button" className="eq-icone-btn" onClick={() => arquivo.current?.click()} aria-label="Mandar foto" title="Mandar foto (ou cole o print)"><Ic d={I.clipe} /></button>

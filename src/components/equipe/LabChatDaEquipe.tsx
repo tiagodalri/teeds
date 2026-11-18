@@ -64,6 +64,12 @@ function criarApi(): EquipeApi {
       await espera()
       return msgs.filter((m) => m.conversaId === conversaId && (!antesDe || m.criadaEm < antesDe)).map((m) => ({ ...m }))
     },
+    async mensagensDesde(conversaId, desde) { await espera(); return msgs.filter((m) => m.conversaId === conversaId && m.criadaEm >= desde).map((m) => ({ ...m })) },
+    async buscar(termo) {
+      await espera(200)
+      const t = termo.trim().toLowerCase()
+      return t.length < 2 ? [] : msgs.filter((m) => !m.apagada && m.texto.toLowerCase().includes(t)).reverse().map((m) => ({ ...m }))
+    },
     async mandar(conversaId, d) {
       await espera(350)
       const m = add(conversaId, EU, d.texto, 0, { id: d.id, anexo: d.anexo ?? null, midia: d.midia ?? null, respostaA: d.respostaA ?? null })

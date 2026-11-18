@@ -73,6 +73,10 @@ export interface EquipeApi {
   conversas(): Promise<ConversaEq[]>
   /** As últimas mensagens da conversa (ou as de antes de `antesDe`), da mais velha para a mais nova. */
   mensagens(conversaId: string, antesDe?: string): Promise<MensagemEq[]>
+  /** As mensagens a partir de um momento (para chegar numa mensagem achada na busca). */
+  mensagensDesde(conversaId: string, desde: string): Promise<MensagemEq[]>
+  /** Busca no texto de todas as conversas (as mais novas primeiro). */
+  buscar(termo: string): Promise<MensagemEq[]>
   /** O id vem da tela: mandar de novo o mesmo id não duplica. */
   mandar(conversaId: string, d: EnvioEq): Promise<MensagemEq>
   direta(outro: string): Promise<string>
@@ -202,6 +206,16 @@ export function equipeDoBanco(sessao: SessaoTeeds, marca: string = MARCA.id): Eq
       const antes = antesDe ? `&criado_em=lt.${encodeURIComponent(antesDe)}` : ''
       const l = await rest<any[]>(`/equipe_mensagens?conversa_id=eq.${conversaId}${antes}&select=*&order=criado_em.desc&limit=${POR_PAGINA}`)
       return (l ?? []).map(daMensagem).reverse()
+    },
+    async mensagensDesde(conversaId, desde) {
+      const l = await rest<any[]>(`/equipe_mensagens?conversa_id=eq.${conversaId}&criado_em=gte.${encodeURIComponent(desde)}&select=*&order=criado_em.asc&limit=300`)
+      return (l ?? []).map(daMensagem)
+    },
+    async buscar(termo) {
+      const t = termo.trim().replace(/[%*,()]/g, ' ').trim()
+      if (t.length < 2) return []
+      const l = await rest<any[]>(`/equipe_mensagens?marca=eq.${marca}&apagada=is.false&texto=ilike.${encodeURIComponent(`*${t}*`)}&select=*&order=criado_em.desc&limit=40`)
+      return (l ?? []).map(daMensagem)
     },
     async mandar(conversaId, d) {
       try {
