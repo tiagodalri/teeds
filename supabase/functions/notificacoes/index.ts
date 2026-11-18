@@ -426,14 +426,13 @@ async function avisarComissao(corpo: Record<string, unknown>) {
   const nome = (cliente?.nome ?? '').trim().split(/\s+/).slice(0, 2).join(' ') || 'Um cliente'
   const parceiro = cliente?.parceiro ?? null
   const robo = String(corpo.robo ?? '').trim()
-  const deOnde = origem === 'manual'
-    ? 'Operação manual'
-    : `${robo ? `I.A. ${robo.replace(/^GF\s+/i, 'GF ')}` : 'I.A.'} · ${operacoes} ${operacoes === 1 ? 'operação' : 'operações'}`
+  // 18/11/2026 (Tiago): sem a palavra "operação": só "Manual" ou "I.A." (com o nome da I.A.)
+  const deOnde = origem === 'manual' ? 'Manual' : robo ? `I.A. ${robo.replace(/^GF\s+/i, 'GF ')}` : 'I.A.'
   const cotacao = (moeda || 'USD').toUpperCase() === 'USD' ? await cotacaoDoDia() : null
   // 18/11/2026 (Tiago): "pode ser só o valor em reais mesmo, não precisa ser em dólar nem a cotação"
   const valor = cotacao ? `${brl.format(markup * cotacao)} de comissão` : `${usdComissao(markup, moeda)} de comissão`
   const aviso: Aviso = {
-    titulo: '💰 Comissão gerada',
+    titulo: '💰 Comissão',  // 18/11/2026 (Tiago): sem o "gerada"
     corpo: `${nome} · ${valor}\n${deOnde} · ${parceiro && NOME_DO_PARCEIRO[parceiro] ? `Cliente do ${NOME_DO_PARCEIRO[parceiro]}` : 'Cliente direto'}`,
     tag: `comissao-${chave}`, url: './',
   }
@@ -451,7 +450,7 @@ async function avisarComissao(corpo: Record<string, unknown>) {
   let enviados = 0
   const detalhes: string[] = []
   for (const id of destino) { const r = await enviar(id, marca, comEco); enviados += r.enviados; detalhes.push(...r.detalhes) }
-  console.log('comissao', origem, parceiro, markup.toFixed(4), { admins: destino.length, enviados, detalhes })
+  console.log('comissao', origem, parceiro, markup.toFixed(4), operacoes, { admins: destino.length, enviados, detalhes })
   return json({ admins: destino.length, enviados, markup, cotacao, detalhes })
 }
 
