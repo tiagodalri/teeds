@@ -227,9 +227,12 @@
 }
 .as-escrever:focus-within { border-color: color-mix(in srgb, var(--as-ouro) 70%, var(--border)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--as-ouro) 14%, transparent), 0 16px 40px -18px rgba(5, 21, 40, .3); }
 .as-escrever textarea {
-  flex: 1; min-width: 0; min-height: 28px; max-height: 168px; padding: 7px 0; border: 0; background: none; resize: none; overflow-y: auto;
+  flex: 1; min-width: 0; box-sizing: border-box; min-height: calc(1.55em + 17px); max-height: 168px; padding: 8.5px 0;
+  border: 0; background: none; resize: none; overflow-y: hidden; field-sizing: content;
   color: var(--text); font: inherit; font-size: 16px; line-height: 1.55;
 }
+/* só ganha barra de rolagem quando passa da altura máxima */
+.as-escrever textarea.cheia { overflow-y: auto; }
 .as-escrever textarea::placeholder { color: color-mix(in srgb, var(--muted) 75%, transparent); }
 .as-escrever textarea:focus { outline: none; }
 .as-escrever button {
@@ -280,6 +283,7 @@
   .as-selo { width: 60px; height: 60px; border-radius: 19px; margin-bottom: 18px; }
   .as-escrever { padding: 7px 7px 7px 16px; border-radius: 24px; }
   .as-escrever button { width: 38px; height: 38px; }
+  .as-escrever textarea { min-height: calc(1.55em + 13px); padding: 6.5px 0; }
   .as-rodape { display: none; }
   .as-barra { display: none; }
   .as-sugestoes-pe .as-nova-pe { display: grid; }

@@ -1038,9 +1038,12 @@ function LabAssistente() {
     { tipo: 'cliente', texto: 'qual porcentagem devo buscar?' },
     { tipo: 'assistente', texto: 'A definição de metas e limites é pessoal e depende da sua tolerância a risco.\nNão há percentual garantido ou recomendado\n, pois o mercado envolve perdas possíveis.' },
   ] : undefined
+  // &escondido=1: nasce escondido (como no app, montado enquanto a pessoa está em outra aba) e aparece depois
+  const [oculto, setOculto] = useState(q.has('escondido'))
+  useEffect(() => { if (oculto) { const t = window.setTimeout(() => setOculto(false), 700); return () => window.clearTimeout(t) } }, [oculto])
   return (
     <div className="app workspace-app" style={{ paddingLeft: 0 }}>
-      <div className="tela-viva">
+      <div className="tela-viva" hidden={oculto}>
         <AssistentePanel sessao={sessao} socket={null} symbols={[]} symbolPadrao={null} conexao={'closed' as never} administracao inicial={inicial} />
       </div>
       {/* &barra=1: a barra de baixo do celular (só a casca, para ver a caixa de escrever acima dela) */}

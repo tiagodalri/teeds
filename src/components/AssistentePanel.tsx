@@ -100,13 +100,32 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
 
   useEffect(() => { fim.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [itens, pensando])
 
-  /* A caixa cresce com o que se escreve, e para de crescer numa altura sensata. */
+  /*
+    A caixa cresce com o que se escreve, e para de crescer numa altura sensata.
+    19/11/2026 (Tiago: "feio e torto"): o Assistente nasce montado e ESCONDIDO quando a pessoa está em
+    outra aba; medida escondida, a altura virava 0 e a caixa ficava com a frase caída e barra de rolagem.
+    Agora o navegador ajusta sozinho (field-sizing: content) onde sabe; onde não sabe, a conta só roda
+    com a caixa visível e é refeita quando ela aparece ou muda de largura.
+  */
+  const ajustaSozinha = typeof CSS !== 'undefined' && CSS.supports?.('field-sizing', 'content')
+  function medirCampo() {
+    const el = campo.current
+    if (!el || !el.offsetParent) return
+    if (!ajustaSozinha) {
+      el.style.height = 'auto'
+      el.style.height = `${Math.min(el.scrollHeight, 168)}px`
+    }
+    el.classList.toggle('cheia', el.scrollHeight > 170)
+  }
+  useEffect(medirCampo, [texto])
   useEffect(() => {
     const el = campo.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 168)}px`
-  }, [texto])
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const o = new ResizeObserver(() => medirCampo())
+    o.observe(el.parentElement ?? el)
+    return () => o.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const responder = (texto: string) => setItens((a) => [...a, { tipo: 'assistente', texto, novo: true }])
 
