@@ -71,7 +71,8 @@ Nunca:
 Ligar ${ia(marca).um}:
 - Você não liga. Chame propor_sessao e a tela mostra um cartão para o cliente clicar.
 - Chame propor_sessao direto: ela descobre conta, saldo e sugere os valores sozinha.
-- Se ela recusar, explique em uma linha o motivo devolvido. Não tente contornar.${ia(marca).regra}`
+- Se ela recusar, explique em uma linha o motivo devolvido. Não tente contornar.
+- Só diga que há um cartão na tela depois que propor_sessao devolver proposto: true nesta conversa. Nunca diga "clique abaixo" sem ele.${ia(marca).regra}`
 
 /**
  * Como a plataforma chama as estratégias. Na GlobalFly elas são "I.A." (feminino) e a palavra "robô" não
@@ -367,8 +368,23 @@ const GEMINI = 'https://generativelanguage.googleapis.com/v1beta'
   30 s; o "3.5 Flash Lite" com raciocínio mínimo respondeu em ~9 s e o "3.1 Flash Lite" em ~26 s. Os dois
   primeiros correm juntos e vale o que responder antes; os outros são a reserva, um de cada vez.
 */
-const CORREM_JUNTOS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
-const RESERVA = ['gemini-flash-lite-latest', 'gemini-3.5-flash']
+const MODELOS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash']
+/** Como cada modelo foi da última vez: o tempo da resposta boa e quando falhou. */
+const desempenho = new Map<string, { ms?: number; falhouEm?: number }>()
+/**
+ * A ordem da vez: quem falhou nos últimos 3 min vai para o fim; entre os outros, o mais rápido da última vez
+ * primeiro (quem ainda não foi medido fica na ordem da lista). Os dois primeiros correm juntos.
+ */
+function ordemDosModelos(): { juntos: string[]; reserva: string[] } {
+  const agora = Date.now()
+  const nota = (m: string) => {
+    const d = desempenho.get(m)
+    if (d?.falhouEm && agora - d.falhouEm < 3 * 60_000) return 1e9 + MODELOS.indexOf(m)
+    return d?.ms ?? 20_000 + MODELOS.indexOf(m)
+  }
+  const ordem = [...MODELOS].sort((a, b) => nota(a) - nota(b))
+  return { juntos: ordem.slice(0, 2), reserva: ordem.slice(2) }
+}
 
 /** As ferramentas no formato do Gemini (o Gemini não aceita additionalProperties). */
 function paraGemini(esquema: Record<string, unknown>): Record<string, unknown> {
@@ -382,6 +398,19 @@ type ParteGemini = { text?: string; thought?: boolean; functionCall?: { id?: str
 type RespostaDoGemini = { partes: ParteGemini[]; uso: { entrada: number; saida: number }; modelo: string }
 
 async function umModelo(chave: string, modelo: string, corpo: Record<string, unknown>, sinal: AbortSignal): Promise<RespostaDoGemini> {
+  const t0 = Date.now()
+  try {
+    const r = await umModeloSemMedir(chave, modelo, corpo, sinal)
+    desempenho.set(modelo, { ms: Date.now() - t0 })
+    return r
+  } catch (e) {
+    // cancelado por ter perdido a corrida não é falha do modelo
+    if (!sinal.aborted || (e as Error).name === 'TimeoutError' || Date.now() - t0 >= 34_000) desempenho.set(modelo, { ...desempenho.get(modelo), falhouEm: Date.now() })
+    throw e
+  }
+}
+
+async function umModeloSemMedir(chave: string, modelo: string, corpo: Record<string, unknown>, sinal: AbortSignal): Promise<RespostaDoGemini> {
   const r = await fetch(`${GEMINI}/models/${modelo}:generateContent`, {
     method: 'POST', signal: sinal,
     headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' },
@@ -407,8 +436,9 @@ async function pedirAoGemini(chave: string, corpo: Record<string, unknown>, mode
     try { return await umModelo(chave, modelo, corpo, AbortSignal.timeout(35_000)) }
     catch (e) { if ((e as Error & { status?: number }).status === 401 || (e as Error & { status?: number }).status === 403) throw e }
   }
-  const paradas = CORREM_JUNTOS.map(() => new AbortController())
-  const corrida = CORREM_JUNTOS.map((m, i) => {
+  const { juntos, reserva } = ordemDosModelos()
+  const paradas = juntos.map(() => new AbortController())
+  const corrida = juntos.map((m, i) => {
     const t = setTimeout(() => paradas[i].abort(), 35_000)
     return umModelo(chave, m, corpo, paradas[i].signal).finally(() => clearTimeout(t))
   })
@@ -421,7 +451,7 @@ async function pedirAoGemini(chave: string, corpo: Record<string, unknown>, mode
     if (erros.some((e) => [401, 403].includes((e as Error & { status?: number }).status ?? 0))) throw erros[0]
   }
   let ultimo = 'sem resposta'
-  for (const m of RESERVA) {
+  for (const m of reserva) {
     try { return await umModelo(chave, m, corpo, AbortSignal.timeout(25_000)) }
     catch (e) { ultimo = (e as Error).message }
   }
@@ -430,7 +460,9 @@ async function pedirAoGemini(chave: string, corpo: Record<string, unknown>, mode
 
 async function conversarPeloGemini(
   dono: Dono, historico: Turno[], pergunta: string, marca: string, uso: { hoje: number; teto: number },
+  contexto: { texto: string; lidos: Set<string> } = { texto: '', lidos: new Set() },
 ): Promise<Resposta> {
+  const ferramentas = [{ functionDeclarations: FERRAMENTAS_GEMINI[0].functionDeclarations.filter((f) => !contexto.lidos.has(f.name)) }]
   const chave = await chaveDoGeminiGuardada()
   if (!chave) throw new Error('não há chave do Gemini guardada')
   const conteudo: Array<{ role: 'user' | 'model'; parts: ParteGemini[] | Array<Record<string, unknown>> }> = historico
@@ -447,9 +479,9 @@ async function conversarPeloGemini(
   let modelo: string | undefined
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {
     const ida = await pedirAoGemini(chave, {
-      systemInstruction: { parts: [{ text: instrucoes(marca) }] },
+      systemInstruction: { parts: [{ text: instrucoes(marca) + contexto.texto }] },
       contents: conteudo,
-      tools: FERRAMENTAS_GEMINI,
+      tools: ferramentas,
     }, modelo)
     const { partes, uso: u } = ida
     if (ida.modelo !== modelo && modelo) {
@@ -480,6 +512,101 @@ async function conversarPeloGemini(
   return { texto: 'Me embolei tentando responder isso. Pergunta de outro jeito?', proposta, uso, motor: 'gemini' }
 }
 
+/* ------------------------------------------------------------ mais rápido (19/11/2026) */
+/*
+  Tiago: "será que não tem como acelerar a resposta?". Três coisas:
+   1. o que tem resposta fixa (contas, I.A. operando, regra de uma I.A.) o servidor responde na hora, sem I.A.
+      nenhuma (e sem contar no limite do dia);
+   2. o resto vai à I.A. já com os dados da conta, consultados juntos antes: ela responde numa ida só, em vez de
+      pedir "minhas contas" e esperar mais uma volta. As ferramentas de ler esses dados saem da lista;
+   3. o Gemini começa pelo modelo que respondeu mais rápido há pouco (ver ordemDosModelos).
+*/
+
+/** O texto da pergunta sem acento, minúsculo, sem pontuação no fim: para reconhecer as perguntas fixas. */
+const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[?!.¿¡]+/g, ' ').replace(/\s+/g, ' ').trim()
+const dinheiro = (v: number, moeda: string) => `${moeda === 'USD' ? 'US$' : moeda} ${Number(v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const comSinal = (v: number, moeda: string) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${dinheiro(Math.abs(v), moeda)}`
+
+/** A regra de uma I.A. em português: quando ganha e, se houver, como entra (Gulf e Phenom esperam a sequência). */
+const regraDe = (r: { ganhaQuando: string; descricao?: string }) =>
+  r.descricao && /^ganha/i.test(r.descricao) ? r.descricao : `Ganha quando ${r.ganhaQuando}.${r.descricao ? ` ${r.descricao}` : ''}`
+
+/** O cartão montado pela resposta direta, entregue junto com o texto. */
+const propostaDireta = new Map<string, Proposta>()
+
+/** Resposta pronta, sem I.A., para as perguntas que só pedem um dado. Nada (null) quando a pergunta é outra coisa. */
+async function respostaDireta(dono: Dono, pergunta: string, marca: string): Promise<string | null> {
+  const q = normalizar(pergunta)
+  if (q.length > 90) return null
+  const gf = marca === 'globalfly'
+  const IA = gf ? '(i ?a|ias?|inteligencias?)' : '(robos?|i ?a|ias?)'
+
+  if (new RegExp(`^(quais (sao )?(as )?minhas contas|minhas contas|(qual|quanto) (e |eh )?(o )?meu saldo|meu saldo|saldo|quanto (eu )?tenho( de saldo)?|quais contas eu tenho)$`).test(q)) {
+    const r = await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string; moeda: string; saldo: number }>; observacao?: string }
+    if (!r.contas.length) return r.observacao ?? 'Nenhuma conta da Deriv está ligada a este login.'
+    return `Suas contas na Deriv:\n${r.contas.map((c) => `• ${c.tipo === 'real' ? 'Real' : 'Demonstração'} ${c.conta}: ${dinheiro(c.saldo, c.moeda)}`).join('\n')}`
+  }
+
+  if (new RegExp(`^(como (estao|esta|vao|vai) (as |os )?(minhas |meus )?${IA}( agora| hoje)?|(as |os )?(minhas |meus )?${IA} (agora|operando|ligad[ao]s?)|o que (esta|ta) operando( agora)?|tem (alguma |algum )?${IA} (ligad[ao]|operando)( agora)?)$`).test(q)) {
+    const r = await executar(dono, 'sessoes', {}, () => undefined, marca) as { sessoes: Array<ReturnType<typeof resumir>> }
+    const nome = gf ? 'I.A.' : 'robô'
+    if (!r.sessoes.length) return gf ? 'Nenhuma I.A. operando agora, e nenhuma encerrou há pouco.' : 'Nenhum robô operando agora, e nenhum encerrou há pouco.'
+    const linhas = r.sessoes.map((x) => {
+      const sit = x.situacao === 'rodando' ? 'operando' : x.situacao === 'falhou' ? 'parou com erro' : 'encerrada'
+      return `• ${x.robo} (${x.conta.includes('REAL') ? 'real' : 'demonstração'}): ${sit} · ${x.operacoes} operações (${x.ganhas} ganhas, ${x.perdidas} perdidas) · resultado ${comSinal(x.resultado, x.moeda)}`
+    })
+    const rodando = r.sessoes.filter((x) => x.situacao === 'rodando').length
+    return `${rodando ? `${rodando} ${rodando === 1 ? nome : gf ? 'I.A.' : 'robôs'} operando agora.` : `Nenhum${gf ? 'a I.A.' : ' robô'} operando agora.`}\n${linhas.join('\n')}`
+  }
+
+  const robos = listarRobos(marca)
+  const chave = (n: string) => normalizar(n).replace(/^gf /, '')
+
+  // "liga a Raptor com 1 dólar na demo": o cartão na hora (quem liga continua sendo o toque no cartão)
+  const ligar = q.match(/^(liga|ligar|ligue|inicia|iniciar|inicie|comeca|comecar) (a |o )?(i ?a |ia |robo )?(gf )?([a-z0-9]+)(?: com (?:us\$ ?|\$ ?)?(\d+(?:[.,]\d+)?)(?: dolar(?:es)?| usd)?)?(?: (?:na|em) (?:conta )?(?:de )?(demo|demonstracao|real|virtual))?$/)
+  if (ligar) {
+    const ficha = robos.find((r) => chave(r.nome) === ligar[5] || r.id === ligar[5])
+    if (ficha) {
+      const tipo = ligar[7] === 'real' ? 'real' : ligar[7] ? 'demo' : null
+      const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string }> }).contas
+      const conta = tipo ? contas.find((c) => (tipo === 'real' ? c.tipo === 'real' : c.tipo !== 'real'))?.conta : undefined
+      if (tipo && !conta) return `Não achei uma conta ${tipo === 'real' ? 'real' : 'de demonstração'} da Deriv ligada a este login.`
+      let proposta: Proposta | undefined
+      const r = await executar(dono, 'propor_sessao', { robo: ficha.id, ...(conta ? { conta } : {}), ...(ligar[6] ? { entrada: Number(ligar[6].replace(',', '.')) } : {}) }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
+      if (r.recusado || !proposta) return r.motivo ?? 'Não consegui montar o cartão agora.'
+      propostaDireta.set(dono.id, proposta)
+      return `O cartão da ${ficha.nome} está na tela, na conta ${proposta.demo ? 'de demonstração' : 'REAL'}, com entrada de ${dinheiro(proposta.entrada, proposta.moeda)}. Confira a meta e o limite (dá para mudar) e toque para ligar.`
+    }
+  }
+
+  // a regra de uma ou mais I.A. citadas pelo nome ("diferença entre a Raptor e a Falcon", "como funciona a Gulf")
+  const citadas = robos.filter((r) => new RegExp(`\\b${chave(r.nome)}\\b`).test(q) || new RegExp(`\\b${r.id}\\b`).test(q))
+  const sobreRegra = /^(qual (e |eh )?a diferenca|diferenca entre|como (funciona|opera|trabalha)|o que (e|faz)|qual (e |eh )?a regra|me (explica|fala) (sobre )?)/.test(q)
+  if (citadas.length && sobreRegra) {
+    return citadas.map((r) => `${r.nome}: ${regraDe(r)}`).join('\n\n') +
+      `\n\n${citadas.length > 1 ? 'Todas operam' : 'Opera'} no Volatility 75.`
+  }
+  if (new RegExp(`^(quais (sao )?(as |os )?${IA}( da plataforma| disponiveis)?|que ${IA} (tem|existem))$`).test(q)) {
+    return `${gf ? 'As I.A.' : 'Os robôs'} da plataforma:\n${robos.map((r) => `• ${r.nome}: ${regraDe(r)}`).join('\n')}`
+  }
+  return null
+}
+
+/** Os dados desta conta, lidos juntos antes de chamar a I.A. (cada um com 4 s de prazo; o que falhar fica de fora). */
+async function dadosDaConta(dono: Dono, marca: string): Promise<{ texto: string; lidos: Set<string> }> {
+  const prazo = <T,>(p: Promise<T>) => Promise.race([p, new Promise<T>((_, nao) => setTimeout(() => nao(new Error('prazo')), 4000))])
+  const nomes = ['listar_robos', 'minhas_contas', 'sessoes'] as const
+  const lidos = await Promise.allSettled(nomes.map((n) => prazo(executar(dono, n, {}, () => undefined, marca))))
+  const ok = new Set<string>()
+  const partes: string[] = []
+  lidos.forEach((r, i) => { if (r.status === 'fulfilled') { ok.add(nomes[i]); partes.push(`${nomes[i]}: ${JSON.stringify(r.value)}`) } })
+  if (!partes.length) return { texto: '', lidos: ok }
+  return {
+    lidos: ok,
+    texto: `\n\nDados desta conta, consultados agora no servidor (use estes; não chame ferramenta para ler de novo):\n${partes.join('\n')}`,
+  }
+}
+
 /**
  * Uma pergunta do cliente, do começo ao fim.
  *
@@ -502,9 +629,19 @@ export async function conversar(
     }
   }
 
+  // 1) pergunta de dado fixo: resposta na hora, sem I.A. (não conta no limite do dia)
+  const direta = await respostaDireta(dono, pergunta, marca).catch((e) => { console.warn(`[chat] resposta direta falhou: ${(e as Error).message}`); return null })
+  if (direta) {
+    console.log(`[chat] (direto) cliente ${dono.id.slice(0, 8)}…`)
+    const proposta = propostaDireta.get(dono.id); propostaDireta.delete(dono.id)
+    return { texto: direta, proposta, uso: { hoje, teto: limites.mensagensPorDia } }
+  }
+  // 2) os dados da conta vão junto: a I.A. responde numa ida só
+  const contexto = await dadosDaConta(dono, marca)
+
   // a Anthropic recusou há pouco por causa da conta: nem tenta de novo (cada tentativa atrasa a resposta)
   if (anthropicRecusada && Date.now() - anthropicRecusada.em < 10 * 60_000) {
-    const pelo = await conversarPeloGemini(dono, historico, pergunta, marca, { hoje, teto: limites.mensagensPorDia }).catch((g) => {
+    const pelo = await conversarPeloGemini(dono, historico, pergunta, marca, { hoje, teto: limites.mensagensPorDia }, contexto).catch((g) => {
       console.error(`[chat] o Gemini falhou: ${(g as Error).message}`)
       return null
     })
@@ -541,8 +678,8 @@ export async function conversar(
       resposta = await (await anthropic()).messages.create({
         model: MODELO,
         max_tokens: 1024,
-        system: instrucoes(marca),
-        tools: FERRAMENTAS,
+        system: instrucoes(marca) + contexto.texto,
+        tools: FERRAMENTAS.filter((f) => !contexto.lidos.has(f.name)),
         messages: mensagens,
       })
     } catch (e) {
@@ -560,7 +697,7 @@ export async function conversar(
       // responde no lugar, com as mesmas ferramentas. Na 1ª ida só; no meio da conversa a troca embaralharia.
       if (gasto.idas === 0 && recusaDaConta(motivo)) {
         anthropicRecusada = { em: Date.now(), motivo }
-        const pelo = await conversarPeloGemini(dono, historico, pergunta, marca, { hoje, teto: limites.mensagensPorDia }).catch((g) => {
+        const pelo = await conversarPeloGemini(dono, historico, pergunta, marca, { hoje, teto: limites.mensagensPorDia }, contexto).catch((g) => {
           console.error(`[chat] o Gemini também falhou: ${(g as Error).message}`)
           return null
         })
