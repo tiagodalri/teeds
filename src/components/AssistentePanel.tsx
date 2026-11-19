@@ -357,7 +357,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
             <textarea ref={campo} value={texto} rows={1} maxLength={2000} enterKeyHint="send"
               onChange={(e) => setTexto(e.target.value)} onKeyDown={tecla}
               aria-label="Escreva sua mensagem"
-              placeholder={estreito ? 'Pergunte alguma coisa…' : 'Pergunte alguma coisa, ou peça para ligar um robô…'} />
+              placeholder={estreito ? 'Pergunte alguma coisa…' : 'Pergunte alguma coisa, ou peça para ligar um robô'} />
             <button type="submit" className={pensando ? 'indo' : ''} disabled={pensando || !texto.trim()} aria-label="Enviar">
               {pensando ? <span className="as-girando" /> : <IconeEnviar />}
             </button>
