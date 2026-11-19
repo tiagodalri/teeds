@@ -70,14 +70,13 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
   const [falhaDaIA, setFalhaDaIA] = useState<string | null>(null)
   const [chaveNova, setChaveNova] = useState('')
   const [trocando, setTrocando] = useState<{ indo?: boolean; erro?: string; ok?: boolean }>({})
-  // respondendo pelo Gemini (a Anthropic recusou a conta): a administração sabe e pode colar a chave nova
-  const [peloGemini, setPeloGemini] = useState(false)
+  // 19/11/2026 (Tiago: "remova esse recado"): respondendo pelo Gemini não aparece aviso nenhum
   const [abrirChave, setAbrirChave] = useState(false)
   async function guardarChave() {
     setTrocando({ indo: true })
     try { await trocarChaveDaIA(sessao, chaveNova.trim()) }
     catch (e) { setTrocando({ erro: (e as Error).message }); return }
-    setChaveNova(''); setFalhaDaIA(null); setAbrirChave(false); setPeloGemini(false); setTrocando({ ok: true })
+    setChaveNova(''); setFalhaDaIA(null); setAbrirChave(false); setTrocando({ ok: true })
   }
   const [itens, setItens] = useState<Item[]>([])
   const [texto, setTexto] = useState('')
@@ -151,7 +150,6 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
       const r = await perguntar(sessao, historico, limpa)
       setUso(r.uso)
       setFalhaDaIA(r.falhaDaIA ?? null)
-      setPeloGemini(r.motor === 'gemini')
       if (!r.falhaDaIA) setTrocando({})
       setItens((a) => {
         const novos: Item[] = [...a]
@@ -261,10 +259,6 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
 
           {pensando && <div className="as-pensando"><em /> consultando o servidor da {MARCA.prosa}…</div>}
           {erro && <p className="as-erro">{erro}</p>}
-          {administracao && peloGemini && !falhaDaIA && !abrirChave && (
-            <p className="as-motor">Respondendo pelo Gemini (gratuito e mais lento) enquanto a Anthropic não libera a conta. Só a administração vê este aviso.{' '}
-              <button type="button" onClick={() => setAbrirChave(true)}>Colar chave da Anthropic</button></p>
-          )}
           {administracao && (falhaDaIA || abrirChave) && (
             <form className="as-chave" onSubmit={(e) => { e.preventDefault(); void guardarChave() }}>
               <b>Só a administração vê este aviso</b>
