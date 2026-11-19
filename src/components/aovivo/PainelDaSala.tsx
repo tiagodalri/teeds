@@ -99,22 +99,24 @@ function Aparelhos() {
     const s = situacaoDoAparelho(a)
     const mudo = a === 'microfone' && s === 'ok' && microfoneMudo()
     const on = s === 'ok' && !mudo
-    const legenda = s === 'ligando' ? 'Ligando…' : s === 'erro' ? (e.errosDeCaptura[a === 'camera' ? 'camera:padrao' : a === 'tela' ? 'tela' : 'mic:padrao'] ?? 'Não ligou') : mudo ? 'Mudo' : on ? (a === 'tela' ? 'Compartilhando' : a === 'microfone' && !micNaTela ? 'Ligado · os alunos não ouvem nesta tela' : 'Ligado') : a === 'tela' ? 'Clique para escolher' : 'Desligado'
+    const erro = s === 'erro' ? (e.errosDeCaptura[a === 'camera' ? 'camera:padrao' : a === 'tela' ? 'tela' : 'mic:padrao'] ?? 'Não ligou. Tente de novo.') : null
+    const legenda = s === 'ligando' ? 'Ligando…' : erro ? `${erro} Clique para tentar de novo.` : mudo ? 'Mudo' : on
+      ? (a === 'tela' ? 'Compartilhando' : a === 'microfone' && !micNaTela ? 'Ligado · alunos não ouvem nesta tela' : 'Ligado')
+      : a === 'tela' ? 'Clique para escolher a tela' : 'Desligado'
     return (
-      <button type="button" className={`ps-aparelho ${on ? 'on' : ''} ${s === 'erro' ? 'erro' : ''}`} aria-pressed={on} onClick={() => alternarAparelho(a)} title={s === 'erro' ? legenda : undefined}>
+      <button type="button" role="switch" aria-checked={on} className={`ps-aparelho ${on ? 'on' : ''} ${erro ? 'erro' : ''} ${s === 'ligando' ? 'ligando' : ''} ${a === 'microfone' && on && !micNaTela ? 'aviso' : ''}`}
+        onClick={() => alternarAparelho(a)} title={erro ?? undefined}>
         <span className="ps-aparelho-ico"><Icone d={icone} tamanho={18} />{!on && <span className="ps-risco"><Icone d={ICONES.riscar} tamanho={18} /></span>}</span>
-        <span className="ps-aparelho-txt"><b>{rotulo}</b><small>{legenda}</small></span>
+        <span className="ps-aparelho-txt"><b>{rotulo}</b><small>{legenda}</small>{a === 'microfone' && <span aria-hidden><MedidorDoMic ligado={on} /></span>}</span>
         <i className="ps-chave" aria-hidden />
       </button>
     )
   }
-  const micOk = situacaoDoAparelho('microfone') === 'ok' && !microfoneMudo()
   return (
-    <div className="ps-aparelhos" role="group" aria-label="Câmera, tela e microfone">
+    <div className="ps-aparelhos" role="group" aria-label="Câmera, tela e microfone (valem para todas as telas)">
       {item('tela', 'Tela', ICONES.tela)}
       {item('camera', 'Câmera', ICONES.camera)}
       {item('microfone', 'Microfone', ICONES.microfone)}
-      <div className="ps-volume"><span><b>Volume</b><small>{!micOk ? 'Microfone desligado' : micNaTela ? 'Do microfone' : 'Só você ouve nesta tela'}</small></span><MedidorDoMic ligado={micOk} /></div>
     </div>
   )
 }
@@ -250,7 +252,6 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
             </>}
 
             {tipo === 'aovivo' && <>
-              <SimNao rotulo="Som do computador" dica="Leva junto o som da tela compartilhada (vídeo, gráfico com som). Vale na próxima vez que você compartilhar a tela." valor={sim(campos.somDaTela)} mudar={(v) => mudar({ somDaTela: v ? 'sim' : 'nao' })} />
               <SimNao rotulo="Você no canto" dica="A câmera aparece por cima da tela compartilhada." valor={sim(campos.camera)} mudar={(v) => mudar({ camera: v ? 'sim' : 'nao' })} />
               {sim(campos.camera) && (
                 <div className="ps-campo">
@@ -260,6 +261,7 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
                   </div>
                 </div>
               )}
+              <SimNao rotulo="Som do computador" dica="Leva junto o som da tela compartilhada (vídeo, gráfico com som). Vale na próxima vez que você compartilhar a tela." valor={sim(campos.somDaTela)} mudar={(v) => mudar({ somDaTela: v ? 'sim' : 'nao' })} />
               <small className="ps-dica">A tela que vai aqui é a do botão <b>Tela</b>, embaixo do vídeo.</small>
             </>}
 
@@ -346,7 +348,7 @@ export function PainelDaSala() {
       const alvo = ev.target as HTMLElement | null
       if (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable)) return
       // outra janela aberta (a dos roteiros da I.A., por exemplo): os números não trocam a tela no ar
-      if (document.querySelector('[aria-modal="true"]')) return
+      if (document.querySelector('[aria-modal="true"], .ps-pop')) return
       const n = Number(ev.key)
       if (n >= 1 && n <= 9 && cenas[n - 1]) { ev.preventDefault(); colocarNoAr(cenas[n - 1].id) }
     }
@@ -385,6 +387,7 @@ export function PainelDaSala() {
 
       <figure className={`ps-monitor ${sala.ativa ? 'no-ar' : ''}`}>
         <Monitor pronto={e.pronto} />
+        {entrando && <span key={entrando} className="ps-monitor-troca" aria-hidden style={{ animationDuration: `${e.config.duracaoMs}ms` }} />}
         <span className="ps-selo"><i aria-hidden />{sala.ativa ? 'No ar' : 'Prévia'} · {noAr?.nome}</span>
         <span className="ps-etiqueta">{sala.ativa ? 'O que os alunos estão vendo' : 'O que os alunos vão ver'}</span>
         {e.somBloqueado && <button type="button" className="ps-som" onClick={() => void liberarSom()}>Clique para liberar o som</button>}
@@ -405,6 +408,8 @@ export function PainelDaSala() {
                 <span className="ps-mini">
                   <canvas ref={ref(c.id)} width={LARGURA_MINI} height={LARGURA_MINI * 9 / 16} aria-hidden />
                   {i < 9 && <span className="ps-tecla" aria-hidden>{i + 1}</span>}
+                  {!esta && !entrando && !precisa(c) && <span className="ps-mini-acao" aria-hidden><Icone d="M8 5l11 7-11 7z" tamanho={14} />{sala.ativa ? 'Colocar no ar' : 'Ver na prévia'}</span>}
+                  {vem && <span className="ps-mini-entrando" aria-hidden style={{ animationDuration: `${e.config.duracaoMs}ms` }} />}
                   {precisa(c) && <em className="ps-mini-falta">{precisa(c) === 'tela' ? 'Tela desligada' : 'Câmera desligada'}</em>}
                 </span>
                 <span className="ps-tela-nome"><b>{c.nome}</b><small>{esta ? (sala.ativa ? 'No ar agora' : 'Na prévia') : vem ? 'Entrando…' : !sala.ativa && c.id === abertura?.id ? 'Abre a live' : c.modelo ? infoDoModelo(c.modelo.tipo).dica : 'Tela'}</small></span>

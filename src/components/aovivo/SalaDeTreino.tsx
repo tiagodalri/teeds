@@ -186,8 +186,25 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const [computador] = useState(() => typeof window !== 'undefined' && !ehCelular())
   const comEstudio = computador
   const [pop, setPop] = useState<'destino' | 'sala' | 'historico' | null>(null)
-  const verDestino = pop === 'destino'
-  const setVerDestino = (v: boolean) => setPop(v ? 'destino' : null)
+  const [confirmarFim, setConfirmarFim] = useState(false)
+  // o "Encerrar agora" volta sozinho a "Encerrar transmissão" depois de 5 s (não fica armado)
+  useEffect(() => {
+    if (!confirmarFim) return
+    const t = window.setTimeout(() => setConfirmarFim(false), 5000)
+    const esc = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setConfirmarFim(false) }
+    document.addEventListener('keydown', esc)
+    window.setTimeout(() => document.querySelector<HTMLButtonElement>('.ps-cancelar')?.focus(), 0)
+    return () => { window.clearTimeout(t); document.removeEventListener('keydown', esc) }
+  }, [confirmarFim])
+  useEffect(() => { if (!sim.ativa) setConfirmarFim(false) }, [sim.ativa])
+  const pills = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!pop) return
+    const fora = (ev: PointerEvent) => { if (pills.current && !pills.current.contains(ev.target as Node)) setPop(null) }
+    const esc = (ev: KeyboardEvent) => { if (ev.key !== 'Escape') return; pills.current?.querySelector<HTMLButtonElement>('.ps-pill.on')?.focus(); setPop(null) }
+    document.addEventListener('pointerdown', fora); document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('pointerdown', fora); document.removeEventListener('keydown', esc) }
+  }, [pop])
   const [nomesDasPlataformas, setNomes] = useState<Record<string, string>>({})
   useEffect(() => { if (sessao && MARCA.parceiros?.length) void plataformasDaMarca(sessao).then((l) => setNomes(Object.fromEntries(l.map((p) => [p.codigo, p.nome])))) }, [sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const [cheia, setCheia] = useState(false)
@@ -422,121 +439,130 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   if (comEstudio) {
     const destino = tr.teste ? 'Teste com link privado' : !tr.vitrines ? 'Todas as plataformas' : tr.vitrines.map((v) => (v === 'direto' ? 'Direto' : nomesDasPlataformas[v] ?? `/${v}`)).join(', ')
     const publicoNaTela = sim.ativa ? sim.publicoAgora : sim.publicoAlvo
+    const foraDaSala = tr.fase === 'erro' || tr.fase === 'fora'
+    const iaEstado = !sim.ativa ? 'espera' : sim.pausada ? 'pausada' : 'ligada'
+    const pill = (qual: 'destino' | 'sala' | 'historico', conteudo: React.ReactNode, extra = '', titulo?: string) => (
+      <button type="button" className={`ps-pill ${pop === qual ? 'on' : ''} ${extra}`} aria-expanded={pop === qual} aria-haspopup="dialog" title={titulo} onClick={() => setPop(pop === qual ? null : qual)}>
+        {conteudo}<svg className="ps-pill-seta" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+    )
     return (
       <div className={`cv-app ps-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
-        <header className="cv-app-topo">
+        <header className="cv-app-topo ps-topo">
           <div className="cv-app-marca">
             {MARCA.id === 'globalfly' && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
             <span><b>Sala de treino</b><small>Painel da transmissão</small></span>
           </div>
-          <span className={`cv-app-estado ${sim.ativa ? 'vivo' : ''}`} role="status">
-            <i aria-hidden />{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'}{sim.ativa && <b className="cv-num">{relogio(Date.now() - central.noArDesde)}</b>}
-          </span>
-          {sessao && (
-            <div className="cv-app-destino">
-              <button type="button" className={`cv-app-pill ${verDestino ? 'on' : ''} ${tr.teste ? 'teste' : ''}`} aria-expanded={verDestino} onClick={() => setVerDestino(!verDestino)}>
-                <small>Para</small>{destino}<i aria-hidden>▾</i>
-              </button>
-              {verDestino && (
-                <div className="cv-app-pop" role="dialog" aria-label="Quem recebe a transmissão">
-                  <DestinoDaTransmissao sessao={sessao} noAr={sim.ativa} />
-                  <button type="button" className="av-link" onClick={() => setPop(null)}>Fechar</button>
-                </div>
-              )}
-            </div>
-          )}
-          {sessao && (
-            <div className="cv-app-destino">
-              <button type="button" className={`cv-app-pill ${pop === 'sala' ? 'on' : ''} ${tr.fase === 'erro' || tr.fase === 'fora' ? 'ps-pill-erro' : ''}`} aria-expanded={pop === 'sala'} onClick={() => setPop(pop === 'sala' ? null : 'sala')}
-                title={tr.fase === 'erro' ? tr.erro ?? undefined : undefined}>
-                <small>Na sala</small>
-                {tr.fase === 'conectada' ? <><b className="cv-num">{tr.membros}</b>&nbsp;{tr.membros === 1 ? 'membro' : 'membros'}</> : tr.fase === 'erro' || tr.fase === 'fora' ? 'Fora da sala' : 'Abrindo…'}
-                <i aria-hidden>▾</i>
-              </button>
-              {pop === 'sala' && (
-                <div className="cv-app-pop ps-pop-sala" role="dialog" aria-label="Quem está na sala">
-                  {(tr.fase === 'erro' || tr.fase === 'fora') && <p className="av-erro">{tr.erro ?? 'Você saiu da sala.'} <button type="button" className="cv-app-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button></p>}
-                  {naSalaCard}
-                  {movimento}
-                  <button type="button" className="av-link" onClick={() => setPop(null)}>Fechar</button>
-                </div>
-              )}
-            </div>
-          )}
-          {sessao && (
-            <div className="cv-app-destino">
-              <button type="button" className={`cv-app-pill ${pop === 'historico' ? 'on' : ''}`} aria-expanded={pop === 'historico'} onClick={() => setPop(pop === 'historico' ? null : 'historico')}>Histórico<i aria-hidden>▾</i></button>
-              {pop === 'historico' && (
-                <div className="cv-app-pop ps-pop-historico" role="dialog" aria-label="Histórico das transmissões">
-                  <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto />
-                  <button type="button" className="av-link" onClick={() => setPop(null)}>Fechar</button>
-                </div>
-              )}
-            </div>
-          )}
+          <div className={`ps-estado ${sim.ativa ? 'vivo' : ''} ${tr.teste ? 'teste' : ''}`}>
+            <i aria-hidden />
+            <span><b role="status">{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'}</b>{sim.ativa ? <small className="cv-num ps-relogio" aria-label="Tempo no ar">{relogio(Date.now() - central.noArDesde)}</small> : <small>Pronto para começar</small>}</span>
+          </div>
+          <div className="ps-pills" ref={pills}>
+            {sessao && (
+              <div className="ps-pill-caixa">
+                {pill('destino', <><small>Para</small><span className="ps-pill-txt">{destino}</span></>, tr.teste ? 'teste' : '')}
+                {pop === 'destino' && (
+                  <div className="cv-app-pop ps-pop" role="dialog" aria-label="Quem recebe a transmissão">
+                    <DestinoDaTransmissao sessao={sessao} noAr={sim.ativa} />
+                  </div>
+                )}
+              </div>
+            )}
+            {sessao && (
+              <div className="ps-pill-caixa">
+                {pill('sala', <><i className={`ps-ponto ${tr.fase === 'conectada' ? 'ok' : foraDaSala ? 'erro' : ''}`} aria-hidden /><small>Na sala</small><span className="ps-pill-txt">{tr.fase === 'conectada' ? <><b className="cv-num">{tr.membros}</b> {tr.membros === 1 ? 'membro' : 'membros'}</> : foraDaSala ? 'Fora da sala' : 'Abrindo…'}</span></>, foraDaSala ? 'erro' : '', foraDaSala ? tr.erro ?? undefined : undefined)}
+                {pop === 'sala' && (
+                  <div className="cv-app-pop ps-pop ps-pop-sala" role="dialog" aria-label="Quem está na sala">
+                    {foraDaSala && <p className="ps-pop-erro">{tr.erro ?? 'Você saiu da sala.'} <button type="button" className="cv-app-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button></p>}
+                    {naSalaCard}
+                    {movimento}
+                  </div>
+                )}
+              </div>
+            )}
+            {sessao && (
+              <div className="ps-pill-caixa">
+                {pill('historico', <span className="ps-pill-txt">Histórico</span>)}
+                {pop === 'historico' && (
+                  <div className="cv-app-pop ps-pop ps-pop-historico ps-pop-direita" role="dialog" aria-label="Histórico das transmissões">
+                    <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <span className="cv-app-espaco" />
-          {sim.ativa
-            ? <button className="av-botao-encerrar" onClick={() => pararSimulacao()}>Encerrar transmissão</button>
-            : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar transmissão</button>}
-          <button type="button" className="cv-app-ico" aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'} onClick={alternarTelaCheia}>
+          {foraDaSala && sessao && <button type="button" className="ps-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button>}
+          {!sim.ativa
+            ? <button type="button" className="ps-comecar" onClick={comecar}><i aria-hidden />Começar transmissão</button>
+            : confirmarFim
+              ? <span className="ps-confirmar-fim" role="group" aria-label="Confirmar o fim da transmissão">
+                <button type="button" className="ps-encerrar sim" onClick={() => { setConfirmarFim(false); pararSimulacao() }}>Encerrar agora</button>
+                <button type="button" className="ps-cancelar" onClick={() => setConfirmarFim(false)}>Continuar no ar</button>
+              </span>
+              : <button type="button" className="ps-encerrar" onClick={() => setConfirmarFim(true)}><i aria-hidden />Encerrar transmissão</button>}
+          <button type="button" className="ps-ico-topo" aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'} onClick={alternarTelaCheia}>
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={cheia ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} /></svg>
           </button>
-          <button type="button" className="cv-app-sair" onClick={sairDaSala}>Sair</button>
+          <button type="button" className="ps-sair" onClick={sairDaSala} title={sim.ativa ? 'A transmissão continua no ar no player flutuante' : undefined}>Sair</button>
         </header>
         {erro && <p className="av-erro cv-app-erro" role="alert">{erro}</p>}
 
         <div className="ps-corpo">
           <aside className="ps-lado ps-esquerda" aria-label="Público e comentários">
-            <section className="ps-card">
+            <section className={`ps-card ps-card-publico ${sim.ativa ? 'vivo' : ''}`}>
               <h3>Público na tela <small>O que os alunos veem</small></h3>
-              <div className="ps-numero"><b className="cv-num">{fmt(publicoNaTela)}</b><span>pessoas{sim.ativa && sim.publicoAgora !== sim.publicoAlvo ? ` · indo para ${fmt(sim.publicoAlvo)}` : ''}</span></div>
+              <div className="ps-numero"><b className="cv-num">{fmt(publicoNaTela)}</b><span>{sim.ativa && sim.publicoAgora !== sim.publicoAlvo ? <>Pessoas · indo para <b className="cv-num">{fmt(sim.publicoAlvo)}</b></> : 'Pessoas'}</span></div>
               <input className="ps-barra" type="range" min={50} max={10000} step={50} value={Math.min(10000, sim.publicoAlvo)} aria-label="Pessoas na tela"
+                style={{ '--ps-barra': `${Math.round(((Math.min(10000, sim.publicoAlvo) - 50) / 9950) * 100)}%` } as React.CSSProperties}
                 onChange={(e) => ajustar({ publicoAlvo: Number(e.target.value) })} />
               <div className="ps-prontos" role="group" aria-label="Tamanhos prontos">
-                {[100, 500, 1000, 2000, 5000].map((n) => <button key={n} type="button" className={sim.publicoAlvo === n ? 'on' : ''} onClick={() => ajustar({ publicoAlvo: n })}>{fmt(n)}</button>)}
-                <label className="ps-outro"><span className="av-oculto">Outro número</span><input type="number" min={1} max={50000} value={sim.publicoAlvo} onChange={(e) => { const n = Math.round(Number(e.target.value)); if (n > 0) ajustar({ publicoAlvo: Math.min(50000, n) }) }} /></label>
+                {[100, 500, 1000, 2000, 5000].map((n) => <button key={n} type="button" className={sim.publicoAlvo === n ? 'on' : ''} aria-pressed={sim.publicoAlvo === n} onClick={() => ajustar({ publicoAlvo: n })}>{fmt(n)}</button>)}
+                <label className="ps-outro" title="Outro número"><span className="av-oculto">Outro número</span><input type="number" min={1} max={50000} value={sim.publicoAlvo} onChange={(e) => { const n = Math.round(Number(e.target.value)); if (n > 0) ajustar({ publicoAlvo: Math.min(50000, n) }) }} /></label>
               </div>
               <span className="ps-rotulo">Variação do número</span>
               {segmentado<Oscilacao>(sim.oscilacao, [['baixa', 'Pouca'], ['media', 'Média'], ['alta', 'Muita']], (v) => ajustar({ oscilacao: v }), 'Variação do público')}
             </section>
 
-            <section className="ps-card ps-card-ia">
+            <section className={`ps-card ps-card-ia ia-${iaEstado}`}>
               <h3>Comentários da I.A.
-                <small className={sim.ativa && !sim.pausada ? 'ps-ligado' : ''}>{!sim.ativa ? 'Começam com a transmissão' : sim.pausada ? 'Pausados' : 'Ligados'}</small>
+                {sim.ativa
+                  ? <button type="button" className={`ps-ia-estado ${iaEstado}`} onClick={() => ajustar({ pausada: !sim.pausada })} title={sim.pausada ? 'Retomar os comentários' : 'Pausar os comentários'}>
+                    <i aria-hidden />{sim.pausada ? 'Pausados · retomar' : 'Ligados · pausar'}
+                  </button>
+                  : <span className="ps-ia-estado espera"><i aria-hidden />Começam com a live</span>}
               </h3>
-              {sim.ativa && <button type="button" className="ps-pausar" onClick={() => ajustar({ pausada: !sim.pausada })}>{sim.pausada ? 'Retomar os comentários' : 'Pausar os comentários'}</button>}
               <span className="ps-rotulo">Velocidade</span>
               {segmentado<Ritmo>(sim.ritmo, [['calmo', 'Calmo'], ['normal', 'Normal'], ['agitado', 'Agitado']], (v) => ajustar({ ritmo: v }), 'Velocidade dos comentários')}
               <span className="ps-rotulo">Assunto agora <small>Um toque muda o assunto por alguns segundos</small></span>
               <div className="ps-chips">
                 {MOMENTOS.map((m) => (
-                  <button key={m.id} type="button" className={sim.momento === m.id ? 'on' : ''} disabled={!sim.ativa} title={sim.ativa ? m.dica : 'Liberado quando a transmissão começar'} onClick={() => dispararMomento(m.id)}>{m.rotulo}</button>
+                  <button key={m.id} type="button" className={sim.momento === m.id ? 'on' : ''} aria-pressed={sim.momento === m.id} disabled={!sim.ativa} title={sim.ativa ? m.dica : 'Liberado quando a transmissão começar'} onClick={() => dispararMomento(m.id)}>{m.rotulo}</button>
                 ))}
               </div>
               <BlocosDoChat sessao={sessao} embutido />
-              <button type="button" className="av-link ps-limpar" onClick={limparChat}>Limpar o chat</button>
+              <button type="button" className="ps-limpar" onClick={limparChat}>Limpar o chat</button>
             </section>
           </aside>
 
           <main className="ps-centro"><PainelDaSala /></main>
 
-          <aside className="ps-lado ps-direita" aria-label="Chat">
-            <div className="ps-chat-topo">
-              <span>Membros podem escrever</span>
-              <button className={`av-chave-chat ${sim.chatAberto ? 'on' : ''}`} aria-pressed={sim.chatAberto} onClick={() => abrirChatDoTreino(!sim.chatAberto)}><i aria-hidden />{sim.chatAberto ? 'Aberto' : 'Fechado'}</button>
+          <aside className="ps-lado ps-direita" aria-label="Chat e números da live">
+            <div className="ps-agora" role="group" aria-label="Números da live">
+              <div title="Membros de verdade na sala agora"><small>Na sala</small><b className="cv-num">{tr.membros}</b></div>
+              <div><small>Pico</small><b className="cv-num">{central.pico}</b></div>
+              <div><small>Passaram</small><b className="cv-num">{central.pessoas.size}</b></div>
+              <div className={naoRespondidas > 0 ? 'alerta' : ''} title="Mensagens de membros ainda sem resposta"><small>A responder</small><b className="cv-num">{naoRespondidas}</b></div>
             </div>
-            {chatDaSala}
+            <div className="ps-chat">
+              <div className="ps-chat-topo">
+                <span>Membros podem escrever</span>
+                <button type="button" className={`av-chave-chat ${sim.chatAberto ? 'on' : ''}`} aria-pressed={sim.chatAberto} onClick={() => abrirChatDoTreino(!sim.chatAberto)}><i aria-hidden />{sim.chatAberto ? 'Aberto' : 'Fechado'}</button>
+              </div>
+              {chatDaSala}
+            </div>
           </aside>
         </div>
-
-        <footer className="cv-app-status" aria-label="Estado da transmissão">
-          <span className={sim.ativa ? 'vivo' : ''}><i aria-hidden />{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'} <b className="cv-num">{sim.ativa ? relogio(Date.now() - central.noArDesde) : '00:00:00'}</b></span>
-          <span>Membros reais <b className="cv-num">{tr.membros}</b></span>
-          <span>Pico <b className="cv-num">{central.pico}</b></span>
-          <span>Passaram <b className="cv-num">{central.pessoas.size}</b></span>
-          <span>Para a equipe <b className="cv-num">{central.paraEquipe}</b>{naoRespondidas > 0 && <em> · {naoRespondidas} sem resposta</em>}</span>
-          <span>Público na tela <b className="cv-num">{sim.ativa ? fmt(sim.publicoAgora) : '—'}</b></span>
-        </footer>
       </div>
     )
   }

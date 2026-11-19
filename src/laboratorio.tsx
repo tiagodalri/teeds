@@ -243,6 +243,42 @@ import { definirDonoDoPlano, lembrarMetaEStop } from './core/teeds/planoDoDia'
 if (new URLSearchParams(location.search).get('tela') === 'preparo') definirDonoDoPlano('lab')
 
 document.documentElement.dataset.marca = MARCA.id
+// ?tela=treino&aparelhos=1 (19/11/2026): câmera, tela e microfone de mentira (desenhados), para testar o painel da sala como numa live
+if (new URLSearchParams(location.search).get('tela') === 'treino' && new URLSearchParams(location.search).has('aparelhos')) {
+  const md = navigator.mediaDevices
+  if (md) {
+  const desenho = (l: number, a: number, pintar: (g: CanvasRenderingContext2D, t: number) => void) => {
+    const c = document.createElement('canvas'); c.width = l; c.height = a
+    const g = c.getContext('2d')!
+    const t0 = performance.now()
+    window.setInterval(() => pintar(g, (performance.now() - t0) / 1000), 33)
+    return (c as HTMLCanvasElement & { captureStream(f?: number): MediaStream }).captureStream(30)
+  }
+  const camera = () => desenho(1280, 720, (g, t) => {
+    g.fillStyle = '#2b3442'; g.fillRect(0, 0, 1280, 720)
+    g.fillStyle = '#d9b48a'; g.beginPath(); g.arc(640 + Math.sin(t) * 20, 300, 140, 0, 7); g.fill()
+    g.fillStyle = '#1d2530'; g.fillRect(420, 470, 440, 260)
+    g.fillStyle = '#fff'; g.font = 'bold 40px sans-serif'; g.fillText('Câmera de teste ' + t.toFixed(1), 40, 60)
+  })
+  const tela = () => desenho(1920, 1080, (g, t) => {
+    g.fillStyle = '#0d1117'; g.fillRect(0, 0, 1920, 1080)
+    g.strokeStyle = '#26a69a'; g.lineWidth = 4; g.beginPath()
+    for (let x = 0; x < 1920; x += 8) { const y = 540 + Math.sin(x / 90 + t) * 160 + Math.sin(x / 23 + t * 3) * 30; if (x) g.lineTo(x, y); else g.moveTo(x, y) }
+    g.stroke(); g.fillStyle = '#fff'; g.font = 'bold 48px sans-serif'; g.fillText('Tela compartilhada de teste', 60, 90)
+  })
+  const microfone = () => {
+    const a = new AudioContext(); const o = a.createOscillator(); const ganho = a.createGain(); o.frequency.value = 220
+    ganho.gain.value = 0.2; o.connect(ganho); const d = a.createMediaStreamDestination(); ganho.connect(d); o.start()
+    window.setInterval(() => { ganho.gain.value = 0.05 + Math.abs(Math.sin(performance.now() / 400)) * 0.5 }, 60)
+    return d.stream
+  }
+  md.getUserMedia = async (c?: MediaStreamConstraints) => (c?.video ? camera() : microfone())
+  md.getDisplayMedia = async () => tela()
+  const consultar = navigator.permissions.query.bind(navigator.permissions)
+  navigator.permissions.query = (async (d: PermissionDescriptor) => (['camera', 'microphone'].includes(d.name as string) ? { state: 'granted' } as PermissionStatus : consultar(d))) as typeof navigator.permissions.query
+  }
+}
+
 // ?tela=central-extras: o banco responde com plataformas e transmissões de exemplo
 if (new URLSearchParams(location.search).get('tela') === 'central-extras') {
   const original = window.fetch.bind(window)
