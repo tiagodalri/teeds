@@ -1338,7 +1338,10 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           return json(403, { erro: 'O assistente ainda não está disponível para a sua conta.' })
         }
         const somenteDemo = somenteDemoDoUsuario(dono)
-        return json(200, await conversar({ id: dono.id, somenteDemo }, historico, pergunta, marcaDoChat, anexos))
+        // 19/11/2026: o chat liga a I.A. direto; o parceiro do endereço (/n, /v) e o app dele valem como no botão
+        const vitrineDoChat = vitrineDoPedido(marcaDoChat, corpo.parceiro)
+        const appDoChat = vitrineDoChat === undefined ? undefined : await appDaVitrine(marcaDoChat, vitrineDoChat)
+        return json(200, await conversar({ id: dono.id, somenteDemo, vitrine: vitrineDoChat, app: appDoChat }, historico, pergunta, marcaDoChat, anexos))
       }
 
       // ---- acompanhar

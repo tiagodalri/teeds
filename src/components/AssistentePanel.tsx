@@ -5,7 +5,7 @@ import type { ConfigEstrategia } from '../core/deriv/engine'
 import { identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { perguntar, trocarChaveDaIA, type Extras, type Proposta, type Turno } from '../core/teeds/chat'
-import { acompanharVivas, pararNoServidor, sessoesVivas, type SessaoViva } from '../core/teeds/servidorRobos'
+import { acompanharVivas, pararNoServidor, sessoesVivas, verNoServidor, type SessaoViva } from '../core/teeds/servidorRobos'
 import { ChatProposta } from './ChatProposta'
 import { LocalRobotPanel } from './LocalRobotPanel'
 import { MARCA } from '../marca'
@@ -79,6 +79,28 @@ interface Props {
   contaAtual?: string
 }
 
+/** Uma sessão ligada pela conversa, esperando o fim para virar mensagem. */
+type Vigiada = { id: string; robo: string; moeda: string; demo: boolean }
+const CHAVE_VIGIADAS = `${MARCA.id}.assistente.vigiadas`
+function lerVigiadas(): Vigiada[] {
+  try { const l = JSON.parse(localStorage.getItem(CHAVE_VIGIADAS) ?? '[]'); return Array.isArray(l) ? l.filter((v) => v && typeof v.id === 'string').slice(-10) : [] } catch { return [] }
+}
+function guardarVigiadas(l: Vigiada[]) { try { localStorage.setItem(CHAVE_VIGIADAS, JSON.stringify(l.slice(-10))) } catch { /* sem armazenamento: vale só nesta aba */ } }
+/** A mensagem do fim: como terminou, o resultado e as operações. */
+function mensagemDoFim(v: Vigiada, e: { resultado: number; operacoes: number; vitorias: number; derrotas: number; motivoParada: string | null }, trocados: boolean, demoComoReal: boolean): string {
+  const motivo = (e.motivoParada ?? '').trim()
+  const como = /meta/i.test(motivo) ? { emoji: '✅', txt: 'bateu a meta' }
+    : /limite de perda|stop/i.test(motivo) ? { emoji: '🛡️', txt: 'parou no limite de perda' }
+    : /você pediu|desligad/i.test(motivo) ? { emoji: '⏹️', txt: MARCA.id === 'globalfly' ? 'foi desligada' : 'foi desligado' }
+    : /limite de \d+ opera/i.test(motivo) ? { emoji: '🏁', txt: 'completou as operações' }
+    : { emoji: 'ℹ️', txt: 'terminou' }
+  const sinal = e.resultado > 0 ? '+' : e.resultado < 0 ? '−' : ''
+  const conta = (trocados ? !v.demo : v.demo && !demoComoReal) ? 'demonstração' : 'real'
+  return `${como.emoji} ${MARCA.id === 'globalfly' ? 'A' : 'O'} ${v.robo} ${como.txt} (conta ${conta}).\n` +
+    `• Resultado: ${sinal}${din(Math.abs(e.resultado), v.moeda)}\n` +
+    `• ${e.operacoes} ${e.operacoes === 1 ? 'operação' : 'operações'}: ${e.vitorias} ${e.vitorias === 1 ? 'ganho' : 'ganhos'}, ${e.derrotas} ${e.derrotas === 1 ? 'perda' : 'perdas'}`
+}
+
 /** Foto ou vídeo escolhido, esperando o envio (aparece em miniatura dentro da caixa). */
 type Pendente = { id: number; tipo: 'imagem' | 'video'; arquivo: File; url: string; capa?: string; duracao?: number }
 
@@ -96,6 +118,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
     setChaveNova(''); setFalhaDaIA(null); setAbrirChave(false); setTrocando({ ok: true })
   }
   const [itens, setItens] = useState<Item[]>(inicial ?? [])
+  const [vigiadas, setVigiadas] = useState<Vigiada[]>(lerVigiadas)
   const [texto, setTexto] = useState('')
   const [pensando, setPensando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
@@ -146,6 +169,36 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
   }, [])
 
   const responder = (texto: string) => setItens((a) => [...a, { tipo: 'assistente', texto, novo: true }])
+
+  /*
+    "Começa e me fala depois o que deu" (19/11/2026): as sessões ligadas por esta conversa ficam vigiadas
+    (lembradas neste aparelho, para sobreviver a recarregar a página). Quando uma termina, chega uma
+    mensagem do assistente com o resultado, como chegaria no WhatsApp. Uma consulta a cada 10 s.
+  */
+  const vigiar = (v: Vigiada) => setVigiadas((a) => (a.some((x) => x.id === v.id) ? a : [...a, v]))
+  useEffect(() => { guardarVigiadas(vigiadas) }, [vigiadas])
+  useEffect(() => {
+    if (!vigiadas.length) return
+    let vivo = true
+    const olhar = async () => {
+      for (const v of vigiadas) {
+        let s: Awaited<ReturnType<typeof verNoServidor>> | null = null
+        try { s = await verNoServidor(sessao, v.id) }
+        catch (e) {
+          // o servidor já não tem a sessão (reiniciou, ou passou 1 hora do fim): para de vigiar sem inventar resultado
+          if (/não encontrada|404/i.test((e as Error).message)) setVigiadas((a) => a.filter((x) => x.id !== v.id))
+          continue
+        }
+        if (!vivo || !s?.estado || s.estado.rodando || s.estado.emOperacao) continue
+        setVigiadas((a) => a.filter((x) => x.id !== v.id))
+        responder(mensagemDoFim(v, s.estado, rotulosTrocados, demoComoReal))
+      }
+    }
+    void olhar()
+    const t = window.setInterval(() => void olhar(), 10_000)
+    return () => { vivo = false; window.clearInterval(t) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vigiadas.map((v) => v.id).join('|'), sessao.token])
 
   /** Os atalhos: falam com o servidor direto, sem passar por modelo nenhum. */
   async function atalho(qual: 'robos' | 'parar', rotulo: string) {
@@ -208,7 +261,11 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
           ? { ...it, ouvindo: false, texto: r.transcricao !== undefined ? [limpa, r.transcricao].filter(Boolean).join('\n') : it.texto }
           : it))
         if (r.texto) novos.push({ tipo: 'assistente', texto: r.texto, novo: true })
-        if (r.proposta) novos.push({ tipo: 'proposta', proposta: r.proposta })
+        // 19/11/2026 (Tiago: "sem esses cards com botão", pensando no WhatsApp): o servidor já ligou; nada de
+        // cartão nem cabine na conversa, só a mensagem, e a tela fica de olho para avisar quando terminar.
+        // (Servidor antigo, sem sessaoId: o cartão ainda é o único jeito de ligar.)
+        if (r.proposta?.sessaoId) vigiar({ id: r.proposta.sessaoId, robo: r.proposta.roboNome, moeda: r.proposta.moeda, demo: r.proposta.demo })
+        else if (r.proposta) novos.push({ tipo: 'proposta', proposta: r.proposta })
         return novos
       })
     } catch (e) {
@@ -551,7 +608,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
             </div>
           </form>
           <p className="as-rodape">
-            Confiro tudo no servidor e nunca ligo um robô sozinho.
+            Confiro tudo no servidor antes de ligar e aviso aqui quando terminar.
             {uso && uso.hoje > uso.teto * 0.7 && <> · {uso.hoje} de {uso.teto} mensagens hoje</>}
           </p>
         </div>

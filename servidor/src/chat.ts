@@ -3,7 +3,7 @@ import './ambiente'
 import Anthropic from '@anthropic-ai/sdk'
 import { autorizacao } from './mcp'
 import { autorizacaoParaOperar } from './cofre'
-import { contas, listarRobos, parar, resumir, todas, ver } from './sessoes'
+import { contas, iniciar, listarRobos, parar, resumir, todas, ver } from './sessoes'
 import { chaveDaAnthropicGuardada, chaveDoGeminiGuardada, contasDoUsuario, guardarChaveDaAnthropic, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
 import { marcaPorId } from '../../src/marca/marcas'
@@ -23,11 +23,12 @@ import { marcaPorId } from '../../src/marca/marcas'
  *     do navegador, qualquer pessoa abriria as ferramentas do navegador,
  *     copiaria a chave e passaria a gastar na conta do Tiago.
  *
- *  2. A IA propõe, o servidor executa. Não existe ferramenta de ligar robô
- *     nesta lista — a mais parecida é `propor_sessao`, que não liga nada:
- *     devolve um cartão para a tela desenhar. Quem liga é o dedo do
- *     cliente, na rota que o botão da tela já usa. Nenhum robô nasce de uma
- *     frase interpretada.
+ *  2. A IA pede, o servidor confere e executa. 19/11/2026 (Tiago: "não precisa desse card pra pessoa
+ *     clicar... a ideia é que seja parecida com um chat mesmo", pensando no WhatsApp; escolheu "liga
+ *     direto sempre"): `propor_sessao` agora LIGA a I.A. na hora, sem cartão nem botão. As travas são as
+ *     mesmas da rota do botão: a conta precisa ser do login, `conferir` (limites.ts) barra entrada, stop e
+ *     meta fora da regra, e `iniciar` (sessoes.ts) confere plano, simulador e I.A. liberada. Os números
+ *     vêm sempre do servidor (o que a pessoa disse, ou a sugestão pelo saldo), nunca do texto da IA.
  */
 
 /**
@@ -69,10 +70,10 @@ Nunca:
   Se não sabe, diga que não sabe e chame a ferramenta.
 
 Ligar ${ia(marca).um}:
-- Você não liga. Chame propor_sessao e a tela mostra um cartão para o cliente clicar.
-- Chame propor_sessao direto: ela descobre conta, saldo e sugere os valores sozinha.
+- Quando o cliente pedir claramente para ligar, chame propor_sessao: ela LIGA na hora (não existe cartão nem botão).
+- Passe só os valores que o cliente disse; o que faltar ela sugere pelo saldo. Na dúvida sobre qual I.A., pergunte antes.
 - Se ela recusar, explique em uma linha o motivo devolvido. Não tente contornar.
-- Só diga que há um cartão na tela depois que propor_sessao devolver proposto: true nesta conversa. Nunca diga "clique abaixo" sem ele.${ia(marca).regra}`
+- Só diga que ligou depois que propor_sessao devolver ligado: true nesta conversa. Diga a I.A., a conta, a entrada, a meta e o limite, e que você avisa aqui quando terminar.${ia(marca).regra}`
 
 /**
  * Como a plataforma chama as estratégias. Na GlobalFly elas são "I.A." (feminino) e a palavra "robô" não
@@ -130,8 +131,8 @@ const FERRAMENTAS: Anthropic.Tool[] = [
   },
   {
     name: 'propor_sessao',
-    description: 'Monta o cartão de ligar um robô. NÃO liga: quem liga é o clique do cliente. ' +
-      'Descobre conta e saldo sozinha, e sugere os valores se você não passar.',
+    description: 'Liga um robô na hora (19/11/2026: sem cartão). Só chame quando o cliente pediu para ligar. ' +
+      'Descobre conta e saldo sozinha, sugere os valores que faltarem e confere os limites antes de ligar.',
     input_schema: {
       type: 'object',
       properties: {
@@ -158,9 +159,12 @@ export interface Proposta {
   entrada: number
   stopLoss: number
   takeProfit: number
+  /** A sessão que já foi ligada (19/11/2026: o chat liga direto; a tela acompanha e avisa no fim). */
+  sessaoId?: string
 }
 
-interface Dono { id: string; somenteDemo?: boolean }
+/** Quem fala. `vitrine`/`app`: o parceiro do endereço (/n, /v) e o app da Deriv dele, como na rota do botão. */
+export interface Dono { id: string; somenteDemo?: boolean; vitrine?: string; app?: string }
 
 /** As contas Deriv que são deste cliente E que a autorização enxerga. */
 async function contasDele(dono: Dono) {
@@ -168,7 +172,7 @@ async function contasDele(dono: Dono) {
   // A mesma regra da rota /api/sessao: a autorizacao do proprio cliente, e a
   // do servidor so quando o cofre esta vazio. Uma conta que a autorizacao nao
   // enxerga nao entra na lista, entao o chat nunca fala de conta alheia.
-  const cofre = await autorizacaoParaOperar(dono.id, autorizacao)
+  const cofre = await autorizacaoParaOperar(dono.id, autorizacao, dono.app)
   if (!cofre.ok) throw new Error(cofre.motivo)
   const lista = await contas(cofre.sessao)
   return lista.filter((c) => minhas.includes(c.accountId) && (!dono.somenteDemo || c.type === 'demo'))
@@ -268,18 +272,33 @@ async function executar(
       // a IA explicar em português, e nenhum cartão é desenhado.
       if (!veredito.ok) return { recusado: true, motivo: veredito.motivo }
 
+      if (conta.type !== 'demo' && dono.somenteDemo) return { recusado: true, motivo: 'Este acesso está limitado à conta demo.' }
+      // liga de verdade: a mesma autorização e os mesmos dados que a rota do botão manda para iniciar()
+      const cofre = await autorizacaoParaOperar(dono.id, autorizacao, dono.app)
+      if (!cofre.ok) return { recusado: true, motivo: cofre.motivo }
+      let sessao
+      try {
+        sessao = await iniciar(cofre.sessao, {
+          roboId, contaId: conta.accountId, valorInicial: entrada, stopLoss, takeProfit,
+          origem: 'chat', marca, userId: dono.id, parceiro: dono.vitrine,
+        })
+      } catch (e) {
+        console.warn(`[chat] não liguei ${roboId} para ${dono.id.slice(0, 8)}…: ${(e as Error).message}`)
+        return { recusado: true, motivo: (e as Error).message }
+      }
+      console.log(`[chat] ligou ${roboId} para ${dono.id.slice(0, 8)}… → sessão ${sessao.id}`)
       const proposta: Proposta = {
         roboId, roboNome: ficha.nome, regra: ficha.ganhaQuando,
         contaId: conta.accountId, demo: conta.type === 'demo',
         moeda: conta.currency, saldo: conta.balance,
-        entrada, stopLoss, takeProfit,
+        entrada, stopLoss, takeProfit, sessaoId: sessao.id,
       }
       guardar(proposta)
       return {
-        proposto: true,
+        ligado: true,
         ...proposta,
-        observacao: 'O cartão já está na tela do cliente. Diga em uma linha o que ele vai ligar e ' +
-          'que os valores são editáveis. Não repita todos os números.',
+        observacao: 'A I.A. já está operando. Diga em poucas linhas o que ligou (I.A., conta, entrada, meta e limite) ' +
+          'e que você avisa aqui quando a sessão terminar.',
       }
     }
 
@@ -596,9 +615,11 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
       if (tipo && !conta) return `Não achei uma conta ${tipo === 'real' ? 'real' : 'de demonstração'} da Deriv ligada a este login.`
       let proposta: Proposta | undefined
       const r = await executar(dono, 'propor_sessao', { robo: ficha.id, ...(conta ? { conta } : {}), ...(ligar[6] ? { entrada: Number(ligar[6].replace(',', '.')) } : {}) }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
-      if (r.recusado || !proposta) return r.motivo ?? 'Não consegui montar o cartão agora.'
+      if (r.recusado || !proposta) return `Não liguei: ${r.motivo ?? 'não consegui falar com a corretora agora. Tente de novo em instantes.'}`
       propostaDireta.set(dono.id, proposta)
-      return `O cartão da ${ficha.nome} está na tela, na conta ${proposta.demo ? 'de demonstração' : 'REAL'}, com entrada de ${dinheiro(proposta.entrada, proposta.moeda)}. Confira a meta e o limite (dá para mudar) e toque para ligar.`
+      return `Pronto, liguei a ${ficha.nome} na conta ${proposta.demo !== !!anexos.trocados ? 'de demonstração' : 'REAL'}:\n` +
+        `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
+        'Te aviso aqui quando terminar.'
     }
   }
 
@@ -681,14 +702,14 @@ async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, 
     robo: pedido.robo, ...(conta ? { conta } : {}),
     ...(pedido.entrada ? { entrada: pedido.entrada } : {}), ...(pedido.meta ? { take_profit: pedido.meta } : {}), ...(pedido.stop ? { stop_loss: pedido.stop } : {}),
   }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
-  if (r.recusado || !proposta) return r.motivo ?? 'Não consegui montar o cartão agora.'
+  if (r.recusado || !proposta) return `Não liguei: ${r.motivo ?? 'não consegui falar com a corretora agora. Tente de novo em instantes.'}`
   propostaDireta.set(dono.id, proposta)
   const rotulo = proposta.demo !== !!anexos.trocados ? 'de demonstração' : 'REAL'
   const sugeridos = [!pedido.entrada && 'entrada', !pedido.meta && 'meta', !pedido.stop && 'stop'].filter(Boolean) as string[]
-  return `Pronto. A ${pedido.nome} está no cartão, na conta ${rotulo}:\n` +
+  return `Pronto, liguei a ${pedido.nome} na conta ${rotulo}:\n` +
     `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
-    (sugeridos.length ? `${sugeridos.length === 1 ? 'Sugeri a' : 'Sugeri'} ${sugeridos.join(' e ').replace(/ e (?=.* e )/, ', ')} pelo seu saldo. ` : '') +
-    'Confira e toque em Ligar.'
+    (sugeridos.length ? `${sugeridos.length === 1 ? 'A' : 'Os valores de'} ${sugeridos.join(' e ').replace(/ e (?=.* e )/, ', ')} eu escolhi pelo seu saldo, porque você não disse. ` : '') +
+    'Te aviso aqui quando terminar.'
 }
 
 /** O áudio em texto, pelo Gemini (que escuta). Números em algarismos, para o pedido de ligar ler os valores. */

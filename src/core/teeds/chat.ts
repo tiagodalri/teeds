@@ -1,6 +1,7 @@
 import { SERVIDOR } from './config'
 import type { SessaoTeeds } from './conta'
 import { MARCA } from '../../marca'
+import { vitrine } from './parceiro'
 
 /**
  * A conversa com o assistente da Teeds.
@@ -26,6 +27,8 @@ export interface Proposta {
   entrada: number
   stopLoss: number
   takeProfit: number
+  /** 19/11/2026: o servidor já ligou (o chat liga direto, sem cartão); a tela acompanha e avisa no fim */
+  sessaoId?: string
 }
 
 export interface Turno {
@@ -73,7 +76,8 @@ export async function perguntar(
         Authorization: `Bearer ${sessao.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ pergunta, historico, marca: MARCA.id, ...extras }),
+      // o parceiro do endereço (/n, /v): o chat liga a I.A. pelo app dele, como o botão (19/11/2026)
+      body: JSON.stringify({ pergunta, historico, marca: MARCA.id, parceiro: vitrine(), ...extras }),
     })
   } catch {
     throw new Error(`Não consegui falar com o servidor da ${MARCA.prosa}. Tente de novo em instantes.`)
