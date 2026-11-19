@@ -747,6 +747,39 @@ export async function manuaisEncerradasDoDia(sessao: SessaoTeeds, contaId: strin
     })).filter((m) => Number.isFinite(m.contractId) && m.compradaEm)
   } catch (e) { console.warn('[teeds] entradas do dia indisponíveis:', (e as Error).message); return [] }
 }
+/** Uma operação de I.A. de hoje, como o banco guardou (19/11/2026: "Suas operações com I.A." volta ao recarregar). */
+export interface OperacaoDaIADoDia {
+  contractId: number; sessaoId: string | null; roboId: string; roboNome: string; tipoContrato: string; moeda: string
+  entrada: number; resultado: number; markup: number | null; executadaEm: string; precoSaida: number | null; digitoSaida: number | null
+}
+/*
+  19/11/2026 (Victor Cordeiro: "se eu atualizo, zera o histórico das operações com I.A. de hoje"): as operações
+  das I.A. desta conta HOJE (dia de Brasília), de operacoes_robos, só do próprio cliente (user_id), mesmo para
+  administradores. O banco devolve no máximo 1.000 por vez: lê em páginas. null = não deu para ler agora.
+*/
+export async function operacoesDaIADoDia(sessao: SessaoTeeds, contaId: string): Promise<OperacaoDaIADoDia[] | null> {
+  const desde = inicioDoDiaBrasilia().toISOString()
+  const n = (v: unknown) => (v === null || v === undefined || v === '' ? null : Number(v))
+  try {
+    const todas: any[] = []
+    for (let de = 0; de < 10_000; de += 1000) {
+      const linhas = await rest<any[]>(
+        `/operacoes_robos?user_id=eq.${sessao.usuario.id}&marca=eq.${encodeURIComponent(MARCA.id)}&conta_id=eq.${encodeURIComponent(contaId)}`
+        + `&executada_em=gte.${encodeURIComponent(desde)}`
+        + `&select=contract_id,sessao_id,robo_id,robo_nome,tipo_contrato,moeda,entrada,resultado,markup,executada_em,preco_saida,digito_saida`
+        + `&order=executada_em.desc,contract_id.desc&offset=${de}&limit=1000`,
+        sessao.token, { signal: comPrazo(15_000) },
+      )
+      todas.push(...(linhas ?? []))
+      if (!linhas || linhas.length < 1000) break
+    }
+    return todas.map((l) => ({
+      contractId: Number(l.contract_id), sessaoId: l.sessao_id ?? null, roboId: String(l.robo_id ?? ''), roboNome: String(l.robo_nome ?? l.robo_id ?? ''),
+      tipoContrato: String(l.tipo_contrato ?? ''), moeda: String(l.moeda ?? 'USD'), entrada: Number(l.entrada ?? 0), resultado: Number(l.resultado ?? 0),
+      markup: n(l.markup), executadaEm: String(l.executada_em), precoSaida: n(l.preco_saida), digitoSaida: n(l.digito_saida),
+    })).filter((o) => Number.isFinite(o.contractId) && o.executadaEm)
+  } catch (e) { console.warn('[teeds] operações das I.A. de hoje indisponíveis:', (e as Error).message); return null }
+}
 /*
   Os preços da operação manual (10/11/2026): a cabine ao vivo do Monitoramento desenha o preço pela
   cotação pública da Deriv e precisa da entrada, da barreira e, no fim, da saída. Vai num PATCH à

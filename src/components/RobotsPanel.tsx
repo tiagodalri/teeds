@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { OperacoesDaIADeHoje } from './operar/OperacoesDaIADeHoje'
 import { createPortal } from 'react-dom'
 import { IconeFechar } from './IconeFechar'
 import type { TeedsSocket } from '../core/deriv/client'
@@ -791,6 +792,12 @@ export function RobotsPanel({
 
       </div>}
       </div>
+
+      {/* 19/11/2026 (Victor): as operações das I.A. de hoje ficam à vista o dia todo, como a manual */}
+      {sessaoTeeds && contaId && !modoSim && (
+        <OperacoesDaIADeHoje sessao={sessaoTeeds} contaId={contaId} mostrarMarkup={admin && mostrarMarkup}
+          atualizar={vivasNoServidor.map((v) => `${v.id}:${v.estado?.rodando ? 1 : 0}`).join('|')} />
+      )}
 
 
       {rodando.length > 0 && (

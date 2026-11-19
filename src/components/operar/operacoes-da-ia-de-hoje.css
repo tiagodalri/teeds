@@ -1,0 +1,64 @@
+/* 19/11/2026: "Suas operações com I.A." de hoje na tela das I.A. (OperacoesDaIADeHoje.tsx), prefixo iah-.
+   O mesmo jeito minimalista de "Suas últimas entradas" (ulm-): linhas finas, cor só no resultado e no dígito. */
+.iah {
+  display: grid; margin: 14px 0 0; padding: 0 0 8px; border: 1px solid var(--border); border-radius: 18px;
+  background: var(--surface); font-variant-numeric: tabular-nums; overflow: hidden;
+}
+.iah header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px 16px 10px; }
+.iah-rot { color: var(--muted); font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.iah-rot small { margin-left: 6px; color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.iah-botao { flex: none; padding: 5px 10px; border: 1px solid var(--border); border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 650; cursor: pointer; }
+.iah-botao:hover { color: var(--text); border-color: color-mix(in srgb, var(--text) 30%, var(--border)); }
+.iah-botao:focus-visible, .iah-sessao:focus-visible, .iah-mais:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; }
+.iah-total.ganho, .iah-contagem .ganho, .iah-resumo-curto .ganho { color: var(--up); }
+.iah-total.perda, .iah-contagem .perda, .iah-resumo-curto .perda { color: var(--down); }
+.iah-ops li { color: var(--muted); }
+
+.iah-resumo { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 4px 12px; padding: 0 16px; }
+.iah-resumo > div { display: grid; gap: 2px; min-width: 0; }
+.iah-legenda { color: var(--muted); font-size: 11.5px; font-weight: 600; }
+.iah-total { font: 700 20px var(--fonte-dados, ui-monospace, monospace); letter-spacing: -.02em; white-space: nowrap; }
+.iah-contagem { margin: 0 0 0 auto; color: var(--muted); font-size: 11.5px; line-height: 1.45; text-align: right; }
+.iah-proporcao { display: flex; gap: 2px; height: 2px; margin: 10px 16px 2px; border-radius: 2px; overflow: hidden; }
+.iah-proporcao i { display: block; height: 100%; border-radius: 2px; }
+.iah-proporcao i.ganho { background: var(--up); } .iah-proporcao i.perda { background: var(--down); }
+.iah-markup-dia { margin: 8px 16px 0; color: var(--muted); font-size: 11px; }
+.iah-markup-dia b, .iah-markup { color: var(--gf-ouro, var(--primary)); font-family: var(--fonte-dados, ui-monospace, monospace); }
+
+.iah-sessoes { list-style: none; margin: 8px 0 0; padding: 0 16px; }
+.iah-sessoes > li { border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent); }
+.iah-sessao { display: grid; gap: 3px; width: 100%; padding: 10px 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.iah-s1, .iah-s2 { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
+.iah-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 13px; font-weight: 650; }
+.iah-res { flex: none; font: 700 12.5px var(--fonte-dados, ui-monospace, monospace); white-space: nowrap; }
+.iah-sessoes > li.ganho .iah-sessao .iah-res { color: var(--up); } .iah-sessoes > li.perda .iah-sessao .iah-res { color: var(--down); }
+.iah-s2 { color: var(--muted); font-size: 11.5px; }
+.iah-s2 > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iah-hora { font-family: var(--fonte-dados, ui-monospace, monospace); }
+.iah-seta { flex: none; font-style: normal; transition: transform .2s; }
+.iah-sessoes > li.aberta .iah-seta { transform: rotate(180deg); }
+.iah-markup { justify-self: end; font-size: 10.5px; font-weight: 700; }
+
+.iah-ops { list-style: none; margin: 0 0 8px; padding: 0 0 0 10px; border-left: 2px solid color-mix(in srgb, var(--border) 90%, transparent); max-height: 340px; overflow-y: auto; overscroll-behavior: contain; }
+.iah-ops li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: baseline; gap: 10px; padding: 6px 0; font-size: 11.5px; color: var(--muted); }
+.iah-ops li + li { border-top: 1px dashed color-mix(in srgb, var(--border) 70%, transparent); }
+.iah-tipo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.iah-saida { font-family: var(--fonte-dados, ui-monospace, monospace); }
+.iah-ops li.ganho .iah-saida b, .iah-ops li.ganho .iah-res { color: var(--up); }
+.iah-ops li.perda .iah-saida b, .iah-ops li.perda .iah-res { color: var(--down); }
+.iah-saida b { font-weight: 800; }
+
+.iah-mais { display: block; margin: 4px auto 0; padding: 6px 10px; border: 0; background: none; color: var(--gf-ouro, var(--primary)); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.iah-mais:hover { text-decoration: underline; }
+
+/* oculto: uma linha só, com o botão para mostrar */
+.iah.iah-oculto { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 10px 16px; }
+.iah-oculto .iah-rot { flex: 1 1 auto; }
+.iah-resumo-curto { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.iah-resumo-curto b { font-family: var(--fonte-dados, ui-monospace, monospace); }
+
+@media (max-width: 560px) {
+  .iah header, .iah-resumo, .iah-sessoes { padding-inline: 14px; }
+  .iah-proporcao, .iah-markup-dia { margin-inline: 14px; }
+  .iah-ops li { gap: 8px; font-size: 11px; }
+}

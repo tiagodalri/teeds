@@ -327,7 +327,20 @@ export function LocalRobotPanel({
     setLigando(true)
     try {
       const continuarId = sessaoIdRef.current && sessaoRef.current?.estrategia.id === escolhida.id ? sessaoIdRef.current : undefined
-      const s = await ligarNoServidor(sessaoTeeds, { roboId: escolhida.id, contaId: continuarId ? (contaDaSessao?.contaId ?? contaId) : contaId, config, ...(continuarId ? { continuarId } : {}) })
+      /*
+        19/11/2026 (Victor, no meio de uma gravação: "Sessão indisponível para continuar nesta conta e I.A."):
+        o servidor só guarda a sessão encerrada por 1 hora (e esquece tudo quando reinicia). Ligar de novo a
+        mesma I.A. depois disso pedia para CONTINUAR uma sessão que não existe mais lá e travava com esse erro.
+        Agora, nesse caso, liga uma sessão nova na conta de agora, sem perguntar nada.
+      */
+      const pedir = (comContinuacao: boolean) => ligarNoServidor(sessaoTeeds, { roboId: escolhida.id, contaId: comContinuacao ? (contaDaSessao?.contaId ?? contaId) : contaId, config, ...(comContinuacao && continuarId ? { continuarId } : {}) })
+      let s: Awaited<ReturnType<typeof ligarNoServidor>>
+      try { s = await pedir(!!continuarId) }
+      catch (e) {
+        if (!continuarId || !/indispon[ií]vel para continuar/i.test((e as Error).message ?? '')) throw e
+        sessaoIdRef.current = null
+        s = await pedir(false)
+      }
       roboLigou()
       // ligou: a próxima vez desta I.A. nesta conta (demo ou real, a que o servidor disse) abre com estes valores
       lembrarMetaEStop(escolhida.id, s.demo, config.takeProfit, config.stopLoss)

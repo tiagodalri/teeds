@@ -98,6 +98,7 @@ const LabOperar = lazy(() => import('./components/operar/LabOperar'))
 const LabRelatorios = lazy(() => import('./components/relatorios/LabRelatorios'))
 const LabMultiplicador = lazy(() => import('./components/operar/LabMultiplicador'))
 const AdminLeadsLab = lazy(() => import('./components/AdminLeads').then((m) => ({ default: m.AdminLeads })))
+const OperacoesDaIADeHojeLab = lazy(() => import('./components/operar/OperacoesDaIADeHoje').then((m) => ({ default: m.OperacoesDaIADeHoje })))
 const LabMultitela = lazy(() => import('./components/operar/multitela/LabMultitela'))
 const LabFinanceiro = lazy(() => import('./components/financeiro/LabFinanceiro'))
 const LabPainelDeComando = lazy(() => import('./components/grafico/LabPainelDeComando'))
@@ -646,6 +647,26 @@ function Laboratorio() {
   }
   // ?tela=assistente: a aba do Assistente dentro da moldura do app (19/11/2026)
   if (qual === 'assistente') return <LabAssistente />
+  // ?tela=ia-de-hoje(&oculto): "Suas operações com I.A." de hoje com operações de exemplo (19/11/2026)
+  if (qual === 'ia-de-hoje') {
+    const f = window.fetch, agora = Date.now()
+    const ops: unknown[] = []
+    let k = 0
+    for (const [sid, nome, desdeMin, n] of [['s1', 'GF Falcon', 25, 14], ['s2', 'GF Raptor', 140, 9], ['s3', 'GF Phenom', 300, 22]] as const) {
+      for (let i = 0; i < n; i++) {
+        const ganhou = (i * 7 + k) % 5 !== 0
+        const dig = (i * 3 + k) % 10
+        ops.push({ contract_id: 900000 + k++, sessao_id: sid, robo_id: nome.toLowerCase(), robo_nome: nome, tipo_contrato: 'DIGITOVER', moeda: 'USD', entrada: 2, resultado: ganhou ? 1.28 : -2, markup: 0.06, executada_em: new Date(agora - (desdeMin - i) * 60_000).toISOString(), preco_saida: Number((5123.45 + i / 10).toFixed(2)) + dig / 100 - Number((5123.45 + i / 10).toFixed(2)) % 0.1, digito_saida: dig })
+      }
+    }
+    ops.sort((a: any, b: any) => (a.executada_em < b.executada_em ? 1 : -1))
+    if (new URLSearchParams(location.search).has('oculto')) { try { localStorage.setItem(`${MARCA.id}.ia-de-hoje.oculto`, '1') } catch { /* */ } }
+    else { try { localStorage.removeItem(`${MARCA.id}.ia-de-hoje.oculto`) } catch { /* */ } }
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => String(u).includes('/operacoes_robos')
+      ? new Response(JSON.stringify(String(u).includes('offset=0') ? ops : []), { status: 200 })
+      : f(u, i)) as typeof fetch
+    return <Suspense fallback={null}><div style={{ maxWidth: 760, margin: '0 auto', padding: 16 }}><OperacoesDaIADeHojeLab sessao={{ token: 'lab', usuario: { id: 'lab' } } as never} contaId="VRTC1" mostrarMarkup={new URLSearchParams(location.search).has('markup')} /></div></Suspense>
+  }
   if (qual === 'ultimas') return <LabUltimas />
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
