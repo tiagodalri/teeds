@@ -14,6 +14,7 @@ import { dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../../co
 import { LeitorDeTermos } from '../termos/Termos'
 import { CartaoDeNotificacoes } from '../notificacoes/Notificacoes'
 import { CartaoDeBiometria } from '../biometria/Biometria'
+import { CartaoDoAssessor } from './CartaoDoAssessor'
 import { abrirMeuPlano, subplanoAtual, useMeuSubplano } from '../../core/teeds/subplanos'
 
 /**
@@ -274,6 +275,9 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
               : nascIso && nascIdade !== null ? <small>{nascIdade} anos</small> : null}
           </label>
         </section>
+
+        {/* ------------------------------------------------ WhatsApp do Assessor (19/11/2026; só quem o servidor liberou) */}
+        {MARCA.id === 'globalfly' && <CartaoDoAssessor sessao={sessao} telefoneSalvo={perfil.telefone} />}
 
         {/* ------------------------------------------------ endereço */}
         <section className="mp-cartao">

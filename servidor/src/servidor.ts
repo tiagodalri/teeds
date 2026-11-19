@@ -41,6 +41,7 @@ import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
+import { assessorLiberado, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
 import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
 
 /**
@@ -500,6 +501,20 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
     deu errado fica no log e na tabela `compras_kiwify`, que é onde dá para
     olhar depois sem depender de ninguém estar vendo o terminal.
   */
+  /*
+    O aviso da Z-API a cada mensagem que chega no WhatsApp do Assessor GF (19/11/2026). Sem login: quem prova
+    que é a Z-API é o segredo no caminho, gerado ao colar os códigos no ADM. Responde 200 na hora; o atendimento
+    (conferir o número, o Assistente, a resposta) segue por fora e nunca derruba o motor.
+  */
+  const avisoZapi = url.pathname.match(/^\/zapi\/([a-z]+)\/([a-f0-9]{20,80})$/)
+  if (avisoZapi && req.method === 'POST') {
+    const pedacos = await lerCorpoComTeto(req, 300_000)
+    res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ok":true}')
+    if (!pedacos || avisoZapi[1] !== MARCA_DO_ASSESSOR || !(await segredoConfere(avisoZapi[2]).catch(() => false))) return
+    try { avisoRecebido(JSON.parse(Buffer.concat(pedacos).toString('utf8'))) } catch (e) { console.warn(`[assessor] aviso ilegível: ${(e as Error).message}`) }
+    return
+  }
+
   if (url.pathname === '/kiwify/compra') {
     const tipo = { 'content-type': 'application/json; charset=utf-8' }
     if (req.method !== 'POST') { res.writeHead(405, tipo); return res.end(JSON.stringify({ erro: 'use POST' })) }
@@ -1310,6 +1325,22 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           appId: appValido(marcaDoCofre, typeof corpo.appId === 'string' ? corpo.appId : undefined),
         }, marcaDoCofre)
         return json(200, { guardado: true })
+      }
+
+      // ---- Assessor GF no WhatsApp (19/11/2026): o número do perfil confirmado vira o login no WhatsApp.
+      // Por enquanto só os e-mails de LIBERADOS (zapi.ts); o resto recebe { liberado: false } e a tela não mostra nada.
+      if (url.pathname.startsWith('/api/assessor/whatsapp')) {
+        if (!assessorLiberado(dono.email) || (dono.marca ?? 'teeds') !== MARCA_DO_ASSESSOR) return json(200, { liberado: false })
+        if (url.pathname === '/api/assessor/whatsapp' && req.method === 'GET') return json(200, { liberado: true, ...(await estadoDoPerfil(dono.id)) })
+        if (url.pathname === '/api/assessor/whatsapp/codigo' && req.method === 'POST') return json(200, { liberado: true, ...(await codigoDoPerfil(dono.id)) })
+        if (url.pathname === '/api/assessor/whatsapp/desvincular' && req.method === 'POST') { await desvincularPerfil(dono.id); return json(200, { liberado: true, ok: true }) }
+      }
+      if (url.pathname.startsWith('/api/admin/zapi')) {
+        if (!assessorLiberado(dono.email) || !(await administradorDaMarca(dono.id, MARCA_DO_ASSESSOR).catch(() => false))) return json(403, { erro: 'Só a administração geral liga o WhatsApp do assessor.' })
+        const publico = RETORNO.replace(/\/callback$/, '')
+        if (url.pathname === '/api/admin/zapi' && req.method === 'GET') return json(200, await estadoDaConexao())
+        if (url.pathname === '/api/admin/zapi' && req.method === 'POST') return json(200, await ligarZapi(corpo, publico))
+        if (url.pathname === '/api/admin/zapi/desligar' && req.method === 'POST') { await desligarZapi(); return json(200, await estadoDaConexao()) }
       }
 
       // ---- a chave da I.A. do Assistente (19/11/2026): só o admin geral troca; testada antes de guardar

@@ -1337,3 +1337,17 @@ export async function fecharManualVencida(userId: string, contractId: number, fi
     body: JSON.stringify({ situacao: fim.situacao, resultado: fim.resultado, encerrada_em: fim.encerrada_em, atualizado_em: new Date().toISOString() }),
   })
 }
+
+/**
+ * O login de quem é dono deste id (19/11/2026, Assessor no WhatsApp): lá não há crachá, então a identidade
+ * vem do número confirmado e o e-mail é lido aqui, do Supabase, para valer a mesma trava de demo e a lista de liberados.
+ */
+export async function loginDoUsuario(userId: string): Promise<{ id: string; email: string; marca?: string } | null> {
+  if (!supabaseConfigurado()) return null
+  const res = await fetch(`${URL_BASE}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}` }, signal: AbortSignal.timeout(8_000),
+  }).catch(() => null)
+  if (!res?.ok) return null
+  const u = (await res.json().catch(() => null)) as any
+  return u?.id ? { id: String(u.id), email: emailReal(u.email), marca: marcaDaConta(u.email) } : null
+}

@@ -139,6 +139,7 @@ const LabGerenciamento = lazy(() => import('./components/OperationalManagementPa
 const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
 const LabLaboratorio = lazy(() => import('./components/laboratorio/LabLaboratorio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
+const LabAssessor = lazy(() => import('./components/assessor/AdminAssessor').then((m) => ({ default: () => <div style={{ padding: 24, background: 'var(--bg)', minHeight: '100vh' }}><m.AdminAssessor sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 3_600_000, usuario: { id: 'lab', email: 'tiagodalri1@live.com', nome: 'Tiago', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} /></div> })))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
 /** &cursos=1: a sala com três cursos (um de todos, um vendido à parte, um de plano), como o aluno sem compra vê. */
 function gradeComCursos(): GradeAulas {
@@ -313,6 +314,26 @@ if (new URLSearchParams(location.search).get('tela') === 'assistente') {
       if (/^liga/i.test(pergunta)) return json({ texto: 'Preparei a GF Raptor na sua conta de demonstração. Confira os valores e toque em Ligar.', proposta: { roboId: MARCA.robos[0], roboNome: 'GF Raptor', regra: 'o último dígito do preço é diferente do escolhido', contaId: 'VRTC1', demo: true, moeda: 'USD', saldo: 1686, entrada: 1, stopLoss: 10, takeProfit: 5 }, uso: { hoje: 3, teto: 30 } }, demora)
       if (/erro/i.test(pergunta)) return new Promise<Response>((ok) => window.setTimeout(() => ok(new Response(JSON.stringify({ erro: 'A I.A. demorou demais para responder. Tente de novo em instantes.' }), { status: 504 })), demora))
       return json({ texto: 'A definição de metas e limites é pessoal e depende da sua tolerância a risco.\nNão há percentual garantido ou recomendado\n, pois o mercado envolve perdas possíveis.\n\nUm jeito comum de começar:\n- **Meta do dia** entre 2% e 5% da banca\n- **Stop** do mesmo tamanho ou menor que a meta\n- Pare ao bater qualquer um dos dois', uso: { hoje: 4, teto: 30 } }, demora)
+    }
+    return original(u, i)
+  }
+}
+// ?tela=perfil&assessor=telefone|codigo|ok|conectando  e  ?tela=assessor&zapi=vazio|qr|ok|offline: o Assessor no WhatsApp (19/11/2026)
+if (new URLSearchParams(location.search).has('assessor') || new URLSearchParams(location.search).has('zapi')) {
+  const q = new URLSearchParams(location.search)
+  const original = window.fetch.bind(window)
+  const json = (d: unknown, status = 200) => new Promise<Response>((ok) => window.setTimeout(() => ok(new Response(JSON.stringify(d), { status, headers: { 'content-type': 'application/json' } })), 400))
+  const caso = q.get('assessor') ?? 'telefone'
+  const z = q.get('zapi') ?? 'vazio'
+  const qr = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" shape-rendering="crispEdges"><rect width="29" height="29" fill="#fff"/>' + Array.from({ length: 29 * 29 }, (_, k) => ((k * 7919) % 13 < 6 ? `<rect x="${k % 29}" y="${Math.floor(k / 29)}" width="1" height="1"/>` : '')).join('') + '</svg>')
+  window.fetch = (u: RequestInfo | URL, i?: RequestInit) => {
+    const url = String(u)
+    if (url.includes('/api/assessor/whatsapp/codigo')) return json({ liberado: true, codigo: '482193', numeroAssessor: '5511999990000', expiraEm: new Date(Date.now() + 1800_000).toISOString() })
+    if (url.includes('/api/assessor/whatsapp')) return json(caso === 'ok' ? { liberado: true, telefone: '11987654321', confirmado: true, numeroConfirmado: '5511987654321', numeroAssessor: '5511999990000', conectado: true }
+      : { liberado: true, telefone: caso === 'semtelefone' ? '' : '11987654321', confirmado: false, numeroAssessor: caso === 'conectando' ? undefined : '5511999990000', conectado: caso !== 'conectando' })
+    if (url.includes('/api/admin/zapi')) {
+      if (i?.method === 'POST') return json({ erro: 'A Z-API recusou esses códigos (Instance not found).' }, 400)
+      return json(z === 'ok' ? { configurado: true, conectado: true, celularOnline: true, numero: '5511999990000', instancia: '3E7A' } : z === 'offline' ? { configurado: true, conectado: true, celularOnline: false, numero: '5511999990000' } : z === 'qr' ? { configurado: true, conectado: false, qr } : { configurado: false, conectado: false })
     }
     return original(u, i)
   }
@@ -706,6 +727,7 @@ function Laboratorio() {
   if (qual === 'ultimas') return <LabUltimas />
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
+  if (qual === 'assessor') return <Suspense fallback={null}><LabAssessor /></Suspense>
   if (qual === 'organizacao') return <Suspense fallback={null}><LabOrganizacao /></Suspense>
   // ?tela=planos: Administração > Planos com o banco de mentira
   if (qual === 'planos') return <Suspense fallback={null}><LabPlanos /></Suspense>

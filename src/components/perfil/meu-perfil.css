@@ -180,3 +180,13 @@
   body:has(.barra-inferior) .mp-salvar { position: fixed; left: 12px; right: 12px; z-index: 160; bottom: calc(74px + var(--sab, env(safe-area-inset-bottom, 0px))); }
 }
 @media (prefers-reduced-motion: reduce) { .mp-salvar, .mp-trilho i, .mp-btn, .mp-avatar-btn { transition: none; } .mp-girando { animation-duration: 2s; } }
+
+/* WhatsApp do Assessor (19/11/2026) */
+.mp-assessor-ok { border-color: color-mix(in srgb, #2F8F72 45%, var(--mp-linha)); background: color-mix(in srgb, #2F8F72 8%, var(--surface-alt)); }
+.mp-assessor-ok b::before { content: '✓'; display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 8px; border-radius: 50%; background: #2F8F72; color: #fff; font-size: 11px; vertical-align: 1px; }
+.mp-assessor-acoes { display: flex; flex-wrap: wrap; gap: 10px; }
+.mp-assessor a.mp-btn { text-decoration: none; text-align: center; }
+.mp-assessor-espera { display: flex; align-items: center; gap: 9px; }
+.mp-assessor-espera i { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--mp-ouro); animation: mp-pulso 1.2s ease-in-out infinite; }
+@keyframes mp-pulso { 50% { opacity: .25; transform: scale(.7); } }
+@media (prefers-reduced-motion: reduce) { .mp-assessor-espera i { animation: none; } }
