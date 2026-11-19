@@ -66,6 +66,10 @@ interface Props {
   topo?: ReactNode
   /** Lê o mercado de novo (depois de uma falha). */
   aoRecarregarMercado?: () => void
+  /** A I.A. recomendada agora, acima da frota (mockup 19/11/2026). */
+  recomendacao?: ReactNode
+  /** A I.A. recomendada: o jato dela ganha a marca na frota. */
+  recomendada?: string | null
 }
 
 const numero = (n: number) => Math.abs(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -103,7 +107,7 @@ const ICONE = {
 }
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
 
-export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira, topo, aoRecarregarMercado }: Props) {
+export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo, aoAbrirCarteira, topo, aoRecarregarMercado, recomendacao, recomendada }: Props) {
   const ocultos = useValoresOcultos()
   // a comunidade: com o Instagram configurado, abre a escolha WhatsApp ou Instagram (03/11/2026)
   const comunidade = useComunidade()
@@ -237,6 +241,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
 
       <div className="in-grade">
         <div className="in-coluna-principal">
+          {recomendacao}
           {/* ------------------------------------------------ sua frota */}
           {/* sem I.A. para mostrar (a lista ainda não chegou), o título não fica sozinho sobre um vazio */}
           {frota.length > 0 && <section className="in-frota" aria-labelledby="in-frota-titulo">
@@ -250,11 +255,12 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                 // I.A. vendida à parte que a pessoa ainda não tem: o cadeado leva ao Marketplace
                 const trancada = !r.noAr && bloqueados.has(r.id)
                 return (
-                  <button key={r.id} type="button" className={`in-jato ${r.noAr ? 'no-ar' : ''} ${trancada ? 'trancada' : ''}`}
+                  <button key={r.id} type="button" className={`in-jato ${r.noAr ? 'no-ar' : ''} ${trancada ? 'trancada' : ''} ${recomendada === r.id && !r.noAr ? 'recomendada' : ''}`}
                     onClick={() => (r.noAr ? aoIr('robos') : trancada ? aoIr('marketplace') : aoPrepararRobo(r.id))}
                     aria-label={r.noAr ? `${r.nome}: no ar, ${ocultos ? 'resultado oculto' : `resultado ${sinal(r.resultado)}${numero(r.resultado)}`}. Abrir a cabine.` : trancada ? `${r.nome}: liberar no Marketplace.` : `${r.nome}, ${r.chamada}. Configurar e ligar.`}>
                     {/* a marca da casa no canto: o monograma, não as letras (22/10/2026) */}
                     {TEM_MONOGRAMA && <Monograma tamanho={30} className="in-jato-mono" />}
+                    {recomendada === r.id && !r.noAr && <span className="in-jato-recomendada" key={recomendada}>Recomendada</span>}
                     <img {...fotoDoCartaoAlto(r.id)} sizes="(max-width: 700px) 45vw, 20vw" alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.style.visibility = 'hidden' }} />
                     {r.noAr
                       ? <span className={`in-jato-selo ${r.operando ? 'operando' : ''}`}><i aria-hidden="true" />{r.operando ? 'Operando' : 'No ar'}</span>

@@ -16,6 +16,7 @@ import { SERVIDOR } from '../../core/teeds/config'
 import { capaResolvida } from '../aulas/CapaDaAula'
 import { MARCA } from '../../marca'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
+import { RecomendacaoDaIA, recomendacaoLiberada } from './RecomendacaoDaIA'
 import { BarraDeStories } from '../stories/BarraDeStories'
 import { useMeuPapel } from '../../core/teeds/parceiroEmFoco'
 import { useMenuAdminOculto } from '../../core/menuDeAdmin'
@@ -109,6 +110,9 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
   const [rodadaMercado, setRodadaMercado] = useState(0)
   const [jornada, setJornada] = useState(jornadaGuardada)
   const [plano, setPlano] = useState(planoDoDia)
+  // I.A. recomendada (19/11/2026): por enquanto só no usuário do Tiago
+  const comRecomendacao = recomendacaoLiberada(sessao?.usuario.email)
+  const [recomendada, setRecomendada] = useState<string | null>(null)
   const disponiveis = useRobosDisponiveis()
 
   // o plano que está na conta (feito em outro aparelho) passa a valer aqui
@@ -245,7 +249,8 @@ export function InicioPagina({ sessao, nome, conta, treino, aoIr, aoConectar, ao
     jornada: { deriv: conta.conectada, demo: !!jornada.demo, gestao: !!planoValido, primeiraIa: !!jornada.primeiraIa },
   }
   return (
-    <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} aoAbrirCarteira={aoAbrirCarteira} aoRecarregarMercado={() => setRodadaMercado((n) => n + 1)}
+    <InicioPanel d={d} aoIr={aoIr} aoConectar={aoConectar} recomendada={comRecomendacao ? recomendada : null}
+      recomendacao={comRecomendacao ? <RecomendacaoDaIA aoMudar={setRecomendada} aoLigar={(id) => { pedirModeloDaVitrine(id); pedirPreparo(); aoIr('robos') }} /> : undefined} aoAbrirCarteira={aoAbrirCarteira} aoRecarregarMercado={() => setRodadaMercado((n) => n + 1)}
       topo={<>
         {/* Stories para todos desde 10/11/2026 (Tiago: "pode liberar pros alunos"). O que é de admin (Publicar, "Visto por",
             arrastar para a câmera, métricas) só aparece para a equipe, e some com o olhinho dos itens de admin: aí o admin

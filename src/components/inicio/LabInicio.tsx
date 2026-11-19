@@ -5,6 +5,7 @@ import { AccountSwitcher } from '../AccountSwitcher'
 import { UserMenu } from '../UserMenu'
 import { InicioPanel, type DadosDoInicio } from './InicioPanel'
 import { InicioPagina } from './InicioPagina'
+import { RecomendacaoDaIA } from './RecomendacaoDaIA'
 import { BarraDeStories } from '../stories/BarraDeStories'
 import { EXEMPLO_DE_STORIES, ligarLab } from '../stories/LabStories'
 import { TourGuiado, passosDoTour } from '../tour/TourGuiado'
@@ -91,6 +92,9 @@ export default function LabInicio() {
   // &stories=1: o estúdio publica no banco de mentira (envio com progresso, salvar)
   useState(() => { if (q.has('stories')) ligarLab() })
   const nada = () => undefined
+  // &recomendacao=1(&ciclo=N): a I.A. recomendada com os ticks de verdade; ciclo encurta a validade (segundos)
+  const [recomendada, setRecomendada] = useState<string | null>(null)
+  const ciclo = q.get('ciclo') ? Number(q.get('ciclo')) : undefined
   return (
     <div className="app workspace-app">
       <WorkspaceNav page="inicio" admin={false} mostrarInicio onNavigate={nada} />
@@ -115,7 +119,9 @@ export default function LabInicio() {
       {/* &real=1: o componente de verdade (mercado ao vivo, aula seguinte, jornada), sem conta */}
       {q.has('real')
         ? <InicioPagina sessao={null} nome="Tiago Dal Ri" conta={{ conectada: false, demo: true, saldo: null, moeda: 'USD' }} treino={null} aoIr={nada} />
-        : <InicioPanel d={d} aoIr={nada} aoSalvarPlano={(meta, limite) => setPlano({ meta, limite })} aoPrepararRobo={nada}
+        : <InicioPanel d={d} aoIr={nada} recomendada={recomendada}
+            recomendacao={q.has('recomendacao') ? <RecomendacaoDaIA aoLigar={nada} aoMudar={setRecomendada} ciclo={ciclo} membros={47} /> : undefined}
+            aoSalvarPlano={(meta, limite) => setPlano({ meta, limite })} aoPrepararRobo={nada}
             // &stories=1[&equipe=1][&aovivo=1]: as bolinhas dos Stories com dados de exemplo (08/11/2026)
             topo={q.has('stories') ? <BarraDeStories sessao={{ token: 'lab', usuario: { id: 'lab' } } as never} aoIr={nada} exemplo={EXEMPLO_DE_STORIES} equipe={q.has('equipe')} aoVivo={q.has('aovivo')} /> : undefined} />}
       <BarraInferior tela="inicio" irPara={nada} />
