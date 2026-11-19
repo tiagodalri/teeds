@@ -249,6 +249,11 @@
 .as-com-icone .as-selo { overflow: visible; border: 0; background: var(--gf-azul, #051528); }
 .as-com-icone .as-selo img { width: 100%; height: 100%; border-radius: 22px; }
 
+/* computador estreito: a caixa de escrever não passa por baixo dos botões redondos do canto (suporte, chat da equipe) */
+@media (min-width: 901px) and (max-width: 1320px) {
+  .as-pe { padding-inline: 92px; }
+}
+
 /* ---------------------------------------------------------------- celular */
 @media (max-width: 900px) {
   .as-rolo { padding: 0 16px; }

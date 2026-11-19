@@ -6295,7 +6295,8 @@ body:has(:is(.aula-modal-fundo, .market-modal-fundo, .cw-fundo, .adm-modal-fundo
   body:has(.sp-lancador-area, .mcb) .workspace-app { padding-bottom: 96px; }
   /* 31/10/2026: as telas de fundo próprio (I.A., Gerenciamento...) rolam por dentro, e a
      folga ficava fora delas, como uma faixa de outra cor no pé. Nelas a folga vai para dentro. */
-  body:has(.sp-lancador-area, .mcb) .workspace-app:has(> .ger, > .tela-viva:not([hidden]) > .ger) { padding-bottom: 0; }
+  body:has(.sp-lancador-area, .mcb) .workspace-app:has(> .ger, > .tela-viva:not([hidden]) > .ger, > .tela-viva:not([hidden]) > .as) { padding-bottom: 0; }
+  /* 19/11/2026: o Assistente também — o pé dele é a caixa de escrever (a folga virava faixa branca embaixo dela) */
   body:has(.sp-lancador-area, .mcb) :is(.workspace-app > .ger, .tela-viva > .ger).ger.ger { padding-bottom: 96px; }
 }
 
