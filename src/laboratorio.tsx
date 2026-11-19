@@ -53,6 +53,8 @@ import { Bandeira, Moeda } from './components/ferramentas/Bandeira'
 const MOEDAS_LAB = ['USD', 'BRL', 'EUR', 'GBP', 'CHF', 'CAD', 'AUD', 'JPY', 'CNY', 'ARS', 'MXN', 'CLP', 'BTC']
 import { gradeDoCatalogo, normalizarGrade, type GradeAulas } from './core/teeds/gradeAulas'
 import { LocalRobotPanel } from './components/LocalRobotPanel'
+import { AssistentePanel, type ItemDoAssistente } from './components/AssistentePanel'
+import './components/barra/barra-inferior.css'
 import { RobotSetup } from './components/RobotSetup'
 import { DigitsPanel } from './components/DigitsPanel'
 import { VitrineDeRobos } from './components/VitrineDeRobos'
@@ -254,6 +256,24 @@ if (new URLSearchParams(location.search).get('tela') === 'central-extras') {
       { id: '2', apresentador: 'Victor Dias', teste: false, vitrines: ['v'], iniciada_em: new Date(agora - 26 * 3600000).toISOString(), encerrada_em: new Date(agora - 24.5 * 3600000).toISOString(), pico: 61, pessoas: 74, tempo_medio_s: 3120, mensagens: 143, presencas: [], atualizada_em: new Date(agora - 24.5 * 3600000).toISOString() },
       { id: '3', apresentador: 'Victor Dias', teste: true, vitrines: null, iniciada_em: new Date(agora - 50 * 3600000).toISOString(), encerrada_em: new Date(agora - 49.8 * 3600000).toISOString(), pico: 2, pessoas: 2, tempo_medio_s: 540, mensagens: 4, presencas: [], atualizada_em: new Date(agora - 49.8 * 3600000).toISOString() },
     ])
+    return original(u, i)
+  }
+}
+// ?tela=assistente(&conversa=1)(&vivas=1)(&demora=ms): o Assistente com o servidor de mentira (19/11/2026)
+if (new URLSearchParams(location.search).get('tela') === 'assistente') {
+  const q = new URLSearchParams(location.search)
+  const original = window.fetch.bind(window)
+  const json = (d: unknown, ms = 0) => new Promise<Response>((ok) => window.setTimeout(() => ok(new Response(JSON.stringify(d), { status: 200, headers: { 'content-type': 'application/json' } })), ms))
+  const demora = Number(q.get('demora') ?? 2200)
+  window.fetch = (u: RequestInfo | URL, i?: RequestInit) => {
+    const url = String(u)
+    if (url.includes('/api/sessoes')) return json({ sessoes: q.has('vivas') ? [{ id: 's1', roboId: MARCA.robos[0], roboNome: 'GF Raptor', contaId: 'VRTC1', demo: true, moeda: 'USD', marca: MARCA.id, estado: { operacoes: 14, resultado: 3.42 } }] : [] })
+    if (url.includes('/api/chat')) {
+      const pergunta = String(JSON.parse(String(i?.body ?? '{}')).pergunta ?? '')
+      if (/^liga/i.test(pergunta)) return json({ texto: 'Preparei a GF Raptor na sua conta de demonstração. Confira os valores e toque em Ligar.', proposta: { roboId: MARCA.robos[0], roboNome: 'GF Raptor', regra: 'o último dígito do preço é diferente do escolhido', contaId: 'VRTC1', demo: true, moeda: 'USD', saldo: 1686, entrada: 1, stopLoss: 10, takeProfit: 5 }, uso: { hoje: 3, teto: 30 } }, demora)
+      if (/erro/i.test(pergunta)) return new Promise<Response>((ok) => window.setTimeout(() => ok(new Response(JSON.stringify({ erro: 'A I.A. demorou demais para responder. Tente de novo em instantes.' }), { status: 504 })), demora))
+      return json({ texto: 'A definição de metas e limites é pessoal e depende da sua tolerância a risco.\nNão há percentual garantido ou recomendado\n, pois o mercado envolve perdas possíveis.\n\nUm jeito comum de começar:\n- **Meta do dia** entre 2% e 5% da banca\n- **Stop** do mesmo tamanho ou menor que a meta\n- Pare ao bater qualquer um dos dois', uso: { hoje: 4, teto: 30 } }, demora)
+    }
     return original(u, i)
   }
 }
@@ -621,6 +641,8 @@ function Laboratorio() {
     }) as typeof fetch
     return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminLeadsLab sessao={{ token: 'lab' } as never} marca="globalfly" /></div></Suspense>
   }
+  // ?tela=assistente: a aba do Assistente dentro da moldura do app (19/11/2026)
+  if (qual === 'assistente') return <LabAssistente />
   if (qual === 'ultimas') return <LabUltimas />
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
@@ -1004,3 +1026,25 @@ function LabMarketplace() {
   return <div className="workspace-app"><Suspense fallback={null}><MarketplaceDoLab sessao={null} /></Suspense></div>
 }
 const MarketplaceDoLab = lazy(() => import('./components/MarketplacePanel').then((m) => ({ default: m.MarketplacePanel })))
+
+function LabAssistente() {
+  const q = new URLSearchParams(location.search)
+  const sessao = { token: 'lab', refresh: 'lab', expiraEm: Date.now() + 3600e3, usuario: { id: 'lab', email: 'lab@lab', nome: 'tiago dalri', telefone: null, cpf: null, criadoEm: '' } } as never
+  const inicial: ItemDoAssistente[] | undefined = q.has('conversa') ? [
+    { tipo: 'cliente', texto: 'como funciona esse mercado?' },
+    { tipo: 'assistente', texto: 'As operações na Deriv utilizam contratos de dígitos no índice sintético Volatility 75, baseando-se no último\nnúmero do preço do ativo.\nCada I.A. segue uma regra matemática específica de previsão sobre qual dígito vai aparecer.' },
+    { tipo: 'cliente', texto: 'Como estão minhas I.A.?' },
+    { tipo: 'assistente', texto: '2 I.A. operando, somando USD 3,42:\n• GF Raptor — 14 operações, USD 2,10 (demonstração)\n• GF Falcon — 9 operações, USD 1,32 (demonstração)' },
+    { tipo: 'cliente', texto: 'qual porcentagem devo buscar?' },
+    { tipo: 'assistente', texto: 'A definição de metas e limites é pessoal e depende da sua tolerância a risco.\nNão há percentual garantido ou recomendado\n, pois o mercado envolve perdas possíveis.' },
+  ] : undefined
+  return (
+    <div className="app workspace-app" style={{ paddingLeft: 0 }}>
+      <div className="tela-viva">
+        <AssistentePanel sessao={sessao} socket={null} symbols={[]} symbolPadrao={null} conexao={'closed' as never} administracao inicial={inicial} />
+      </div>
+      {/* &barra=1: a barra de baixo do celular (só a casca, para ver a caixa de escrever acima dela) */}
+      {q.has('barra') && <nav className="barra-inferior">{['Início', 'I.A.', 'Manual', 'Aulas', 'Suporte'].map((t) => <button key={t} type="button"><span className="barra-icone" /><span className="barra-rotulo">{t}</span></button>)}</nav>}
+    </div>
+  )
+}

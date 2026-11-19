@@ -1,0 +1,295 @@
+/* ==========================================================================
+   O Assistente (19/11/2026, Tiago: "tudo bugado sem layout sem padrão sem
+   estética sem imersividade… quero nível Anthropic, OpenAI, Tesla, Apple").
+
+   Uma coluna de leitura no meio da tela, um fundo só do topo ao pé, a caixa
+   de escrever flutuando presa embaixo, e o texto em corpo de leitura (16 px)
+   em vez de 13. A conversa rola por dentro; a página não.
+   Prefixo .as- (só esta tela usa).
+   ========================================================================== */
+
+.as {
+  --as-largura: 740px;
+  --as-fundo: var(--bg);
+  --as-balao: color-mix(in srgb, var(--text) 8%, var(--bg));
+  --as-ouro: var(--gf-ouro, var(--primary));
+  position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0;
+  background: var(--as-fundo); color: var(--text);
+}
+
+/* ---------------------------------------------------------------- rolagem */
+.as-rolo { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 0 24px; scroll-padding-bottom: 24px; }
+.as-coluna { width: 100%; max-width: var(--as-largura); margin: 0 auto; display: grid; gap: 30px; align-content: start; }
+.as-rolo > .as-coluna { padding: 36px 0 40px; }
+.as-fim { height: 1px; margin-top: -30px; }
+
+/* Nova conversa: presa no alto, discreta, fora da coluna de leitura */
+.as-barra { position: sticky; top: 0; z-index: 3; display: flex; justify-content: flex-end; height: 0; }
+.as-barra button {
+  display: inline-flex; align-items: center; gap: 7px; height: 36px; margin-top: 14px; padding: 0 14px 0 12px;
+  border: 1px solid var(--border); border-radius: 999px; background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.as-barra button:hover { color: var(--text); border-color: color-mix(in srgb, var(--text) 25%, var(--border)); }
+
+/* ---------------------------------------------------------------- abertura */
+.as-vazio .as-rolo { display: flex; flex-direction: column; }
+.as-vazio .as-rolo > .as-coluna { margin-block: auto; padding: 48px 0 32px; }
+.as-abertura { display: grid; justify-items: center; text-align: center; gap: 0; }
+.as-selo {
+  position: relative; display: grid; place-items: center; width: 68px; height: 68px; margin-bottom: 22px;
+  border-radius: 22px; background: var(--surface); border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(5, 21, 40, .05), 0 12px 32px -12px color-mix(in srgb, var(--as-ouro) 45%, transparent);
+}
+.as-selo::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 28px; pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--as-ouro) 28%, transparent); opacity: .7;
+  animation: as-respira 3.6s ease-in-out infinite;
+}
+.as-selo img { border-radius: 10px; }
+@keyframes as-respira { 0%, 100% { transform: scale(.96); opacity: .25 } 50% { transform: scale(1.02); opacity: .8 } }
+.as-abertura h2 { margin: 0; font-size: clamp(28px, 3.2vw, 38px); line-height: 1.12; font-weight: 700; letter-spacing: -.028em; color: var(--text); }
+.as-abertura > p { margin: 12px 0 0; max-width: 470px; color: var(--muted); font-size: 15.5px; line-height: 1.6; }
+
+.as-cartoes { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 34px; }
+.as-cartoes button {
+  display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 14px 18px; text-align: left;
+  border: 1px solid var(--border); border-radius: 16px; background: var(--surface); color: var(--text);
+  font: inherit; font-size: 14.5px; font-weight: 600; line-height: 1.35; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(5, 21, 40, .04);
+  transition: border-color .18s, box-shadow .18s, transform .18s;
+}
+.as-cartoes button:hover { border-color: color-mix(in srgb, var(--as-ouro) 60%, var(--border)); box-shadow: 0 10px 28px -14px rgba(5, 21, 40, .28); transform: translateY(-1px); }
+.as-cartoes button:active { transform: translateY(0) scale(.99); }
+.as-cartao-icone {
+  flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px;
+  background: color-mix(in srgb, var(--as-ouro) 13%, transparent); color: var(--as-ouro);
+}
+.as-cartoes button.perigo .as-cartao-icone { background: var(--down-soft); color: var(--down); }
+
+/* ---------------------------------------------------------------- mensagens */
+.as-entra { animation: as-entra .34s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes as-entra { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+
+/* quem pergunta: balão neutro à direita */
+.as-eu { display: flex; justify-content: flex-end; }
+.as-eu > div {
+  max-width: min(82%, 560px); padding: 11px 18px; border-radius: 22px; border-bottom-right-radius: 8px;
+  background: var(--as-balao); color: var(--text);
+  font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* o assistente: texto solto ao lado da marca, em corpo de leitura */
+.as-ele { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 16px; align-items: start; }
+.as-marca {
+  display: grid; place-items: center; width: 30px; height: 30px; margin-top: 1px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.as-marca img { border-radius: 5px; }
+.as-ele-corpo { min-width: 0; display: grid; gap: 6px; }
+.as-texto { font-size: 16px; line-height: 1.7; color: var(--text); overflow-wrap: anywhere; }
+.as-texto > * { margin: 0; }
+.as-texto > * + * { margin-top: .8em; }
+.as-texto strong { font-weight: 700; }
+.as-texto ul, .as-texto ol { padding-left: 1.3em; display: grid; gap: .35em; }
+.as-texto ul { list-style: none; padding-left: 1.1em; }
+.as-texto ul > li { position: relative; }
+.as-texto ul > li::before {
+  content: ''; position: absolute; left: -1em; top: .72em; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--as-ouro);
+}
+.as-texto ol > li::marker { color: var(--muted); font-weight: 700; }
+/* o cursor de quem escreve, só durante a animação */
+.as-texto.escrevendo > :last-child::after {
+  content: ''; display: inline-block; width: 8px; height: 8px; margin-left: 5px; border-radius: 50%;
+  background: var(--as-ouro); vertical-align: middle; animation: as-pisca .8s ease-in-out infinite;
+}
+@keyframes as-pisca { 50% { opacity: .2 } }
+
+.as-acoes { display: flex; gap: 4px; margin-left: -8px; }
+.as-copiar {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: 8px;
+  background: none; color: var(--muted); font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  opacity: .62; transition: opacity .15s, background .15s, color .15s;
+}
+.as-copiar span { opacity: 0; max-width: 0; overflow: hidden; transition: opacity .15s, max-width .2s; }
+.as-ele:hover .as-copiar, .as-copiar:focus-visible, .as-copiar.ok { opacity: 1; }
+.as-ele:hover .as-copiar span, .as-copiar:focus-visible span, .as-copiar.ok span { opacity: 1; max-width: 80px; }
+.as-copiar:hover { background: var(--as-balao); color: var(--text); }
+.as-copiar.ok { color: var(--up); }
+
+/* pensando: a marca gira devagar e a frase brilha */
+.as-pensando { align-items: center; }
+.as-marca.girando { position: relative; }
+.as-marca.girando::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid transparent; border-top-color: var(--as-ouro); border-right-color: color-mix(in srgb, var(--as-ouro) 40%, transparent);
+  animation: as-gira 1s linear infinite;
+}
+@keyframes as-gira { to { transform: rotate(360deg) } }
+.as-pensando-texto {
+  display: inline-flex; align-items: baseline; gap: 1px; font-size: 15px; font-weight: 600;
+  background: linear-gradient(90deg, var(--muted) 0%, var(--muted) 35%, var(--text) 50%, var(--muted) 65%, var(--muted) 100%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: as-brilho 2.2s linear infinite, as-entra .3s ease both;
+}
+.as-pensando-texto i { width: 4px; height: 4px; margin-left: 3px; border-radius: 50%; background: var(--muted); animation: as-ponto 1.2s ease-in-out infinite; }
+.as-pensando-texto i:nth-of-type(2) { animation-delay: .15s; }
+.as-pensando-texto i:nth-of-type(3) { animation-delay: .3s; }
+@keyframes as-brilho { from { background-position: 125% 0 } to { background-position: -125% 0 } }
+@keyframes as-ponto { 0%, 100% { opacity: .25; transform: translateY(0) } 50% { opacity: 1; transform: translateY(-2px) } }
+
+.as-erro {
+  display: flex; gap: 10px; align-items: flex-start; margin-left: 46px; padding: 12px 16px; border-radius: 14px;
+  background: var(--down-soft); color: var(--down); font-size: 14.5px; line-height: 1.5;
+}
+.as-erro svg { flex: none; margin-top: 2px; }
+
+/* cartão de ligar e o painel da sessão: alinhados com o texto do assistente */
+.as-anexo { margin-left: 46px; min-width: 0; }
+.as-cartao { max-width: 560px; }
+.as-robo { border-radius: 18px; }
+.as-anexo .cp { border-left-width: 1px; border-radius: 16px; padding: 18px; gap: 14px; background: var(--surface); box-shadow: 0 1px 2px rgba(5, 21, 40, .04), 0 14px 34px -22px rgba(5, 21, 40, .35); }
+.as-anexo .cp.cp-real { background: color-mix(in srgb, var(--down) 7%, var(--surface)); }
+.as-anexo .cp-topo b { font-size: 15px; }
+.as-anexo .cp-topo small { font-size: 12px; }
+.as-anexo .cp-regra { font-size: 13.5px; }
+.as-anexo .cp-campos span { font-size: 10.5px; }
+.as-anexo .cp-campos input { height: 42px; font-size: 15px; border-radius: 10px; }
+.as-anexo .cp-pe { font-size: 12.5px; }
+.as-anexo .cp-ligar { min-height: 44px; padding: 0 22px; border-radius: 12px; font-size: 14px; }
+
+/* chave da I.A. recusada (só a administração vê) */
+.as-chave { display: grid; gap: 8px; max-width: 560px; margin: 0 0 0 46px; padding: 16px 18px; border: 1px solid var(--border); border-left: 3px solid var(--as-ouro); border-radius: 14px; background: var(--surface); }
+.as-chave b { font-size: 14px; }
+.as-chave p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.as-chave-linha { display: flex; gap: 8px; flex-wrap: wrap; }
+.as-chave-linha input { flex: 1 1 220px; min-width: 0; height: 44px; padding: 0 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 16px; }
+.as-chave-linha button { height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--as-ouro); color: #051528; font: inherit; font-weight: 700; cursor: pointer; }
+.as-chave-linha button:disabled { opacity: .5; cursor: default; }
+.as-chave-erro { color: var(--down) !important; }
+.as-chave-ok { margin: 0 0 0 46px; padding: 12px 16px; border-radius: 12px; font-size: 14px; background: var(--up-soft, rgba(34, 197, 94, .12)); color: var(--up, #16a34a); }
+
+/* ---------------------------------------------------------------- pé */
+/* A caixa de escrever flutua: sem faixa de outra cor, a conversa some num
+   degradê do próprio fundo logo acima dela. */
+.as-pe { position: sticky; bottom: 0; z-index: 4; flex: none; padding: 0 24px 14px; background: var(--as-fundo); }
+.as-pe::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: 36px; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--as-fundo));
+}
+.as-pe .as-coluna { gap: 10px; }
+
+.as-fita {
+  display: inline-flex; align-items: center; gap: 9px; justify-self: start; height: 34px; padding: 0 14px 0 12px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted);
+  font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .15s;
+}
+.as-fita:hover { border-color: var(--as-ouro); }
+.as-fita em { width: 8px; height: 8px; border-radius: 50%; background: var(--up); box-shadow: 0 0 0 3px var(--up-soft); animation: as-pisca 1.6s ease-in-out infinite; }
+.as-fita b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.as-fita b.positivo { color: var(--up); }
+.as-fita b.negativo { color: var(--down); }
+
+.as-sugestoes-pe {
+  display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -2px; padding: 2px;
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+.as-sugestoes-pe::-webkit-scrollbar { display: none; }
+.as-sugestoes-pe button {
+  flex: none; height: 34px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.as-sugestoes-pe button:last-child { margin-right: 24px; }
+.as-sugestoes-pe .as-nova-pe { display: none; width: 34px; padding: 0; place-items: center; color: var(--text); }
+.as-sugestoes-pe button:hover:not(:disabled) { color: var(--text); border-color: color-mix(in srgb, var(--as-ouro) 60%, var(--border)); }
+.as-sugestoes-pe button:disabled { opacity: .45; cursor: default; }
+
+.as-confirmar {
+  display: grid; gap: 12px; padding: 14px 16px; border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--down) 45%, var(--border)); background: color-mix(in srgb, var(--down) 7%, var(--surface));
+  animation: as-entra .25s ease both;
+}
+.as-confirmar > span { color: var(--text); font-size: 14.5px; line-height: 1.5; }
+.as-confirmar > div { display: flex; gap: 8px; justify-content: flex-end; }
+.as-confirmar button { min-height: 42px; padding: 0 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.as-confirmar button.perigo { border-color: var(--down); background: var(--down); color: #fff; font-weight: 700; }
+
+.as-escrever {
+  display: flex; align-items: flex-end; gap: 10px; padding: 10px 10px 10px 20px; cursor: text;
+  border: 1px solid var(--border); border-radius: 26px; background: var(--surface);
+  box-shadow: 0 1px 2px rgba(5, 21, 40, .05), 0 16px 40px -18px rgba(5, 21, 40, .28);
+  transition: border-color .18s, box-shadow .18s;
+}
+.as-escrever:focus-within { border-color: color-mix(in srgb, var(--as-ouro) 70%, var(--border)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--as-ouro) 14%, transparent), 0 16px 40px -18px rgba(5, 21, 40, .3); }
+.as-escrever textarea {
+  flex: 1; min-width: 0; min-height: 28px; max-height: 168px; padding: 7px 0; border: 0; background: none; resize: none; overflow-y: auto;
+  color: var(--text); font: inherit; font-size: 16px; line-height: 1.55;
+}
+.as-escrever textarea::placeholder { color: color-mix(in srgb, var(--muted) 75%, transparent); }
+.as-escrever textarea:focus { outline: none; }
+.as-escrever button {
+  flex: none; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--text); color: var(--surface); cursor: pointer; transition: background .15s, transform .15s, opacity .15s;
+}
+.as-escrever button:hover:not(:disabled) { transform: scale(1.05); }
+.as-escrever button:active:not(:disabled) { transform: scale(.95); }
+.as-escrever button:disabled { background: color-mix(in srgb, var(--text) 14%, var(--surface)); color: color-mix(in srgb, var(--text) 45%, var(--surface)); cursor: default; }
+.as-escrever button.indo:disabled { background: var(--text); color: var(--surface); }
+.as-girando { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: as-gira .8s linear infinite; }
+.as-rodape { margin: 0; text-align: center; color: var(--muted); font-size: 12px; opacity: .8; }
+
+/* GF: o ícone do app preenche o círculo e o selo (sem moldura branca em volta) */
+.as-com-icone .as-marca { border: 0; background: var(--gf-azul, #051528); }
+.as-com-icone .as-marca img { width: 100%; height: 100%; border-radius: 50%; }
+.as-com-icone .as-selo { overflow: visible; border: 0; background: var(--gf-azul, #051528); }
+.as-com-icone .as-selo img { width: 100%; height: 100%; border-radius: 22px; }
+
+/* ---------------------------------------------------------------- celular */
+@media (max-width: 900px) {
+  .as-rolo { padding: 0 16px; }
+  .as-rolo > .as-coluna { padding: 64px 0 28px; gap: 24px; }
+  .as-vazio .as-rolo > .as-coluna { padding: 28px 0 20px; }
+  .as-pe { padding: 0 12px 10px; }
+  /* a barra de baixo do app fica por cima do pé: a caixa sobe acima dela, e desce quando o teclado abre (a barra some) */
+  body:has(.barra-inferior) .as-pe { bottom: calc(64px + var(--sab, 0px)); }
+  body:has(.barra-inferior):has(.as-escrever textarea:focus) .as-pe { bottom: 0; }
+  /* os botões redondos do canto (suporte, chat da equipe) sobem acima da caixa de escrever */
+  body:has(.tela-viva:not([hidden]) > .as) :is(.sp-lancador-area, .eq-lancador-area) { bottom: calc(64px + 150px + var(--sab, 0px)); }
+}
+@media (max-width: 560px) {
+  .as-ele { grid-template-columns: 26px minmax(0, 1fr); gap: 12px; }
+  .as-marca { width: 26px; height: 26px; }
+  .as-marca img { width: 15px; height: 15px; }
+  .as-anexo, .as-erro, .as-chave, .as-chave-ok { margin-left: 0; }
+  .as-eu > div { max-width: 88%; }
+  .as-abertura h2 { font-size: 27px; }
+  .as-abertura > p { font-size: 15px; }
+  .as-cartoes { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 26px; }
+  .as-cartoes button { min-height: 60px; padding: 12px 14px; font-size: 14.5px; }
+  .as-cartao-icone { width: 34px; height: 34px; border-radius: 10px; }
+  .as-selo { width: 60px; height: 60px; border-radius: 19px; margin-bottom: 18px; }
+  .as-escrever { padding: 7px 7px 7px 16px; border-radius: 24px; }
+  .as-escrever button { width: 38px; height: 38px; }
+  .as-rodape { display: none; }
+  .as-barra { display: none; }
+  .as-sugestoes-pe .as-nova-pe { display: grid; }
+  .as-rolo > .as-coluna { padding-top: 24px; }
+  .as-anexo .cp-campos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* ---------------------------------------------------------------- escuro */
+:root[data-tema='escuro'] .as { --as-balao: color-mix(in srgb, var(--text) 9%, var(--surface)); }
+:root[data-tema='escuro'] .as-com-icone :is(.as-marca, .as-selo) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--as-ouro) 38%, transparent); }
+:root[data-tema='escuro'] .as-escrever { box-shadow: 0 16px 40px -18px rgba(0, 0, 0, .7); }
+:root[data-tema='escuro'] .as-cartoes button:hover { box-shadow: 0 10px 28px -14px rgba(0, 0, 0, .7); }
+:root[data-tema='escuro'] .as-escrever button:not(:disabled), :root[data-tema='escuro'] .as-escrever button.indo { background: var(--as-ouro); color: var(--gf-azul, #051528); }
+
+@media (prefers-reduced-motion: reduce) {
+  .as-entra, .as-selo::after, .as-marca.girando::after, .as-pensando-texto, .as-pensando-texto i, .as-fita em, .as-texto.escrevendo > :last-child::after { animation: none; }
+  .as-pensando-texto { color: var(--muted); background: none; }
+}

@@ -207,7 +207,7 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 :root[data-tema='escuro'] :is(
   .btn-login, .beta-entrar, .entrada-btn, .convite-botoes button, .sem-deriv-acoes button,
   .btn-conectar, .perfil-btn, .aula-proxima, .blocos-vazio button,
-  .market-hero-acoes button, .market-modal-compra button, .as-eu > div, .as-escrever button,
+  .market-hero-acoes button, .market-modal-compra button, .as-escrever button,
   .dig-escolha button.on, .dig-ticks button.on, .simr-botao, .robot-launch-next
 ) { color: var(--gf-azul); }
 .beta-entrar, .market-hero-acoes button, .market-modal-compra button {
@@ -500,7 +500,9 @@ span.logo-ia { color: inherit !important; }
    é preso, e a moldura do app cresce com o conteúdo para ele acompanhar. */
 @media (min-width: 901px) {
   :root[data-marca='globalfly'] .workspace-app > .topbar { position: sticky; top: 0; z-index: 60; }
-  :root[data-marca='globalfly'] .workspace-app:not(:has(> .ger, > .tela-viva:not([hidden]) > .ger, > .layout)) { height: auto; min-height: 100%; }
+  /* 19/11/2026: o Assistente fica de fora — ele rola por dentro, com a caixa de escrever presa embaixo
+     (crescendo junto, a caixa descia com a conversa e sobrava uma faixa vazia no pé) */
+  :root[data-marca='globalfly'] .workspace-app:not(:has(> .ger, > .tela-viva:not([hidden]) > .ger, > .tela-viva:not([hidden]) > .as, > .layout)) { height: auto; min-height: 100%; }
   /* o topo na cor do fundo da página, com o fio embaixo (era marfim sobre página branca) */
   :root[data-marca='globalfly']:not([data-tema='escuro']) .workspace-app > .topbar { background: var(--surface); }
   /* Manual: a folga dos botões flutuantes deixava uma faixa branca embaixo do gráfico */

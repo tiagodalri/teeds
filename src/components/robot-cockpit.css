@@ -215,11 +215,6 @@
    "Desligar"); o cabeçalho da cabine repetia os mesmos botões. */
 .as-robo .cabine-caixa.aberta .tv-topo { display: none; }
 .tv-alerta .tv-alerta-link { color: inherit; font-weight: 700; text-decoration: underline; white-space: nowrap; }
-/* "Parar tudo" do Assistente pede confirmação: a frase ocupa a linha, os botões embaixo */
-.as-confirmar { align-items: center; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--down) 55%, var(--border)); border-radius: 12px; background: var(--down-soft); }
-.as-confirmar > span { flex: 1 1 100%; color: var(--text); font-size: 13.5px; line-height: 1.45; text-align: left; }
-.as-confirmar button { min-height: 44px; }
-.as-confirmar button.perigo { border-color: var(--down); color: var(--down); font-weight: 700; }
 
 /* ==================================================================
    Revisão visual da cabine (29/10/2026)
