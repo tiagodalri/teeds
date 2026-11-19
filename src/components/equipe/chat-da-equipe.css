@@ -596,3 +596,52 @@ body:has(.av-flutuante.embaixo[data-canto$='dir']):has(.sp-lancador-area) .eq-la
 
 /* só para o leitor de tela: a mensagem que chegou com a conversa aberta */
 .eq-so-leitor { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ------------------------------------------------ 18/11/2026: celular igual ao WhatsApp do iPhone
+   (Tiago: "aquele barrado em cima, o teclado, tudo! precisa ser idêntico ao WhatsApp real. Alto padrão").
+   Barra de cima translúcida que entra por baixo do relógio do iPhone; barra de escrever sólida, colada no
+   teclado: + à esquerda, pílula fina, câmera e microfone soltos; com texto, o botão redondo de enviar. */
+@media (max-width: 720px) {
+  .eq-painel { --eq-barra-solida: color-mix(in srgb, var(--surface) 55%, var(--bg)); --eq-barra: color-mix(in srgb, var(--eq-barra-solida) 86%, transparent); }
+  /* como no iPhone: "online" e "digitando…" em cinza, sem cor */
+  .eq-cabeca-nome small.online, .eq-cabeca-nome small.digitando { color: var(--muted); font-weight: 400; }
+  .eq-conversa { padding-top: 0; }
+  .eq-cabeca {
+    position: relative; min-height: calc(56px + var(--sat, 0px)); padding: var(--sat, 0px) max(8px, var(--sar, 0px)) 0 max(0px, var(--sal, 0px)); gap: 6px;
+    background: var(--eq-barra); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: .5px solid color-mix(in srgb, var(--text) 16%, transparent);
+  }
+  .eq-cabeca .eq-voltar { display: flex; align-items: center; gap: 0; width: auto; min-width: 36px; height: 44px; padding: 0 2px 0 4px; border-radius: 10px; color: var(--text); }
+  .eq-cabeca .eq-voltar svg { width: 26px; height: 26px; stroke-width: 2.2; }
+  /* o número de não lidas ao lado da seta, em texto, como no iPhone (não bolinha verde) */
+  .eq-cabeca .eq-voltar-selo { position: static; min-width: 0; height: auto; padding: 0; margin-left: -3px; background: none; color: var(--text); font-size: 17px; font-weight: 500; line-height: 1; }
+  .eq-cabeca-nome { gap: 0; }
+  .eq-cabeca-nome b { font-size: 16.5px; font-weight: 650; letter-spacing: -.01em; }
+  .eq-cabeca-nome small { font-size: 12.5px; }
+  .eq-mensagens { margin-top: 0; }
+
+  .eq-escrever {
+    padding: 6px max(8px, var(--sar, 0px)) calc(6px + var(--sab, 0px)) max(4px, var(--sal, 0px));
+    background: var(--eq-barra-solida); border-top: .5px solid color-mix(in srgb, var(--text) 14%, transparent);
+  }
+  html.eq-teclado .eq-escrever { padding-bottom: 6px; }
+  .eq-escrever-linha { align-items: flex-end; gap: 4px; }
+  .eq-mais, .eq-camera { width: 40px; height: 36px; color: var(--text); }
+  .eq-mais svg { width: 26px; height: 26px; stroke-width: 1.8; }
+  .eq-camera svg { width: 25px; height: 25px; stroke-width: 1.7; }
+  .eq-campo {
+    min-height: 36px; padding: 0 12px; border-radius: 18px; box-shadow: none;
+    background: var(--surface); border: .5px solid color-mix(in srgb, var(--text) 16%, transparent);
+  }
+  .eq-campo textarea { min-height: 34px; padding: 7px 0; font-size: 16px; line-height: 1.3; }
+  .eq-campo .eq-icone-btn { height: 34px; width: 34px; }
+  /* o microfone solto (sem círculo); com texto, o botão de enviar redondo e pequeno */
+  .eq-enviar { width: 36px; height: 36px; box-shadow: none; }
+  .eq-enviar svg { width: 18px; height: 18px; }
+  .eq-mic:not(.ativo) { width: 40px; background: transparent; color: var(--text); }
+  .eq-mic:not(.ativo) svg { width: 25px; height: 25px; stroke-width: 1.7; }
+  .eq-gravacao { min-height: 36px; border-radius: 18px; box-shadow: none; background: var(--surface); }
+  .eq-respondendo { margin: 0 0 6px; border-radius: 12px; background: var(--surface); padding: 4px; }
+  .eq-trava { bottom: 64px; }
+  .eq-descer { bottom: calc(62px + var(--sab, 0px)); }
+}

@@ -1361,6 +1361,13 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
             {gravador.segundos > MAXIMO_DE_AUDIO_S - 20 && <small className="eq-gravacao-limite">até {duracaoCurta(MAXIMO_DE_AUDIO_S)}</small>}
           </div>
         ) : (
+          <>
+          {/* 18/11/2026 (Tiago: "precisa ser idêntico ao WhatsApp real"): no celular, o + de anexar fica fora da pílula, à esquerda */}
+          {toque() && !editando && (
+            <button type="button" className="eq-icone-btn eq-mais" onClick={() => arquivo.current?.click()} aria-label="Mandar foto">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
+          )}
           <div className="eq-campo">
             {!toque() && (
               <button type="button" className={`eq-icone-btn eq-emoji-btn ${emojis ? 'ativo' : ''}`} onClick={() => setEmojis((v) => !v)} aria-label="Emoji" aria-expanded={emojis} title="Emoji">
@@ -1377,13 +1384,15 @@ function Escrever({ conversaId, rascunhos, placeholder, resposta, editando, nome
               }} />
             {!editando && (
               <>
-                <button type="button" className="eq-icone-btn" onClick={() => arquivo.current?.click()} aria-label="Mandar foto" title="Mandar foto (ou cole o print)"><Ic d={I.clipe} /></button>
-                {!temTexto && toque() && <button type="button" className="eq-icone-btn" onClick={() => camera.current?.click()} aria-label="Tirar foto"><Ic d={I.camera} /></button>}
+                {!toque() && <button type="button" className="eq-icone-btn" onClick={() => arquivo.current?.click()} aria-label="Mandar foto" title="Mandar foto (ou cole o print)"><Ic d={I.clipe} /></button>}
               </>
             )}
             <input ref={arquivo} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; aoImagem(f) }} />
             <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; aoImagem(f) }} />
           </div>
+          {/* a câmera fica fora da pílula, ao lado do microfone, e some quando há texto (como no WhatsApp) */}
+          {toque() && !temTexto && !editando && <button type="button" className="eq-icone-btn eq-camera" onClick={() => camera.current?.click()} aria-label="Tirar foto"><Ic d={I.camera} /></button>}
+          </>
         )}
         {temTexto || editando || (gravando && travado) ? (
           <button type="button" className="eq-enviar" aria-label={editando ? 'Salvar' : 'Enviar'}
