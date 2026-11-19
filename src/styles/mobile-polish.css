@@ -580,7 +580,7 @@
 /* ==========================================================================
    iPhone com iOS 26, app instalado (10/11/2026, refeito em 18/11/2026): depois
    que o teclado ou um seletor fecha, o iOS às vezes deixa os fixos deslocados
-   (barra de baixo no meio da tela, topo fora dela). A classe e o tamanho do desvio vêm de
+   (barra de baixo no meio da tela). A classe e o tamanho do desvio vêm de
    src/core/iphoneDesalinhado.ts; só existem enquanto o defeito está na tela.
    A propriedade `translate` soma com o `transform` que o elemento já tenha.
    ========================================================================== */
@@ -600,9 +600,8 @@
   html.vv-desalinhado .cpl-barra-fixa,
   html.vv-desalinhado .ac-placar,
   html.vv-desalinhado #aviso-versao { translate: 0 var(--vv-baixo, 0px); }
-  html.vv-desalinhado .workspace-app .topbar,
-  html.vv-desalinhado .workspace-app .workspace-mobile-toggle,
-  html.vv-desalinhado body::before { translate: 0 var(--vv-cima, 0px); }
+  /* 19/11/2026: o topo não é mais empurrado — o número em que a conta se baseava (offsetTop) mente no
+     iOS 26 e jogava o cabeçalho para o meio da tela (print do Tiago na Visão geral). */
 }
 
 /* ==========================================================================
