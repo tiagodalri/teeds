@@ -75,7 +75,7 @@
 
 /* quem pergunta: balão neutro à direita */
 .as-eu { display: flex; justify-content: flex-end; }
-.as-eu > div {
+.as-eu > div:not(.as-fotos) {
   max-width: min(82%, 560px); padding: 11px 18px; border-radius: 22px; border-bottom-right-radius: 8px;
   background: var(--as-balao); color: var(--text);
   font-size: 16px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
@@ -220,29 +220,106 @@
 .as-confirmar button.perigo { border-color: var(--down); background: var(--down); color: #fff; font-weight: 700; }
 
 .as-escrever {
-  display: flex; align-items: flex-end; gap: 10px; padding: 10px 10px 10px 20px; cursor: text;
+  display: grid; gap: 8px; padding: 10px 10px 10px 12px; cursor: text;
   border: 1px solid var(--border); border-radius: 26px; background: var(--surface);
   box-shadow: 0 1px 2px rgba(5, 21, 40, .05), 0 16px 40px -18px rgba(5, 21, 40, .28);
   transition: border-color .18s, box-shadow .18s;
 }
 .as-escrever:focus-within { border-color: color-mix(in srgb, var(--as-ouro) 70%, var(--border)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--as-ouro) 14%, transparent), 0 16px 40px -18px rgba(5, 21, 40, .3); }
+.as-escrever-linha { display: flex; align-items: flex-end; gap: 6px; min-width: 0; }
 .as-escrever textarea {
-  flex: 1; min-width: 0; box-sizing: border-box; min-height: calc(1.55em + 17px); max-height: 168px; padding: 8.5px 0;
+  flex: 1; min-width: 0; box-sizing: border-box; min-height: calc(1.55em + 17px); max-height: 168px; padding: 8.5px 4px 8.5px 4px;
   border: 0; background: none; resize: none; overflow-y: hidden; field-sizing: content;
   color: var(--text); font: inherit; font-size: 16px; line-height: 1.55;
 }
+.as-escrever textarea[hidden] { display: none; }
 /* só ganha barra de rolagem quando passa da altura máxima */
 .as-escrever textarea.cheia { overflow-y: auto; }
 .as-escrever textarea::placeholder { color: color-mix(in srgb, var(--muted) 75%, transparent); }
 .as-escrever textarea:focus { outline: none; }
-.as-escrever button {
+
+/* o botão redondo da direita: enviar, ou o microfone quando a caixa está vazia */
+.as-enviar {
   flex: none; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%;
   background: var(--text); color: var(--surface); cursor: pointer; transition: background .15s, transform .15s, opacity .15s;
 }
-.as-escrever button:hover:not(:disabled) { transform: scale(1.05); }
-.as-escrever button:active:not(:disabled) { transform: scale(.95); }
-.as-escrever button:disabled { background: color-mix(in srgb, var(--text) 14%, var(--surface)); color: color-mix(in srgb, var(--text) 45%, var(--surface)); cursor: default; }
-.as-escrever button.indo:disabled { background: var(--text); color: var(--surface); }
+.as-enviar:hover:not(:disabled) { transform: scale(1.05); }
+.as-enviar:active:not(:disabled) { transform: scale(.95); }
+.as-enviar:disabled { background: color-mix(in srgb, var(--text) 14%, var(--surface)); color: color-mix(in srgb, var(--text) 45%, var(--surface)); cursor: default; }
+.as-enviar.indo:disabled { background: var(--text); color: var(--surface); }
+.as-microfone { background: color-mix(in srgb, var(--as-ouro) 14%, var(--surface)); color: var(--as-ouro); }
+.as-microfone:hover { background: var(--as-ouro); color: #fff; }
+
+/* o clipe (foto/vídeo), à esquerda */
+.as-clipe {
+  flex: none; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: var(--muted); cursor: pointer; transition: background .15s, color .15s;
+}
+.as-clipe:hover:not(:disabled) { background: var(--as-balao); color: var(--text); }
+.as-clipe:disabled { opacity: .4; cursor: default; }
+
+/* gravando: ponto vermelho, o tempo e as barrinhas do nível ao vivo */
+.as-escrever.gravando { border-color: color-mix(in srgb, var(--down) 55%, var(--border)); box-shadow: 0 0 0 4px color-mix(in srgb, var(--down) 10%, transparent), 0 16px 40px -18px rgba(5, 21, 40, .28); }
+.as-gravando { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; height: 42px; }
+.as-cancelar {
+  flex: none; display: grid; place-items: center; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 50%;
+  background: none; color: var(--muted); cursor: pointer;
+}
+.as-cancelar:hover { background: var(--down-soft); color: var(--down); }
+.as-rec { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--down); box-shadow: 0 0 0 4px var(--down-soft); animation: as-pisca 1.1s ease-in-out infinite; }
+.as-gravando b { flex: none; min-width: 38px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); }
+.as-niveis { flex: 1; min-width: 0; height: 28px; display: flex; align-items: center; gap: 3px; overflow: hidden; justify-content: flex-end; }
+.as-niveis i { flex: none; width: 3px; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--text) 55%, transparent); transform-origin: center; transition: transform .08s linear; }
+
+/* fotos e vídeo esperando o envio, dentro da caixa */
+.as-pendentes { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 0 6px; scrollbar-width: none; }
+.as-pendentes::-webkit-scrollbar { display: none; }
+.as-pendente { position: relative; flex: none; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; background: var(--as-balao); display: grid; place-items: center; animation: as-entra .25s ease both; }
+.as-pendente img { width: 100%; height: 100%; object-fit: cover; }
+.as-pendente em { position: absolute; left: 5px; bottom: 5px; padding: 1px 6px; border-radius: 999px; background: rgba(0, 0, 0, .62); color: #fff; font-size: 10.5px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+.as-pendente button {
+  position: absolute; top: 4px; right: 4px; display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
+  border: 0; border-radius: 50%; background: rgba(0, 0, 0, .62); color: #fff; cursor: pointer;
+}
+
+/* arrastar arquivo para cima da conversa */
+.as-soltar {
+  position: absolute; inset: 12px; z-index: 20; display: grid; place-items: center; pointer-events: none;
+  border: 2px dashed color-mix(in srgb, var(--as-ouro) 70%, transparent); border-radius: 24px;
+  background: color-mix(in srgb, var(--as-fundo) 86%, transparent); backdrop-filter: blur(3px);
+}
+.as-soltar span { display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 700; box-shadow: 0 12px 30px -14px rgba(5, 21, 40, .35); }
+
+/* o balão de quem mandou: fotos, vídeo e áudio */
+.as-eu { flex-direction: column; align-items: flex-end; gap: 6px; }
+.as-fotos { display: grid; gap: 4px; width: min(320px, 82%); border-radius: 18px; overflow: hidden; }
+.as-fotos.n1 { width: min(300px, 74%); }
+.as-fotos.n2, .as-fotos.n3, .as-fotos.n4 { grid-template-columns: 1fr 1fr; }
+.as-fotos a { display: block; aspect-ratio: 1; background: var(--as-balao); }
+.as-fotos.n1 a { aspect-ratio: auto; }
+.as-fotos img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.as-fotos.n1 img { height: auto; max-height: 360px; }
+.as-video { display: block; width: min(320px, 82%); max-height: 420px; border-radius: 18px; background: #000; }
+.as-video-capa { position: relative; aspect-ratio: 16 / 10; padding: 0; border: 0; overflow: hidden; cursor: pointer; }
+.as-video-capa img { width: 100%; height: 100%; object-fit: cover; opacity: .9; }
+.as-video-capa span { position: absolute; inset: 0; margin: auto; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .92); color: #051528; padding-left: 3px; }
+.as-video-capa span svg { width: 20px; height: 20px; }
+.as-video-capa em { position: absolute; right: 10px; bottom: 10px; padding: 2px 8px; border-radius: 999px; background: rgba(0, 0, 0, .62); color: #fff; font-size: 12px; font-style: normal; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.as-eu > .as-balao-audio {
+  display: grid; gap: 8px; width: min(340px, 82%); padding: 10px 14px 10px 10px; white-space: normal;
+}
+.as-audio { display: flex; align-items: center; gap: 10px; }
+.as-audio button {
+  flex: none; display: grid; place-items: center; width: 38px; height: 38px; padding: 0 0 0 1px; border: 0; border-radius: 50%;
+  background: var(--text); color: var(--surface); cursor: pointer;
+}
+.as-onda { flex: 1; min-width: 0; height: 30px; display: flex; align-items: center; gap: 2px; }
+.as-onda i { flex: 1; min-width: 2px; max-width: 4px; border-radius: 3px; background: color-mix(in srgb, var(--text) 30%, transparent); transition: background .12s; }
+.as-onda i.ja { background: var(--text); }
+.as-audio small { flex: none; min-width: 34px; text-align: right; color: var(--muted); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.as-transcrito { margin: 0; padding: 0 2px 0 4px; font-size: 15px; line-height: 1.5; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.as-transcrito.ouvindo { color: var(--muted); font-style: italic; }
 .as-girando { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: as-gira .8s linear infinite; }
 .as-rodape { margin: 0; text-align: center; color: var(--muted); font-size: 12px; opacity: .8; }
 
@@ -274,15 +351,16 @@
   .as-marca { width: 26px; height: 26px; }
   .as-marca img { width: 15px; height: 15px; }
   .as-anexo, .as-erro, .as-chave, .as-chave-ok { margin-left: 0; }
-  .as-eu > div { max-width: 88%; }
+  .as-eu > div:not(.as-fotos) { max-width: 88%; }
   .as-abertura h2 { font-size: 27px; }
   .as-abertura > p { font-size: 15px; }
   .as-cartoes { grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 26px; }
   .as-cartoes button { min-height: 60px; padding: 12px 14px; font-size: 14.5px; }
   .as-cartao-icone { width: 34px; height: 34px; border-radius: 10px; }
   .as-selo { width: 60px; height: 60px; border-radius: 19px; margin-bottom: 18px; }
-  .as-escrever { padding: 7px 7px 7px 16px; border-radius: 24px; }
-  .as-escrever button { width: 38px; height: 38px; }
+  .as-escrever { padding: 7px 7px 7px 6px; border-radius: 24px; }
+  .as-enviar, .as-clipe, .as-cancelar { width: 38px; height: 38px; }
+  .as-gravando { height: 38px; gap: 8px; }
   .as-escrever textarea { min-height: calc(1.55em + 13px); padding: 6.5px 0; }
   .as-rodape { display: none; }
   .as-barra { display: none; }
@@ -296,9 +374,10 @@
 :root[data-tema='escuro'] .as-com-icone :is(.as-marca, .as-selo) { box-shadow: 0 0 0 1px color-mix(in srgb, var(--as-ouro) 38%, transparent); }
 :root[data-tema='escuro'] .as-escrever { box-shadow: 0 16px 40px -18px rgba(0, 0, 0, .7); }
 :root[data-tema='escuro'] .as-cartoes button:hover { box-shadow: 0 10px 28px -14px rgba(0, 0, 0, .7); }
-:root[data-tema='escuro'] .as-escrever button:not(:disabled), :root[data-tema='escuro'] .as-escrever button.indo { background: var(--as-ouro); color: var(--gf-azul, #051528); }
+:root[data-tema='escuro'] .as-enviar:not(:disabled):not(.as-microfone), :root[data-tema='escuro'] .as-enviar.indo { background: var(--as-ouro); color: var(--gf-azul, #051528); }
+:root[data-tema='escuro'] .as-audio button { background: var(--as-ouro); color: var(--gf-azul, #051528); }
 
 @media (prefers-reduced-motion: reduce) {
-  .as-entra, .as-selo::after, .as-marca.girando::after, .as-pensando-texto, .as-pensando-texto i, .as-fita em, .as-texto.escrevendo > :last-child::after { animation: none; }
+  .as-entra, .as-selo::after, .as-marca.girando::after, .as-pensando-texto, .as-pensando-texto i, .as-fita em, .as-texto.escrevendo > :last-child::after, .as-rec { animation: none; }
   .as-pensando-texto { color: var(--muted); background: none; }
 }

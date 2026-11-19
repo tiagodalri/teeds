@@ -41,6 +41,17 @@ export interface Resposta {
   falhaDaIA?: string
   /** Quem respondeu: o Gemini entra quando a Anthropic recusa a conta (19/11/2026). */
   motor?: 'anthropic' | 'gemini'
+  /** O que a pessoa falou no áudio, como o servidor entendeu. */
+  transcricao?: string
+}
+
+/** O que vai junto com a pergunta (19/11/2026): áudio, fotos ou quadros de um vídeo, em base64, e a conta da tela. */
+export interface Extras {
+  audio?: { mime: string; dados: string }
+  imagens?: Array<{ mime: string; dados: string }>
+  video?: boolean
+  contaAtual?: string
+  trocados?: boolean
 }
 
 /**
@@ -52,7 +63,7 @@ export interface Resposta {
  * custa dinheiro em todo turno e não ajuda a responder nada.
  */
 export async function perguntar(
-  sessao: SessaoTeeds, historico: Turno[], pergunta: string,
+  sessao: SessaoTeeds, historico: Turno[], pergunta: string, extras: Extras = {},
 ): Promise<Resposta> {
   let res: Response
   try {
@@ -62,12 +73,13 @@ export async function perguntar(
         Authorization: `Bearer ${sessao.token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ pergunta, historico, marca: MARCA.id }),
+      body: JSON.stringify({ pergunta, historico, marca: MARCA.id, ...extras }),
     })
   } catch {
     throw new Error(`Não consegui falar com o servidor da ${MARCA.prosa}. Tente de novo em instantes.`)
   }
   const corpo = await res.json().catch(() => ({} as any))
+  if (res.status === 413) throw new Error('O anexo ficou grande demais. Mande um áudio mais curto ou menos fotos.')
   if (!res.ok) throw new Error(corpo?.erro || `O servidor recusou o pedido (${res.status}).`)
   return corpo as Resposta
 }

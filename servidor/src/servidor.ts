@@ -28,7 +28,7 @@ import { nomeDoUsuario, sessoesGravadasPorVersao } from './supabase'
 import { parametrosPadrao } from '../../src/core/deriv/parametros'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../../src/core/deriv/strategies'
 import { PADRAO, conferir } from './limites'
-import { conversar, trocarChaveDaIA } from './chat'
+import { conversar, trocarChaveDaIA, type Anexos } from './chat'
 import { autorizacaoDoCliente, autorizacaoParaOperar, guardar } from './cofre'
 import { concluirLoginDoCliente, iniciarLoginDoCliente, type PedidoDoCliente } from './login-cliente'
 import { appDaVitrine, appValido, vitrineDoPedido } from './apps-parceiros'
@@ -926,8 +926,9 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
 
     let corpo: any = {}
     if (req.method === 'POST') {
-      const pedacos = await lerCorpoComTeto(req, 1_000_000)
-      if (!pedacos) return json(413, { erro: 'Pedido grande demais.' })
+      // o chat leva áudio e imagens (19/11/2026): 1,9 MB só nele, abaixo do teto de 2 MB do Caddy
+      const pedacos = await lerCorpoComTeto(req, url.pathname === '/api/chat' ? 1_900_000 : 1_000_000)
+      if (!pedacos) return json(413, { erro: url.pathname === '/api/chat' ? 'O anexo passou do tamanho máximo. Mande um áudio mais curto ou menos imagens.' : 'Pedido grande demais.' })
       const cru = Buffer.concat(pedacos).toString('utf8')
       if (cru) { try { corpo = JSON.parse(cru) } catch { return json(400, { erro: 'Pedido malformado.' }) } }
     }
@@ -1325,7 +1326,9 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       // texto — nunca a credencial, que nem chega a existir por la.
       if (url.pathname === '/api/chat' && req.method === 'POST') {
         const pergunta = String(corpo.pergunta ?? '').trim()
-        if (!pergunta) return json(400, { erro: 'Escreva alguma coisa.' })
+        const anexos = anexosDoChat(corpo)
+        if (typeof anexos === 'string') return json(400, { erro: anexos })
+        if (!pergunta && !anexos.audio && !anexos.imagens?.length) return json(400, { erro: 'Escreva alguma coisa.' })
         if (pergunta.length > 2000) return json(400, { erro: 'Mensagem longa demais.' })
         const historico = Array.isArray(corpo.historico) ? corpo.historico.slice(-12) : []
         const marcaDoChat = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
@@ -1335,7 +1338,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           return json(403, { erro: 'O assistente ainda não está disponível para a sua conta.' })
         }
         const somenteDemo = somenteDemoDoUsuario(dono)
-        return json(200, await conversar({ id: dono.id, somenteDemo }, historico, pergunta, marcaDoChat))
+        return json(200, await conversar({ id: dono.id, somenteDemo }, historico, pergunta, marcaDoChat, anexos))
       }
 
       // ---- acompanhar
@@ -1504,6 +1507,32 @@ servidor.listen(PORTA, '127.0.0.1', () => {
   console.log(`Supabase: ${supabaseConfigurado() ? 'ligado — as sessoes aparecem na tela do cliente' : 'nao configurado (rode servidor/chave.sh)'}`)
   console.log(`\nO endereco do MCP e uma senha: quem tiver ele comanda os robos.\n`)
 })
+
+/**
+ * Os anexos do chat (19/11/2026): um áudio, até 12 imagens (ou quadros de um vídeo), a conta aberta na tela e
+ * se os rótulos estão trocados. Tipo errado ou tamanho fora volta como texto de erro.
+ */
+function anexosDoChat(corpo: any): Anexos | string {
+  const base64 = /^[A-Za-z0-9+/]+={0,2}$/
+  const anexos: Anexos = {}
+  if (corpo.audio) {
+    const mime = String(corpo.audio.mime ?? '').split(';')[0].trim().toLowerCase()
+    const dados = String(corpo.audio.dados ?? '')
+    if (!/^audio\/(webm|mp4|ogg|mpeg|mp3|wav|x-wav|aac|x-m4a|m4a|flac|aiff)$/.test(mime)) return 'Formato de áudio não aceito.'
+    if (!dados || dados.length > 1_800_000 || !base64.test(dados)) return 'Áudio grande demais ou corrompido.'
+    anexos.audio = { mime, dados }
+  }
+  if (Array.isArray(corpo.imagens) && corpo.imagens.length) {
+    if (corpo.imagens.length > 12) return 'Mande até 12 imagens por vez.'
+    const imagens = corpo.imagens.map((i: any) => ({ mime: String(i?.mime ?? '').toLowerCase(), dados: String(i?.dados ?? '') }))
+    if (imagens.some((i: { mime: string; dados: string }) => !/^image\/(jpeg|png|webp)$/.test(i.mime) || !i.dados || !base64.test(i.dados))) return 'Formato de imagem não aceito.'
+    anexos.imagens = imagens
+    anexos.video = corpo.video === true
+  }
+  if (typeof corpo.contaAtual === 'string' && /^[A-Za-z0-9]{3,20}$/.test(corpo.contaAtual)) anexos.contaAtual = corpo.contaAtual
+  if (corpo.trocados === true) anexos.trocados = true
+  return anexos
+}
 
 /**
  * Lê o corpo do pedido com teto de tamanho (09/11/2026). Passou do teto: para de ler e devolve null

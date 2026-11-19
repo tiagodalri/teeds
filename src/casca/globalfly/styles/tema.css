@@ -207,7 +207,7 @@ h1, h2, h3, h4 { font-family: var(--fonte-marca); }
 :root[data-tema='escuro'] :is(
   .btn-login, .beta-entrar, .entrada-btn, .convite-botoes button, .sem-deriv-acoes button,
   .btn-conectar, .perfil-btn, .aula-proxima, .blocos-vazio button,
-  .market-hero-acoes button, .market-modal-compra button, .as-escrever button,
+  .market-hero-acoes button, .market-modal-compra button, .as-enviar:not(.as-microfone),
   .dig-escolha button.on, .dig-ticks button.on, .simr-botao, .robot-launch-next
 ) { color: var(--gf-azul); }
 .beta-entrar, .market-hero-acoes button, .market-modal-compra button {

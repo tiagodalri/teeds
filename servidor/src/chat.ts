@@ -301,6 +301,22 @@ export interface Resposta {
   falhaDaIA?: string
   /** Quem respondeu: a Anthropic (padrão) ou o Gemini, quando a Anthropic recusou (a tela avisa a administração). */
   motor?: 'anthropic' | 'gemini'
+  /** O que a pessoa falou no áudio, como o servidor entendeu (a tela mostra no balão dela). */
+  transcricao?: string
+}
+
+/**
+ * O que vem junto com a pergunta (19/11/2026, Tiago: "mandar áudio, mandar imagem, mandar vídeo").
+ * O áudio vira texto antes de tudo e segue o caminho de uma mensagem escrita. Imagens (e os quadros de um
+ * vídeo, tirados na tela) vão para o Gemini, que enxerga. `contaAtual` é a conta aberta na tela agora:
+ * "liga na minha conta" é ela. `trocados`: os rótulos real/demonstração estão trocados na tela desta pessoa.
+ */
+export interface Anexos {
+  audio?: { mime: string; dados: string }
+  imagens?: Array<{ mime: string; dados: string }>
+  video?: boolean
+  contaAtual?: string
+  trocados?: boolean
 }
 
 /*
@@ -461,6 +477,7 @@ async function pedirAoGemini(chave: string, corpo: Record<string, unknown>, mode
 async function conversarPeloGemini(
   dono: Dono, historico: Turno[], pergunta: string, marca: string, uso: { hoje: number; teto: number },
   contexto: { texto: string; lidos: Set<string> } = { texto: '', lidos: new Set() },
+  anexos: Anexos = {},
 ): Promise<Resposta> {
   const ferramentas = [{ functionDeclarations: FERRAMENTAS_GEMINI[0].functionDeclarations.filter((f) => !contexto.lidos.has(f.name)) }]
   const chave = await chaveDoGeminiGuardada()
@@ -468,7 +485,9 @@ async function conversarPeloGemini(
   const conteudo: Array<{ role: 'user' | 'model'; parts: ParteGemini[] | Array<Record<string, unknown>> }> = historico
     .slice(-MEMORIA)
     .map((t) => ({ role: t.papel === 'cliente' ? 'user' as const : 'model' as const, parts: [{ text: t.texto }] }))
-  conteudo.push({ role: 'user', parts: [{ text: pergunta }] })
+  const imagens = (anexos.imagens ?? []).map((i) => ({ inlineData: { mimeType: i.mime, data: i.dados } }))
+  const aviso = imagens.length ? (anexos.video ? `(São ${imagens.length} quadros de um vídeo, em ordem, tirados a intervalos iguais; o som não vem.) ` : '') : ''
+  conteudo.push({ role: 'user', parts: [...imagens, { text: aviso + pergunta }] })
 
   let proposta: Proposta | undefined
   const gasto = { entrada: 0, saida: 0, cache: 0, idas: 0 }
@@ -535,8 +554,11 @@ const regraDe = (r: { ganhaQuando: string; descricao?: string }) =>
 const propostaDireta = new Map<string, Proposta>()
 
 /** Resposta pronta, sem I.A., para as perguntas que só pedem um dado. Nada (null) quando a pergunta é outra coisa. */
-async function respostaDireta(dono: Dono, pergunta: string, marca: string): Promise<string | null> {
+async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexos: Anexos = {}): Promise<string | null> {
   const q = normalizar(pergunta)
+  // "opera com a Raptor, entrada de 1, meta de 10 e stop de 20" (escrito ou falado): o cartão na hora, de qualquer tamanho
+  const pedido = pedidoDeLigar(q, listarRobos(marca))
+  if (pedido) return cartaoDoPedido(dono, pedido, marca, anexos)
   if (q.length > 90) return null
   const gf = marca === 'globalfly'
   const IA = gf ? '(i ?a|ias?|inteligencias?)' : '(robos?|i ?a|ias?)'
@@ -592,6 +614,89 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string): Prom
   return null
 }
 
+/* ---------- o pedido de ligar, escrito ou falado (19/11/2026) */
+/*
+  Tiago: "se eu mandar um áudio 'opera com Raptor na minha conta, com entrada de $1, meta de $10 e stop de 20',
+  tem que entender e transformar em operação". Aqui o servidor lê a frase sozinho (sem esperar a I.A.):
+  o verbo de ligar, UMA I.A. citada pelo nome e os valores que vierem (entrada, meta, stop). O que faltar,
+  propor_sessao sugere. Continua sendo só o cartão: quem liga é o toque.
+*/
+const POR_EXTENSO: Record<string, number> = {
+  meio: 0.5, um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10,
+  onze: 11, doze: 12, treze: 13, quatorze: 14, catorze: 14, quinze: 15, dezesseis: 16, dezessete: 17, dezoito: 18, dezenove: 19,
+  vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50, sessenta: 60, setenta: 70, oitenta: 80, noventa: 90, cem: 100, duzentos: 200, quinhentos: 500, mil: 1000,
+}
+const NUM = `(\\d+(?:[.,]\\d+)?|${Object.keys(POR_EXTENSO).sort((a, b) => b.length - a.length).join('|')})`
+const valorDe = (t: string) => POR_EXTENSO[t] ?? Number(t.replace(',', '.'))
+const VERBO_DE_LIGAR = /\b(liga|ligar|ligue|liguem|opera|operar|opere|roda|rodar|rode|coloca|colocar|coloque|poe|por|inicia|iniciar|inicie|comeca|comecar|comece|bota|botar|bote|ativa|ativar|ative|aciona|acionar|acione|starta|startar|start|dispara|disparar)\b/
+const PERGUNTA = /^(como|qual|quais|o que|oque|por que|porque|quando|quanto|sera que|vale a pena|devo|e se)\b/
+
+export interface PedidoDeLigar { robo: string; nome: string; entrada?: number; meta?: number; stop?: number; tipo?: 'real' | 'demo' }
+
+export function pedidoDeLigar(q: string, robos: Array<{ id: string; nome: string }>): PedidoDeLigar | null {
+  if (PERGUNTA.test(q) || !VERBO_DE_LIGAR.test(q) || /\b(nao|nunca|para de|parar de|desliga)\b/.test(q)) return null
+  const chave = (n: string) => normalizar(n).replace(/^gf /, '')
+  const citadas = robos.filter((r) => new RegExp(`\\b${chave(r.nome)}\\b`).test(q) || new RegExp(`\\b${r.id}\\b`).test(q))
+  if (citadas.length !== 1) return null
+  // os valores: tira moeda e enfeite ("$1", "us$ 10", "10 dolares", "20 reais") para sobrar o número
+  const t = q.replace(/us ?\$|\$|usd|dolar(es)?|reais|real(?= (de|e)\b)/g, ' ').replace(/\s+/g, ' ')
+  const achar = (rotulo: string) => {
+    const m = t.match(new RegExp(`(?:${rotulo})(?: de| em| ate| no| para| pra)?(?: maximo| maxima)?(?: de)? ${NUM}\\b`))
+    return m ? valorDe(m[1]) : undefined
+  }
+  const entrada = achar('entrada(?: inicial)?|stake|valor(?: de entrada| inicial)?|mao') ?? (() => {
+    const m = t.match(new RegExp(`\\bcom ${NUM}\\b(?! (?:de )?(?:meta|stop|loss|limite|gain))`))
+    return m ? valorDe(m[1]) : undefined
+  })()
+  const meta = achar('meta(?: de ganho| de lucro| diaria)?|take(?: profit)?|alvo|objetivo|gain|lucro')
+  const stop = achar('stop(?: loss)?|limite(?: de perda)?|loss|perda(?: maxima)?|prejuizo')
+  const tipo = /\b(conta real|na real|em real|real)\b/.test(q.replace(/\breais\b/g, '')) ? 'real'
+    : /\b(demo|demonstracao|treino|virtual|teste|simulacao)\b/.test(q) ? 'demo' : undefined
+  const ok = (v?: number) => (v !== undefined && Number.isFinite(v) && v > 0 ? v : undefined)
+  return { robo: citadas[0].id, nome: citadas[0].nome, entrada: ok(entrada), meta: ok(meta), stop: ok(stop), tipo }
+}
+
+async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, anexos: Anexos): Promise<string> {
+  const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string }> }).contas
+  // a pessoa fala pelo que vê: com os rótulos trocados, a "real" da tela é a virtual
+  const tipoDeVerdade = pedido.tipo && anexos.trocados ? (pedido.tipo === 'real' ? 'demo' : 'real') : pedido.tipo
+  const conta = tipoDeVerdade
+    ? contas.find((c) => (tipoDeVerdade === 'real' ? c.tipo === 'real' : c.tipo !== 'real'))?.conta
+    : contas.find((c) => c.conta === anexos.contaAtual)?.conta
+  if (tipoDeVerdade && !conta) return `Não achei uma conta ${pedido.tipo === 'real' ? 'real' : 'de demonstração'} da Deriv ligada a este login.`
+  let proposta: Proposta | undefined
+  const r = await executar(dono, 'propor_sessao', {
+    robo: pedido.robo, ...(conta ? { conta } : {}),
+    ...(pedido.entrada ? { entrada: pedido.entrada } : {}), ...(pedido.meta ? { take_profit: pedido.meta } : {}), ...(pedido.stop ? { stop_loss: pedido.stop } : {}),
+  }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
+  if (r.recusado || !proposta) return r.motivo ?? 'Não consegui montar o cartão agora.'
+  propostaDireta.set(dono.id, proposta)
+  const rotulo = proposta.demo !== !!anexos.trocados ? 'de demonstração' : 'REAL'
+  const sugeridos = [!pedido.entrada && 'entrada', !pedido.meta && 'meta', !pedido.stop && 'stop'].filter(Boolean) as string[]
+  return `Pronto. A ${pedido.nome} está no cartão, na conta ${rotulo}:\n` +
+    `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
+    (sugeridos.length ? `${sugeridos.length === 1 ? 'Sugeri a' : 'Sugeri'} ${sugeridos.join(' e ').replace(/ e (?=.* e )/, ', ')} pelo seu saldo. ` : '') +
+    'Confira e toque em Ligar.'
+}
+
+/** O áudio em texto, pelo Gemini (que escuta). Números em algarismos, para o pedido de ligar ler os valores. */
+export async function transcrever(audio: { mime: string; dados: string }, marca: string): Promise<{ texto: string; gasto: { entrada: number; saida: number } }> {
+  const chave = await chaveDoGeminiGuardada()
+  if (!chave) throw new Error('não há chave do Gemini guardada')
+  const nomes = listarRobos(marca).map((r) => r.nome.replace(/^GF /, '')).join(', ')
+  const ida = await pedirAoGemini(chave, {
+    systemInstruction: { parts: [{ text:
+      'Você transcreve áudios curtos de clientes de uma plataforma de operações na corretora Deriv. ' +
+      'Devolva só o que a pessoa falou, em português do Brasil, sem comentário, sem aspas, sem "a pessoa disse". ' +
+      'Escreva números com algarismos (1, 10, 20, 1,50) e dinheiro como "1 dólar". ' +
+      `Nomes que podem aparecer: ${nomes}, Deriv, Volatility 75, stop, meta, entrada, gale. ` +
+      'Se não houver fala, devolva vazio.' }] },
+    contents: [{ role: 'user', parts: [{ inlineData: { mimeType: audio.mime, data: audio.dados } }, { text: 'Transcreva este áudio.' }] }],
+  })
+  const texto = ida.partes.filter((p) => p.text && !p.thought).map((p) => p.text).join(' ').replace(/\s+/g, ' ').trim()
+  return { texto, gasto: ida.uso }
+}
+
 /** Os dados desta conta, lidos juntos antes de chamar a I.A. (cada um com 4 s de prazo; o que falhar fica de fora). */
 async function dadosDaConta(dono: Dono, marca: string): Promise<{ texto: string; lidos: Set<string> }> {
   const prazo = <T,>(p: Promise<T>) => Promise.race([p, new Promise<T>((_, nao) => setTimeout(() => nao(new Error('prazo')), 4000))])
@@ -616,7 +721,7 @@ async function dadosDaConta(dono: Dono, marca: string): Promise<{ texto: string;
  * entra numa resposta — ela não passa por aqui, fica dentro de `sessoes.ts`.
  */
 export async function conversar(
-  dono: Dono, historico: Turno[], pergunta: string, marca = 'teeds',
+  dono: Dono, historico: Turno[], perguntaEscrita: string, marca = 'teeds', anexos: Anexos = {},
 ): Promise<Resposta> {
   const limites = await limitesDe(dono)
   // O custo do chat é contado por plataforma: o da OMNI não some no da Teeds.
@@ -629,15 +734,47 @@ export async function conversar(
     }
   }
 
+  // 0) áudio: vira texto antes de tudo (e segue o caminho de uma mensagem escrita)
+  let pergunta = perguntaEscrita
+  let transcricao: string | undefined
+  if (anexos.audio) {
+    try {
+      const t0 = Date.now()
+      const ouvido = await transcrever(anexos.audio, marca)
+      console.log(`[chat] (áudio) cliente ${dono.id.slice(0, 8)}… transcrito em ${Date.now() - t0} ms`)
+      void registrarGastoDoChat(dono.id, { ...ouvido.gasto, cache: 0, idas: 1 }, marca)
+      transcricao = ouvido.texto
+    } catch (e) {
+      console.error(`[chat] (áudio) não transcreveu: ${(e as Error).message}`)
+      return { texto: 'Não consegui ouvir o áudio agora. Tente de novo em instantes, ou escreva.', uso: { hoje, teto: limites.mensagensPorDia } }
+    }
+    if (!transcricao) return { texto: 'Não entendi nada no áudio. Pode gravar de novo, mais perto do microfone?', uso: { hoje, teto: limites.mensagensPorDia }, transcricao: '' }
+    pergunta = [perguntaEscrita, transcricao].filter(Boolean).join('\n')
+  }
+  const comImagem = !!anexos.imagens?.length
+  if (comImagem && !pergunta) pergunta = anexos.video ? 'O que aparece neste vídeo? Explique o que for útil para operar na plataforma.' : 'O que aparece nesta imagem? Explique o que for útil para operar na plataforma.'
+  const comTranscricao = <T extends Resposta>(r: T): T => (transcricao !== undefined ? { ...r, transcricao } : r)
+
   // 1) pergunta de dado fixo: resposta na hora, sem I.A. (não conta no limite do dia)
-  const direta = await respostaDireta(dono, pergunta, marca).catch((e) => { console.warn(`[chat] resposta direta falhou: ${(e as Error).message}`); return null })
+  const direta = comImagem ? null : await respostaDireta(dono, pergunta, marca, anexos).catch((e) => { console.warn(`[chat] resposta direta falhou: ${(e as Error).message}`); return null })
   if (direta) {
     console.log(`[chat] (direto) cliente ${dono.id.slice(0, 8)}…`)
     const proposta = propostaDireta.get(dono.id); propostaDireta.delete(dono.id)
-    return { texto: direta, proposta, uso: { hoje, teto: limites.mensagensPorDia } }
+    return comTranscricao({ texto: direta, proposta, uso: { hoje, teto: limites.mensagensPorDia } })
   }
   // 2) os dados da conta vão junto: a I.A. responde numa ida só
   const contexto = await dadosDaConta(dono, marca)
+  if (anexos.contaAtual) contexto.texto += `\nA conta aberta na tela do cliente agora é ${anexos.contaAtual}: quando ele disser "minha conta" ou não disser qual, é ela.`
+  if (anexos.trocados) contexto.texto += '\nNa tela deste cliente os nomes das contas estão trocados (uso interno): chame a conta real de "demonstração" e a de demonstração de "real", e entenda o que ele disser do mesmo jeito.'
+
+  // imagem e vídeo: só o Gemini enxerga aqui
+  if (comImagem) {
+    const pelo = await conversarPeloGemini(dono, historico, pergunta, marca, { hoje, teto: limites.mensagensPorDia }, contexto, anexos).catch((g) => {
+      console.error(`[chat] (imagem) o Gemini falhou: ${(g as Error).message}`)
+      return null
+    })
+    return pelo ?? { texto: 'Não consegui ver a imagem agora. Tente de novo em instantes.', uso: { hoje, teto: limites.mensagensPorDia } }
+  }
 
   // a Anthropic recusou há pouco por causa da conta: nem tenta de novo (cada tentativa atrasa a resposta)
   if (anthropicRecusada && Date.now() - anthropicRecusada.em < 10 * 60_000) {
@@ -645,7 +782,7 @@ export async function conversar(
       console.error(`[chat] o Gemini falhou: ${(g as Error).message}`)
       return null
     })
-    if (pelo) return pelo
+    if (pelo) return comTranscricao(pelo)
     anthropicRecusada = null
   }
 
@@ -701,7 +838,7 @@ export async function conversar(
           console.error(`[chat] o Gemini também falhou: ${(g as Error).message}`)
           return null
         })
-        if (pelo) return pelo
+        if (pelo) return comTranscricao(pelo)
       }
       if (gasto.idas > 0) anotar()
       return {
@@ -725,7 +862,7 @@ export async function conversar(
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
         .map((b) => b.text).join('\n').trim()
       anotar()
-      return { texto, proposta, uso: { hoje, teto: limites.mensagensPorDia } }
+      return comTranscricao({ texto, proposta, uso: { hoje, teto: limites.mensagensPorDia } })
     }
 
     mensagens.push({ role: 'assistant', content: resposta.content })

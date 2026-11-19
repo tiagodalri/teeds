@@ -1884,6 +1884,7 @@ export default function App() {
             rotulosTrocados={conta.rotulosTrocados}
             demoComoReal={conta.somenteDemo}
             administracao={admin === true}
+            contaAtual={conta.account?.accountId}
           />
         </div>
       )}
