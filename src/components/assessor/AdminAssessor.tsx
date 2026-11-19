@@ -58,7 +58,7 @@ export function AdminAssessor({ sessao }: { sessao: SessaoTeeds }) {
 
         {estado?.conectado && !trocar && (
           <div className="aas-ok">
-            <div className="aas-numero"><span>Número do assessor</span><b>{numeroBonito(estado.numero) || 'lendo…'}</b></div>
+            <div className="aas-numero"><span>Número do assessor</span><b>{numeroBonito(estado.numero) || 'Lendo…'}</b></div>
             {estado.celularOnline === false && <p className="aas-nota aviso">O celular do assessor está sem internet agora. As mensagens continuam chegando; abra o WhatsApp nele de vez em quando para a conexão não cair.</p>}
             <p className="aas-nota">Os clientes liberados confirmam o número em <b>Meu perfil › WhatsApp do Assessor</b> e já podem conversar. Por enquanto só a sua conta está liberada.</p>
             <div className="aas-acoes">
