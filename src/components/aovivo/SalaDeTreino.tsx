@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CantoDaCamera } from '../../core/live/api'
 import {
-  abrirChatDoTreino, ajustar, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, pararSimulacao, useSimulacao,
+  abrirChatDoTreino, ajustar, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, mudarVelocidade, pararSimulacao, useSimulacao,
   type Momento, type Oscilacao, type Ritmo,
 } from '../../core/live/simulacao'
 import './aovivo.css'
@@ -49,6 +49,12 @@ const ICONE: Record<string, string> = {
   microfone: 'M12 3a3 3 0 013 3v6a3 3 0 01-6 0V6a3 3 0 013-3zM5 11a7 7 0 0014 0M12 18v3',
 }
 const fmt = (n: number) => n.toLocaleString('pt-BR')
+/** O − e o + do público: passos que acompanham o tamanho da sala (50 em 50 até 500, 100 até 2 mil, 500 depois). */
+function passoDoPublico(atual: number, sentido: 1 | -1): number {
+  const passo = atual + (sentido > 0 ? 0 : -1) < 500 ? 50 : atual + (sentido > 0 ? 0 : -1) < 2000 ? 100 : 500
+  const alvo = sentido > 0 ? Math.floor(atual / passo) * passo + passo : Math.ceil(atual / passo) * passo - passo
+  return Math.max(50, Math.min(50000, alvo))
+}
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 const MOMENTOS: Array<{ id: Momento; rotulo: string; dica: string }> = [
@@ -185,7 +191,13 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   // decidido uma vez ao abrir: estreitar a janela no meio da live não troca o modo (a imagem do painel segue indo)
   const [computador] = useState(() => typeof window !== 'undefined' && !ehCelular())
   const comEstudio = computador
-  const [pop, setPop] = useState<'destino' | 'sala' | 'historico' | null>(null)
+  const [pop, setPop] = useState<'destino' | 'sala' | 'historico' | 'mais' | null>(null)
+  // 19/11/2026: no ar, o painel mostra só o comando; os ajustes de antes abrem aqui
+  const [ajustes, setAjustes] = useState(false)
+  useEffect(() => { setAjustes(false); setPop(null) }, [sim.ativa])
+  // a lixeira do chat arma no 1º clique e apaga no 2º (volta sozinha em 4 s)
+  const [limparArmado, setLimparArmado] = useState(false)
+  useEffect(() => { if (!limparArmado) return; const t = window.setTimeout(() => setLimparArmado(false), 4000); return () => window.clearTimeout(t) }, [limparArmado])
   const [confirmarFim, setConfirmarFim] = useState(false)
   // o "Encerrar agora" volta sozinho a "Encerrar transmissão" depois de 5 s (não fica armado)
   useEffect(() => {
@@ -441,8 +453,9 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     const publicoNaTela = sim.ativa ? sim.publicoAgora : sim.publicoAlvo
     const foraDaSala = tr.fase === 'erro' || tr.fase === 'fora'
     const iaEstado = !sim.ativa ? 'espera' : sim.pausada ? 'pausada' : 'ligada'
-    const pill = (qual: 'destino' | 'sala' | 'historico', conteudo: React.ReactNode, extra = '', titulo?: string) => (
-      <button type="button" className={`ps-pill ${pop === qual ? 'on' : ''} ${extra}`} aria-expanded={pop === qual} aria-haspopup="dialog" title={titulo} onClick={() => setPop(pop === qual ? null : qual)}>
+    const comandando = sim.ativa && !ajustes
+    const pill = (qual: 'destino' | 'sala' | 'historico' | 'mais', conteudo: React.ReactNode, extra = '', titulo?: string, nome?: string) => (
+      <button type="button" className={`ps-pill ${pop === qual ? 'on' : ''} ${extra}`} aria-expanded={pop === qual} aria-haspopup="dialog" title={titulo} aria-label={nome} onClick={() => setPop(pop === qual ? null : qual)}>
         {conteudo}<svg className="ps-pill-seta" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
       </button>
     )
@@ -451,14 +464,14 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         <header className="cv-app-topo ps-topo">
           <div className="cv-app-marca">
             {MARCA.id === 'globalfly' && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
-            <span><b>Sala de treino</b><small>Painel da transmissão</small></span>
+            <span><b>Sala de treino</b></span>
           </div>
           <div className={`ps-estado ${sim.ativa ? 'vivo' : ''} ${tr.teste ? 'teste' : ''}`}>
             <i aria-hidden />
             <span><b role="status">{sim.ativa ? (tr.teste ? 'Teste no ar' : 'Ao vivo') : 'Fora do ar'}</b>{sim.ativa ? <small className="cv-num ps-relogio" aria-label="Tempo no ar">{relogio(Date.now() - central.noArDesde)}</small> : <small>Pronto para começar</small>}</span>
           </div>
           <div className="ps-pills" ref={pills}>
-            {sessao && (
+            {sessao && !sim.ativa && (
               <div className="ps-pill-caixa">
                 {pill('destino', <><small>Para</small><span className="ps-pill-txt">{destino}</span></>, tr.teste ? 'teste' : '')}
                 {pop === 'destino' && (
@@ -480,11 +493,22 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                 )}
               </div>
             )}
-            {sessao && (
+            {sessao && !sim.ativa && (
               <div className="ps-pill-caixa">
                 {pill('historico', <span className="ps-pill-txt">Histórico</span>)}
                 {pop === 'historico' && (
                   <div className="cv-app-pop ps-pop ps-pop-historico ps-pop-direita" role="dialog" aria-label="Histórico das transmissões">
+                    <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto />
+                  </div>
+                )}
+              </div>
+            )}
+            {sessao && sim.ativa && (
+              <div className="ps-pill-caixa">
+                {pill('mais', <span className="ps-pill-txt" aria-hidden>⋯</span>, 'ps-pill-mais', 'Para quem vai e histórico', 'Mais: para quem vai e histórico')}
+                {pop === 'mais' && (
+                  <div className="cv-app-pop ps-pop ps-pop-historico" role="dialog" aria-label="Para quem vai e histórico">
+                    <p className="ps-pop-linha"><small>Para</small><b>{destino}</b></p>
                     <HistoricoDasTransmissoes sessao={sessao} noAr={sim.ativa} compacto />
                   </div>
                 )}
@@ -509,19 +533,25 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         {erro && <p className="av-erro cv-app-erro" role="alert">{erro}</p>}
 
         <div className="ps-corpo">
-          <aside className="ps-lado ps-esquerda" aria-label="Público e comentários">
+          <aside className={`ps-lado ps-esquerda ${comandando ? 'comandando' : ''}`} aria-label="Público e comentários">
             <section className={`ps-card ps-card-publico ${sim.ativa ? 'vivo' : ''}`}>
               <h3>Público na tela <small>O que os alunos veem</small></h3>
-              <div className="ps-numero"><b className="cv-num">{fmt(publicoNaTela)}</b><span>{sim.ativa && sim.publicoAgora !== sim.publicoAlvo ? <>Pessoas · indo para <b className="cv-num">{fmt(sim.publicoAlvo)}</b></> : 'Pessoas'}</span></div>
+              <div className="ps-numero-linha">
+                <button type="button" className="ps-passo" aria-label="Menos pessoas" disabled={sim.publicoAlvo <= 50} onClick={() => ajustar({ publicoAlvo: passoDoPublico(sim.publicoAlvo, -1) })}>−</button>
+                <div className="ps-numero"><b className="cv-num">{fmt(publicoNaTela)}</b><span>{sim.ativa && sim.publicoAgora !== sim.publicoAlvo ? <>Indo para <b className="cv-num">{fmt(sim.publicoAlvo)}</b></> : 'Pessoas'}</span></div>
+                <button type="button" className="ps-passo" aria-label="Mais pessoas" onClick={() => ajustar({ publicoAlvo: passoDoPublico(sim.publicoAlvo, 1) })}>+</button>
+              </div>
               <input className="ps-barra" type="range" min={50} max={10000} step={50} value={Math.min(10000, sim.publicoAlvo)} aria-label="Pessoas na tela"
                 style={{ '--ps-barra': `${Math.round(((Math.min(10000, sim.publicoAlvo) - 50) / 9950) * 100)}%` } as React.CSSProperties}
                 onChange={(e) => ajustar({ publicoAlvo: Number(e.target.value) })} />
-              <div className="ps-prontos" role="group" aria-label="Tamanhos prontos">
-                {[100, 500, 1000, 2000, 5000].map((n) => <button key={n} type="button" className={sim.publicoAlvo === n ? 'on' : ''} aria-pressed={sim.publicoAlvo === n} onClick={() => ajustar({ publicoAlvo: n })}>{fmt(n)}</button>)}
-                <label className="ps-outro" title="Outro número"><span className="av-oculto">Outro número</span><input type="number" min={1} max={50000} value={sim.publicoAlvo} onChange={(e) => { const n = Math.round(Number(e.target.value)); if (n > 0) ajustar({ publicoAlvo: Math.min(50000, n) }) }} /></label>
-              </div>
-              <span className="ps-rotulo">Variação do número</span>
-              {segmentado<Oscilacao>(sim.oscilacao, [['baixa', 'Pouca'], ['media', 'Média'], ['alta', 'Muita']], (v) => ajustar({ oscilacao: v }), 'Variação do público')}
+              {!comandando && <>
+                <div className="ps-prontos" role="group" aria-label="Tamanhos prontos">
+                  {[100, 500, 1000, 2000, 5000].map((n) => <button key={n} type="button" className={sim.publicoAlvo === n ? 'on' : ''} aria-pressed={sim.publicoAlvo === n} onClick={() => ajustar({ publicoAlvo: n })}>{fmt(n)}</button>)}
+                  <label className="ps-outro" title="Outro número"><span className="av-oculto">Outro número</span><input type="number" min={50} max={50000} value={sim.publicoAlvo} onChange={(e) => { const n = Math.round(Number(e.target.value)); if (n > 0) ajustar({ publicoAlvo: Math.min(50000, n) }) }} /></label>
+                </div>
+                <span className="ps-rotulo">Variação do número</span>
+                {segmentado<Oscilacao>(sim.oscilacao, [['baixa', 'Pouca'], ['media', 'Média'], ['alta', 'Muita']], (v) => ajustar({ oscilacao: v }), 'Variação do público')}
+              </>}
             </section>
 
             <section className={`ps-card ps-card-ia ia-${iaEstado}`}>
@@ -532,32 +562,49 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                   </button>
                   : <span className="ps-ia-estado espera"><i aria-hidden />Começam com a live</span>}
               </h3>
-              <span className="ps-rotulo">Velocidade</span>
-              {segmentado<Ritmo>(sim.ritmo, [['calmo', 'Calmo'], ['normal', 'Normal'], ['agitado', 'Agitado']], (v) => ajustar({ ritmo: v }), 'Velocidade dos comentários')}
-              <span className="ps-rotulo">Assunto agora <small>Um toque muda o assunto por alguns segundos</small></span>
+              {!comandando && <>
+                <span className="ps-rotulo">Velocidade <small>Vale para os comentários e para os roteiros</small></span>
+                {segmentado<Ritmo>(sim.ritmo, [['calmo', 'Calmo'], ['normal', 'Normal'], ['agitado', 'Agitado']], (v) => { ajustar({ ritmo: v }); mudarVelocidade(v === 'calmo' ? 'lenta' : v === 'agitado' ? 'rapida' : 'normal') }, 'Velocidade dos comentários')}
+              </>}
+              <span className="ps-rotulo">Assunto agora{!comandando && <small>Um toque muda o assunto por alguns segundos</small>}</span>
               <div className="ps-chips">
                 {MOMENTOS.map((m) => (
                   <button key={m.id} type="button" className={sim.momento === m.id ? 'on' : ''} aria-pressed={sim.momento === m.id} disabled={!sim.ativa} title={sim.ativa ? m.dica : 'Liberado quando a transmissão começar'} onClick={() => dispararMomento(m.id)}>{m.rotulo}</button>
                 ))}
               </div>
-              <BlocosDoChat sessao={sessao} embutido />
-              <button type="button" className="ps-limpar" onClick={limparChat}>Limpar o chat</button>
+              <BlocosDoChat sessao={sessao} embutido comandando={comandando} />
             </section>
+
+            {sim.ativa && (
+              <button type="button" className={`ps-ajustes ${ajustes ? 'on' : ''}`} aria-expanded={ajustes} onClick={() => setAjustes(!ajustes)}>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4" /></svg>
+                {ajustes ? 'Fechar os ajustes' : 'Ajustes da live'}
+                <small>{ajustes ? 'Volta ao modo comando' : 'Números prontos, variação, velocidade e roteiros'}</small>
+              </button>
+            )}
           </aside>
 
           <main className="ps-centro"><PainelDaSala /></main>
 
           <aside className="ps-lado ps-direita" aria-label="Chat e números da live">
             <div className="ps-agora" role="group" aria-label="Números da live">
-              <div title="Membros de verdade na sala agora"><small>Na sala</small><b className="cv-num">{tr.membros}</b></div>
-              <div><small>Pico</small><b className="cv-num">{central.pico}</b></div>
-              <div><small>Passaram</small><b className="cv-num">{central.pessoas.size}</b></div>
+              <div title={`Membros de verdade na sala agora · pico ${central.pico} · passaram ${central.pessoas.size}`}><small>Na sala agora</small><b className="cv-num">{tr.membros}</b></div>
               <div className={naoRespondidas > 0 ? 'alerta' : ''} title="Mensagens de membros ainda sem resposta"><small>A responder</small><b className="cv-num">{naoRespondidas}</b></div>
             </div>
             <div className="ps-chat">
               <div className="ps-chat-topo">
-                <span>Membros podem escrever</span>
-                <button type="button" className={`av-chave-chat ${sim.chatAberto ? 'on' : ''}`} aria-pressed={sim.chatAberto} onClick={() => abrirChatDoTreino(!sim.chatAberto)}><i aria-hidden />{sim.chatAberto ? 'Aberto' : 'Fechado'}</button>
+                <b>Chat</b>
+                <span className="cv-app-espaco" />
+                <button type="button" className={`ps-chat-cadeado ${sim.chatAberto ? '' : 'fechado'}`} aria-label={sim.chatAberto ? 'Chat aberto para os membros. Fechar' : 'Chat fechado para os membros. Abrir'} onClick={() => abrirChatDoTreino(!sim.chatAberto)}
+                  title={sim.chatAberto ? 'Os membros podem escrever. Clique para fechar o chat.' : 'Chat fechado para os membros. Clique para abrir.'}>
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={sim.chatAberto ? 'M6 11h12v9H6zM8 11V7a4 4 0 017.5-2' : 'M6 11h12v9H6zM8 11V7a4 4 0 018 0v4'} /></svg>
+                  {sim.chatAberto ? 'Aberto' : 'Fechado'}
+                </button>
+                <button type="button" className={`ps-chat-limpar ${limparArmado ? 'armado' : ''}`} onClick={() => { if (limparArmado) { limparChat(); setLimparArmado(false) } else setLimparArmado(true) }}
+                  title={limparArmado ? 'Clique de novo para apagar todas as mensagens' : 'Limpar o chat'} aria-label={limparArmado ? 'Confirmar: apagar todas as mensagens do chat' : 'Limpar o chat'}>
+                  {limparArmado && <span>Apagar tudo?</span>}
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg>
+                </button>
               </div>
               {chatDaSala}
             </div>

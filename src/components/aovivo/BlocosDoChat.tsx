@@ -29,7 +29,8 @@ const ICONES = {
 }
 
 /** `embutido` (18/11/2026): dentro do cartão "Comentários da I.A." do painel da sala, como "Roteiros prontos". */
-export function BlocosDoChat({ sessao, embutido = false }: { sessao: SessaoTeeds | null; embutido?: boolean }) {
+/** `comandando` (19/11/2026): durante a live, só a lista com o play (editar e criar ficam para antes). */
+export function BlocosDoChat({ sessao, embutido = false, comandando = false }: { sessao: SessaoTeeds | null; embutido?: boolean; comandando?: boolean }) {
   const sim = useSimulacao()
   const [blocos, setBlocos] = useState<BlocoDoChat[] | null>(null)
   const [erro, setErro] = useState<string | null>(null)
@@ -59,12 +60,14 @@ export function BlocosDoChat({ sessao, embutido = false }: { sessao: SessaoTeeds
   return (
     <section className={embutido ? 'bc bc-embutido' : 'cv-card bc'}>
       <h4>{embutido ? 'Roteiros prontos' : 'Blocos de mensagens'} {blocos && blocos.length > 0 && <small className="cv-num" title={`${total} mensagens aprovadas`}>{blocos.length} {embutido ? (blocos.length === 1 ? 'roteiro' : 'roteiros') : blocos.length === 1 ? 'bloco' : 'blocos'}</small>}</h4>
-      <span className="tr-legenda">{embutido ? 'Mensagens que você aprova antes. Na hora certa, dê o play e elas entram no chat.' : 'Prepare e aprove as mensagens antes. Na hora certa, dê o play e elas entram no chat.'}</span>
-
-      <span className="tr-rotulo">{embutido ? 'Velocidade do roteiro' : 'Velocidade'}</span>
-      <div className="tr-seg" role="radiogroup" aria-label={embutido ? 'Velocidade do roteiro' : 'Velocidade do bloco'}>
-        {VELOCIDADES.map(([v, r]) => <button key={v} role="radio" aria-checked={sim.velocidade === v} className={sim.velocidade === v ? 'on' : ''} onClick={() => mudarVelocidade(v)}>{r}</button>)}
-      </div>
+      {!embutido && <>
+        <span className="tr-legenda">Prepare e aprove as mensagens antes. Na hora certa, dê o play e elas entram no chat.</span>
+        <span className="tr-rotulo">Velocidade</span>
+        <div className="tr-seg" role="radiogroup" aria-label="Velocidade do bloco">
+          {VELOCIDADES.map(([v, r]) => <button key={v} role="radio" aria-checked={sim.velocidade === v} className={sim.velocidade === v ? 'on' : ''} onClick={() => mudarVelocidade(v)}>{r}</button>)}
+        </div>
+      </>}
+      {embutido && !comandando && <span className="tr-legenda">Mensagens que você aprova antes. Na live, um play e elas entram no chat.</span>}
 
       {tocando && (
         <div className="bc-tocando" role="status">
@@ -93,12 +96,16 @@ export function BlocosDoChat({ sessao, embutido = false }: { sessao: SessaoTeeds
                         onClick={() => (esta ? pararBloco() : tocarBloco(b.id, b.nome, b.mensagens))}>
                         {esta ? <i className="bc-quadrado" aria-hidden /> : <i className="bc-triangulo" aria-hidden />}
                       </button>
-                      <button type="button" className="bc-nome" onClick={() => setEditando(b)}>
+                      <button type="button" className="bc-nome" disabled={comandando && !esta && !b.mensagens.length}
+                        title={comandando ? (esta ? 'Parar' : b.mensagens.length ? 'Mandar para o chat' : 'Aprove mensagens para dar o play') : 'Editar'}
+                        onClick={() => (comandando ? (esta ? pararBloco() : b.mensagens.length && tocarBloco(b.id, b.nome, b.mensagens)) : setEditando(b))}>
                         <b>{b.nome || 'Sem nome'}</b>
                         <small><span className="cv-num">{b.mensagens.length}</span> {b.mensagens.length === 1 ? 'mensagem' : 'mensagens'}{b.revisar.length > 0 && <em> · {b.revisar.length} para revisar</em>}</small>
                       </button>
-                      <button type="button" className="bc-ico" aria-label={`Editar o bloco ${b.nome}`} title="Editar" onClick={() => setEditando(b)}><Icone d={ICONES.lapis} /></button>
-                      <button type="button" className="bc-ico perigo" aria-label={`Apagar o bloco ${b.nome}`} title="Apagar" onClick={() => void apagar(b)}><Icone d={ICONES.lixo} /></button>
+                      {!comandando && <>
+                        <button type="button" className="bc-ico" aria-label={`Editar o bloco ${b.nome}`} title="Editar" onClick={() => setEditando(b)}><Icone d={ICONES.lapis} /></button>
+                        <button type="button" className="bc-ico perigo" aria-label={`Apagar o bloco ${b.nome}`} title="Apagar" onClick={() => void apagar(b)}><Icone d={ICONES.lixo} /></button>
+                      </>}
                     </li>
                   )
                 })}
@@ -106,7 +113,7 @@ export function BlocosDoChat({ sessao, embutido = false }: { sessao: SessaoTeeds
             )}
 
       {erro && <p className="av-erro" role="alert">{erro}</p>}
-      {sessao && <button type="button" className="bc-novo" onClick={() => setEditando('novo')}><Icone d={ICONES.mais} />{embutido ? 'Criar roteiro com a I.A.' : 'Novo bloco'}</button>}
+      {sessao && !comandando && <button type="button" className="bc-novo" onClick={() => setEditando('novo')}><Icone d={ICONES.mais} />{embutido ? 'Criar roteiro com a I.A.' : 'Novo bloco'}</button>}
       {sessao && !sim.ativa && blocos && blocos.length > 0 && <span className="tr-legenda">O play fica liberado quando a transmissão começar.</span>}
 
       {editando && sessao && (

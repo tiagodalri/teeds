@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   alternarAparelho, aplicarModelo, apagarCena, cenaPorId, colocarNoAr, criarTela, desenharMiniatura, duplicarTela, enviarArquivo,
-  fecharAviso, iniciarEstudio, liberarSom, microfoneMudo, moverCena, nivelDoCanal, saidaDoEstudio, situacaoDoAparelho, telaAoVivo, useEstudio,
+  estudioAgora, fecharAviso, iniciarEstudio, liberarSom, microfoneMudo, moverCena, nivelDoCanal, saidaDoEstudio, situacaoDoAparelho, telaAoVivo, useEstudio,
   type Aparelho,
 } from '../../core/live/estudio/motor'
 import { MODELOS, infoDoModelo } from '../../core/live/estudio/modelo'
@@ -344,11 +344,24 @@ export function PainelDaSala() {
   // atalhos: 1 a 9 põem a tela no ar (fora de campos de texto e de janelas)
   useEffect(() => {
     const f = (ev: KeyboardEvent) => {
-      if (editando || novaAberta || ev.metaKey || ev.ctrlKey || ev.altKey || ev.repeat) return
+      if (editando || novaAberta || ev.metaKey || ev.ctrlKey || ev.altKey) return
       const alvo = ev.target as HTMLElement | null
-      if (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable)) return
+      // campos de digitar ficam de fora; a barra do público e as caixinhas não (o espaço segue trocando a tela)
+      const deTexto = alvo instanceof HTMLInputElement ? !['range', 'checkbox', 'radio', 'button'].includes(alvo.type) : false
+      if (alvo && (deTexto || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable)) return
       // outra janela aberta (a dos roteiros da I.A., por exemplo): os números não trocam a tela no ar
       if (document.querySelector('[aria-modal="true"], .ps-pop')) return
+      // barra de espaço: a próxima tela (o botão em foco não recebe o espaço)
+      if (ev.code === 'Space') {
+        ev.preventDefault()
+        ;(document.activeElement as HTMLElement | null)?.blur?.()
+        if (ev.repeat) return
+        const i = cenas.findIndex((c) => c.id === estudioAgora().config.programa)
+        const prox = cenas[i + 1]
+        if (prox) colocarNoAr(prox.id)
+        return
+      }
+      if (ev.repeat) return
       const n = Number(ev.key)
       if (n >= 1 && n <= 9 && cenas[n - 1]) { ev.preventDefault(); colocarNoAr(cenas[n - 1].id) }
     }
@@ -360,8 +373,8 @@ export function PainelDaSala() {
 
   const noAr = cenaPorId(e.config.programa)
   const abertura = telaDeAbertura(cenas)
-  const aoVivo = cenas.find((c) => c.modelo?.tipo === 'aovivo')
-  const naAbertura = !!abertura && e.config.programa === abertura.id
+  const indice = cenas.findIndex((c) => c.id === e.config.programa)
+  const proxima = indice >= 0 ? cenas[indice + 1] : cenas[0]
   const entrando = e.transicao?.para
   // a tela no ar depende da tela compartilhada ou da câmera, e ela está desligada?
   const precisa = (c: Cena | undefined): Aparelho | null => {
@@ -375,11 +388,6 @@ export function PainelDaSala() {
   return (
     <section className="ps" aria-label="Telas da transmissão" onPointerDown={() => { if (e.somBloqueado) void liberarSom() }}>
       {e.aviso && <div className="ps-faixa-aviso" role="status"><span>{e.aviso}</span><button type="button" aria-label="Fechar aviso" onClick={fecharAviso}><Icone d={ICONES.x} /></button></div>}
-      {!sala.ativa
-        ? <p className="ps-guia"><i aria-hidden />Ao começar, os alunos veem primeiro a tela <b>{abertura?.nome ?? 'de abertura'}</b>. Quando estiver pronto, clique em <b>{aoVivo?.nome ?? 'Ao vivo'}</b>.</p>
-        : naAbertura && aoVivo
-          ? <p className="ps-guia"><i aria-hidden />Os alunos estão vendo <b>{abertura!.nome}</b>. Quando estiver pronto: <button type="button" className="ps-guia-botao" onClick={() => colocarNoAr(aoVivo.id)}>Ir para {aoVivo.nome}</button></p>
-          : null}
       {falta && (
         <p className="ps-guia ps-guia-alerta" role="alert"><i aria-hidden />A tela <b>{noAr?.nome}</b> usa {falta === 'tela' ? 'a tela compartilhada' : 'a câmera'}, que está desligada{sala.ativa ? ': os alunos estão vendo preto.' : '.'}
           <button type="button" className="ps-guia-botao" onClick={() => alternarAparelho(falta)}>{falta === 'tela' ? 'Compartilhar a tela' : 'Ligar a câmera'}</button></p>
@@ -389,13 +397,26 @@ export function PainelDaSala() {
         <Monitor pronto={e.pronto} />
         {entrando && <span key={entrando} className="ps-monitor-troca" aria-hidden style={{ animationDuration: `${e.config.duracaoMs}ms` }} />}
         <span className="ps-selo"><i aria-hidden />{sala.ativa ? 'No ar' : 'Prévia'} · {noAr?.nome}</span>
-        <span className="ps-etiqueta">{sala.ativa ? 'O que os alunos estão vendo' : 'O que os alunos vão ver'}</span>
         {e.somBloqueado && <button type="button" className="ps-som" onClick={() => void liberarSom()}>Clique para liberar o som</button>}
       </figure>
 
+      {/* o comando da live: o que está no ar e a próxima tela, num botão grande (ou na barra de espaço) */}
+      <div className={`ps-comando ${sala.ativa ? 'vivo' : ''}`}>
+        <div className="ps-comando-agora">
+          <small>{sala.ativa ? 'No ar agora' : 'Na prévia'}</small>
+          <b>{noAr?.nome}</b>
+          {!sala.ativa && abertura && <em>A live sempre abre em {abertura.nome}</em>}
+        </div>
+        <button type="button" className="ps-proxima" disabled={!proxima || !!entrando} onClick={() => proxima && colocarNoAr(proxima.id)}
+          title={proxima ? `Pôr ${proxima.nome} no ar (barra de espaço)` : 'Esta é a última tela'}>
+          <span><small>{proxima ? 'Próxima tela' : 'Última tela'}</small><b>{proxima ? proxima.nome : 'Fim da sequência'}</b></span>
+          {proxima && <kbd>Espaço</kbd>}
+          <Icone d="M8 5l11 7-11 7z" tamanho={18} />
+        </button>
+      </div>
+
       <div className="ps-telas-topo">
         <h3>Telas</h3>
-        <small>Um clique coloca no ar · o lápis troca texto, foto ou vídeo · teclas 1 a 9</small>
         <button type="button" className="ps-botao ps-nova" onClick={() => setNovaAberta(true)}><Icone d={ICONES.mais} tamanho={14} />Nova tela</button>
       </div>
       <ol className="ps-telas">
