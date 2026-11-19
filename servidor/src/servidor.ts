@@ -5,7 +5,7 @@ import { contaComSenhaPropria, decidirLead, listarPendentes, enviarAprovacoes, e
 import { trocarEmailDoCliente } from './trocar-email'
 import { abrirBilhete, registrarDescadastro, paginaDeSaida } from './descadastro'
 import { catalogo, alterarRobo } from './catalogo'
-import { adminPlenoDaMarca, clienteNoEscopo, emailsDoParceiro, papelDoAdmin } from './supabase'
+import { administradorDaMarca, adminPlenoDaMarca, clienteNoEscopo, emailsDoParceiro, papelDoAdmin } from './supabase'
 import { listarEmailsAdmin } from './admin-emails'
 import { receberEventoResend } from './eventos-resend'
 import { lugarDoEndereco } from './regiao'
@@ -28,7 +28,7 @@ import { nomeDoUsuario, sessoesGravadasPorVersao } from './supabase'
 import { parametrosPadrao } from '../../src/core/deriv/parametros'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../../src/core/deriv/strategies'
 import { PADRAO, conferir } from './limites'
-import { conversar } from './chat'
+import { conversar, trocarChaveDaIA } from './chat'
 import { autorizacaoDoCliente, autorizacaoParaOperar, guardar } from './cofre'
 import { concluirLoginDoCliente, iniciarLoginDoCliente, type PedidoDoCliente } from './login-cliente'
 import { appDaVitrine, appValido, vitrineDoPedido } from './apps-parceiros'
@@ -1311,6 +1311,14 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         return json(200, { guardado: true })
       }
 
+      // ---- a chave da I.A. do Assistente (19/11/2026): só o admin geral troca; testada antes de guardar
+      if (url.pathname === '/api/chat/chave' && req.method === 'POST') {
+        const marcaDaChave = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
+        if (!(await administradorDaMarca(dono.id, marcaDaChave).catch(() => false))) return json(403, { erro: 'Só o administrador geral troca a chave da I.A.' })
+        const r = await trocarChaveDaIA(String(corpo.valor ?? ''))
+        return r.ok ? json(200, { ok: true }) : json(400, { erro: r.erro })
+      }
+
       // ---- conversar
       //
       // A chave da IA fica deste lado. O navegador manda a pergunta e recebe
@@ -1321,6 +1329,11 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         if (pergunta.length > 2000) return json(400, { erro: 'Mensagem longa demais.' })
         const historico = Array.isArray(corpo.historico) ? corpo.historico.slice(-12) : []
         const marcaDoChat = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
+        // GlobalFly (19/11/2026, Tiago: "só administradores"): o Assistente é da equipe por enquanto.
+        // A tela já esconde dos outros; aqui é a trava de verdade (cada mensagem custa na conta da Anthropic).
+        if (marcaDoChat === 'globalfly' && !(await papelDoAdmin(dono.id, marcaDoChat).catch(() => null))) {
+          return json(403, { erro: 'O assistente ainda não está disponível para a sua conta.' })
+        }
         const somenteDemo = somenteDemoDoUsuario(dono)
         return json(200, await conversar({ id: dono.id, somenteDemo }, historico, pergunta, marcaDoChat))
       }

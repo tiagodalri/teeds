@@ -86,6 +86,24 @@ export async function administradorDaMarca(userId: string, marca: string): Promi
 }
 
 /**
+ * A chave da Anthropic colada na tela da administração (config_servicos.ANTHROPIC_API_KEY, a mesma da
+ * leitura dos anúncios e dos blocos do chat). 19/11/2026: o Assistente passou a usar esta, para a chave
+ * ficar num lugar só; a do .env do servidor vira reserva. Vazio quando não há.
+ */
+export async function chaveDaAnthropicGuardada(): Promise<string> {
+  const linhas = await rest<Array<{ valor: string | null }>>('/config_servicos?chave=eq.ANTHROPIC_API_KEY&select=valor&limit=1')
+  return String(linhas[0]?.valor ?? '').trim()
+}
+
+/** Guarda a chave da Anthropic (já testada) no lugar das outras leituras da I.A. */
+export async function guardarChaveDaAnthropic(valor: string): Promise<void> {
+  await rest('/config_servicos?on_conflict=chave', {
+    method: 'POST', headers: { Prefer: 'resolution=merge-duplicates' },
+    body: JSON.stringify({ chave: 'ANTHROPIC_API_KEY', valor, atualizado_em: new Date().toISOString() }),
+  })
+}
+
+/**
  * O papel de quem pede, nesta marca: geral (vê tudo), do parceiro (só o /n ou
  * o /v dele) ou nenhum. O admin da Teeds (a master) é geral em todas.
  */

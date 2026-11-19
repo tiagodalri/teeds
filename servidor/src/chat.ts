@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { autorizacao } from './mcp'
 import { autorizacaoParaOperar } from './cofre'
 import { contas, listarRobos, parar, resumir, todas, ver } from './sessoes'
-import { contasDoUsuario, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
+import { chaveDaAnthropicGuardada, contasDoUsuario, guardarChaveDaAnthropic, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
 import { marcaPorId } from '../../src/marca/marcas'
 
@@ -63,15 +63,33 @@ Quando o cliente perde dinheiro, informe: não comemore nem console.
 
 Nunca:
 - prometa resultado, ganho ou probabilidade de sucesso;
-- diga que um robô "está quente" ou "vai virar" — robôs não têm fase;
+- diga que ${ia(marca).um} "está quente" ou "vai virar" — ${ia(marca).plural} não têm fase;
 - sugira aumentar a entrada depois de uma perda;
 - invente número. Todo valor que você disser veio de uma ferramenta desta conversa.
   Se não sabe, diga que não sabe e chame a ferramenta.
 
-Ligar robô:
+Ligar ${ia(marca).um}:
 - Você não liga. Chame propor_sessao e a tela mostra um cartão para o cliente clicar.
 - Chame propor_sessao direto: ela descobre conta, saldo e sugere os valores sozinha.
-- Se ela recusar, explique em uma linha o motivo devolvido. Não tente contornar.`
+- Se ela recusar, explique em uma linha o motivo devolvido. Não tente contornar.${ia(marca).regra}`
+
+/**
+ * Como a plataforma chama as estratégias. Na GlobalFly elas são "I.A." (feminino) e a palavra "robô" não
+ * aparece em lugar nenhum (vocabularioIA.ts na tela); os nomes são os da frota (GF Raptor, GF Falcon…),
+ * que listar_robos já devolve. As ferramentas continuam com o nome técnico: o cliente não as vê.
+ */
+function ia(marca: string) {
+  if (marca === 'globalfly') {
+    return {
+      um: 'uma I.A.', plural: 'as I.A.',
+      regra: `
+
+Nesta plataforma as estratégias se chamam I.A., no feminino ("a I.A. Raptor", "suas I.A.").
+Nunca escreva a palavra robô nem os códigos internos (ag2, ag7, superior5): use o nome que listar_robos devolver.`,
+    }
+  }
+  return { um: 'um robô', plural: 'robôs', regra: '' }
+}
 
 /* ------------------------------------------------------------ ferramentas */
 
@@ -278,15 +296,56 @@ export interface Resposta {
   proposta?: Proposta
   /** Quantas mensagens o cliente já gastou hoje, e de quantas. */
   uso: { hoje: number; teto: number }
+  /** Quando a Anthropic recusou: o motivo em português, para a administração agir (a tela só mostra a admin). */
+  falhaDaIA?: string
 }
 
-let cliente: Anthropic | null = null
-function anthropic(): Anthropic {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('O chat ainda não está configurado neste servidor.')
+/*
+  A chave (19/11/2026): a colada na administração (config_servicos), a mesma das outras leituras da I.A.;
+  sem ela, a do .env do servidor. Lida de novo a cada minuto: trocar a chave na tela vale sem reiniciar.
+*/
+let cliente: { chave: string; ia: Anthropic } | null = null
+let lida: { chave: string; em: number } | null = null
+async function anthropic(): Promise<Anthropic> {
+  if (!lida || Date.now() - lida.em > 60_000) {
+    const doBanco = await chaveDaAnthropicGuardada().catch(() => lida?.chave ?? '')
+    lida = { chave: doBanco || (process.env.ANTHROPIC_API_KEY ?? '').trim(), em: Date.now() }
   }
-  if (!cliente) cliente = new Anthropic()
-  return cliente
+  if (!lida.chave) throw new Error('O chat ainda não está configurado: falta a chave da Anthropic.')
+  if (!cliente || cliente.chave !== lida.chave) cliente = { chave: lida.chave, ia: new Anthropic({ apiKey: lida.chave }) }
+  return cliente.ia
+}
+
+/** O motivo de a Anthropic recusar, do nosso jeito (o original fica no registro do servidor). */
+export function motivoDaRecusa(mensagem: string): string {
+  const m = mensagem || ''
+  if (/identity verification/i.test(m)) return 'A conta da Anthropic pede a verificação de identidade. Entre em console.anthropic.com com a conta da chave e conclua a verificação; depois disso o Assistente volta sozinho.'
+  if (/credit balance|billing/i.test(m)) return 'A conta da Anthropic está sem créditos. Em console.anthropic.com › Plans & Billing, compre créditos.'
+  if (/authentication|invalid x-api-key|401/i.test(m)) return 'A Anthropic não aceitou a chave guardada. Gere uma nova em console.anthropic.com › API keys e cole abaixo.'
+  if (/permission|403/i.test(m)) return 'A chave não tem permissão para usar a I.A. Gere uma nova em console.anthropic.com › API keys.'
+  if (/rate limit|overloaded|529|429/i.test(m)) return 'A Anthropic pediu uma pausa (muitas consultas agora). Tente de novo em um minuto.'
+  if (/falta a chave/i.test(m)) return 'Falta a chave da Anthropic. Cole abaixo a chave que começa com sk-ant-.'
+  return 'A Anthropic recusou a conversa. O motivo completo ficou no registro do servidor.'
+}
+
+/**
+ * Troca a chave da Anthropic (só o admin geral; a rota confere). Testa com uma conversa de verdade de
+ * 1 token antes de guardar: a lista de modelos responde até em conta sem crédito ou sem a verificação de
+ * identidade, e aí a chave "passava" e o Assistente seguia mudo.
+ */
+export async function trocarChaveDaIA(valor: string): Promise<{ ok: true } | { ok: false; erro: string }> {
+  const chave = valor.trim()
+  if (!/^sk-ant-[A-Za-z0-9_-]{20,}$/.test(chave)) return { ok: false, erro: 'Isso não parece uma chave da Anthropic (começa com sk-ant-).' }
+  try {
+    await new Anthropic({ apiKey: chave }).messages.create({ model: MODELO, max_tokens: 1, messages: [{ role: 'user', content: 'oi' }] })
+  } catch (e) {
+    console.error(`[chat] a chave nova foi recusada: ${(e as Error).message}`)
+    return { ok: false, erro: motivoDaRecusa((e as Error).message) }
+  }
+  await guardarChaveDaAnthropic(chave)
+  lida = null
+  console.log('[chat] chave da Anthropic trocada pela administração')
+  return { ok: true }
 }
 
 /**
@@ -306,7 +365,7 @@ export async function conversar(
   if (hoje >= limites.mensagensPorDia) {
     return {
       texto: `Você chegou ao limite de ${limites.mensagensPorDia} mensagens por hoje. ` +
-        'Os robôs continuam operando normalmente — o limite é só da conversa. Amanhã zera.',
+        `${marca === 'globalfly' ? 'As I.A.' : 'Os robôs'} continuam operando normalmente — o limite é só da conversa. Amanhã zera.`,
       uso: { hoje, teto: limites.mensagensPorDia },
     }
   }
@@ -337,7 +396,7 @@ export async function conversar(
   for (let volta = 0; volta < MAX_VOLTAS; volta++) {
     let resposta: Anthropic.Message
     try {
-      resposta = await anthropic().messages.create({
+      resposta = await (await anthropic()).messages.create({
         model: MODELO,
         max_tokens: 1024,
         system: instrucoes(marca),
@@ -356,10 +415,12 @@ export async function conversar(
       console.error(`[chat] a IA recusou: ${(e as Error).message}`)
       if (gasto.idas > 0) anotar()
       return {
-        texto: 'O assistente está indisponível agora. Seus robôs continuam ' +
-          'operando normalmente, e a tela de Robôs mostra tudo.',
+        texto: marca === 'globalfly'
+          ? 'O assistente está indisponível agora. Suas I.A. continuam operando normalmente, e a tela das I.A. mostra tudo.'
+          : 'O assistente está indisponível agora. Seus robôs continuam operando normalmente, e a tela de Robôs mostra tudo.',
         proposta,
         uso: { hoje, teto: limites.mensagensPorDia },
+        falhaDaIA: motivoDaRecusa((e as Error).message),
       }
     }
 

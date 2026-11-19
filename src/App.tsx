@@ -1631,8 +1631,12 @@ export default function App() {
   // Sinal GF: só administradores; o gráfico remonta quando a conferência do banco volta
   const sinalGF = sinalGFLiberado(admin, MARCA.id)
 
+  // GlobalFly (19/11/2026, Tiago: "só administradores"): o Assistente é da equipe, sem código; os outros
+  // não o veem (o servidor também recusa). Teeds e OMNI seguem com o código de acesso.
+  const assistenteAberto = MARCA.id === 'globalfly' ? admin === true : assistenteLiberado
   function abrirAssistente() {
-    if (assistenteLiberado) { setTela('assistente'); return }
+    if (assistenteAberto) { setTela('assistente'); return }
+    if (MARCA.id === 'globalfly') return
     setPedirCodigoAssistente(true)
   }
 
@@ -1645,7 +1649,7 @@ export default function App() {
 
   return (
     <div className={`app workspace-app${JANELA ? ` em-janela-solta janela-${JANELA}` : ''}`}>
-      {!JANELA && <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} mostrarAssistente={admin === true || assistenteLiberado} onNavigate={next => {
+      {!JANELA && <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} mostrarAssistente={MARCA.id === 'globalfly' ? admin === true : admin === true || assistenteLiberado} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
@@ -1869,7 +1873,7 @@ export default function App() {
           de uma conversa e voltar nao pode apagar o que foi dito, e um robo
           ligado por aqui nao pode parar de ser acompanhado porque alguem foi
           olhar o grafico. */}
-      {teeds.sessao && assistenteLiberado && !JANELA && (
+      {teeds.sessao && assistenteAberto && !JANELA && (
         <div className="tela-viva" hidden={tela !== 'assistente'}>
           <AssistentePanel
             sessao={teeds.sessao}
@@ -1879,6 +1883,7 @@ export default function App() {
             conexao={conta.conexao}
             rotulosTrocados={conta.rotulosTrocados}
             demoComoReal={conta.somenteDemo}
+            administracao={admin === true}
           />
         </div>
       )}

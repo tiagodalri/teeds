@@ -4,7 +4,7 @@ import type { ActiveSymbol, ConnectionState } from '../core/deriv/types'
 import type { ConfigEstrategia } from '../core/deriv/engine'
 import { identidade } from '../core/deriv/branding'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { perguntar, type Proposta, type Turno } from '../core/teeds/chat'
+import { perguntar, trocarChaveDaIA, type Proposta, type Turno } from '../core/teeds/chat'
 import { acompanharVivas, pararNoServidor, sessoesVivas, type SessaoViva } from '../core/teeds/servidorRobos'
 import { ChatProposta } from './ChatProposta'
 import { LocalRobotPanel } from './LocalRobotPanel'
@@ -61,9 +61,21 @@ interface Props {
   rotulosTrocados?: boolean
   /** Acesso de demonstração: a conta virtual se apresenta como real. */
   demoComoReal?: boolean
+  /** Administração: vê o motivo quando a Anthropic recusa e pode trocar a chave (o servidor só aceita do admin geral). */
+  administracao?: boolean
 }
 
-export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao, rotulosTrocados = false, demoComoReal = false }: Props) {
+export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao, rotulosTrocados = false, demoComoReal = false, administracao = false }: Props) {
+  // a Anthropic recusou (sem crédito, conta sem verificação, chave errada): o motivo e o campo da chave nova
+  const [falhaDaIA, setFalhaDaIA] = useState<string | null>(null)
+  const [chaveNova, setChaveNova] = useState('')
+  const [trocando, setTrocando] = useState<{ indo?: boolean; erro?: string; ok?: boolean }>({})
+  async function guardarChave() {
+    setTrocando({ indo: true })
+    try { await trocarChaveDaIA(sessao, chaveNova.trim()) }
+    catch (e) { setTrocando({ erro: (e as Error).message }); return }
+    setChaveNova(''); setFalhaDaIA(null); setTrocando({ ok: true })
+  }
   const [itens, setItens] = useState<Item[]>([])
   const [texto, setTexto] = useState('')
   const [pensando, setPensando] = useState(false)
@@ -135,6 +147,8 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
     try {
       const r = await perguntar(sessao, historico, limpa)
       setUso(r.uso)
+      setFalhaDaIA(r.falhaDaIA ?? null)
+      if (!r.falhaDaIA) setTrocando({})
       setItens((a) => {
         const novos: Item[] = [...a]
         if (r.texto) novos.push({ tipo: 'assistente', texto: r.texto })
@@ -243,6 +257,20 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
 
           {pensando && <div className="as-pensando"><em /> consultando o servidor da {MARCA.prosa}…</div>}
           {erro && <p className="as-erro">{erro}</p>}
+          {administracao && falhaDaIA && (
+            <form className="as-chave" onSubmit={(e) => { e.preventDefault(); void guardarChave() }}>
+              <b>Só a administração vê este aviso</b>
+              <p>{falhaDaIA}</p>
+              <p>Para trocar a chave, cole a nova aqui. O servidor testa antes de guardar, e ela não aparece de novo na tela.</p>
+              <div className="as-chave-linha">
+                <input type="text" inputMode="text" autoComplete="off" autoCapitalize="off" spellCheck={false} name="chave-da-ia"
+                  aria-label="Chave da Anthropic" placeholder="Cole a chave que começa com sk-ant-" value={chaveNova} onChange={(e) => setChaveNova(e.target.value)} />
+                <button type="submit" disabled={trocando.indo || !chaveNova.trim()}>{trocando.indo ? 'Testando…' : 'Testar e guardar'}</button>
+              </div>
+              {trocando.erro && <p className="as-chave-erro">{trocando.erro}</p>}
+            </form>
+          )}
+          {administracao && trocando.ok && <p className="as-chave-ok">Chave nova guardada e testada. Pode mandar a pergunta de novo.</p>}
           <div ref={fim} />
         </div>
       </div>

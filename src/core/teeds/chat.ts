@@ -37,6 +37,8 @@ export interface Resposta {
   texto: string
   proposta?: Proposta
   uso: { hoje: number; teto: number }
+  /** A Anthropic recusou: o motivo em português (a tela mostra só para a administração). */
+  falhaDaIA?: string
 }
 
 /**
@@ -66,4 +68,23 @@ export async function perguntar(
   const corpo = await res.json().catch(() => ({} as any))
   if (!res.ok) throw new Error(corpo?.erro || `O servidor recusou o pedido (${res.status}).`)
   return corpo as Resposta
+}
+
+/**
+ * Troca a chave da Anthropic do Assistente (19/11/2026). Só o admin geral: o servidor confere, testa a chave
+ * com uma conversa de 1 token e só então guarda. A chave vai e não volta: a tela nunca a recebe de novo.
+ */
+export async function trocarChaveDaIA(sessao: SessaoTeeds, valor: string): Promise<void> {
+  let res: Response
+  try {
+    res = await fetch(`${SERVIDOR.url}/api/chat/chave`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valor, marca: MARCA.id }),
+    })
+  } catch {
+    throw new Error(`Não consegui falar com o servidor da ${MARCA.prosa}. Tente de novo em instantes.`)
+  }
+  const corpo = await res.json().catch(() => ({} as any))
+  if (!res.ok) throw new Error(corpo?.erro || `O servidor recusou o pedido (${res.status}).`)
 }
