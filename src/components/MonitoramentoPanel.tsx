@@ -35,7 +35,7 @@ import { FiltroDePeriodo, LimparFiltros, filtrosMudaram, TotaisDasEncerradas, TE
 import { SeloDoParceiro } from './parceiros/SeloDoParceiro'
 import { PalcoDoCliente, TelaDoCliente, type DadosDaVisao } from './monitoramento/VisaoDoCliente'
 import { baixarArquivo, gravarElemento, pedirCapturaDaAba, podeGravarTela, type Gravador } from '../core/teeds/gravarTela'
-import { simboloMoeda } from '../core/dinheiro'
+import { dinheiro, simboloMoeda } from '../core/dinheiro'
 
 /**
  * Monitoramento ao vivo — a central administrativa.
@@ -1015,10 +1015,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
   }
   const clientesOnline = new Set([...online.map((s) => s.userId), ...manuaisAbertas.clientes]).size
   // 10/11/2026: o cartão "Clientes online" abre a lista de quem está na plataforma e de quem está operando
-  const [verOnline, setVerOnline] = useState(false)
+  const [verOnline, setVerOnline] = useState<false | 'plataforma' | 'saldo'>(false)
   /* Quantos estão na plataforma agora (10/11/2026, Tiago: "ali tá 7 e quando clico os números não batem"):
      o cartão mostra o mesmo número da janela "Na plataforma", e embaixo quantos estão operando. */
   const [naPlataforma, setNaPlataforma] = useState<number | null>(null)
+  /* 18/11/2026 (Tiago: "vai que é 14 pessoas que têm 2 dólares cada uma"): a soma do saldo em conta real de
+     quem está na plataforma agora, na cara, sem precisar abrir a lista. Mesma leitura do número de cima;
+     só contas em dólar entram na soma (as demais ficam de fora para não misturar moedas). */
+  const [saldoRealOnline, setSaldoRealOnline] = useState<{ total: number; pessoas: number } | null>(null)
   const sessaoDoPainel = useRef(sessao)
   sessaoDoPainel.current = sessao
   const parceiroDoPainel = filtrandoParceiro ? parceiroFoco : ''
@@ -1028,8 +1032,14 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
     const ler = () => {
       window.clearTimeout(t)
       void Promise.all(marcas.map((m) => lerQuemEstaOnline(sessaoDoPainel.current, m, parceiroDoPainel)))
-        .then((l) => { if (vivo) setNaPlataforma(l.reduce((n, x) => n + x.length, 0)) })
-        .catch(() => { if (vivo) setNaPlataforma(null) })
+        .then((l) => {
+          if (!vivo) return
+          const todos = l.flat()
+          setNaPlataforma(todos.length)
+          const comSaldo = todos.filter((p) => Number(p.real?.saldo ?? 0) > 0 && (p.real?.moeda || 'USD') === 'USD')
+          setSaldoRealOnline({ total: comSaldo.reduce((t, p) => t + Number(p.real!.saldo), 0), pessoas: comSaldo.length })
+        })
+        .catch(() => { if (vivo) { setNaPlataforma(null); setSaldoRealOnline(null) } })
         .finally(() => { if (vivo) t = window.setTimeout(ler, document.visibilityState === 'hidden' ? 120_000 : 30_000) })
     }
     ler()
@@ -1082,9 +1092,19 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
             soReal={filtroConta === 'real'} onVerQuem={verQuemEmReal} onVerTodas={() => setFiltroConta('todas')} />
           <div className="adm-kpis mon-kpis">
             <article className="ok mon-kpi-clicavel" role="button" tabIndex={0} aria-haspopup="dialog" title="Ver quem está online"
-              onClick={() => setVerOnline(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerOnline(true) } }}>
+              onClick={() => setVerOnline('plataforma')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerOnline('plataforma') } }}>
               {naPlataforma !== null
-                ? <><span>Clientes online</span><strong>{naPlataforma}</strong>
+                ? <><span>Clientes online</span>
+                    <div className="mon-kpi-online">
+                      <strong>{naPlataforma}</strong>
+                      {saldoRealOnline && (
+                        <button type="button" className="mon-kpi-saldo" title="Ver quem tem saldo na conta real"
+                          onClick={(e) => { e.stopPropagation(); setVerOnline('saldo') }} onKeyDown={(e) => e.stopPropagation()}>
+                          <b>{dinheiro(saldoRealOnline.total, 'USD')}</b>
+                          <small>em conta real · soma do saldo de {saldoRealOnline.pessoas} {saldoRealOnline.pessoas === 1 ? 'cliente online' : 'clientes online'}</small>
+                        </button>
+                      )}
+                    </div>
                     <small>na plataforma agora · <b className="mon-kpi-operando">{clientesOnline} operando</b> ({online.length} {MARCA.vocabularioIA ? 'I.A.' : online.length === 1 ? 'robô' : 'robôs'} · {manuaisAbertas.n} {manuaisAbertas.n === 1 ? 'operação manual aberta' : 'operações manuais abertas'})</small></>
                 : <><span>Operando agora</span><strong>{clientesOnline}</strong>
                     <small>{online.length} {MARCA.vocabularioIA ? 'I.A.' : online.length === 1 ? 'robô' : 'robôs'} · {manuaisAbertas.n} {manuaisAbertas.n === 1 ? 'operação manual aberta' : 'operações manuais abertas'}</small></>}
@@ -1122,7 +1142,7 @@ export function MonitoramentoPanel({ sessao, mostrarMarkup = false, onMostrarMar
 
       {verOnline && (
         <QuemEstaOnline sessao={sessao} marcas={marcas} parceiro={filtrandoParceiro ? parceiroFoco : ''} operando={operando} clientes={clientes}
-          selo={seloDe} aoFechar={() => setVerOnline(false)} aoAbrirSessao={(id) => { setVerOnline(false); void abrirFoco(id) }} />
+          selo={seloDe} abaInicial={verOnline} aoFechar={() => setVerOnline(false)} aoAbrirSessao={(id) => { setVerOnline(false); void abrirFoco(id) }} />
       )}
 
       {tela === 'pronto' && aba === 'ao-vivo' && emFoco && focoAutorizado === 'pendente' && <div className="mon-estado" role="status"><b>Registrando o acesso…</b></div>}
