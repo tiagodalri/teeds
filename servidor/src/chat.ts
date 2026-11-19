@@ -643,9 +643,15 @@ export function pedidoDeLigar(q: string, robos: Array<{ id: string; nome: string
   // 19/11/2026 (Tiago: pediu "50 centavos de dólar de entrada" e veio 0,35): centavos viram dólar ("50 centavos" = 0.50)
   const emCentavos = q.replace(new RegExp(`${NUM} centavos?`, 'g'), (_, n: string) => String(valorDe(n) / 100))
   const t = emCentavos.replace(/us ?\$|\$|usd|dolar(es)?|reais|real(?= (de|e)\b)/g, ' ').replace(/\s+/g, ' ')
+  const TODOS_OS_NOMES = 'entrada|stake|mao|meta|take|alvo|objetivo|gain|lucro|stop|limite|loss|perda|prejuizo'
   const achar = (rotulo: string) => {
-    const m = t.match(new RegExp(`(?:${rotulo})(?: de| em| ate| no| para| pra)?(?: maximo| maxima)?(?: de)? ${NUM}(?!\\d|[.,]\\d)`))
-    if (m) return valorDe(m[1])
+    // 19/11/2026: entre o nome e o valor cabem até 4 palavras de ligação ("entradas e 50 centavos", "stop vai ser 20",
+    // "meta de lucro de 10", "limite maximo de 30"); o plural do nome também vale
+    const LIGA = '(?:de|e|em|a|ate|no|na|para|pra|com|vai|vou|ser|sera|seria|fica|ficar|eh|igual|maximo|maxima|minimo|minima|lucro|ganho|perda|inicial|diaria|so|apenas|uns|umas)'
+    const m = t.match(new RegExp(`(?:${rotulo})s?(?: ${LIGA}){0,4}[ :=]+${NUM}(?!\\d|[.,]\\d)`))
+    // o valor achado é de OUTRO nome quando vem logo antes dele ("20 de stop e 1 de entrada": o 1 é da entrada)
+    const deOutro = m && new RegExp(`^(?: de)+ (?:${TODOS_OS_NOMES})s?\\b`).test(t.slice((m.index ?? 0) + m[0].length))
+    if (m && !deOutro) return valorDe(m[1])
     // o valor ANTES do nome ("50 centavos de entrada", "10 de meta"); "um"/"uma" aí é artigo ("um stop"), não valor
     const antes = t.match(new RegExp(`(?:^|\\s)(\\d+(?:[.,]\\d+)?|${Object.keys(POR_EXTENSO).filter((k) => k !== 'um' && k !== 'uma').join('|')})(?: de)*(?: (?:na|no|como|pra|para))? (?:${rotulo})\\b`))
     return antes ? valorDe(antes[1]) : undefined
