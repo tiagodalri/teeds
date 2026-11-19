@@ -164,7 +164,15 @@ export interface Proposta {
 }
 
 /** Quem fala. `vitrine`/`app`: o parceiro do endereço (/n, /v) e o app da Deriv dele, como na rota do botão. */
-export interface Dono { id: string; somenteDemo?: boolean; vitrine?: string; app?: string }
+export interface Dono {
+  id: string; somenteDemo?: boolean; vitrine?: string; app?: string
+  /**
+   * 19/11/2026 (revisão): a pessoa PEDIU para ligar nesta mensagem (ou na anterior, quando o assistente
+   * perguntou um detalhe e ela respondeu "real", "a Raptor"...). Sem isto a I.A. do assistente não liga nada:
+   * uma pergunta ("quanto daria a Raptor com 1 dólar?") ou o texto de uma imagem nunca viram sessão.
+   */
+  pediuParaLigar?: boolean
+}
 
 /** As contas Deriv que são deste cliente E que a autorização enxerga. */
 async function contasDele(dono: Dono) {
@@ -273,6 +281,10 @@ async function executar(
       if (!veredito.ok) return { recusado: true, motivo: veredito.motivo }
 
       if (conta.type !== 'demo' && dono.somenteDemo) return { recusado: true, motivo: 'Este acesso está limitado à conta demo.' }
+      if (!dono.pediuParaLigar) return { recusado: true, motivo: `Para ligar, peça direto, por exemplo: "liga a ${ficha.nome} com entrada de 1, meta de 10 e stop de 20".` }
+      // a mesma I.A. já operando nesta conta (áudio mandado duas vezes, por exemplo): não liga em dobro
+      const jaLigada = todas().find((x) => x.parametros?.userId === dono.id && x.roboId === roboId && x.contaId === conta.accountId && (x.estado?.rodando || x.estado?.emOperacao))
+      if (jaLigada) return { recusado: true, motivo: `A ${ficha.nome} já está operando nesta conta. Se quiser trocar os valores, peça para desligar e depois ligue de novo.` }
       // liga de verdade: a mesma autorização e os mesmos dados que a rota do botão manda para iniciar()
       const cofre = await autorizacaoParaOperar(dono.id, autorizacao, dono.app)
       if (!cofre.ok) return { recusado: true, motivo: cofre.motivo }
@@ -570,15 +582,16 @@ const comSinal = (v: number, moeda: string) => `${v > 0 ? '+' : v < 0 ? '−' : 
 const regraDe = (r: { ganhaQuando: string; descricao?: string }) =>
   r.descricao && /^ganha/i.test(r.descricao) ? r.descricao : `Ganha quando ${r.ganhaQuando}.${r.descricao ? ` ${r.descricao}` : ''}`
 
-/** O cartão montado pela resposta direta, entregue junto com o texto. */
+/** A sessão ligada pela resposta direta, entregue junto com o texto (a tela vigia e avisa no fim). */
 const propostaDireta = new Map<string, Proposta>()
 
 /** Resposta pronta, sem I.A., para as perguntas que só pedem um dado. Nada (null) quando a pergunta é outra coisa. */
 async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexos: Anexos = {}): Promise<string | null> {
   const q = normalizar(pergunta)
-  // "opera com a Raptor, entrada de 1, meta de 10 e stop de 20" (escrito ou falado): o cartão na hora, de qualquer tamanho
+  // "opera com a Raptor, entrada de 1, meta de 10 e stop de 20" (escrito ou falado): liga na hora, de qualquer tamanho
   const pedido = pedidoDeLigar(q, listarRobos(marca))
-  if (pedido) return cartaoDoPedido(dono, pedido, marca, anexos)
+  // só quando é pedido de verdade ("quero saber como opera a Gulf" segue para a I.A. explicar)
+  if (pedido && dono.pediuParaLigar) return cartaoDoPedido(dono, pedido, marca, anexos)
   if (q.length > 90) return null
   const gf = marca === 'globalfly'
   const IA = gf ? '(i ?a|ias?|inteligencias?)' : '(robos?|i ?a|ias?)'
@@ -604,7 +617,7 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
   const robos = listarRobos(marca)
   const chave = (n: string) => normalizar(n).replace(/^gf /, '')
 
-  // "liga a Raptor com 1 dólar na demo": o cartão na hora (quem liga continua sendo o toque no cartão)
+  // "liga a Raptor com 1 dólar na demo": liga na hora (19/11/2026: sem cartão)
   const ligar = q.match(/^(liga|ligar|ligue|inicia|iniciar|inicie|comeca|comecar) (a |o )?(i ?a |ia |robo )?(gf )?([a-z0-9]+)(?: com (?:us\$ ?|\$ ?)?(\d+(?:[.,]\d+)?)(?: dolar(?:es)?| usd)?)?(?: (?:na|em) (?:conta )?(?:de )?(demo|demonstracao|real|virtual))?$/)
   if (ligar) {
     const ficha = robos.find((r) => chave(r.nome) === ligar[5] || r.id === ligar[5])
@@ -641,7 +654,7 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
   Tiago: "se eu mandar um áudio 'opera com Raptor na minha conta, com entrada de $1, meta de $10 e stop de 20',
   tem que entender e transformar em operação". Aqui o servidor lê a frase sozinho (sem esperar a I.A.):
   o verbo de ligar, UMA I.A. citada pelo nome e os valores que vierem (entrada, meta, stop). O que faltar,
-  propor_sessao sugere. Continua sendo só o cartão: quem liga é o toque.
+  propor_sessao sugere. 19/11/2026: liga na hora (sem cartão), com as travas de propor_sessao.
 */
 const POR_EXTENSO: Record<string, number> = {
   meio: 0.5, um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10,
@@ -785,6 +798,12 @@ export async function conversar(
     pergunta = [perguntaEscrita, transcricao].filter(Boolean).join('\n')
   }
   const comImagem = !!anexos.imagens?.length
+  {
+    // "por" aqui é quase sempre a preposição ("por favor", "por dia"), não o verbo pôr
+    const pediu = (t: string) => { const q = normalizar(t).replace(/\bpor\b/g, ' '); return !!q && VERBO_DE_LIGAR.test(q) && !PERGUNTA.test(q) && !/\b(nao|nunca|desliga)\b/.test(q) && !/\b(como (ela |ele |a |o )?(opera|funciona)|saber|explica|explicar|entender|funciona)\b/.test(q) }
+    const anterior = [...historico].reverse().find((t) => t.papel === 'cliente')?.texto ?? ''
+    dono = { ...dono, pediuParaLigar: !comImagem && (pediu(pergunta) || (pergunta.length <= 60 && pediu(anterior))) }
+  }
   if (comImagem && !pergunta) pergunta = anexos.video ? 'O que aparece neste vídeo? Explique o que for útil para operar na plataforma.' : 'O que aparece nesta imagem? Explique o que for útil para operar na plataforma.'
   const comTranscricao = <T extends Resposta>(r: T): T => (transcricao !== undefined ? { ...r, transcricao } : r)
 
