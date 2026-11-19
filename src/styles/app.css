@@ -4906,6 +4906,8 @@ input, select, textarea, button { vertical-align: middle; }
 .as-chave-linha button{height:44px;padding:0 16px;border:0;border-radius:10px;background:var(--gf-ouro,var(--primary));color:#051528;font:inherit;font-weight:700;cursor:pointer}
 .as-chave-linha button:disabled{opacity:.5;cursor:default}
 .as-chave-erro{color:var(--down)!important}
+.as-motor{margin:0;max-width:560px;font-size:12px;line-height:1.5;color:var(--muted)}
+.as-motor button{padding:0;border:0;background:none;color:var(--gf-ouro,var(--primary));font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;min-height:24px}
 .as-chave-ok{margin:0;padding:11px 14px;border-radius:10px;font-size:12.5px;background:var(--up-soft,rgba(34,197,94,.12));color:var(--up,#16a34a)}
 
 /* --- a caixa de escrever, ancorada embaixo --- */

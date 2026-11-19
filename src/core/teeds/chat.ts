@@ -39,6 +39,8 @@ export interface Resposta {
   uso: { hoje: number; teto: number }
   /** A Anthropic recusou: o motivo em português (a tela mostra só para a administração). */
   falhaDaIA?: string
+  /** Quem respondeu: o Gemini entra quando a Anthropic recusa a conta (19/11/2026). */
+  motor?: 'anthropic' | 'gemini'
 }
 
 /**

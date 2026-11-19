@@ -95,6 +95,12 @@ export async function chaveDaAnthropicGuardada(): Promise<string> {
   return String(linhas[0]?.valor ?? '').trim()
 }
 
+/** A chave gratuita do Gemini (Google) colada nas Recomendações do negócio. Vazio quando não há. */
+export async function chaveDoGeminiGuardada(): Promise<string> {
+  const linhas = await rest<Array<{ valor: string | null }>>('/config_servicos?chave=eq.GEMINI_API_KEY&select=valor&limit=1')
+  return String(linhas[0]?.valor ?? '').trim()
+}
+
 /** Guarda a chave da Anthropic (já testada) no lugar das outras leituras da I.A. */
 export async function guardarChaveDaAnthropic(valor: string): Promise<void> {
   await rest('/config_servicos?on_conflict=chave', {

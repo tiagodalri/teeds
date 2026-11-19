@@ -4,7 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { autorizacao } from './mcp'
 import { autorizacaoParaOperar } from './cofre'
 import { contas, listarRobos, parar, resumir, todas, ver } from './sessoes'
-import { chaveDaAnthropicGuardada, contasDoUsuario, guardarChaveDaAnthropic, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
+import { chaveDaAnthropicGuardada, chaveDoGeminiGuardada, contasDoUsuario, guardarChaveDaAnthropic, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
 import { marcaPorId } from '../../src/marca/marcas'
 
@@ -298,6 +298,8 @@ export interface Resposta {
   uso: { hoje: number; teto: number }
   /** Quando a Anthropic recusou: o motivo em português, para a administração agir (a tela só mostra a admin). */
   falhaDaIA?: string
+  /** Quem respondeu: a Anthropic (padrão) ou o Gemini, quando a Anthropic recusou (a tela avisa a administração). */
+  motor?: 'anthropic' | 'gemini'
 }
 
 /*
@@ -348,6 +350,136 @@ export async function trocarChaveDaIA(valor: string): Promise<{ ok: true } | { o
   return { ok: true }
 }
 
+/* ------------------------------------------------------------ o Gemini, enquanto a Anthropic não libera */
+
+/**
+ * 19/11/2026 (Tiago: "ja temos a chave do gemini ne? vamos usar ela entao"): a conta da Anthropic travou na
+ * verificação de identidade. A chave gratuita do Gemini (a das Recomendações do negócio) responde no lugar,
+ * com as mesmas instruções e as mesmas ferramentas, até a Anthropic voltar (a cada 10 min ela é tentada de novo).
+ * Faixa gratuita do Google: as conversas podem ser usadas por ele; por isso o Assistente da GF é só da equipe.
+ */
+let anthropicRecusada: { em: number; motivo: string } | null = null
+const recusaDaConta = (m: string) => /identity verification|credit balance|billing|authentication|invalid x-api-key|permission|falta a chave/i.test(m)
+
+const GEMINI = 'https://generativelanguage.googleapis.com/v1beta'
+/*
+  Medido em 19/11/2026 na faixa gratuita: os modelos maiores viviam lotados (503), sem cota (429) ou passavam de
+  30 s; o "3.5 Flash Lite" com raciocínio mínimo respondeu em ~9 s e o "3.1 Flash Lite" em ~26 s. Os dois
+  primeiros correm juntos e vale o que responder antes; os outros são a reserva, um de cada vez.
+*/
+const CORREM_JUNTOS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite']
+const RESERVA = ['gemini-flash-lite-latest', 'gemini-3.5-flash']
+
+/** As ferramentas no formato do Gemini (o Gemini não aceita additionalProperties). */
+function paraGemini(esquema: Record<string, unknown>): Record<string, unknown> {
+  const { additionalProperties: _fora, ...resto } = esquema as Record<string, unknown> & { additionalProperties?: unknown }
+  return resto
+}
+const FERRAMENTAS_GEMINI = [{ functionDeclarations: FERRAMENTAS.map((f) => ({ name: f.name, description: f.description, parameters: paraGemini(f.input_schema as Record<string, unknown>) })) }]
+
+type ParteGemini = { text?: string; thought?: boolean; functionCall?: { id?: string; name: string; args?: Record<string, unknown> }; [k: string]: unknown }
+
+type RespostaDoGemini = { partes: ParteGemini[]; uso: { entrada: number; saida: number }; modelo: string }
+
+async function umModelo(chave: string, modelo: string, corpo: Record<string, unknown>, sinal: AbortSignal): Promise<RespostaDoGemini> {
+  const r = await fetch(`${GEMINI}/models/${modelo}:generateContent`, {
+    method: 'POST', signal: sinal,
+    headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' },
+    // raciocínio mínimo: sem ele os modelos "pensam" por 20 s antes de chamar uma ferramenta
+    body: JSON.stringify({ ...corpo, generationConfig: { maxOutputTokens: 1024, thinkingConfig: { thinkingLevel: 'minimal' } } }),
+  })
+  const d = await r.json().catch(() => ({} as any))
+  if (!r.ok) {
+    const e = new Error(`${modelo} ${r.status}: ${String(d?.error?.message ?? '').slice(0, 160)}`)
+    ;(e as Error & { status?: number }).status = r.status
+    throw e
+  }
+  const partes = (d.candidates?.[0]?.content?.parts ?? []) as ParteGemini[]
+  return { partes, modelo, uso: { entrada: Number(d.usageMetadata?.promptTokenCount ?? 0), saida: Number(d.usageMetadata?.candidatesTokenCount ?? 0) } }
+}
+
+/**
+ * Uma ida ao Gemini. Com `modelo` (as idas depois de uma ferramenta), o mesmo modelo da 1ª: a assinatura do
+ * raciocínio que volta no histórico é dele. Sem, os dois mais rápidos correm juntos e o perdedor é cancelado.
+ */
+async function pedirAoGemini(chave: string, corpo: Record<string, unknown>, modelo?: string): Promise<RespostaDoGemini> {
+  if (modelo) {
+    try { return await umModelo(chave, modelo, corpo, AbortSignal.timeout(35_000)) }
+    catch (e) { if ((e as Error & { status?: number }).status === 401 || (e as Error & { status?: number }).status === 403) throw e }
+  }
+  const paradas = CORREM_JUNTOS.map(() => new AbortController())
+  const corrida = CORREM_JUNTOS.map((m, i) => {
+    const t = setTimeout(() => paradas[i].abort(), 35_000)
+    return umModelo(chave, m, corpo, paradas[i].signal).finally(() => clearTimeout(t))
+  })
+  try {
+    const venceu = await Promise.any(corrida)
+    paradas.forEach((p) => p.abort())
+    return venceu
+  } catch (todos) {
+    const erros = (todos as AggregateError).errors ?? []
+    if (erros.some((e) => [401, 403].includes((e as Error & { status?: number }).status ?? 0))) throw erros[0]
+  }
+  let ultimo = 'sem resposta'
+  for (const m of RESERVA) {
+    try { return await umModelo(chave, m, corpo, AbortSignal.timeout(25_000)) }
+    catch (e) { ultimo = (e as Error).message }
+  }
+  throw new Error(ultimo)
+}
+
+async function conversarPeloGemini(
+  dono: Dono, historico: Turno[], pergunta: string, marca: string, uso: { hoje: number; teto: number },
+): Promise<Resposta> {
+  const chave = await chaveDoGeminiGuardada()
+  if (!chave) throw new Error('não há chave do Gemini guardada')
+  const conteudo: Array<{ role: 'user' | 'model'; parts: ParteGemini[] | Array<Record<string, unknown>> }> = historico
+    .slice(-MEMORIA)
+    .map((t) => ({ role: t.papel === 'cliente' ? 'user' as const : 'model' as const, parts: [{ text: t.texto }] }))
+  conteudo.push({ role: 'user', parts: [{ text: pergunta }] })
+
+  let proposta: Proposta | undefined
+  const gasto = { entrada: 0, saida: 0, cache: 0, idas: 0 }
+  const anotar = () => {
+    console.log(`[chat] (gemini ${modelo ?? '?'}) cliente ${dono.id.slice(0, 8)}… · ${gasto.idas} ida(s) · entrada ${gasto.entrada} · saida ${gasto.saida}`)
+    void registrarGastoDoChat(dono.id, gasto, marca)
+  }
+  let modelo: string | undefined
+  for (let volta = 0; volta < MAX_VOLTAS; volta++) {
+    const ida = await pedirAoGemini(chave, {
+      systemInstruction: { parts: [{ text: instrucoes(marca) }] },
+      contents: conteudo,
+      tools: FERRAMENTAS_GEMINI,
+    }, modelo)
+    const { partes, uso: u } = ida
+    if (ida.modelo !== modelo && modelo) {
+      // o modelo da conversa caiu no meio: o histórico com a assinatura dele não serve para outro
+      console.warn(`[chat] (gemini) ${modelo} caiu no meio; seguiu com ${ida.modelo}`)
+    }
+    modelo = ida.modelo
+    gasto.idas += 1; gasto.entrada += u.entrada; gasto.saida += u.saida
+    const pedidos = partes.filter((p) => p.functionCall)
+    if (!pedidos.length) {
+      const texto = partes.filter((p) => p.text && !p.thought).map((p) => p.text).join('\n').trim()
+      anotar()
+      return { texto: texto || 'Não consegui responder agora. Pergunta de outro jeito?', proposta, uso, motor: 'gemini' }
+    }
+    // a resposta do modelo volta inteira (com a assinatura do raciocínio que o Gemini 3 exige de volta)
+    conteudo.push({ role: 'model', parts: partes })
+    const respostas: Array<Record<string, unknown>> = []
+    for (const p of pedidos) {
+      const f = p.functionCall!
+      let resultado: unknown
+      try { resultado = await executar(dono, f.name, f.args ?? {}, (x) => { proposta = x }, marca) }
+      catch (e) { resultado = { erro: `Não deu certo: ${(e as Error).message}` } }
+      respostas.push({ functionResponse: { ...(f.id ? { id: f.id } : {}), name: f.name, response: { resultado } } })
+    }
+    conteudo.push({ role: 'user', parts: respostas })
+  }
+  anotar()
+  return { texto: 'Me embolei tentando responder isso. Pergunta de outro jeito?', proposta, uso, motor: 'gemini' }
+}
+
 /**
  * Uma pergunta do cliente, do começo ao fim.
  *
@@ -368,6 +500,16 @@ export async function conversar(
         `${marca === 'globalfly' ? 'As I.A.' : 'Os robôs'} continuam operando normalmente — o limite é só da conversa. Amanhã zera.`,
       uso: { hoje, teto: limites.mensagensPorDia },
     }
+  }
+
+  // a Anthropic recusou há pouco por causa da conta: nem tenta de novo (cada tentativa atrasa a resposta)
+  if (anthropicRecusada && Date.now() - anthropicRecusada.em < 10 * 60_000) {
+    const pelo = await conversarPeloGemini(dono, historico, pergunta, marca, { hoje, teto: limites.mensagensPorDia }).catch((g) => {
+      console.error(`[chat] o Gemini falhou: ${(g as Error).message}`)
+      return null
+    })
+    if (pelo) return pelo
+    anthropicRecusada = null
   }
 
   const mensagens: Anthropic.MessageParam[] = historico
@@ -412,7 +554,18 @@ export async function conversar(
         Isso é problema da Teeds, não dele. O motivo real fica no registro
         do servidor, que é onde alguém pode agir sobre ele.
       */
-      console.error(`[chat] a IA recusou: ${(e as Error).message}`)
+      const motivo = (e as Error).message
+      console.error(`[chat] a IA recusou: ${motivo}`)
+      // 19/11/2026: a conta da Anthropic travada (verificação de identidade, crédito, chave): o Gemini gratuito
+      // responde no lugar, com as mesmas ferramentas. Na 1ª ida só; no meio da conversa a troca embaralharia.
+      if (gasto.idas === 0 && recusaDaConta(motivo)) {
+        anthropicRecusada = { em: Date.now(), motivo }
+        const pelo = await conversarPeloGemini(dono, historico, pergunta, marca, { hoje, teto: limites.mensagensPorDia }).catch((g) => {
+          console.error(`[chat] o Gemini também falhou: ${(g as Error).message}`)
+          return null
+        })
+        if (pelo) return pelo
+      }
       if (gasto.idas > 0) anotar()
       return {
         texto: marca === 'globalfly'
@@ -420,7 +573,7 @@ export async function conversar(
           : 'O assistente está indisponível agora. Seus robôs continuam operando normalmente, e a tela de Robôs mostra tudo.',
         proposta,
         uso: { hoje, teto: limites.mensagensPorDia },
-        falhaDaIA: motivoDaRecusa((e as Error).message),
+        falhaDaIA: motivoDaRecusa(motivo),
       }
     }
 
