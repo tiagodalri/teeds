@@ -77,7 +77,7 @@ const cookie = (nome: string) => decodeURIComponent(document.cookie.match(new Re
  * `email`: o cadastro pelo app, que vai também pelo servidor com o mesmo código.
  */
 /** O código de uma conversão é da pessoa (o mesmo de captura.js, idDaPessoa): um e-mail, um cadastro na Meta. */
-const CONVERSOES = new Set(['Lead', 'CompleteRegistration'])
+const CONVERSOES = new Set(['Lead', 'CompleteRegistration', 'Subscribe'])
 export function idDaPessoa(email: string): string {
   const t = email.trim().toLowerCase()
   let a = 0x811c9dc5, b = 0x01000193
@@ -160,6 +160,17 @@ function naJornada(nome: string, dados?: Record<string, unknown>): void {
       body: JSON.stringify({ p_marca: MARCA.id, p_visitante: visitante, p_evento: evento, p_pagina: tela ? `${location.pathname} · ${tela}` : location.pathname }),
     }).catch(() => { /* a jornada nunca atrapalha a plataforma */ })
   } catch { /* idem */ }
+}
+
+/**
+ * Assinatura no cadastro (19/11/2026, Tiago e Naor): a campanha de Vendas otimizada para "Assinatura" faz a Meta
+ * entregar primeiro a quem costuma assinar/comprar pelo que vê em anúncio. Por enquanto a Assinatura é o cadastro
+ * concluído no /n (vai também pelo servidor, com o código da pessoa); quando os primeiros depósitos crescerem,
+ * ela passa para o primeiro depósito real. Só no pixel do Naor.
+ */
+const ASSINATURA_NO_CADASTRO = new Set(['n'])
+export function assinaturaDoCadastro(email: string): void {
+  if (MARCA.id === 'globalfly' && ASSINATURA_NO_CADASTRO.has(vitrine())) eventoDoPixel('Subscribe', { origem: 'app', content_name: 'cadastro' }, true, email)
 }
 
 /** Abre o pixel (PageView) quando a plataforma sabe quem está usando (ou que ninguém está logado). */

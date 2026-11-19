@@ -33,7 +33,8 @@ const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo
 // O mesmo mapa de captura.js e src/core/teeds/pixelDoParceiro.ts
 const PIXELS: Record<string, Record<string, string>> = { globalfly: { n: '1625935188283999', v: '1104312792216322' } }
 const SITES: Record<string, string> = { globalfly: 'https://globalflytrade.com/' }
-const EVENTOS = new Set(['Lead', 'CompleteRegistration'])
+// 19/11/2026: Subscribe = cadastro concluído no /n (a campanha de Vendas otimizada para Assinatura)
+const EVENTOS = new Set(['Lead', 'CompleteRegistration', 'Subscribe'])
 const EVENTOS_DO_QUIZ = new Set(['Contact', 'QuizComecou', 'QuizAprovado', 'QuizConcluido', 'AssistiuVSL1_75', 'AssistiuVSL2_75', 'AssistiuVSL3_75'])
 // o que o navegador tem de ter registrado antes: o Contact e o concluído pedem o aprovado (que sai antes, ao chegar no fim); os outros, a visita à /trafego (o aprovado vai junto com o registro dele, então não pode esperar por ele)
 const PRE_REQUISITO: Record<string, string> = { Contact: 'quiz-aprovado', QuizConcluido: 'quiz-aprovado' }
