@@ -542,7 +542,8 @@ async function conversarPeloGemini(
 */
 
 /** O texto da pergunta sem acento, minúsculo, sem pontuação no fim: para reconhecer as perguntas fixas. */
-const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[?!.¿¡]+/g, ' ').replace(/\s+/g, ' ').trim()
+// 19/11/2026: o ponto entre dígitos fica ("0.50" não pode virar "0 50": a entrada pedida se perdia)
+const normalizar = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[?!¿¡]+/g, ' ').replace(/\.(?!\d)|(?<!\d)\./g, ' ').replace(/\s+/g, ' ').trim()
 const dinheiro = (v: number, moeda: string) => `${moeda === 'USD' ? 'US$' : moeda} ${Number(v ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const comSinal = (v: number, moeda: string) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${dinheiro(Math.abs(v), moeda)}`
 
@@ -639,10 +640,15 @@ export function pedidoDeLigar(q: string, robos: Array<{ id: string; nome: string
   const citadas = robos.filter((r) => new RegExp(`\\b${chave(r.nome)}\\b`).test(q) || new RegExp(`\\b${r.id}\\b`).test(q))
   if (citadas.length !== 1) return null
   // os valores: tira moeda e enfeite ("$1", "us$ 10", "10 dolares", "20 reais") para sobrar o número
-  const t = q.replace(/us ?\$|\$|usd|dolar(es)?|reais|real(?= (de|e)\b)/g, ' ').replace(/\s+/g, ' ')
+  // 19/11/2026 (Tiago: pediu "50 centavos de dólar de entrada" e veio 0,35): centavos viram dólar ("50 centavos" = 0.50)
+  const emCentavos = q.replace(new RegExp(`${NUM} centavos?`, 'g'), (_, n: string) => String(valorDe(n) / 100))
+  const t = emCentavos.replace(/us ?\$|\$|usd|dolar(es)?|reais|real(?= (de|e)\b)/g, ' ').replace(/\s+/g, ' ')
   const achar = (rotulo: string) => {
-    const m = t.match(new RegExp(`(?:${rotulo})(?: de| em| ate| no| para| pra)?(?: maximo| maxima)?(?: de)? ${NUM}\\b`))
-    return m ? valorDe(m[1]) : undefined
+    const m = t.match(new RegExp(`(?:${rotulo})(?: de| em| ate| no| para| pra)?(?: maximo| maxima)?(?: de)? ${NUM}(?!\\d|[.,]\\d)`))
+    if (m) return valorDe(m[1])
+    // o valor ANTES do nome ("50 centavos de entrada", "10 de meta"); "um"/"uma" aí é artigo ("um stop"), não valor
+    const antes = t.match(new RegExp(`(?:^|\\s)(\\d+(?:[.,]\\d+)?|${Object.keys(POR_EXTENSO).filter((k) => k !== 'um' && k !== 'uma').join('|')})(?: de)*(?: (?:na|no|como|pra|para))? (?:${rotulo})\\b`))
+    return antes ? valorDe(antes[1]) : undefined
   }
   const entrada = achar('entrada(?: inicial)?|stake|valor(?: de entrada| inicial)?|mao') ?? (() => {
     const m = t.match(new RegExp(`\\bcom ${NUM}\\b(?! (?:de )?(?:meta|stop|loss|limite|gain))`))
