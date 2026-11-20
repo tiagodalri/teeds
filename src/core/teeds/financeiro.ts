@@ -44,7 +44,13 @@ export type ResultadoTroca = { ok: true } | { erro: 'senha'; restam: number } | 
 
 /** Quem leva quanto do lucro de um projeto (projeto_id null = custo geral). quem = 's:<sócio>' ou 'p:<parceiro>'. */
 export interface Parte { marca: string; projeto_id: string | null; quem: string; percentual: number }
-export interface DadosFin { categorias: Categoria[]; contas: Conta[]; socios: Socio[]; projetos: Projeto[]; partes: Parte[]; lancamentos: Lancamento[] }
+/**
+ * Revenue Share da Deriv informado à mão (20/11/2026): o valor parcial do mês, por projeto, que o Tiago atualiza todo dia
+ * olhando o painel de afiliado. Não é lançamento: só alimenta a previsão do fechamento do mês no Resumo.
+ * mes = 'AAAA-MM-01'; moeda USD usa a cotação do momento em que foi salvo.
+ */
+export interface RevShare { marca: string; projeto_id: string; mes: string; valor: number; moeda: 'USD' | 'BRL'; cotacao: number | null; atualizado_em: string; atualizado_por: string | null }
+export interface DadosFin { categorias: Categoria[]; contas: Conta[]; socios: Socio[]; projetos: Projeto[]; partes: Parte[]; lancamentos: Lancamento[]; revshare: RevShare[] }
 
 /** Tudo o que a tela pede ao banco. O laboratório troca por uma versão em memória. */
 export interface FinApi {
@@ -68,6 +74,10 @@ export interface FinApi {
   salvarProjeto(p: Partial<Projeto> & { nome: string }): Promise<Projeto>
   /** troca a divisão de um projeto (null = custo geral); só o dono, somando 100% */
   salvarPartes(projetoId: string | null, partes: Array<{ quem: string; percentual: number }>): Promise<void>
+  /** grava (ou apaga, com valor null) o Revenue Share parcial de um projeto no mês ('AAAA-MM-01'); editor ou dono */
+  salvarRevShare(projetoId: string, mes: string, valor: number | null, moeda: RevShare['moeda'], cotacao: number | null): Promise<void>
+  /** dólar comercial agora (null = sem resposta) */
+  cotacao(): Promise<number | null>
   historico(limite?: number): Promise<Historico[]>
   pessoas(ids: string[]): Promise<Pessoa[]>
   acessos(): Promise<Acesso[]>
@@ -180,15 +190,17 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
       if (!lerToken(sessao.usuario.id) || !(await rpc<string | null>('fin_sessao'))) { guardarToken(null); throw new FinTrancado() }
       // traz as vendas da Cakto e o markup da Deriv para os lançamentos antes de ler (falhou: lê o que já tem)
       try { await rpc('fin_sincronizar_receitas', { p_marca: marca, p_cotacao: await cotacaoDoDolar() }) } catch (e) { if (e instanceof FinTrancado) throw e }
-      const [categorias, contas, socios, projetos, partes, lancamentos] = await Promise.all([
+      const [categorias, contas, socios, projetos, partes, revshare, lancamentos] = await Promise.all([
         get<Categoria[]>(`fin_categorias?marca=eq.${m}&order=tipo,ordem,nome`),
         get<Conta[]>(`fin_contas?marca=eq.${m}&order=ordem,nome`),
         get<Socio[]>(`fin_socios?marca=eq.${m}&order=ordem,nome`),
         get<Projeto[]>(`fin_projetos?marca=eq.${m}&order=ordem,nome`),
         get<Parte[]>(`fin_partes?marca=eq.${m}&select=marca,projeto_id,quem,percentual`).catch(() => [] as Parte[]),
+        get<RevShare[]>(`fin_revshare?marca=eq.${m}&select=marca,projeto_id,mes,valor,moeda,cotacao,atualizado_em,atualizado_por`).catch(() => [] as RevShare[]),
         getTodos<Lancamento>(`fin_lancamentos?marca=eq.${m}&order=vencimento.desc,criado_em.desc,id`),
       ])
-      return { categorias, contas: contas.map(num), socios: socios.map(num), projetos, partes: partes.map(num), lancamentos: lancamentos.map(num) }
+      return { categorias, contas: contas.map(num), socios: socios.map(num), projetos, partes: partes.map(num), lancamentos: lancamentos.map(num),
+        revshare: revshare.map((x) => ({ ...num(x), cotacao: x.cotacao == null ? null : Number(x.cotacao) })) }
     },
     salvarLancamentos: async (l) => (await escrever<Lancamento[]>('POST', 'fin_lancamentos', l.map((x) => ({ ...x, marca })))).map(num),
     atualizarLancamento: async (id, campos) => { exigirLinha(await escrever<Lancamento[]>('PATCH', `fin_lancamentos?id=eq.${id}`, campos)) },
@@ -207,6 +219,16 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
       return num((await escrever<Socio[]>('POST', 'fin_socios', { ...s, marca }))[0])
     },
     salvarPartes: async (projetoId, partes) => { await rpc('fin_salvar_partes', { p_marca: marca, p_projeto: projetoId, p_partes: partes }, 'Não foi possível salvar a divisão.') },
+    salvarRevShare: async (projetoId, mes, valor, moeda, cotacao) => {
+      const chave = `fin_revshare?marca=eq.${m}&projeto_id=eq.${projetoId}&mes=eq.${mes}`
+      if (valor == null) { await escrever('DELETE', chave); return }
+      const r = await fetch(`${base}/rest/v1/fin_revshare?on_conflict=marca,projeto_id,mes`, {
+        method: 'POST', headers: cab({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' }),
+        body: JSON.stringify({ marca, projeto_id: projetoId, mes, valor, moeda, cotacao: moeda === 'USD' ? cotacao : null }),
+      })
+      if (!r.ok) throw await erroDe(r, 'Não foi possível salvar o Revenue Share.')
+    },
+    cotacao: cotacaoDoDolar,
     salvarProjeto: async (p) => {
       if (p.id) { const { id, ...resto } = p; return exigirLinha(await escrever<Projeto[]>('PATCH', `fin_projetos?id=eq.${id}`, resto))[0] }
       return (await escrever<Projeto[]>('POST', 'fin_projetos', { ...p, marca }))[0]
@@ -557,6 +579,44 @@ export function partilhar(d: DadosFin, p: Periodo, hojeDia = hoje()): Partilha {
   }
   const pessoas = [...porPessoa.values()].sort((x, y) => Number(y.socio) - Number(x.socio) || y.previsto - x.previsto)
   return { projetos, pessoas, lucro: r2(projetos.reduce((s, x) => s + x.agora.lucro, 0)), lucroPrevisto: r2(projetos.reduce((s, x) => s + x.previsao.lucro, 0)) }
+}
+
+// ── Previsão do fechamento com o Revenue Share (20/11/2026) ───────────────────────────────────────
+/*
+  Tiago: "O Revenue Share da Deriv varia todo dia e fecha no último dia do mês... quero digitar até o momento, um para o
+  Projeto Naor e outro para o Projeto Victor, e ver quanto teriam a receber no total se o mês fechasse com aquele valor".
+  Não projeta ritmo: é o realizado do mês + o Revenue Share informado. A divisão é a mesma das outras receitas:
+  o valor entra como receita do projeto e passa pelo partilhar().
+*/
+/** O Revenue Share em reais (US$ pela cotação de quando foi salvo). */
+export const revShareEmReais = (x: RevShare) => r2(x.moeda === 'USD' ? x.valor * (x.cotacao ?? 0) : x.valor)
+export interface PessoaNaPrevisao { quem: string; nome: string; cor: string; socio: boolean; agora: number; previsto: number; doRevShare: number }
+export interface PrevisaoRevShare {
+  receitas: number; despesas: number; resultado: number
+  /** soma do Revenue Share informado (em reais) */
+  revShare: number
+  receitasPrevistas: number; resultadoPrevisto: number
+  pessoas: PessoaNaPrevisao[]
+}
+/**
+ * O mês (`p` = o mês inteiro) se fechasse hoje com o Revenue Share informado: `d` já vem com o filtro de projeto da
+ * tela; `linhas` são as do mês dos projetos que estão na conta.
+ */
+export function preverComRevShare(d: DadosFin, p: Periodo, linhas: RevShare[]): PrevisaoRevShare {
+  const r = resumir(d, p)
+  const extras: Lancamento[] = linhas.filter((x) => revShareEmReais(x) !== 0).map((x) => ({
+    id: `revshare-${x.projeto_id}`, marca: x.marca, tipo: 'receita', descricao: 'Revenue Share da Deriv (previsão)', valor: revShareEmReais(x),
+    vencimento: p.de, pago_em: p.de, categoria_id: null, conta_id: null, socio_id: null, projeto_id: x.projeto_id,
+    contraparte: 'Deriv', forma: null, observacoes: null, grupo: null, parcela: null, parcelas: null, pago_fora: false, pago_por: null,
+    anexos: [], origem: 'revshare-previsto', origem_id: null, criado_por: null, criado_em: x.atualizado_em, atualizado_por: null, atualizado_em: x.atualizado_em,
+  }))
+  const revShare = r2(extras.reduce((s, x) => s + x.valor, 0))
+  const antes = partilhar(d, p), depois = partilhar({ ...d, lancamentos: [...d.lancamentos, ...extras] }, p)
+  const ag = new Map(antes.pessoas.map((x) => [x.quem, x.total]))
+  const pessoas = depois.pessoas.filter((x) => x.total || ag.get(x.quem))
+    .map((x) => ({ quem: x.quem, nome: x.nome, cor: x.cor, socio: x.socio, agora: ag.get(x.quem) ?? 0, previsto: x.total, doRevShare: r2(x.total - (ag.get(x.quem) ?? 0)) }))
+    .sort((a, b) => Number(b.socio) - Number(a.socio) || b.previsto - a.previsto)
+  return { receitas: r2(r.entradas), despesas: r2(r.saidas), resultado: r2(r.resultado), revShare, receitasPrevistas: r2(r.entradas + revShare), resultadoPrevisto: r2(r.resultado + revShare), pessoas }
 }
 
 // ── Fonte pagadora (11/11/2026) ───────────────────────────────────────────────────────────────────

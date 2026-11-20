@@ -5,8 +5,8 @@
  * Senha do laboratório: 'financeiro1'.
  */
 import { useMemo, useState } from 'react'
-import type { Acesso, Anexo, Candidato, Categoria, Conta, DadosFin, FinApi, Historico, Lancamento, MeuAcesso, NovoLancamento, Papel, Parte, Projeto, Socio } from '../../core/teeds/financeiro'
-import { hoje, somarDias, somarMeses } from '../../core/teeds/financeiro'
+import type { Acesso, Anexo, Candidato, Categoria, Conta, DadosFin, FinApi, Historico, Lancamento, MeuAcesso, NovoLancamento, Papel, Parte, Projeto, RevShare, Socio } from '../../core/teeds/financeiro'
+import { hoje, inicioDoMes, somarDias, somarMeses } from '../../core/teeds/financeiro'
 import { FinanceiroPainel } from './FinanceiroPainel'
 import '../admin-topo.css'
 
@@ -44,7 +44,7 @@ function semente(vazio: boolean): DadosFin {
       { marca: 'globalfly', projeto_id: projetos[i].id, quem: `s:${socios[0].id}`, percentual: 25 }, { marca: 'globalfly', projeto_id: projetos[i].id, quem: `s:${socios[1].id}`, percentual: 25 },
     ]),
   ]
-  if (vazio) return { categorias, contas, socios, projetos, partes, lancamentos: [] }
+  if (vazio) return { categorias, contas, socios, projetos, partes, lancamentos: [], revshare: [] }
   const c = (n: string) => categorias.find((x) => x.nome === n)!.id
   const h = hoje()
   const l: Lancamento[] = []
@@ -71,7 +71,11 @@ function semente(vazio: boolean): DadosFin {
   add({ tipo: 'devolucao', descricao: 'Devolução de Naor a Tiago', valor: 200, vencimento: somarDias(h, -1), pago_em: somarDias(h, -1), conta_id: null, socio_id: socios[0].id, pago_fora: true, pago_por: 'n', forma: 'Pix' })
   add({ tipo: 'retirada', descricao: 'Distribuição de lucro de setembro', valor: 1500, vencimento: somarMeses(h, -1), pago_em: somarMeses(h, -1), socio_id: socios[1].id, forma: 'Pix' })
   add({ tipo: 'aporte', descricao: 'Aporte para os anúncios', valor: 3000, vencimento: somarMeses(h, -2), pago_em: somarMeses(h, -2), socio_id: socios[1].id, forma: 'Pix' })
-  return { categorias, contas, socios, projetos, partes, lancamentos: l }
+  // o Revenue Share parcial do mês (20/11/2026): o do Victor informado ontem, o do Naor ainda não (&revshare=0 tira os dois)
+  const revshare: RevShare[] = q.get('revshare') === '0' ? [] : [
+    { marca: 'globalfly', projeto_id: projetos[0].id, mes: inicioDoMes(h), valor: 1180.4, moeda: 'USD', cotacao: 5.34, atualizado_em: new Date(Date.now() - 864e5).toISOString(), atualizado_por: 'u1' },
+  ]
+  return { categorias, contas, socios, projetos, partes, lancamentos: l, revshare }
 }
 
 function apiEmMemoria(): FinApi {
@@ -119,6 +123,12 @@ function apiEmMemoria(): FinApi {
     salvarCategoria: async (c) => { const n = { id: c.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, cor: '#64748B', ...c } as Categoria; dados = { ...dados, categorias: c.id ? dados.categorias.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...dados.categorias, n] }; return n },
     salvarConta: async (c) => { const n = { id: c.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, tipo: 'banco', saldo_inicial: 0, cor: '#1E3D6E', ...c } as Conta; dados = { ...dados, contas: c.id ? dados.contas.map((x) => x.id === c.id ? { ...x, ...c } : x) : [...dados.contas, n] }; return n },
     salvarPartes: async (pid, lista) => { dados = { ...dados, partes: [...dados.partes.filter((x) => x.projeto_id !== pid), ...lista.map((x) => ({ ...x, marca: 'globalfly', projeto_id: pid }))] } },
+    salvarRevShare: async (pid, mes, valor, moeda, cotacao) => {
+      await espera(null)
+      const resto = dados.revshare.filter((x) => !(x.projeto_id === pid && x.mes === mes))
+      dados = { ...dados, revshare: valor == null ? resto : [...resto, { marca: 'globalfly', projeto_id: pid, mes, valor, moeda, cotacao: moeda === 'USD' ? cotacao : null, atualizado_em: new Date().toISOString(), atualizado_por: 'u1' }] }
+    },
+    cotacao: () => espera(q.get('cotacao') === '0' ? null : 5.36),
     salvarProjeto: async (p) => { const n = { id: p.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, cor: '#2F6FDB', parceiro: null, responsavel: null, ...p } as Projeto; dados = { ...dados, projetos: p.id ? dados.projetos.map((x) => x.id === p.id ? { ...x, ...p } : x) : [...dados.projetos, n] }; return n },
     salvarSocio: async (s) => { const n = { id: s.id ?? id(), marca: 'globalfly', ordem: 99, ativo: true, percentual: 0, cor: '#B78D39', ...s } as Socio; dados = { ...dados, socios: s.id ? dados.socios.map((x) => x.id === s.id ? { ...x, ...s } : x) : [...dados.socios, n] }; return n },
     historico: () => espera(hist),

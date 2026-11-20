@@ -1,9 +1,10 @@
 /* Resumo: os números do período, o mês a mês, para onde foi e de onde veio, o que vence e o saldo das contas. */
 import { useMemo, useState } from 'react'
 import {
-  dataCurta, diasEntre, ehEntrada, hoje, mesAMes, nomeDoMes, porCategoria, porProjeto, reais, reaisCurto, resumir, saldosDasContas, situacaoDe,
-  type DadosFin, type Lancamento, type Periodo,
+  dataCurta, diasEntre, ehEntrada, fimDoMes, hoje, inicioDoMes, mesAMes, nomeDoMes, porCategoria, porProjeto, reais, reaisCurto, resumir, saldosDasContas, situacaoDe,
+  type DadosFin, type FinApi, type Lancamento, type Periodo,
 } from '../../core/teeds/financeiro'
+import { PrevisaoRevShare } from './PrevisaoRevShare'
 import { Icone } from '../Icone'
 import { Vazio } from './ui'
 import type { FiltroInicial } from './Lancamentos'
@@ -17,7 +18,11 @@ const compacto = (v: number) => {
 }
 const pct = (v: number) => `${(v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
 
-export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriodo, podeEditar, aoNovo, aoAbrir, aoPagar, aoIr }: {
+export function Resumo({ api, dados, todos, projeto, aoProjeto, periodo, rotuloPeriodo, podeEditar, aoNovo, aoAbrir, aoPagar, aoIr, aoMudar, aoTrancar }: {
+  api: FinApi
+  /** salvou algo fora do editor de lançamento (o Revenue Share): mostra o aviso e relê */
+  aoMudar: (mensagem: string) => void
+  aoTrancar: () => void
   dados: DadosFin; periodo: Periodo; rotuloPeriodo: string; podeEditar: boolean
   /** os dados sem o filtro de projeto (saldo das contas e o quadro dos projetos olham tudo) */
   todos: DadosFin
@@ -41,6 +46,8 @@ export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriod
   const emAberto = useMemo(() => dados.lancamentos.filter((l) => !l.pago_em && ehEntrada(l.tipo) === (abertos === 'receber')).sort((a, b) => a.vencimento.localeCompare(b.vencimento)), [dados.lancamentos, abertos])
   const maxMes = Math.max(1, ...meses.map((m) => Math.max(m.entradas, m.saidas)))
   const temMeses = meses.some((m) => m.entradas || m.saidas)
+  // a previsão com o Revenue Share só vale para um mês inteiro que já começou
+  const umMes = periodo.de === inicioDoMes(periodo.de) && periodo.ate === fimDoMes(periodo.de) && periodo.de <= hoje()
 
   if (!todos.lancamentos.length) {
     return <section className="fin-cartao fin-comeco">
@@ -74,6 +81,9 @@ export function Resumo({ dados, todos, projeto, aoProjeto, periodo, rotuloPeriod
     {(r.aportes > 0 || r.retiradas > 0) && <p className="fin-nota-socios">
       No período os sócios colocaram <b>{reais(r.aportes)}</b> e tiraram <b>{reais(r.retiradas)}</b>. Isso não entra no resultado.
       <button type="button" onClick={() => aoIr('divisao')}>Ver a divisão</button></p>}
+
+    {umMes && <PrevisaoRevShare api={api} dados={dados} todos={todos} projeto={projeto} periodo={periodo} mes={periodo.de}
+      podeEditar={podeEditar} aoMudar={aoMudar} aoTrancar={aoTrancar} />}
 
     <div className="fin-grade-2 larga">
       <section className="fin-cartao">

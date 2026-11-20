@@ -183,7 +183,7 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
 
     {erro && <p className="fin-alerta erro" role="alert"><Icone nome="info" /><span>{erro}</span><button type="button" className="fin-link" onClick={() => void ler()}>Tentar de novo</button></p>}
     {!dados ? <div className="fin-carregando">{erro ? '' : 'Carregando os lançamentos…'}</div> : <>
-      {aba === 'resumo' && <Resumo dados={visao!} todos={dados} projeto={projeto} aoProjeto={setProjeto} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar}
+      {aba === 'resumo' && <Resumo api={api} aoMudar={depoisDeMudar} aoTrancar={() => void trancar('O financeiro foi bloqueado. Digite sua senha de novo.')} dados={visao!} todos={dados} projeto={projeto} aoProjeto={setProjeto} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar}
         aoNovo={(t) => setEditor({ l: null, rascunho: { tipo: t, projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoIr={irPara} />}
       {aba === 'lancamentos' && <Lancamentos key={chaveLista} dados={visao!} periodo={periodo} rotuloPeriodo={rotuloPeriodo} filtroInicial={filtroInicial} podeEditar={podeEditar}
         aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoNovo={() => setEditor({ l: null, rascunho: { projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} />}
