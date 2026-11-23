@@ -6,6 +6,8 @@ dist
 tsconfig.tsbuildinfo
 .git_desativado_*
 docs/assets/index-*
+# 23/11/2026: o pedaço compartilhado "index-c.js" (chunkFileNames do vite.config) é do site: sem ele, Stories e Monitoramento da Teeds davam 404
+!docs/assets/index-c.js
 vite.config.ts.timestamp-*
 .claude/settings.local.json
 docs-omni/
