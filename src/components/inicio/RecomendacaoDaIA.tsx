@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { publicSocket } from '../../core/deriv/client'
 import { casasDecimais } from '../../core/deriv/types'
-import { emailReal } from '../../core/teeds/emailDaConta'
 import { MARCA } from '../../marca'
 import { LogotipoDaIA } from '../marca/LogotipoDaIA'
 import { fotoDoCartaoAlto } from '../marca/fotoDoCartao'
@@ -10,7 +9,7 @@ import './recomendacao-da-ia.css'
 /**
  * I.A. recomendada agora (19/11/2026, Tiago: "não precisa mostrar a análise
  * de ticks; isso é info nossa interna. Uma recomendação vale 30 min, depois
- * analisa de novo"). Por enquanto só no usuário do Tiago (RECOMENDACAO_LIBERADA).
+ * analisa de novo"). Liberado para todos da GF em 23/11/2026.
  *
  * Por dentro: os 100 ticks do 75 Index que terminam na marca da janela (:00 ou
  * :30), contra a faixa de cada I.A.; a que mais passou do normal é a
@@ -22,12 +21,11 @@ import './recomendacao-da-ia.css'
  * Laboratório: `ciclo` (segundos) encurta a janela e lê os ticks mais novos.
  */
 
-/** Quem vê o cartão enquanto ele está em teste (e-mail de verdade, sem a etiqueta da marca). */
-const RECOMENDACAO_LIBERADA: Readonly<Record<string, readonly string[]>> = {
-  globalfly: ['tiagodalri1@live.com'],
-}
-export const recomendacaoLiberada = (email?: string | null) =>
-  !!email && (RECOMENDACAO_LIBERADA[MARCA.id]?.includes(emailReal(email).trim().toLowerCase()) ?? false)
+/**
+ * Quem vê o cartão: todos da GlobalFly desde 23/11/2026 (Tiago: "pode liberar
+ * pra todos"). Antes, só o usuário do Tiago. As outras marcas não têm o cartão.
+ */
+export const recomendacaoLiberada = (email?: string | null) => !!email && MARCA.id === 'globalfly'
 
 const IAS = [
   { id: 'goreme', nome: 'GF Raptor', curto: 'Raptor', ganha: (d: number) => d < 9, p: 0.9 },
@@ -128,22 +126,43 @@ export function RecomendacaoDaIA({ aoLigar, aoMudar, ciclo, membros }: Props) {
   const faltaTexto = falta >= 60_000 ? `${Math.ceil(falta / 60_000)} min` : `${Math.ceil(falta / 1000)} s`
   const fotos = useMemo(() => IAS.map((x) => ({ id: x.id, ...fotoDoCartaoAlto(x.id) })), [])
 
+  // profundidade: no computador, a foto e o texto acompanham o mouse de leve (paralaxe)
+  const cartao = useRef<HTMLElement>(null)
+  const mover = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse' || !cartao.current) return
+    const r = cartao.current.getBoundingClientRect()
+    cartao.current.style.setProperty('--rc-mx', ((e.clientX - r.left) / r.width - 0.5).toFixed(3))
+    cartao.current.style.setProperty('--rc-my', ((e.clientY - r.top) / r.height - 0.5).toFixed(3))
+  }
+  const soltar = () => { cartao.current?.style.setProperty('--rc-mx', '0'); cartao.current?.style.setProperty('--rc-my', '0') }
+
   return (
-    <section className={`rc ${analisando ? 'analisando' : 'pronta'}`} aria-labelledby="rc-titulo" aria-busy={analisando}>
-      {fotos.map((f) => <img key={f.id} src={f.src} srcSet={f.srcSet} sizes="(max-width: 700px) 100vw, 60vw" alt="" loading="lazy" decoding="async" className={vista?.id === f.id ? 'vista' : ''} />)}
+    <section ref={cartao} className={`rc ${analisando ? 'analisando' : 'pronta'}`} aria-labelledby="rc-titulo" aria-busy={analisando}
+      onPointerMove={mover} onPointerLeave={soltar}>
+      <span className="rc-fotos" aria-hidden="true">
+        {fotos.map((f) => <img key={f.id} src={f.src} srcSet={f.srcSet} sizes="(max-width: 700px) 100vw, 60vw" alt="" loading="lazy" decoding="async" className={vista?.id === f.id ? 'vista' : ''} />)}
+      </span>
       <i className="rc-veu" aria-hidden="true" />
-      <i className="rc-eixo" aria-hidden="true" />
+      <i className="rc-luz" aria-hidden="true" />
+      <i className="rc-eixo" aria-hidden="true"><b /></i>
+      <i className="rc-scan" aria-hidden="true" />
+      <i className="rc-grao" aria-hidden="true" />
 
       <div className="rc-corpo">
         <header className="rc-topo">
           <span id="rc-titulo" className="rc-rotulo"><i aria-hidden="true" /><span><span className="rc-rotulo-ia">I.A. </span>Recomendada agora</span></span>
-          {rec && !analisando && <span className="rc-validade">Válida até <b>{hora(rec.ate)}</b></span>}
+          {rec && !analisando && (
+            <span className="rc-validade" title={`Nova análise em ${faltaTexto}`}>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" className="trilho" /><circle cx="10" cy="10" r="8" className="arco" style={{ strokeDashoffset: `${(50.27 * (1 - resta)).toFixed(2)}` }} /></svg>
+              Válida até <b>{hora(rec.ate)}</b>
+            </span>
+          )}
         </header>
 
         <div className="rc-meio" aria-live="polite">
           {analisando ? (
             <>
-              <span className="rc-sobre">Analisando o mercado para a próxima meia hora</span>
+              <span className="rc-sobre rc-analisando">Analisando o mercado para a próxima meia hora</span>
               <h3 className="rc-nome roleta" key={roleta}>{vista && <LogotipoDaIA nome={vista.nome} id={vista.id} fio sobreFoto />}</h3>
               <span className="rc-pontos" aria-hidden="true">{IAS.map((x, i) => <i key={x.id} className={i === roleta ? 'aceso' : ''} />)}</span>
             </>
