@@ -560,6 +560,7 @@ export default defineConfig({
         //  - assets versionados (?v=): cache primeiro (são imutáveis por versão);
         //  - imagens e fontes do próprio site: cache, atualizando por trás;
         //  - pedidos com cache 'no-store' (a checagem de versão) nunca passam pelo cache.
+        //  - vídeo e áudio (os vídeos das telas da live, 24/11/2026) vão direto à rede: pedem pedaços (206), que o cache não guarda.
         writeFileSync(join(SAIDA, 'sw.js'), [
           `const CACHE='${MARCA.id}-${assinatura}';`,
           `const SHELL=${JSON.stringify(preCache)};`,
@@ -579,7 +580,7 @@ export default defineConfig({
           // sem recarregar no meio de uma operação); a de duas versões atrás sai.
           `const META='${MARCA.id}-meta';const ler=(c,k)=>c.match(k).then(x=>x?x.text():'');`,
           `self.addEventListener('activate',e=>e.waitUntil(caches.open(META).then(m=>Promise.all([ler(m,'./__versao/atual'),ler(m,'./__versao/anterior')]).then(([atual,anterior])=>{const prev=atual&&atual!==CACHE?atual:anterior;return caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!==META&&(prev?k!==prev:false)&&!(!atual&&!anterior)).map(k=>caches.delete(k)))).then(()=>Promise.all([m.put('./__versao/atual',new Response(CACHE)),m.put('./__versao/anterior',new Response(prev||''))]))})).catch(()=>{}).then(()=>self.registration.navigationPreload&&self.registration.navigationPreload.enable().catch(()=>{})).then(()=>self.clients.claim())));`,
-          `self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;`,
+          `self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo')||r.destination==='video'||r.destination==='audio'||r.headers.has('range'))return;`,
           // Só a RAIZ vira o app guardado para uso sem rede (09/10/2026). Antes
           // qualquer navegação era gravada como './index.html': abrir /cadastro
           // (a landing) ou /cadastre-se (o encaminhamento) trocava o app guardado

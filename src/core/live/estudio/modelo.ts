@@ -46,6 +46,22 @@ export const MODELOS: InfoDoModelo[] = [
 
 export const infoDoModelo = (tipo: TipoDeModelo): InfoDoModelo => MODELOS.find((m) => m.tipo === tipo) ?? MODELOS[0]
 
+/** O que o vídeo de uma tela faz ao terminar (24/11/2026): repete, volta para a tela de antes ou para no último quadro. */
+export type QuandoTerminar = 'repetir' | 'voltar' | 'parar'
+export const quandoTerminar = (c: CamposDoModelo): QuandoTerminar =>
+  c.aoTerminar === 'voltar' || c.aoTerminar === 'parar' || c.aoTerminar === 'repetir' ? c.aoTerminar : c.repetir === 'nao' ? 'parar' : 'repetir'
+
+/**
+ * Os vídeos que a equipe usa nas lives (24/11/2026, pedido do Tiago): vêm com a plataforma
+ * (public/estudio-<marca>/videos), um clique em "Nova tela" e eles viram uma tela pronta.
+ */
+export interface VideoPronto { id: string; nome: string; dica: string; url: string; aoTerminar: QuandoTerminar }
+export const VIDEOS_PRONTOS: VideoPronto[] = GF ? [
+  { id: 'abertura-apresentacao', nome: 'Vinheta de abertura', dica: 'Live iniciando e a plataforma · 43 s', url: `${BASE}estudio-globalfly/videos/abertura-apresentacao.mp4`, aoTerminar: 'voltar' },
+  { id: 'tutorial-operar', nome: 'Tutorial: como operar', dica: 'Passo a passo na plataforma · 3 min 36 s', url: `${BASE}estudio-globalfly/videos/tutorial-operar.mp4`, aoTerminar: 'voltar' },
+  { id: 'obrigado-por-assistir', nome: 'Obrigado por assistir', dica: 'Fim da live · 12 s, repete', url: `${BASE}estudio-globalfly/videos/obrigado-por-assistir.mp4`, aoTerminar: 'repetir' },
+] : []
+
 /* ------------------------------------------------------------ montar */
 
 const vazio = { esq: 0, topo: 0, dir: 0, baixo: 0 }
@@ -194,7 +210,7 @@ export function montarFontes(cenaId: string, tipo: TipoDeModelo, c: CamposDoMode
       const m = midia(c, 'midia')
       return [
         ...mic,
-        ...(m ? [fonteDaMidia(`${id}-midia`, m, { caber: 'conter', repetir: c.repetir !== 'nao' })] : [
+        ...(m ? [fonteDaMidia(`${id}-midia`, m, { caber: 'conter', repetir: quandoTerminar(c) === 'repetir' })] : [
           texto(`${id}-vazio`, 'Aviso', estilo({ conteudo: 'Escolha a arte no lápis desta tela', tamanho: 56, cor: '#8a8f99', negrito: false }), 500),
         ]),
         base(`${id}-cor`, { tipo: 'cor', nome: 'Fundo', cor: '#000000' }),

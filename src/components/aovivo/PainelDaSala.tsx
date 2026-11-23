@@ -1,16 +1,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   alternarAparelho, aplicarModelo, apagarCena, cenaPorId, colocarNoAr, criarTela, desenharMiniatura, duplicarTela, enviarArquivo,
-  estudioAgora, fecharAviso, iniciarEstudio, liberarSom, microfoneMudo, moverCena, nivelDoCanal, saidaDoEstudio, situacaoDoAparelho, telaAoVivo, useEstudio,
+  estudioAgora, fecharAviso, iniciarEstudio, videoNoAr, liberarSom, microfoneMudo, moverCena, nivelDoCanal, saidaDoEstudio, situacaoDoAparelho, telaAoVivo, useEstudio,
   type Aparelho,
 } from '../../core/live/estudio/motor'
-import { MODELOS, infoDoModelo } from '../../core/live/estudio/modelo'
+import { MODELOS, VIDEOS_PRONTOS, infoDoModelo, quandoTerminar, type VideoPronto } from '../../core/live/estudio/modelo'
 import type { CamposDoModelo, Cena, TipoDeModelo } from '../../core/live/estudio/tipos'
 import { simulacaoAgora, useSimulacao } from '../../core/live/simulacao'
 import { usarEstudioNoTreino } from '../../core/live/treino'
 import { enviarArquivoDaLive, ligarSincroniaDasTelas, type EstadoDaNuvem } from '../../core/live/estudio/nuvem'
 import { sessaoGuardada } from '../../core/teeds/conta'
 import type { SessaoTeeds } from '../../core/teeds/conta'
+import { MARCA } from '../../marca'
 import './painel-da-sala.css'
 
 /**
@@ -127,6 +128,7 @@ function Aparelhos() {
 /* ------------------------------------------------------------- o editor */
 
 const sim = (v: string | undefined) => v === 'sim'
+const tempo = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const ACEITA = 'image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime'
 
 function CampoDeMidia({ rotulo, dica, campos, prefixo, mudar, padrao, sessao }: {
@@ -290,7 +292,17 @@ function EditorDaTela({ id, fechar, sessao }: { id: string; fechar: () => void; 
 
             {tipo === 'arte' && <>
               <CampoDeMidia rotulo="Sua arte" prefixo="midia" campos={campos} mudar={mudar} sessao={sessao} dica="Imagem, vídeo ou animação (MP4 ou WebM) na tela toda. O som do vídeo vai para os alunos." />
-              {campos.midiaTipo === 'video' && <SimNao rotulo="Repetir o vídeo" valor={campos.repetir !== 'nao'} mudar={(v) => mudar({ repetir: v ? 'sim' : 'nao' })} />}
+              {campos.midiaTipo === 'video' && (
+                <div className="ps-campo">
+                  <span className="ps-rotulo">Quando o vídeo terminar</span>
+                  <div className="tr-seg" role="radiogroup" aria-label="Quando o vídeo terminar">
+                    {([['voltar', 'Volta à tela de antes'], ['repetir', 'Repete'], ['parar', 'Para no fim']] as const).map(([v, r]) => (
+                      <button key={v} type="button" role="radio" aria-checked={quandoTerminar(campos) === v} className={quandoTerminar(campos) === v ? 'on' : ''} onClick={() => mudar({ aoTerminar: v })}>{r}</button>
+                    ))}
+                  </div>
+                  <small className="ps-dica">{quandoTerminar(campos) === 'voltar' ? 'Ao acabar, a live volta sozinha para a tela que estava antes (por exemplo, Ao vivo).' : quandoTerminar(campos) === 'repetir' ? 'O vídeo recomeça sem parar até você trocar de tela.' : 'O vídeo fica parado no último quadro até você trocar de tela.'}</small>
+                </div>
+              )}
             </>}
 
             <SimNao rotulo="Microfone nesta tela" dica={sim(campos.mic) ? 'Os alunos ouvem você enquanto esta tela está no ar.' : 'Os alunos não ouvem você nesta tela.'} valor={sim(campos.mic)} mudar={(v) => mudar({ mic: v ? 'sim' : 'nao' })} />
@@ -310,7 +322,7 @@ function EditorDaTela({ id, fechar, sessao }: { id: string; fechar: () => void; 
   )
 }
 
-function NovaTela({ escolher, fechar }: { escolher: (t: TipoDeModelo) => void; fechar: () => void }) {
+function NovaTela({ escolher, escolherVideo, fechar, jaTem }: { escolher: (t: TipoDeModelo) => void; escolherVideo: (v: VideoPronto) => void; fechar: () => void; jaTem: (url: string) => string | null }) {
   useEffect(() => {
     const f = (ev: KeyboardEvent) => { if (ev.key === 'Escape') fechar() }
     window.addEventListener('keydown', f)
@@ -330,6 +342,22 @@ function NovaTela({ escolher, fechar }: { escolher: (t: TipoDeModelo) => void; f
             </button>
           ))}
         </div>
+        {VIDEOS_PRONTOS.length > 0 && (
+          <div className="ps-videos-prontos">
+            <h3>Vídeos da {MARCA.prosa} <small>Já vêm com a plataforma: um clique e viram uma tela</small></h3>
+            <div className="ps-modelos ps-modelos-videos">
+              {VIDEOS_PRONTOS.map((v) => {
+                const existente = jaTem(v.url)
+                return (
+                  <button key={v.id} type="button" className="ps-modelo ps-modelo-video" onClick={() => escolherVideo(v)}>
+                    <span className="ps-modelo-play" aria-hidden><Icone d="M8 5l11 7-11 7z" tamanho={14} /></span>
+                    <span><b>{v.nome}</b><small>{existente ? `Já está nas telas: ${existente}` : v.dica}</small></span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -363,6 +391,12 @@ export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null })
   const [editando, setEditando] = useState<string | null>(null)
   const [novaAberta, setNovaAberta] = useState(false)
   const nuvem = useTelasNaNuvem(sessao, e.pronto, !!editando || novaAberta)
+  // o vídeo da tela no ar: tempo e o que faz no fim (lido 4 vezes por segundo)
+  const [videoAgora, setVideoAgora] = useState<ReturnType<typeof videoNoAr>>(null)
+  useEffect(() => {
+    const t = window.setInterval(() => setVideoAgora((antes) => { const v = videoNoAr(); return !v && !antes ? antes : v }), 250)
+    return () => window.clearInterval(t)
+  }, [])
 
   // abre o motor (uma vez) e passa a imagem e o som dele para a transmissão
   useEffect(() => {
@@ -406,6 +440,7 @@ export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null })
 
   const noAr = cenaPorId(e.config.programa)
   const abertura = telaDeAbertura(cenas)
+  const video = videoAgora
   const indice = cenas.findIndex((c) => c.id === e.config.programa)
   const proxima = indice >= 0 ? cenas[indice + 1] : cenas[0]
   const entrando = e.transicao?.para
@@ -438,7 +473,14 @@ export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null })
         <div className="ps-comando-agora">
           <small>{sala.ativa ? 'No ar agora' : 'Na prévia'}</small>
           <b>{noAr?.nome}</b>
-          {!sala.ativa && abertura && <em>A live sempre abre em {abertura.nome}</em>}
+          {!sala.ativa && abertura && !video && <em>A live sempre abre em {abertura.nome}</em>}
+          {video && (
+            <span className="ps-video-tempo" role="status">
+              <i style={{ width: `${Math.min(100, (video.atual / video.duracao) * 100)}%` }} aria-hidden />
+              <small className="cv-num">{tempo(video.atual)} de {tempo(video.duracao)}</small>
+              <small>{video.aoTerminar === 'voltar' ? `No fim, volta para ${video.volta ?? 'a tela de antes'}` : video.aoTerminar === 'repetir' ? 'Repete no fim' : 'Para no fim'}</small>
+            </span>
+          )}
         </div>
         <button type="button" className="ps-proxima" disabled={!proxima || !!entrando} onClick={() => proxima && colocarNoAr(proxima.id)}
           title={proxima ? `Pôr ${proxima.nome} no ar (barra de espaço)` : 'Esta é a última tela'}>
@@ -490,7 +532,15 @@ export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null })
       <Aparelhos />
 
       {editando && <EditorDaTela id={editando} fechar={() => setEditando(null)} sessao={sessao} />}
-      {novaAberta && <NovaTela fechar={() => setNovaAberta(false)} escolher={(t) => { const id = criarTela(t); setNovaAberta(false); setEditando(id) }} />}
+      {novaAberta && <NovaTela fechar={() => setNovaAberta(false)} escolher={(t) => { const id = criarTela(t); setNovaAberta(false); setEditando(id) }}
+        jaTem={(url) => cenas.find((c) => c.modelo?.campos.midiaUrl === url)?.nome ?? null}
+        escolherVideo={(v) => {
+          // o vídeo já está numa tela: só mostra ela; senão, cria a tela pronta
+          const existente = cenas.find((c) => c.modelo?.campos.midiaUrl === v.url)
+          setNovaAberta(false)
+          if (existente) { setEditando(existente.id); return }
+          criarTela('arte', v.nome, { midiaUrl: v.url, midiaTipo: 'video', midiaNome: v.nome, aoTerminar: v.aoTerminar, mic: 'nao' })
+        }} />}
     </section>
   )
 }

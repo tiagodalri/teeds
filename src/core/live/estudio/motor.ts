@@ -294,8 +294,13 @@ async function prepararMidia(f: Fonte) {
   el.src = u.url
   noBastidor(el)
   try { audio().createMediaElementSource(el).connect(canalVivo(`arq:${f.id}`).fader) } catch { /* sem som */ }
-  el.addEventListener('loadedmetadata', () => { encaixarFonte(f.id); mudar({ tamanhos: estado.tamanhos + 1 }) })
+  el.addEventListener('loadedmetadata', () => {
+    encaixarFonte(f.id); mudar({ tamanhos: estado.tamanhos + 1 })
+    // a miniatura do cartão mostra um quadro do começo (muito vídeo abre num quadro preto); no ar ele volta ao 0
+    if (el instanceof HTMLVideoElement && el.paused && el.currentTime === 0 && !cenasAtivas().has(cenaDaFonte(f.id) ?? '')) el.currentTime = Math.min(2, el.duration * 0.25)
+  })
   el.addEventListener('error', () => mudar({ aviso: `Não consegui abrir "${f.nomeDoArquivo ?? f.nome}". Use MP4 (H.264), WebM ou MP3.` }))
+  el.addEventListener('ended', () => videoTerminou(f.id))
   midias.set(f.id, { el, chave, url: u.url, doArquivo: u.doArquivo })
   atualizarReproducao()
 }
@@ -515,6 +520,7 @@ export function transicionar(para?: string): void {
   void liberarSom()
   reiniciarMidiasDa(alvo)
   const tipo = c.transicao === 'stinger' && stingerProntoParaUsar() ? 'stinger' : c.transicao === 'corte' ? 'corte' : 'esmaecer'
+  anteriorNoAr = c.programa
   if (tipo === 'corte') { mudarConfig((x) => ({ ...x, programa: alvo })); return }
   transicao = { de: c.programa, para: alvo, tipo, inicio: performance.now(), duracao: tipo === 'esmaecer' ? Math.max(50, c.duracaoMs) : 0, teste: false }
   if (tipo === 'stinger') tocarStinger();
@@ -1127,6 +1133,7 @@ export function duplicarTela(id: string): string | null {
 export function colocarNoAr(id: string, naHora = false): void {
   if (!cenaPorId(id)) return
   if (naHora) {
+    if (estado.config.programa !== id) anteriorNoAr = estado.config.programa
     if (transicao && !transicao.teste) { transicao = null; mudar({ transicao: null }) }
     reiniciarMidiasDa(id)
     mudarConfig((c) => ({ ...c, programa: id }))
@@ -1179,3 +1186,36 @@ export function aplicarTelasDaNuvem(t: { cenas: Cena[]; transicao?: ConfigDoEstu
     previa: cenas.some((x) => x.id === c.previa) ? c.previa : cenas[0].id,
   }))
 }
+
+/* ============================================ vídeos nas telas (24/11/2026) */
+
+/** A tela que estava no ar antes da atual (para o vídeo "voltar ao terminar"). */
+let anteriorNoAr: string | null = null
+
+/** O vídeo da tela no ar terminou: se a tela pede, volta para a de antes (ou para o Ao vivo). */
+function videoTerminou(fonteId: string): void {
+  const c = estado.config
+  const cena = cenaPorId(c.programa)
+  if (!cena || !cena.fontes.some((f) => f.id === fonteId) || transicao) return
+  if (cena.modelo?.campos.aoTerminar !== 'voltar') return
+  const volta = anteriorNoAr && anteriorNoAr !== c.programa && cenaPorId(anteriorNoAr)
+    ? anteriorNoAr
+    : c.cenas.find((x) => x.modelo?.tipo === 'aovivo' && x.id !== c.programa)?.id
+  if (volta) transicionar(volta)
+}
+
+/** O vídeo da tela no ar agora (tempo e o que faz no fim), ou null se ela não tem vídeo. */
+export function videoNoAr(): { atual: number; duracao: number; aoTerminar: string; volta: string | null } | null {
+  const c = estado.config
+  const cena = cenaPorId(c.programa)
+  const f = cena?.fontes.find((x) => x.tipo === 'video' && x.visivel)
+  const m = f ? midias.get(f.id)?.el : undefined
+  if (!cena || !m || !(m.duration > 0)) return null
+  const aoTerminar = cena.modelo?.campos.aoTerminar ?? (f?.repetir ? 'repetir' : 'parar')
+  const volta = aoTerminar === 'voltar'
+    ? cenaPorId(anteriorNoAr && anteriorNoAr !== c.programa ? anteriorNoAr : '')?.nome ?? c.cenas.find((x) => x.modelo?.tipo === 'aovivo' && x.id !== c.programa)?.nome ?? null
+    : null
+  return { atual: m.currentTime, duracao: m.duration, aoTerminar, volta }
+}
+
+const cenaDaFonte = (fonteId: string): string | undefined => estado.config.cenas.find((c) => c.fontes.some((f) => f.id === fonteId))?.id
