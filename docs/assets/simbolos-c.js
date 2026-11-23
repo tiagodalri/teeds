@@ -1,0 +1,1 @@
+function D(r){const t={frxXAUUSD:"Ouro (XAU/USD)",frxXAGUSD:"Prata (XAG/USD)",frxXPTUSD:"Platina (XPT/USD)",frxXPDUSD:"Paládio (XPD/USD)"};if(t[r])return t[r];const n=r.match(/^frx([A-Z]{3})([A-Z]{3})$/);if(n)return`${n[1]}/${n[2]}`;const e=r.match(/^R_(\d+)$/);if(e)return`${e[1]} Index`;const f=r.match(/^1HZ(\d+)V$/);return f?`${f[1]} (1s) Index`:r}export{D as n};

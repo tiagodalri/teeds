@@ -23,6 +23,7 @@ import { ligarCorrecaoDoIphone } from './core/iphoneDesalinhado'
 import { ligarDirecaoDaRolagem } from './core/direcaoDaRolagem'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { JANELA, ligarJanelaSolta } from './core/janelaSolta'
+import { definirRecarregador, emOperacao, pedirAtualizacao } from './core/atualizacaoSegura'
 
 /*
   Os arquivos publicados têm nome fixo. Se uma aba antiga abre uma tela
@@ -41,14 +42,15 @@ const COPIA_VELHA = 'Versão nova publicada: a página recarrega na versão nova
   novo, sem cache, as peças que esta página baixou. Uma vez a cada 30 s, com marca
   nova no endereço: nunca vira laço de recarga.
 */
-function limparPecasVelhasERecarregar(): void {
+function limparPecasVelhasERecarregar(versao: string | null = null, porClique = false): void {
   // chave nova: a cópia velha (de antes desta correção) ainda usa a antiga
   const chave = 'app.limpou-pecas-velhas'
   try {
-    if (Date.now() - Number(sessionStorage.getItem(chave) ?? 0) < 30_000) return
+    // a trava contra laço vale para a recarga automática; o toque em Atualizar sempre recarrega
+    if (!porClique && Date.now() - Number(sessionStorage.getItem(chave) ?? 0) < 30_000) return
     sessionStorage.setItem(chave, String(Date.now()))
-  } catch { return /* sem armazenamento: não recarrega */ }
-  const recarregar = () => { const u = new URL(location.href); u.searchParams.set('v', Date.now().toString(36)); location.replace(u.toString()) }
+  } catch { if (!porClique) return /* sem armazenamento: não recarrega sozinho */ }
+  const recarregar = () => { const u = new URL(location.href); u.searchParams.set('v', versao || Date.now().toString(36)); location.replace(u.toString()) }
   const pecas = performance.getEntriesByType('resource').map((e) => e.name).filter((n) => n.startsWith(`${location.origin}/assets/`))
   const apagarCache = typeof caches === 'undefined' ? Promise.resolve() : caches.keys().then((ks) => Promise.all(ks.map((k) => caches.delete(k)))).then(() => undefined)
   const tudo = apagarCache.catch(() => undefined)
@@ -57,26 +59,29 @@ function limparPecasVelhasERecarregar(): void {
   Promise.race([tudo, new Promise((ok) => setTimeout(ok, 8000))]).then(recarregar, recarregar)
 }
 if (pagina.__appNoAr) {
-  limparPecasVelhasERecarregar()
+  // 23/11/2026: a segunda cópia não recarrega mais sozinha; a que já está na página
+  // vê o erro e decide (aviso, ou recarga só sem nada em andamento)
   throw new Error(COPIA_VELHA)
 }
 pagina.__appNoAr = true
+definirRecarregador((v, porClique) => limparPecasVelhasERecarregar(v, porClique))
 // A cópia velha pode ter vindo de uma publicação anterior a esta correção (ela só
 // lança o erro): o app que já está na página percebe e faz a limpeza.
 const ehCopiaVelha = (m: unknown) => String((m as { message?: unknown } | null)?.message ?? m ?? '').includes(COPIA_VELHA)
-window.addEventListener('error', (e) => { if (ehCopiaVelha(e.error ?? e.message)) limparPecasVelhasERecarregar() })
-window.addEventListener('unhandledrejection', (e) => { if (ehCopiaVelha(e.reason)) limparPecasVelhasERecarregar() })
+window.addEventListener('error', (e) => { if (ehCopiaVelha(e.error ?? e.message)) pedirAtualizacao(null, 'tela') })
+window.addEventListener('unhandledrejection', (e) => { if (ehCopiaVelha(e.reason)) pedirAtualizacao(null, 'tela') })
 // Falha ao baixar uma tela separada (publicação no meio, rede caiu e voltou): recarrega uma vez.
 window.addEventListener('vite:preloadError', (e) => {
   // a tela separada puxou a cópia velha do app: limpa as peças guardadas antes de recarregar
-  if (ehCopiaVelha((e as Event & { payload?: unknown }).payload)) { e.preventDefault(); limparPecasVelhasERecarregar(); return }
+  if (ehCopiaVelha((e as Event & { payload?: unknown }).payload)) { e.preventDefault(); pedirAtualizacao(null, 'tela'); return }
   const chave = 'app.recarregou-por-tela'
   try {
     if (Date.now() - Number(sessionStorage.getItem(chave) ?? 0) < 30_000) return
     sessionStorage.setItem(chave, String(Date.now()))
   } catch { return }
   e.preventDefault()
-  location.reload()
+  // 23/11/2026: com operação aberta, nunca recarrega sozinho; avisa
+  pedirAtualizacao(null, 'tela')
 })
 
 // Convite para instalar e aviso de sem conexão: só nas marcas com app nativo.
@@ -188,10 +193,11 @@ async function conferirVersao(soAvisar = false) {
     if (!propria) return
     const r = await fetch(`${import.meta.env.BASE_URL}index.html?vivo=${Date.now()}`, { cache: 'no-store' })
     if (!r.ok) return
-    const atual = (await r.text()).match(/assets\/[a-z]+\.js\?v=([a-z0-9]+)/)?.[1]
+    // o principal é <marca>-app.js desde 23/11/2026 (antes, <marca>.js)
+    const atual = (await r.text()).match(/assets\/[a-z]+(?:-app)?\.js\?v=([a-z0-9]+)/)?.[1]
     if (!atual || atual === propria) return
-    // com a tela à mostra e a pessoa trabalhando, não recarrega sozinho: avisa
-    if (soAvisar) { avisarVersaoNova(atual); return }
+    // 23/11/2026: com algo em andamento (ou fora da abertura do app), nunca recarrega sozinho: avisa
+    if (soAvisar || emOperacao()) { pedirAtualizacao(atual); return }
     const chave = 'app.recarregou-para'
     if (sessionStorage.getItem(chave) === atual) return
     sessionStorage.setItem(chave, atual)
@@ -217,9 +223,10 @@ document.addEventListener('visibilitychange', () => {
   if (!foraDesde || Date.now() - foraDesde < 20_000) return
   foraDesde = 0
   void navigator.serviceWorker?.getRegistration().then((r) => r?.update()).catch(() => undefined)
-  void conferirVersao()
+  // 23/11/2026: voltar de outra aba (o Meet, por exemplo) recarregava a tela no meio da operação: agora só avisa
+  void conferirVersao(true)
 })
-window.addEventListener('pageshow', (e) => { if (e.persisted) void conferirVersao() })
+window.addEventListener('pageshow', (e) => { if (e.persisted) void conferirVersao(true) })
 
 /*
  * Aba aberta o dia inteiro, sempre à mostra (28/10/2026: o computador do
@@ -228,21 +235,7 @@ window.addEventListener('pageshow', (e) => { if (e.persisted) void conferirVersa
  * mostra um aviso com "Atualizar" em vez de recarregar no meio do uso. As
  * sessões rodam no servidor: atualizar a página não as interrompe.
  */
-let avisadaPara = ''
-function avisarVersaoNova(versao: string) {
-  if (avisadaPara === versao || document.getElementById('aviso-versao')) return
-  avisadaPara = versao
-  const aviso = document.createElement('div')
-  aviso.id = 'aviso-versao'
-  aviso.setAttribute('role', 'status')
-  aviso.innerHTML = '<span><b>Versão nova disponível.</b> O que está em andamento continua normalmente.</span>'
-    + '<button type="button" data-atualizar>Atualizar agora</button><button type="button" data-depois>Depois</button>'
-  aviso.querySelector('[data-atualizar]')!.addEventListener('click', () => {
-    const u = new URL(location.href); u.searchParams.set('v', versao); location.replace(u.toString())
-  })
-  aviso.querySelector('[data-depois]')!.addEventListener('click', () => aviso.remove())
-  document.body.appendChild(aviso)
-}
+// a cada 10 min (aba aberta o dia inteiro) a conferência só avisa; a recarga fica com atualizacaoSegura
 window.setInterval(() => { if (document.visibilityState === 'visible') void conferirVersao(true) }, 10 * 60_000)
 
 // O PWA usa a mesma aplicacao publicada. A troca do service worker acontece

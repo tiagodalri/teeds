@@ -1,3 +1,4 @@
+import { marcarEmUso } from './core/atualizacaoSegura'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react'
 import { assinarTransmissao, transmissaoNoAr } from './core/teeds/transmissao'
 import { useSimulador } from './hooks/useSimulador'
@@ -1067,6 +1068,18 @@ export default function App() {
   // Multiplicadores (30/10/2026): cada tela com as suas posições (o multiplicador não tem prazo nem relógio)
   const naTelaMult = tela === 'multiplicadores'
   const minhas = useMemo(() => minhasTodas.filter((c) => ehMultiplicador(c) === naTelaMult), [minhasTodas, naTelaMult])
+
+  /*
+    Atualização segura (23/11/2026): enquanto houver contrato aberto na conta da Deriv (manual, multitela,
+    multiplicador ou de I.A.), compra esperando confirmação, posição manual na tela ou I.A. ligada, a
+    versão nova só aparece como aviso; a tela nunca recarrega sozinha (ver core/atualizacaoSegura.ts).
+  */
+  const contratosAbertos = conta.contracts.some((c) => !['won', 'lost', 'sold', 'cancelled'].includes(c.status))
+  const iaLigada = vivasRobos.some((v) => v.estado?.rodando || v.estado?.emOperacao)
+  useEffect(() => { marcarEmUso('contratos', contratosAbertos) }, [contratosAbertos])
+  useEffect(() => { marcarEmUso('compras', comprasPendentes.length > 0) }, [comprasPendentes.length])
+  useEffect(() => { marcarEmUso('manuais', minhasTodas.length > 0) }, [minhasTodas.length])
+  useEffect(() => { marcarEmUso('ia', iaLigada) }, [iaLigada])
 
   /*
     Operação manual encerrada fica no gráfico por 2 minutos, com o preço de

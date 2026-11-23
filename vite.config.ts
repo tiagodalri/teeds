@@ -574,7 +574,11 @@ export default defineConfig({
           `self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(s=>{const q=new Request(s,{cache:'reload'});return fetch(q).then(x=>confere(q,x).then(ok=>ok&&c.put(q,x))).catch(()=>{})}))).catch(()=>{}));self.skipWaiting()});`,
           // Pré-carga da navegação (31/10/2026): o navegador já pede a página enquanto o
           // service worker acorda, em vez de esperar ele acordar para só então pedir.
-          `self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.registration.navigationPreload&&self.registration.navigationPreload.enable().catch(()=>{})).then(()=>self.clients.claim())));`,
+          // 23/11/2026: guarda também as peças da versão ANTERIOR. Quem está com a tela antiga
+          // aberta continua abrindo as telas dela com as peças dela (sem misturar versões e
+          // sem recarregar no meio de uma operação); a de duas versões atrás sai.
+          `const META='${MARCA.id}-meta';const ler=(c,k)=>c.match(k).then(x=>x?x.text():'');`,
+          `self.addEventListener('activate',e=>e.waitUntil(caches.open(META).then(m=>Promise.all([ler(m,'./__versao/atual'),ler(m,'./__versao/anterior')]).then(([atual,anterior])=>{const prev=atual&&atual!==CACHE?atual:anterior;return caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!==META&&(prev?k!==prev:false)&&!(!atual&&!anterior)).map(k=>caches.delete(k)))).then(()=>Promise.all([m.put('./__versao/atual',new Response(CACHE)),m.put('./__versao/anterior',new Response(prev||''))]))})).catch(()=>{}).then(()=>self.registration.navigationPreload&&self.registration.navigationPreload.enable().catch(()=>{})).then(()=>self.clients.claim())));`,
           `self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo'))return;`,
           // Só a RAIZ vira o app guardado para uso sem rede (09/10/2026). Antes
           // qualquer navegação era gravada como './index.html': abrir /cadastro
@@ -613,8 +617,14 @@ export default defineConfig({
     emptyOutDir: false,
     rollupOptions: {
       output: {
-        entryFileNames: `assets/${MARCA.id}.js`,
-        chunkFileNames: 'assets/[name].js',
+        // 23/11/2026: o principal se chama <marca>-app.js. A versão de antes disso (aberta
+        // nos navegadores) só reconhece "versão nova" num principal só com letras e se
+        // recarregava sozinha no meio das operações; com este nome ela não se recarrega,
+        // e a versão nova só avisa (core/atualizacaoSegura.ts).
+        entryFileNames: `assets/${MARCA.id}-app.js`,
+        // peça com nome só de letras minúsculas (stories.js) ganha "-c": a versão antiga
+        // aberta nos navegadores confundia ela com o principal e se recarregava (23/11/2026)
+        chunkFileNames: (c) => (/^[a-z]+$/.test(c.name) ? 'assets/[name]-c.js' : 'assets/[name].js'),
         assetFileNames: `assets/${MARCA.id}.[ext]`,
       },
     },
