@@ -6,8 +6,11 @@ import {
 } from '../../core/live/estudio/motor'
 import { MODELOS, infoDoModelo } from '../../core/live/estudio/modelo'
 import type { CamposDoModelo, Cena, TipoDeModelo } from '../../core/live/estudio/tipos'
-import { useSimulacao } from '../../core/live/simulacao'
+import { simulacaoAgora, useSimulacao } from '../../core/live/simulacao'
 import { usarEstudioNoTreino } from '../../core/live/treino'
+import { enviarArquivoDaLive, ligarSincroniaDasTelas, type EstadoDaNuvem } from '../../core/live/estudio/nuvem'
+import { sessaoGuardada } from '../../core/teeds/conta'
+import type { SessaoTeeds } from '../../core/teeds/conta'
 import './painel-da-sala.css'
 
 /**
@@ -126,9 +129,9 @@ function Aparelhos() {
 const sim = (v: string | undefined) => v === 'sim'
 const ACEITA = 'image/png,image/jpeg,image/webp,video/mp4,video/webm,video/quicktime'
 
-function CampoDeMidia({ rotulo, dica, campos, prefixo, mudar, padrao }: {
+function CampoDeMidia({ rotulo, dica, campos, prefixo, mudar, padrao, sessao }: {
   rotulo: string; dica: string; campos: CamposDoModelo; prefixo: 'fundo' | 'midia'
-  mudar: (p: CamposDoModelo) => void; padrao?: CamposDoModelo
+  mudar: (p: CamposDoModelo) => void; padrao?: CamposDoModelo; sessao: SessaoTeeds | null
 }) {
   const input = useRef<HTMLInputElement>(null)
   const [enviando, setEnviando] = useState(false)
@@ -142,17 +145,26 @@ function CampoDeMidia({ rotulo, dica, campos, prefixo, mudar, padrao }: {
     if (!/^(image|video)\//.test(f.type)) { setErro('Escolha uma imagem (PNG, JPG ou WebP) ou um vídeo (MP4 ou WebM).'); return }
     if (/gif$/i.test(f.type)) { setErro('GIF não anima aqui. Para animação, use um vídeo MP4 ou WebM.'); return }
     setEnviando(true)
+    const tipo = f.type.startsWith('video/') ? 'video' : 'imagem'
     try {
+      // 23/11/2026: o arquivo vai para a nuvem (todo administrador vê); sem rede, fica só neste computador
+      if (sessao) {
+        try {
+          const url = await enviarArquivoDaLive(sessao, f, f.name)
+          mudar({ [prefixo]: '', [`${prefixo}Url`]: url, [`${prefixo}Tipo`]: tipo, [`${prefixo}Nome`]: f.name })
+          return
+        } catch (e) { setErro(`${(e as Error).message} Ficou guardado só neste computador.`) }
+      }
       const id = await enviarArquivo(f)
-      mudar({ [prefixo]: id, [`${prefixo}Url`]: '', [`${prefixo}Tipo`]: f.type.startsWith('video/') ? 'video' : 'imagem', [`${prefixo}Nome`]: f.name })
-    } catch { setErro('Não consegui guardar o arquivo neste computador.') } finally { setEnviando(false) }
+      mudar({ [prefixo]: id, [`${prefixo}Url`]: '', [`${prefixo}Tipo`]: tipo, [`${prefixo}Nome`]: f.name })
+    } catch { setErro('Não consegui guardar o arquivo.') } finally { setEnviando(false) }
   }
   return (
     <div className="ps-campo">
       <span className="ps-rotulo">{rotulo}</span>
       <div className="ps-midia">
         <span className="ps-midia-nome">{tem ? <>{campos[`${prefixo}Tipo`] === 'video' ? 'Vídeo' : 'Imagem'}: <b>{ePadrao ? 'o padrão da plataforma' : nome}</b></> : <em>Nenhum arquivo</em>}</span>
-        <button type="button" className="ps-botao" onClick={() => input.current?.click()} disabled={enviando}><Icone d={ICONES.enviar} />{enviando ? 'Guardando…' : tem ? 'Trocar' : 'Escolher'}</button>
+        <button type="button" className="ps-botao" onClick={() => input.current?.click()} disabled={enviando}><Icone d={ICONES.enviar} />{enviando ? 'Enviando…' : tem ? 'Trocar' : 'Escolher'}</button>
         {tem && !ePadrao && padrao?.[`${prefixo}Url`] && <button type="button" className="ps-link" onClick={() => mudar({ [prefixo]: '', [`${prefixo}Url`]: padrao[`${prefixo}Url`] ?? '', [`${prefixo}Tipo`]: padrao[`${prefixo}Tipo`] ?? '', [`${prefixo}Nome`]: padrao[`${prefixo}Nome`] ?? '' })}>Voltar ao padrão</button>}
         {tem && <button type="button" className="ps-link" onClick={() => mudar({ [prefixo]: '', [`${prefixo}Url`]: '', [`${prefixo}Tipo`]: '', [`${prefixo}Nome`]: '' })}>Tirar</button>}
         <input ref={input} type="file" accept={ACEITA} hidden onChange={(ev) => { void escolher(ev.target.files?.[0]); ev.target.value = '' }} />
@@ -186,7 +198,7 @@ function Texto({ rotulo, valor, mudar, linhas = 1, max = 120, dica, placeholder 
 
 const CANTOS: Array<[string, string]> = [['sup-esq', 'Em cima, à esquerda'], ['sup-dir', 'Em cima, à direita'], ['inf-esq', 'Embaixo, à esquerda'], ['inf-dir', 'Embaixo, à direita']]
 
-function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
+function EditorDaTela({ id, fechar, sessao }: { id: string; fechar: () => void; sessao: SessaoTeeds | null }) {
   const e = useEstudio()
   const sala = useSimulacao()
   const cena = cenaPorId(id, e.config)
@@ -247,7 +259,7 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
             {(tipo === 'abertura' || tipo === 'intervalo' || tipo === 'encerramento') && <>
               <Texto rotulo="Título" valor={campos.titulo ?? ''} max={60} placeholder="LIVE INICIANDO" mudar={(v) => mudar({ titulo: v })} dica="O texto grande, em dourado. Deixe vazio para não mostrar." />
               <Texto rotulo="Linha de baixo" valor={campos.subtitulo ?? ''} max={60} placeholder="EM INSTANTES" mudar={(v) => mudar({ subtitulo: v })} />
-              <CampoDeMidia rotulo="Fundo" prefixo="fundo" campos={campos} mudar={mudar} padrao={info.campos}
+              <CampoDeMidia rotulo="Fundo" prefixo="fundo" campos={campos} mudar={mudar} padrao={info.campos} sessao={sessao}
                 dica="Uma imagem, ou um vídeo/animação (MP4 ou WebM). O vídeo repete sozinho e o som dele vai para os alunos." />
             </>}
 
@@ -270,14 +282,14 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
             )}
 
             {tipo === 'depoimento' && <>
-              <CampoDeMidia rotulo="Foto ou vídeo do cliente" prefixo="midia" campos={campos} mudar={mudar} dica="Opcional. Sem foto, a frase fica no centro da tela." />
+              <CampoDeMidia rotulo="Foto ou vídeo do cliente" prefixo="midia" campos={campos} mudar={mudar} sessao={sessao} dica="Opcional. Sem foto, a frase fica no centro da tela." />
               <Texto rotulo="Frase do cliente" linhas={3} max={220} placeholder="Em 30 dias eu entendi o que fazia de errado…" valor={campos.frase ?? ''} mudar={(v) => mudar({ frase: v })} dica="Use as palavras do cliente, como ele disse." />
               <Texto rotulo="Nome" placeholder="Ana Souza" valor={campos.nome ?? ''} max={40} mudar={(v) => mudar({ nome: v })} />
               <Texto rotulo="Cidade" placeholder="Curitiba, PR" valor={campos.cidade ?? ''} max={40} mudar={(v) => mudar({ cidade: v })} />
             </>}
 
             {tipo === 'arte' && <>
-              <CampoDeMidia rotulo="Sua arte" prefixo="midia" campos={campos} mudar={mudar} dica="Imagem, vídeo ou animação (MP4 ou WebM) na tela toda. O som do vídeo vai para os alunos." />
+              <CampoDeMidia rotulo="Sua arte" prefixo="midia" campos={campos} mudar={mudar} sessao={sessao} dica="Imagem, vídeo ou animação (MP4 ou WebM) na tela toda. O som do vídeo vai para os alunos." />
               {campos.midiaTipo === 'video' && <SimNao rotulo="Repetir o vídeo" valor={campos.repetir !== 'nao'} mudar={(v) => mudar({ repetir: v ? 'sim' : 'nao' })} />}
             </>}
 
@@ -290,7 +302,7 @@ function EditorDaTela({ id, fechar }: { id: string; fechar: () => void }) {
             ? <span className="ps-confirmar">Apagar esta tela? <button type="button" className="ps-botao perigo" onClick={() => { if (apagarCena(id)) fechar() }}>Apagar</button><button type="button" className="ps-link" onClick={() => setConfirmar(false)}>Cancelar</button></span>
             : <button type="button" className="ps-botao" onClick={() => setConfirmar(true)} disabled={!podeApagar} title={noAr ? 'Coloque outra tela no ar antes de apagar esta' : undefined}><Icone d={ICONES.lixo} />Apagar</button>}
           <span className="ps-espaco" />
-          <small className="ps-dica">As mudanças já estão salvas neste computador.</small>
+          <small className="ps-dica">{sessao ? 'As mudanças vão sozinhas para a nuvem: toda a equipe vê as mesmas telas.' : 'As mudanças ficam salvas neste computador.'}</small>
           <button type="button" className="ps-botao ps-botao-forte" onClick={fechar}>Pronto</button>
         </footer>
       </div>
@@ -325,11 +337,32 @@ function NovaTela({ escolher, fechar }: { escolher: (t: TipoDeModelo) => void; f
 
 /* --------------------------------------------------------------- o painel */
 
-export function PainelDaSala() {
+/* ------------------------------------------- telas na nuvem (23/11/2026) */
+
+/** Liga a sincronia das telas com a nuvem (a regra toda está em core/live/estudio/nuvem.ts). */
+function useTelasNaNuvem(sessao: SessaoTeeds | null, pronto: boolean, pausar: boolean): EstadoDaNuvem {
+  const [st, setSt] = useState<EstadoDaNuvem>({ fase: sessao ? 'abrindo' : 'local' })
+  const pausarRef = useRef(pausar)
+  pausarRef.current = pausar
+  useEffect(() => {
+    if (!sessao || !pronto) return
+    return ligarSincroniaDasTelas({
+      // o token mais novo (a sessão é renovada pelo app; a live pode passar de 1 h)
+      sessao: () => sessaoGuardada() ?? sessao,
+      pausar: () => pausarRef.current,
+      telaNoAr: () => (simulacaoAgora().ativa ? estudioAgora().config.programa : null),
+      avisar: setSt,
+    })
+  }, [sessao?.usuario.id, pronto]) // eslint-disable-line react-hooks/exhaustive-deps
+  return st
+}
+
+export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null }) {
   const e = useEstudio()
   const sala = useSimulacao()
   const [editando, setEditando] = useState<string | null>(null)
   const [novaAberta, setNovaAberta] = useState(false)
+  const nuvem = useTelasNaNuvem(sessao, e.pronto, !!editando || novaAberta)
 
   // abre o motor (uma vez) e passa a imagem e o som dele para a transmissão
   useEffect(() => {
@@ -417,6 +450,14 @@ export function PainelDaSala() {
 
       <div className="ps-telas-topo">
         <h3>Telas</h3>
+        <span className={`ps-nuvem ${nuvem.fase}`} role="status" title={nuvem.fase === 'erro' ? nuvem.erro : undefined}>
+          <i aria-hidden />
+          {nuvem.fase === 'local' ? 'Salvas neste computador'
+            : nuvem.fase === 'abrindo' ? 'Abrindo as telas da equipe…'
+              : nuvem.fase === 'salvando' ? 'Salvando na nuvem…'
+                : nuvem.fase === 'erro' ? 'Sem conexão com a nuvem: salvas só neste computador'
+                  : `Na nuvem · a equipe toda vê as mesmas${nuvem.nome ? ` · última mudança: ${nuvem.nome.split(' ')[0]}` : ''}`}
+        </span>
         <button type="button" className="ps-botao ps-nova" onClick={() => setNovaAberta(true)}><Icone d={ICONES.mais} tamanho={14} />Nova tela</button>
       </div>
       <ol className="ps-telas">
@@ -448,7 +489,7 @@ export function PainelDaSala() {
 
       <Aparelhos />
 
-      {editando && <EditorDaTela id={editando} fechar={() => setEditando(null)} />}
+      {editando && <EditorDaTela id={editando} fechar={() => setEditando(null)} sessao={sessao} />}
       {novaAberta && <NovaTela fechar={() => setNovaAberta(false)} escolher={(t) => { const id = criarTela(t); setNovaAberta(false); setEditando(id) }} />}
     </section>
   )

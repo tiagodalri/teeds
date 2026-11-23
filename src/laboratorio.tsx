@@ -225,6 +225,7 @@ const LabCabineTopo = lazy(() => import('./components/monitoramento/LabCabineTop
 const LabReplay = lazy(() => import('./components/monitoramento/LabReplay'))
 const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
+const AssistirTreinoReal = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: () => <m.AssistirTreino sessao={{ token: 'lab', usuario: { id: 'lab-aluno', nome: 'Aluno de teste', email: 'aluno@lab' } } as never} /> })))
 const LabAssistirTreino = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: m.LabAssistirTreino })))
 import { DerivDesconectada } from './components/DerivDesconectada'
 import { EscolherContaDeriv } from './components/deriv/EscolherContaDeriv'
@@ -278,6 +279,36 @@ if (new URLSearchParams(location.search).get('tela') === 'treino' && new URLSear
   const consultar = navigator.permissions.query.bind(navigator.permissions)
   navigator.permissions.query = (async (d: PermissionDescriptor) => (['camera', 'microphone'].includes(d.name as string) ? { state: 'granted' } as PermissionStatus : consultar(d))) as typeof navigator.permissions.query
   }
+}
+
+// &ingresso=a|b|aluno (23/11/2026): entra numa sala de teste DE VERDADE do LiveKit com os acessos de
+// localStorage 'lab-tokens' (gerados no servidor; nunca em public/, que vai para o site). Testa dois administradores e um aluno juntos.
+if (new URLSearchParams(location.search).has('ingresso')) {
+  const quem = new URLSearchParams(location.search).get('ingresso') ?? 'a'
+  const original = window.fetch.bind(window)
+  window.fetch = (async (entrada: RequestInfo | URL, init?: RequestInit) => {
+    const url = typeof entrada === 'string' ? entrada : entrada instanceof URL ? entrada.href : entrada.url
+    // a nuvem das telas, de mentira (fica no localStorage, compartilhada entre as abas do laboratório)
+    if (url.includes('/rest/v1/aovivo_telas')) {
+      const guardada = localStorage.getItem('lab-nuvem-telas')
+      if ((init?.method ?? 'GET') === 'GET') return new Response(guardada ? `[${guardada}]` : '[]', { status: 200, headers: { 'Content-Type': 'application/json' } })
+      // como o banco: criar com a linha já existindo dá 409; trocar só vale se a versão bater
+      const atual = guardada ? JSON.parse(guardada) : null
+      if (init?.method === 'POST' && atual) return new Response('{}', { status: 409 })
+      const desde = new URL(url, location.href).searchParams.get('atualizado_em')?.replace(/^eq\./, '')
+      if (init?.method === 'PATCH' && (!atual || atual.atualizado_em !== desde)) return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } })
+      const corpo = JSON.parse(String(init?.body ?? '{}'))
+      const linha = JSON.stringify({ ...atual, ...corpo, atualizado_em: new Date().toISOString() })
+      localStorage.setItem('lab-nuvem-telas', linha)
+      return new Response(`[${linha}]`, { status: 201, headers: { 'Content-Type': 'application/json' } })
+    }
+    if (url.includes('/functions/v1/live-token')) {
+      const t = JSON.parse(localStorage.getItem('lab-tokens') || '{}') as Record<string, string>
+      const nome = quem === 'a' ? 'Tiago (teste)' : quem === 'b' ? 'Victor (teste)' : 'Aluno de teste'
+      return new Response(JSON.stringify({ url: t.url, token: t[quem], nome, moderador: quem !== 'aluno' }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    }
+    return original(entrada, init)
+  }) as typeof window.fetch
 }
 
 // ?tela=central-extras: o banco responde com plataformas e transmissões de exemplo
@@ -1004,6 +1035,8 @@ function Laboratorio() {
         {/* ?tela=treino-membro: o membro do plano assistindo o ensaio do admin. */}
         {/* ?tela=inicio&perfil=experiente|novo&tema=escuro|claro: a home, dentro da casca da plataforma */}
         {qual === 'treino-membro' && <Suspense fallback={null}><LabAssistirTreino /></Suspense>}
+        {/* ?tela=treino-aluno&ingresso=aluno: o aluno de verdade numa sala de teste (com o painel em outra aba) */}
+        {qual === 'treino-aluno' && <Suspense fallback={null}><AssistirTreinoReal /></Suspense>}
         {qual === 'treino-player' && <Suspense fallback={null}><LabAssistirTreino fora={(new URLSearchParams(location.search).get('modo') ?? 'flutuante') as never} /></Suspense>}
         {/* ?tela=selo-tv: o selo vermelho do topo, o aviso "começou agora" e a tag do menu. */}
         {qual === 'selo-tv' && (
@@ -1061,7 +1094,8 @@ function Laboratorio() {
 }
 
 // meta-de-novo sem StrictMode: a montagem dupla do desenvolvimento desliga o acompanhamento da sessão adotada (no site não existe)
-const semModoEstrito = new URLSearchParams(location.search).get('tela') === 'meta-de-novo'
+// &ingresso=…: também sem StrictMode (a montagem dupla entra duas vezes na sala de verdade e o LiveKit derruba a primeira)
+const semModoEstrito = new URLSearchParams(location.search).get('tela') === 'meta-de-novo' || new URLSearchParams(location.search).has('ingresso')
 ReactDOM.createRoot(document.getElementById('root')!).render(semModoEstrito ? <Laboratorio /> : <React.StrictMode><Laboratorio /></React.StrictMode>)
 
 /** A Central ao vivo no laboratório: com &membros=1, membros de mentira entram, saem e escrevem. */
@@ -1092,7 +1126,8 @@ function LabCentral() {
     return () => { vivo = false; cancelar() }
   }, [])
   // &blocos=1: com uma sessão de mentira, para os blocos de mensagens aparecerem
-  const sessao = new URLSearchParams(location.search).has('blocos') ? { token: 'lab', usuario: { id: 'lab', nome: 'Tiago', email: 'lab@lab' } } as never : null
+  const ingresso = new URLSearchParams(location.search).get('ingresso')
+  const sessao = new URLSearchParams(location.search).has('blocos') ? { token: 'lab', usuario: { id: ingresso ? `lab-${ingresso}` : 'lab', nome: ingresso === 'b' ? 'Victor' : 'Tiago', email: 'lab@lab' } } as never : null
   return <SalaDeTreino apresentador="Tiago" aoSair={() => undefined} sessao={sessao} />
 }
 

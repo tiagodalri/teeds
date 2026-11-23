@@ -12,7 +12,7 @@ import { MARCA } from '../../marca'
 import { ehCelular } from '../../core/celular'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
-  alternarFonte, cantoDoTreino, cantoNoTreino, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, voltarATreinar, prepararSalaDoAdmin, sairDoTreino,
+  alternarFonte, cantoDoTreino, cantoNoTreino, outroNoAr, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, voltarATreinar, prepararSalaDoAdmin, sairDoTreino,
   trocarFundoDoTreino, trocarTeste, useTreino,
 } from '../../core/live/treino'
 import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
@@ -245,6 +245,9 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   )
 
   const comecar = () => {
+    // 23/11/2026: com outro administrador no ar, não começa outra live por cima
+    const outro = outroNoAr()
+    if (outro) { setErro(`${outro} já está transmitindo nesta sala. Espere ele encerrar para começar.`); return }
     // 18/11/2026: a live sempre abre pela tela "Começa em instantes"
     if (comEstudio) { const c = estudioAgora().config; const ab = c ? telaDeAbertura(c.cenas) : undefined; if (ab) colocarNoAr(ab.id, true) }
     iniciarSimulacao(apresentador); setAba('chat')
@@ -517,7 +520,9 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           </div>
           <span className="cv-app-espaco" />
           {foraDaSala && sessao && <button type="button" className="ps-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button>}
-          {!sim.ativa
+          {!sim.ativa && tr.outroTransmitindo
+            ? <span className="ps-outro-no-ar" role="status"><i aria-hidden /><span><b>{tr.outroTransmitindo.split(' ')[0]} está no ar</b><small>Para começar, ele precisa encerrar</small></span></span>
+            : !sim.ativa
             ? <button type="button" className="ps-comecar" onClick={comecar}><i aria-hidden />Começar transmissão</button>
             : confirmarFim
               ? <span className="ps-confirmar-fim" role="group" aria-label="Confirmar o fim da transmissão">
@@ -530,7 +535,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           </button>
           <button type="button" className="ps-sair" onClick={sairDaSala} title={sim.ativa ? 'A transmissão continua no ar no player flutuante' : undefined}>Sair</button>
         </header>
-        {erro && <p className="av-erro cv-app-erro" role="alert">{erro}</p>}
+        {(erro || (tr.fase === 'conectada' && tr.erro)) && <p className="av-erro cv-app-erro" role="alert">{erro ?? tr.erro}</p>}
 
         <div className="ps-corpo">
           <aside className={`ps-lado ps-esquerda ${comandando ? 'comandando' : ''}`} aria-label="Público e comentários">
@@ -584,7 +589,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
             )}
           </aside>
 
-          <main className="ps-centro"><PainelDaSala /></main>
+          <main className="ps-centro"><PainelDaSala sessao={sessao} /></main>
 
           <aside className="ps-lado ps-direita" aria-label="Chat e números da live">
             <div className="ps-agora" role="group" aria-label="Números da live">

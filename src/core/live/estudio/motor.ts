@@ -287,6 +287,8 @@ async function prepararMidia(f: Fonte) {
   if (!reserva || reserva.chave !== chave || reserva.url) { if (u?.doArquivo) URL.revokeObjectURL(u.url); return }
   if (!u) { midias.delete(f.id); mudar({ aviso: `O arquivo de "${f.nome}" não está neste computador. Envie de novo pelo lápis da tela.` }); return }
   const el = document.createElement(f.tipo === 'video' ? 'video' : 'audio')
+  // vídeo da nuvem (outro endereço): sem isso a imagem "suja" a tela e a transmissão não sai (23/11/2026)
+  if (!u.doArquivo && /^https?:/.test(u.url) && !u.url.startsWith(location.origin)) el.crossOrigin = 'anonymous'
   el.preload = 'auto'; el.loop = !!f.repetir
   if (el instanceof HTMLVideoElement) el.playsInline = true
   el.src = u.url
@@ -806,10 +808,13 @@ export function saidaDoEstudio(): { video: MediaStreamTrack; audio: MediaStreamT
 async function limparArquivosSoltos() {
   const ids = await idsDosArquivos()
   const antiga = await lerConfigAntiga().catch(() => undefined)
-  const fontes = [...todasAsFontes(), ...(antiga?.cenas.flatMap((c) => c.fontes) ?? [])]
+  // 23/11/2026: e as telas de antes da nuvem (guardadas ao receber as da equipe), para nada se perder
+  const antesDaNuvem = await lerConfigAntiga('antes-da-nuvem').catch(() => undefined)
+  const guardadas = [antiga, antesDaNuvem].filter((x): x is ConfigDoEstudio => !!x)
+  const fontes = [...todasAsFontes(), ...guardadas.flatMap((g) => g.cenas.flatMap((c) => c.fontes))]
   // os campos das telas também contam (o arquivo pode estar só no campo, esperando a tela remontar)
-  const nosCampos = estado.config.cenas.flatMap((c) => Object.values(c.modelo?.campos ?? {}))
-  const usados = new Set([...fontes.map((f) => f.arquivo), estado.config.stinger.arquivo, antiga?.stinger.arquivo, ...nosCampos].filter(Boolean) as string[])
+  const nosCampos = [estado.config, ...guardadas].flatMap((g) => g.cenas.flatMap((c) => Object.values(c.modelo?.campos ?? {})))
+  const usados = new Set([...fontes.map((f) => f.arquivo), estado.config.stinger.arquivo, ...guardadas.map((g) => g.stinger?.arquivo), ...nosCampos].filter(Boolean) as string[])
   for (const id of ids) if (!usados.has(id)) void apagarArquivo(id)
 }
 
@@ -1152,4 +1157,25 @@ export function alternarAparelho(a: Aparelho): void {
   const f = todasAsFontes().find((x) => x.tipo === tipo && chaveDaCaptura(x) === chave)
     ?? { id: 'aparelho', tipo, nome: tipo, visivel: true, bloqueada: true, x: 0, y: 0, w: LARGURA, h: ALTURA, recorte: { esq: 0, topo: 0, dir: 0, baixo: 0 }, dispositivo: '' }
   void ligarCaptura(f)
+}
+
+/* ============================================== telas na nuvem (23/11/2026) */
+
+export const ouvirEstudio = (f: () => void) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }
+
+/** O que vai para a nuvem: as telas (sem as fontes montadas, que saem do modelo) e a transição. */
+export function telasDaMarca(c = estado.config): { cenas: Cena[]; transicao: ConfigDoEstudio['transicao']; duracaoMs: number } {
+  return { cenas: c.cenas.map((x) => (x.modelo ? { id: x.id, nome: x.nome, modelo: x.modelo, fontes: [] } : x)), transicao: c.transicao, duracaoMs: c.duracaoMs }
+}
+
+/** Põe no painel as telas que vieram da nuvem (a tela no ar continua, se ela ainda existir). */
+export function aplicarTelasDaNuvem(t: { cenas: Cena[]; transicao?: ConfigDoEstudio['transicao']; duracaoMs?: number }): void {
+  if (!t?.cenas?.length) return
+  const cenas = t.cenas.map((x) => (x.modelo ? { ...x, fontes: montarFontes(x.id, x.modelo.tipo, x.modelo.campos).map((f) => (f.tipo === 'texto' ? caixaDoTexto(f, null) : f)) } : x))
+  mudarConfig((c) => ({
+    ...c, cenas,
+    transicao: t.transicao ?? c.transicao, duracaoMs: t.duracaoMs ?? c.duracaoMs,
+    programa: cenas.some((x) => x.id === c.programa) ? c.programa : cenas[0].id,
+    previa: cenas.some((x) => x.id === c.previa) ? c.previa : cenas[0].id,
+  }))
 }

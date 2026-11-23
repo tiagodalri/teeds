@@ -56,6 +56,8 @@ export interface EstadoDoTreino {
   presente: boolean
   /** Nome de quem transmite (o admin), para o cabeçalho de quem assiste. */
   quemApresenta: string
+  /** Para o admin (23/11/2026): outro administrador já está transmitindo nesta sala (o nome dele). */
+  outroTransmitindo: string | null
   tela: Track | null
   camera: Track | null
   audios: Track[]
@@ -94,7 +96,7 @@ function guardarPrefs() {
 
 const INICIAL: EstadoDoTreino = {
   fase: 'fora', erro: null, apresentador: false, meuNome: '', membros: 0, nomes: [],
-  presente: false, quemApresenta: '', tela: null, camera: null, audios: [], canto: 'inf-dir',
+  presente: false, quemApresenta: '', outroTransmitindo: null, tela: null, camera: null, audios: [], canto: 'inf-dir',
   sim: { ativa: false, publico: 0, momento: null, pausada: false, chatAberto: true }, mensagens: [], somBloqueado: false, encerrada: false,
   modo: 'palco', tamanho: 'M', cantoPlayer: 'inf-dir',
   local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
@@ -137,6 +139,30 @@ const publicadas: Partial<Record<'tela' | 'camera' | 'mic', LocalVideoTrack | Lo
 const ehApresentador = (p?: Participant) => {
   try { return Boolean(p?.metadata && JSON.parse(p.metadata).moderador) } catch { return false }
 }
+/** Este apresentador está mandando imagem agora (e não só com a Central aberta)? */
+const mandaVideo = (p: Participant) => [...p.trackPublications.values()].some((pub) => pub.kind === Track.Kind.Video && !pub.isMuted)
+/**
+ * 23/11/2026: com dois administradores na sala, o aluno seguia o primeiro que achava (que podia
+ * nem estar transmitindo) e aceitava o "fora do ar" de quem só tinha a Central aberta.
+ * Agora quem assiste segue o dono da live: quem manda vídeo ou quem disse por último que está no ar.
+ */
+let donoDaLive: string | null = null
+/** Quando o dono disse por último que está no ar (outro só assume depois de 10 s de silêncio dele). */
+let donoVistoEm = 0
+function apresentadorQueVale(remotos: RemoteParticipant[]): RemoteParticipant | undefined {
+  const apresentadores = remotos.filter(ehApresentador)
+  return apresentadores.find((p) => p.identity === donoDaLive && mandaVideo(p))
+    ?? apresentadores.find(mandaVideo) ?? apresentadores.find((p) => p.identity === donoDaLive) ?? apresentadores[0]
+}
+/** Para o admin: o último "estou no ar" de outro administrador (vale por 10 s). */
+let outroAtivo: { nome: string; quando: number } | null = null
+/** Outro administrador está no ar agora? (vídeo, ou disse que está há menos de 10 s) */
+export function outroNoAr(): string | null {
+  if (!sala || !estado.apresentador) return null
+  const comVideo = [...sala.remoteParticipants.values()].find((p) => ehApresentador(p) && mandaVideo(p))
+  if (comVideo) return comVideo.name || 'Outro administrador'
+  return outroAtivo && Date.now() - outroAtivo.quando < 10_000 ? outroAtivo.nome : null
+}
 
 async function pedirIngresso(sessao: SessaoTeeds | null, nome: string): Promise<{ url: string; token: string; nome: string; moderador: boolean }> {
   const r = await fetch(`${SUPABASE.url}/functions/v1/live-token`, {
@@ -159,7 +185,7 @@ function atualizarSala() {
   const membros = remotos.filter((p) => !ehApresentador(p))
   let tela: Track | null = null, camera: Track | null = null
   const audios: Track[] = []
-  const quemTransmite = remotos.find(ehApresentador)
+  const quemTransmite = apresentadorQueVale(remotos)
   for (const pub of quemTransmite?.trackPublications.values() ?? []) {
     const t = pub.track
     if (!t || pub.isMuted) continue
@@ -171,6 +197,7 @@ function atualizarSala() {
   mudar({
     membros: membros.length, nomes: membros.map((p) => p.name || 'Membro').slice(0, 80),
     presente: estado.apresentador || !!quemTransmite, quemApresenta: quemTransmite?.name || '', tela, camera, audios,
+    outroTransmitindo: outroNoAr(),
   })
 }
 
@@ -196,17 +223,23 @@ function comecarARepassar() {
   enviadas = new Set(simulacaoAgora().mensagens.map((m) => m.id))
   let ultimo = ''
   let eraAtiva = simulacaoAgora().ativa
+  let eraNoArAntes = eraAtiva
   desligarEscuta = ouvirSimulacao(() => {
-    repassar()
     // Começar simulação = a transmissão começa; Encerrar = acaba, na hora (20/10/2026)
     const ativa = simulacaoAgora().ativa
+    // 23/11/2026: ao entrar no ar, o "estou no ar" vai antes das mensagens (quem assiste aceita só o dono)
+    if (ativa && !eraNoArAntes) void enviar(pacoteDeEstado())
+    repassar()
     if (ativa !== eraAtiva) { eraAtiva = ativa; void (ativa ? republicarFontes() : encerrarTransmissao()); if (ativa) comecarRegistro(); else fecharRegistro() }
     conferirAnuncio()
+    // 23/11/2026: fora do ar, este admin não fala com os alunos (outro pode estar transmitindo)
+    if (!ativa && !eraNoArAntes) return
+    eraNoArAntes = ativa
     const e = JSON.stringify(pacoteDeEstado())
     if (e !== ultimo) { ultimo = e; void enviar(JSON.parse(e)) }
   })
-  // de tempos em tempos, o estado completo (quem perdeu um pacote se acerta)
-  timerEstado = window.setInterval(() => void enviar(pacoteDeEstado()), 3000)
+  // de tempos em tempos, o estado completo (quem perdeu um pacote se acerta) — só no ar
+  timerEstado = window.setInterval(() => { if (estaNoAr()) void enviar(pacoteDeEstado()) }, 3000)
 }
 
 /* ------------------------------------ avisar os GF Members que está no ar */
@@ -271,6 +304,7 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', como
   // a Central usa o teste que ela mesma ligou; quem assiste, o do link que abriu
   testeAtual = comoCentral ? (apresentarNoTeste ? testeAtual : null) : testeDoLink()
   mudar({ ...zerado(), fase: 'conectando' })
+  donoDaLive = null; donoVistoEm = 0; outroAtivo = null
   try {
     const ingresso = await pedirIngresso(sessao, nome)
     // mesmas escolhas da live: H.264 no chip de vídeo, uma camada menor só
@@ -290,13 +324,15 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', como
       .on(RoomEvent.TrackMuted, atualizarSala)
       .on(RoomEvent.TrackUnmuted, atualizarSala)
       .on(RoomEvent.LocalTrackPublished, (_p: LocalTrackPublication) => atualizarSala())
+      .on(RoomEvent.TrackPublished, atualizarSala)
+      .on(RoomEvent.TrackUnpublished, atualizarSala)
       .on(RoomEvent.ParticipantDisconnected, atualizarSala)
       .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
         atualizarSala()
         // quem chega no meio recebe as últimas mensagens e o estado
-        if (estado.apresentador) {
-          void enviar({ t: 'historico', lista: simulacaoAgora().mensagens.filter((m) => !m.membro).slice(-60) }, [p.identity])
+        if (estado.apresentador && estaNoAr()) {
           void enviar(pacoteDeEstado(), [p.identity])
+          void enviar({ t: 'historico', lista: simulacaoAgora().mensagens.filter((m) => !m.membro).slice(-60) }, [p.identity])
         }
       })
       .on(RoomEvent.Reconnecting, () => mudar({ fase: 'reconectando' }))
@@ -324,9 +360,20 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', como
         if (estado.apresentador) {
           // do membro: a mensagem entra no chat da simulação (e volta para todos)
           if (pacote.t === 'membro') { mensagemDeMembro(p.name || 'Membro', String(pacote.texto)); if (registro.inicio) registro.mensagens++ }
+          // de outro administrador: está no ar? (bloqueia começar outra live por cima)
+          if (pacote.t === 'estado' && ehApresentador(p)) { outroAtivo = pacote.ativa ? { nome: p.name || 'Outro administrador', quando: Date.now() } : null; atualizarSala() }
           return
         }
         if (!ehApresentador(p)) return
+        // vale só o dono da live. Quem diz que entrou no ar vira o dono, se o atual sumiu
+        // (sem vídeo e sem dizer que está no ar há 10 s); assim dois no ar não ficam se alternando
+        if (pacote.t === 'estado' && pacote.ativa) {
+          const atual = donoDaLive ? r.remoteParticipants.get(donoDaLive) : undefined
+          const atualSumiu = !atual || (!mandaVideo(atual) && Date.now() - donoVistoEm > 10_000)
+          if (!donoDaLive || p.identity === donoDaLive || atualSumiu) { donoDaLive = p.identity; donoVistoEm = Date.now() }
+        }
+        const dono = apresentadorQueVale([...r.remoteParticipants.values()])
+        if (dono && dono.identity !== p.identity) return
         if (pacote.t === 'estado') {
           canto = pacote.canto
           if (pacote.ativa && estado.encerrada) mudar({ encerrada: false })
@@ -350,7 +397,11 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', como
     if (ingresso.moderador) { comecarARepassar(); comecarAAnunciar() }
     marcarTreinoAtivo(true)
     // o que o admin já tinha ligado antes de a sala abrir entra agora
-    if (ingresso.moderador) await republicarFontes()
+    if (ingresso.moderador && estaNoAr() && [...r.remoteParticipants.values()].some((p) => ehApresentador(p) && mandaVideo(p))) {
+      // 23/11/2026: caiu da rede, e outro administrador assumiu a live enquanto isso
+      pararSimulacao()
+      mudar({ erro: 'Outro administrador assumiu a live enquanto você estava sem conexão. A sua transmissão foi encerrada.' })
+    } else if (ingresso.moderador) await republicarFontes()
     atualizarSala()
   } catch (e) {
     sala = null
@@ -540,7 +591,7 @@ export const cantoDoTreino = (): CantoDaCamera => canto
 /** Em que canto o rosto aparece para quem assiste. */
 export function cantoNoTreino(c: CantoDaCamera): void {
   canto = c
-  if (estado.apresentador) void enviar(pacoteDeEstado())
+  if (estado.apresentador && estaNoAr()) void enviar(pacoteDeEstado())
 }
 
 /* --------------------------------------------------------- o membro fala */

@@ -36,8 +36,8 @@ function pedir<T>(loja: 'config' | 'arquivos', modo: IDBTransactionMode, f: (s: 
 export const lerConfig = () => pedir<ConfigDoEstudio | undefined>('config', 'readonly', (s) => s.get('atual')).catch(() => undefined)
 export const salvarConfig = (c: ConfigDoEstudio) => pedir<void>('config', 'readwrite', (s) => s.put(c, 'atual'))
 /** 18/11/2026: as cenas do estúdio estilo OBS, guardadas ao trocar pelo painel (nada se perde). */
-export const guardarConfigAntiga = (c: ConfigDoEstudio) => pedir<void>('config', 'readwrite', (s) => s.put(c, 'v1'))
-export const lerConfigAntiga = () => pedir<ConfigDoEstudio | undefined>('config', 'readonly', (s) => s.get('v1')).catch(() => undefined)
+export const guardarConfigAntiga = (c: ConfigDoEstudio, chave: 'v1' | 'antes-da-nuvem' = 'v1') => pedir<void>('config', 'readwrite', (s) => s.put(c, chave))
+export const lerConfigAntiga = (chave: 'v1' | 'antes-da-nuvem' = 'v1') => pedir<ConfigDoEstudio | undefined>('config', 'readonly', (s) => s.get(chave)).catch(() => undefined)
 
 export interface ArquivoGuardado { nome: string; tipo: string; blob: Blob }
 export const guardarArquivo = (id: string, a: ArquivoGuardado) => pedir<void>('arquivos', 'readwrite', (s) => s.put(a, id))
