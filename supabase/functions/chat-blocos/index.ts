@@ -4,8 +4,10 @@
 // POST { marca, nome, descricao, exemplos?, quantidade, evitar? } com o token de alguém da equipe da marca
 //   → { mensagens: string[] }   (nada é gravado aqui: a tela mostra para revisar e quem aprova é a pessoa)
 //
-// A chave da I.A. é a mesma da leitura dos anúncios: config_servicos (ANTHROPIC_API_KEY) ou o segredo das
-// funções. Nunca volta para a tela.
+// A chave da I.A.: desde 24/11/2026 (Tiago: "a Anthropic pede verificação de identidade; use a chave gratuita do
+// Gemini por enquanto") vai primeiro a do Gemini (GEMINI_API_KEY em config_servicos, a mesma da Inteligência do
+// negócio); sem ela, ou se o Gemini falhar, a da Anthropic (ANTHROPIC_API_KEY ou o segredo das funções).
+// Nunca volta para a tela.
 
 import Anthropic from 'npm:@anthropic-ai/sdk'
 
@@ -20,10 +22,60 @@ const CORS = {
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 const rest = (caminho: string) => fetch(`${SUPABASE_URL}/rest/v1/${caminho}`, { headers: { apikey: SERVICO, Authorization: `Bearer ${SERVICO}` } })
 
-async function chaveIA(): Promise<string> {
-  const r = await rest('config_servicos?chave=eq.ANTHROPIC_API_KEY&select=valor')
-  const v = r.ok ? ((await r.json())[0]?.valor as string | undefined) : undefined
-  return (v ?? '').trim() || (Deno.env.get('ANTHROPIC_API_KEY') ?? '')
+async function chaves(): Promise<{ anthropic: string; gemini: string }> {
+  const r = await rest('config_servicos?chave=in.(ANTHROPIC_API_KEY,GEMINI_API_KEY)&select=chave,valor')
+  const linhas = (r.ok ? await r.json() : []) as Array<{ chave: string; valor: string | null }>
+  const de = (c: string) => (linhas.find((l) => l.chave === c)?.valor ?? '').trim()
+  return { anthropic: de('ANTHROPIC_API_KEY') || (Deno.env.get('ANTHROPIC_API_KEY') ?? ''), gemini: de('GEMINI_API_KEY') }
+}
+
+/* ------------------------------------------------------------------ o Gemini (faixa gratuita do Google) */
+const GEMINI = 'https://generativelanguage.googleapis.com/v1beta'
+// o mais rápido primeiro (o Flash-Lite responde em ~7 s; o 3.8 Flash vive com 503 de "high demand", visto nas leituras
+// do negócio de 17/11); sem cota (429), sobrecarregado (503) ou fora (404): tenta o seguinte
+const MODELOS_GEMINI = ['gemini-3.5-flash-lite', 'gemini-4-hydrogen', 'gemini-3.8-flash']
+const ESQUEMA = { type: 'object', properties: { mensagens: { type: 'array', items: { type: 'string' } } }, required: ['mensagens'] }
+const PRAZO_TOTAL = 120_000
+
+async function gerarNoGemini(chave: string, sistema: string, pedido: string, quantidade: number): Promise<unknown[]> {
+  const inicio = Date.now()
+  const resta = () => PRAZO_TOTAL - (Date.now() - inicio)
+  let ultimo = ''
+  for (const modelo of MODELOS_GEMINI) {
+    for (const comEsquema of [true, false]) {
+      if (resta() < 8_000) throw new Error(ultimo || 'gemini: sem tempo')
+      const prazo = new AbortController()
+      const relogio = setTimeout(() => prazo.abort(), Math.min(60_000, resta() - 2_000))
+      const r = await fetch(`${GEMINI}/interactions`, {
+        method: 'POST', signal: prazo.signal, headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelo, store: false,
+          system_instruction: comEsquema ? sistema : `${sistema}\n\nResponda SÓ com um objeto JSON neste formato: {"mensagens": ["...", "..."]}`,
+          input: pedido,
+          response_format: comEsquema ? { type: 'text', mime_type: 'application/json', schema: ESQUEMA } : { type: 'text', mime_type: 'application/json' },
+          generation_config: { max_output_tokens: Math.min(16000, 800 + quantidade * 120), thinking_level: 'low' },
+        }),
+      }).catch((e) => ({ ok: false, status: (e as Error)?.name === 'AbortError' ? 'prazo' : 'rede', json: async () => ({}) }) as unknown as Response)
+      clearTimeout(relogio)
+      const d = await r.json().catch(() => ({})) as Record<string, any>
+      if (r.ok) {
+        const texto = ((d.steps ?? []) as any[]).filter((p) => p?.type === 'model_output')
+          .flatMap((p) => (p.content ?? []) as any[]).filter((c) => c?.type === 'text').map((c) => String(c.text ?? '')).join('')
+        try {
+          const j = JSON.parse(texto.replace(/^```(json)?|```$/g, '').trim())
+          const lista = Array.isArray(j) ? j : j?.mensagens
+          if (Array.isArray(lista) && lista.length) return lista
+        } catch { /* veio quebrado: tenta o próximo */ }
+        ultimo = `gemini ${modelo}: resposta sem mensagens`
+        break
+      }
+      ultimo = `gemini ${r.status}: ${String(d?.error?.message ?? '').slice(0, 160)}`
+      if (r.status === 400 && comEsquema) continue              // tenta sem o esquema
+      if (r.status === 401 || r.status === 403) throw new Error(ultimo)   // chave recusada
+      break                                                     // 404, 429, 5xx, prazo: próximo modelo
+    }
+  }
+  throw new Error(ultimo || 'gemini: sem resposta')
 }
 
 async function souEquipe(apikey: string, token: string, marca: string): Promise<boolean> {
@@ -60,8 +112,8 @@ Deno.serve(async (req) => {
   const evitar = (Array.isArray(corpo.evitar) ? corpo.evitar : []).map((x) => limpar(x, 200)).filter(Boolean).slice(-150)
   if (!descricao && !nome) return json({ erro: 'Dê um nome ao bloco ou descreva o tipo de mensagem.' }, 400)
 
-  const chave = await chaveIA()
-  if (!chave) return json({ erro: 'A chave da I.A. não está configurada (Administração › Anúncios › Leitura da I.A.).' }, 503)
+  const chave = await chaves()
+  if (!chave.gemini && !chave.anthropic) return json({ erro: 'A chave da I.A. não está configurada (Administração › Anúncios › Leitura da I.A.).' }, 503)
 
   const p = PLATAFORMA[marca]
   const sistema = `Você escreve mensagens de chat de uma live de operações no mercado da plataforma ${p.nome} (corretora Deriv), em português do Brasil.
@@ -90,8 +142,29 @@ O pedido de quem organiza a live vale mais que estas dicas de estilo: siga o que
     `Escreva exatamente ${quantidade} mensagens diferentes.`,
   ].filter(Boolean).join('\n\n')
 
+  const vistas = new Set(evitar.map((m) => m.toLowerCase()))
+  const arrumar = (lista: unknown[]) => {
+    const mensagens: string[] = []
+    for (const m of lista) {
+      const t = limpar(m, 300).replace(/^["“]|["”]$/g, '')
+      if (!t || vistas.has(t.toLowerCase())) continue
+      vistas.add(t.toLowerCase()); mensagens.push(t)
+    }
+    return mensagens.slice(0, quantidade)
+  }
+  let falhaDoGemini = ''
+  if (chave.gemini) {
+    try {
+      const mensagens = arrumar(await gerarNoGemini(chave.gemini, sistema, pedido, quantidade))
+      if (mensagens.length) return json({ mensagens, motor: 'gemini' })
+      falhaDoGemini = 'O Gemini não devolveu mensagens.'
+    } catch (e) { falhaDoGemini = e instanceof Error ? e.message : String(e) }
+    console.log('chat-blocos: gemini falhou', falhaDoGemini)
+    if (!chave.anthropic) return json({ erro: 'A I.A. não respondeu agora. Tente de novo em instantes.' }, 502)
+  }
+
   try {
-    const ia = new Anthropic({ apiKey: chave })
+    const ia = new Anthropic({ apiKey: chave.anthropic })
     const r = await ia.messages.create({
       model: MODELO,
       max_tokens: Math.min(16000, 600 + quantidade * 90),
@@ -105,17 +178,13 @@ O pedido de quem organiza a live vale mais que estas dicas de estilo: siga o que
       messages: [{ role: 'user', content: pedido }],
     })
     const uso = r.content.find((b) => b.type === 'tool_use') as { input?: { mensagens?: unknown[] } } | undefined
-    const vistas = new Set(evitar.map((m) => m.toLowerCase()))
-    const mensagens: string[] = []
-    for (const m of uso?.input?.mensagens ?? []) {
-      const t = limpar(m, 300).replace(/^["“]|["”]$/g, '')
-      if (!t || vistas.has(t.toLowerCase())) continue
-      vistas.add(t.toLowerCase()); mensagens.push(t)
-    }
+    const mensagens = arrumar(uso?.input?.mensagens ?? [])
     if (!mensagens.length) return json({ erro: 'A I.A. não devolveu mensagens. Tente de novo.' }, 502)
-    return json({ mensagens: mensagens.slice(0, quantidade) })
+    return json({ mensagens, motor: 'anthropic' })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
-    return json({ erro: `A I.A. não respondeu: ${msg.slice(0, 200)}` }, 502)
+    console.log('chat-blocos: anthropic falhou', msg.slice(0, 300))
+    // a mensagem crua da API (em inglês, com JSON) não vai para a tela
+    return json({ erro: falhaDoGemini ? 'A I.A. não respondeu agora. Tente de novo em instantes.' : 'A I.A. não respondeu agora (a chave da Anthropic foi recusada). Tente de novo em instantes.' }, 502)
   }
 })
