@@ -49,6 +49,12 @@ export interface PaginaDeTrafego {
   nome: string
   /** O quiz com a VSL, ou null quando o parceiro ainda não tem (a /trafego abre nos planos). */
   quiz: QuizDoParceiro | null
+  /**
+   * VSL única, sem quiz (24/11/2026, Victor): só o vídeo e o botão verde no segundo em que ele chama,
+   * que leva aos planos. Vale quando `quiz` é null. O `src` pode ser HLS (.m3u8): o vídeo inteiro em
+   * pedaços de 6 s, porque o armazenamento aceita no máximo 50 MB por arquivo.
+   */
+  vsl?: VideoDoQuiz
 }
 
 const PASTA = `${SUPABASE.url}/storage/v1/object/public/aulas/globalfly/vsl-trafego`
@@ -80,12 +86,18 @@ export const PAGINAS_DE_TRAFEGO: Record<string, PaginaDeTrafego> = {
   },
 
   /* ---------------------------------------------------------------- /v/trafego · Victor Cordeiro
-   * Ainda sem VSL própria: abre direto nos planos. Os vídeos do Naor NÃO servem aqui (são a
-   * história dele, em primeira pessoa). */
+   * VSL única (24/11/2026, Tiago: "a do Victor vai ser diferente pq vai ser uma VSL única"): a VSL dele
+   * de 9:33 refeita com 2026 e 10%, sem quiz. O botão verde aparece aos 8:28, quando ele diz "veja agora
+   * se apareceu um botão verde aqui embaixo para você vir para o time", e leva aos planos ("eu vou
+   * liberar todos os seus acessos"). Os vídeos do Naor NÃO servem aqui (são a história dele).
+   * HLS (1080p e 720p): as playlists ficam no site (public/aulas-globalfly/vsl/victor-v1/, porque o
+   * armazenamento só aceita vídeo) e apontam para os pedaços fMP4 em aulas/globalfly/vsl-trafego/victor-v1/.
+   * Trocar: subir como victor-v2/ (playlists e pedaços) para o navegador não guardar o antigo. */
   v: {
     codigo: 'v',
     nome: 'Victor Cordeiro',
     quiz: null,
+    vsl: { src: '/aulas-globalfly/vsl/victor-v1/index.m3u8', capa: '/aulas-globalfly/vsl/victor.webp', botaoAos: 508, duracao: 573 },
   },
 
   /* ---------------------------------------------------------------- /d/trafego · Douglas
@@ -102,10 +114,10 @@ export function paginaDeTrafego(): PaginaDeTrafego | null {
   return PAGINAS_DE_TRAFEGO[vitrine()] ?? null
 }
 
-/** A página de tráfego da visita, só quando ela tem quiz (senão, null: a página vai direto aos planos). */
-export function paginaComQuiz(): (PaginaDeTrafego & { quiz: QuizDoParceiro }) | null {
+/** A página de tráfego da visita, só quando ela tem quiz ou VSL única (senão, null: a página vai direto aos planos). */
+export function paginaComQuiz(): PaginaDeTrafego | null {
   const p = paginaDeTrafego()
-  return p?.quiz ? (p as PaginaDeTrafego & { quiz: QuizDoParceiro }) : null
+  return p?.quiz || p?.vsl ? p : null
 }
 
 /**

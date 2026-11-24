@@ -50,6 +50,8 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
   liberar.current = aoLiberar
   const marco = useRef(aoMarco)
   marco.current = aoMarco
+  // HLS (.m3u8, a VSL única do Victor): iPhone e Safari tocam sozinhos; os outros, pelo hls.js (só baixa aqui)
+  const hls = useRef<{ startLoad: () => void; destroy: () => void } | null>(null)
 
   useEffect(() => {
     const v = ref.current
@@ -94,14 +96,34 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
     v.addEventListener('playing', aoTocar)
     v.addEventListener('canplay', aoTocar)
     v.addEventListener('error', aoErro)
-    v.muted = false
-    v.play().then(() => { if (vivo) setEstado('tocando') }).catch(() => {
-      if (!vivo) return
-      v.muted = true
-      v.play().then(() => { if (vivo) setEstado('mudo') }).catch(() => { if (vivo) { setEstado('pausado'); setEsperando(false) } })
-    })
+    const comecar = () => {
+      v.muted = false
+      v.play().then(() => { if (vivo) setEstado('tocando') }).catch(() => {
+        if (!vivo) return
+        v.muted = true
+        v.play().then(() => { if (vivo) setEstado('mudo') }).catch(() => { if (vivo) { setEstado('pausado'); setEsperando(false) } })
+      })
+    }
+    const ehHls = /\.m3u8(\?|$)/.test(video.src)
+    // Só a Apple (iPhone, iPad, Safari) toca HLS sozinha de verdade; o Chrome diz que toca e falha (24/11/2026)
+    const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || navigator.vendor === 'Apple Computer, Inc.'
+    if (!ehHls || (apple && v.canPlayType('application/vnd.apple.mpegurl') !== '')) { v.src = video.src; comecar() }
+    else {
+      import('hls.js').then(({ default: Hls }) => {
+        if (!vivo) return
+        if (!Hls.isSupported()) { v.src = video.src; comecar(); return }
+        const h = new Hls({ capLevelToPlayerSize: true, maxBufferLength: 30 })
+        h.on(Hls.Events.ERROR, (_e, d) => { if (d.fatal && vivo) setEstado('falhou') })
+        h.loadSource(video.src)
+        h.attachMedia(v)
+        hls.current = h
+        comecar()
+      }).catch(() => { if (vivo) setEstado('falhou') })
+    }
     return () => {
       vivo = false
+      hls.current?.destroy()
+      hls.current = null
       v.removeEventListener('timeupdate', aoAndar)
       v.removeEventListener('seeking', aoPular)
       v.removeEventListener('pause', aoPausar)
@@ -119,7 +141,7 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
   const tocar = () => {
     const v = ref.current
     if (!v) return
-    if (estado === 'falhou') { setEstado('carregando'); setEsperando(true); v.load(); void v.play().then(() => setEstado('tocando')).catch(() => setEstado('pausado')); return }
+    if (estado === 'falhou') { setEstado('carregando'); setEsperando(true); if (hls.current) hls.current.startLoad(); else v.load(); void v.play().then(() => setEstado('tocando')).catch(() => setEstado('pausado')); return }
     if (estado === 'mudo' || estado === 'fim') { v.currentTime = 0; setBarra(0) }
     if (estado === 'tocando' && !v.paused) { v.pause(); setEstado('pausado'); return }
     v.muted = false
@@ -138,7 +160,7 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
   const rotulo = estado === 'tocando' ? 'Pausar o vídeo' : estado === 'mudo' ? 'Ouvir o vídeo do começo' : estado === 'fim' ? 'Assistir de novo' : 'Assistir ao vídeo'
   return (
     <div className="qzt-video" data-estado={estado} ref={caixa}>
-      <video ref={ref} src={video.src} poster={video.capa} playsInline preload="auto" disablePictureInPicture
+      <video ref={ref} poster={video.capa} playsInline preload="auto" disablePictureInPicture
         controlsList="nodownload noplaybackrate noremoteplayback" onContextMenu={(e) => e.preventDefault()} />
       <button type="button" className="qzt-video-toque" onClick={tocar} aria-label={rotulo}>
         {estado === 'mudo' && (
@@ -169,7 +191,81 @@ function PlayerDoQuiz({ video, aoLiberar, aoMarco }: { video: VideoDoQuiz; aoLib
  * `semRegistro`: quem já tem conta e abriu o /trafego logado (a equipe revisando) faz o quiz sem
  * entrar na central de rastreio nem no pixel, para não sujar o funil dos anúncios.
  */
-export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pagina: PaginaDeTrafego & { quiz: QuizDoParceiro }; aoConcluir: () => void; semRegistro?: boolean }) {
+export function QuizDoTrafego({ pagina, aoConcluir, semRegistro = false }: { pagina: PaginaDeTrafego; aoConcluir: () => void; semRegistro?: boolean }) {
+  if (pagina.quiz) return <QuizComEtapas pagina={pagina as PaginaDeTrafego & { quiz: QuizDoParceiro }} aoConcluir={aoConcluir} semRegistro={semRegistro} />
+  if (pagina.vsl) return <VslUnica pagina={pagina} video={pagina.vsl} aoConcluir={aoConcluir} semRegistro={semRegistro} />
+  return null
+}
+
+/**
+ * A VSL única (24/11/2026, /v/trafego do Victor): sem quiz, só o vídeo inteiro no mesmo player e o
+ * botão verde que aparece no segundo em que o parceiro chama (`botaoAos`) e leva aos planos.
+ * Rastreio igual ao do quiz (entrada, quiz-video-progresso, quiz-video-botao, quiz-concluiu, saiu),
+ * marcado com `vsl: true`, para a central de rastreio e os públicos do Meta funcionarem do mesmo jeito.
+ */
+function VslUnica({ pagina, video, aoConcluir, semRegistro }: { pagina: PaginaDeTrafego; video: VideoDoQuiz; aoConcluir: () => void; semRegistro: boolean }) {
+  const rastro: typeof rastroDoCadastro = semRegistro ? () => undefined : rastroDoCadastro
+  const pixel: typeof eventoDoPixel = semRegistro ? () => undefined : eventoDoPixel
+  const pixelComServidor: typeof eventoComServidor = semRegistro ? () => undefined : eventoComServidor
+  const [botao, setBotao] = useState(false)
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const ceuAtivo = useRef(true)
+  useCeu(canvas, ceuAtivo)
+
+  useEffect(() => {
+    let nova = true
+    try { nova = !sessionStorage.getItem('gf.rastro.sessao'); sessionStorage.setItem('gf.rastro.sessao', '1') } catch { /* sem armazenamento */ }
+    rastro(nova ? 'entrada' : 'pagina', { vsl: true })
+    pixel('ViewContent', { content_name: 'vsl-abertura' }, true)
+    rastro('quiz-video', { video: 1, vsl: true })
+    const inicio = Date.now()
+    let foi = false
+    const aoSair = () => {
+      if (foi) return
+      foi = true
+      rastro('saiu', { segundos: Math.round((Date.now() - inicio) / 1000), vsl: true })
+    }
+    addEventListener('pagehide', aoSair)
+    return () => removeEventListener('pagehide', aoSair)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const marco = (pct: number, mudo: boolean) => {
+    rastro('quiz-video-progresso', { video: 1, pct, vsl: true, ...(mudo ? { mudo: true } : {}) })
+    pixel('AssistiuVSL', { video: 1, percentual: pct, mudo }, true)
+    if (!mudo && pct === 75) pixelComServidor('AssistiuVSL1_75')
+    if (!mudo && pct > 0) pixel('ViewContent', { content_name: `vsl-1-${pct}` }, true)
+  }
+  const concluir = () => {
+    rastro('quiz-concluiu', { vsl: true, destino: 'planos' })
+    pixelComServidor('QuizConcluido')
+    aoConcluir()
+  }
+
+  return (
+    <div className="cpl qzt qzt-largo qzt-vsl-unica">
+      <canvas className="cpl-ceu" ref={canvas} aria-hidden="true" />
+      <div className="cpl-ambiente" aria-hidden="true" />
+      <header className="qzt-topo cpl-faixa">
+        <div className="qzt-topo-miolo"><div className="cpl-marca"><Brand tamanho={36} /></div></div>
+      </header>
+      <main className="qzt-palco cpl-faixa">
+        <section className="qzt-painel qzt-centro qzt-com-video">
+          <div className="qzt-socio">
+            <AvatarDoParceiro codigo={pagina.codigo} nome={pagina.nome} tamanho={44} />
+            <div><b>{pagina.nome}</b><span>Seu futuro sócio</span></div>
+          </div>
+          <h2>Assista com atenção até o final</h2>
+          <PlayerDoQuiz video={video} aoMarco={marco} aoLiberar={() => { setBotao(true); rastro('quiz-video-botao', { video: 1, vsl: true }) }} />
+          <div className={`qzt-depois ${botao ? 'qzt-visivel' : ''}`} aria-hidden={!botao}>
+            <button type="button" className="qzt-btn qzt-btn-verde qzt-grande qzt-vaga" tabIndex={botao ? 0 : -1} onClick={concluir}>Quero entrar para o time <Seta /></button>
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+
+function QuizComEtapas({ pagina, aoConcluir, semRegistro = false }: { pagina: PaginaDeTrafego & { quiz: QuizDoParceiro }; aoConcluir: () => void; semRegistro?: boolean }) {
   const { videos } = pagina.quiz
   const rastro: typeof rastroDoCadastro = semRegistro ? () => undefined : rastroDoCadastro
   const pixel: typeof eventoDoPixel = semRegistro ? () => undefined : eventoDoPixel

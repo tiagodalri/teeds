@@ -15,6 +15,7 @@
     "@mediapipe/tasks-vision": "0.10.14",
     "exceljs": "^4.4.0",
     "heic2any": "^0.0.4",
+    "hls.js": "1.7.4",
     "klinecharts": "10.0.3",
     "livekit-client": "2.22.3",
     "mediabunny": "1.62.1",
