@@ -13,8 +13,10 @@ import { Avatar, Janela, Segmentado } from './ui'
 const pct = (v: number) => `${v.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
 const primeiro = (nome: string) => nome.split(' ')[0]
 
-export function Partilha({ api, dados, periodo, rotuloPeriodo, souDono, aoMudar }: {
+export function Partilha({ api, dados, periodo, rotuloPeriodo, souDono, restrito = false, aoMudar }: {
   api: FinApi; dados: DadosFin; periodo: Periodo; rotuloPeriodo: string; souDono: boolean
+  /** vê só alguns projetos: o rodapé fala do projeto, não de todos */
+  restrito?: boolean
   aoMudar: (mensagem: string) => void
 }) {
   const r = useMemo(() => partilhar(dados, periodo), [dados, periodo])
@@ -53,7 +55,7 @@ export function Partilha({ api, dados, periodo, rotuloPeriodo, souDono, aoMudar 
         })}
       </div>
       <p className="fin-partilha-rodape">
-        Lucro de todos os projetos {ver === 'agora' ? 'até agora' : 'na previsão'}: <b className={lucro < 0 ? 'fin-sai' : 'fin-entra'}>{reais(lucro)}</b>.
+        {restrito ? (r.projetos.length === 1 ? 'Lucro do projeto' : 'Lucro dos seus projetos') : 'Lucro de todos os projetos'} {ver === 'agora' ? 'até agora' : 'na previsão'}: <b className={lucro < 0 ? 'fin-sai' : 'fin-entra'}>{reais(lucro)}</b>.
         {ver === 'previsao' ? ' A previsão soma o que já aconteceu, o resto do período no mesmo ritmo dos dias que já passaram e as contas em aberto até o fim do período.' : ' Primeiro volta para cada um o que pagou do bolso; o lucro (receitas menos despesas) é dividido pelos percentuais de cada projeto.'}
       </p>
     </section>

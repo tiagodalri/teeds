@@ -21,7 +21,9 @@ type FSituacao = 'todas' | 'pago' | 'aberto' | 'vencido'
 
 const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, podeEditar, aoAbrir, aoPagar, aoNovo }: {
+export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, filtroInicial, podeEditar, aoAbrir, aoPagar, aoNovo }: {
+  /** vê só alguns projetos: sem o filtro de sócios e de conta */
+  restrito?: boolean
   dados: DadosFin; periodo: Periodo; rotuloPeriodo: string; filtroInicial: FiltroInicial; podeEditar: boolean
   aoAbrir: (l: Lancamento) => void
   aoPagar: (l: Lancamento) => void
@@ -97,7 +99,7 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
       <label className="fin-busca"><Icone nome="buscar" />
         <input placeholder="Buscar lançamento" value={busca} onChange={(e) => setBusca(e.target.value)} aria-label="Buscar lançamentos" /></label>
       <div className="fin-seg" role="radiogroup" aria-label="Tipo">
-        {([['todos', 'Todos'], ['receita', 'Receitas'], ['despesa', 'Despesas'], ['socios', 'Sócios']] as Array<[FTipo, string]>).map(([id, nome]) =>
+        {([['todos', 'Todos'], ['receita', 'Receitas'], ['despesa', 'Despesas'], ...(restrito ? [] : [['socios', 'Sócios']])] as Array<[FTipo, string]>).map(([id, nome]) =>
           <button key={id} type="button" role="radio" aria-checked={tipo === id} className={tipo === id ? 'on' : ''} onClick={() => setTipo(id)}>{nome}</button>)}
       </div>
       <label className="fin-select"><span>Situação</span>
@@ -110,10 +112,10 @@ export function Lancamentos({ dados, periodo, rotuloPeriodo, filtroInicial, pode
           <optgroup label="Despesas">{categoriasUsadas.filter((c) => c.tipo === 'saida').map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</optgroup>
           <optgroup label="Receitas">{categoriasUsadas.filter((c) => c.tipo === 'entrada').map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}</optgroup>
         </select></label>
-      <label className="fin-select"><span>Conta</span>
+      {!restrito && <label className="fin-select"><span>Conta</span>
         <select value={conta} onChange={(e) => setConta(e.target.value)}>
           <option value="">Todas</option>{dados.contas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-        </select></label>
+        </select></label>}
       {filtrando && <button type="button" className="fin-link" onClick={limpar}>Limpar filtros</button>}
     </div>
 

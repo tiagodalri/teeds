@@ -35,10 +35,12 @@ export interface Lancamento {
 }
 export type NovoLancamento = Omit<Lancamento, 'id' | 'criado_por' | 'criado_em' | 'atualizado_por' | 'atualizado_em'> & { id?: string }
 export interface Historico { id: number; lancamento_id: string | null; acao: 'criou' | 'editou' | 'pagou' | 'reabriu' | 'apagou'; por: string | null; em: string; antes: Partial<Lancamento> | null; depois: Partial<Lancamento> | null }
-export interface Acesso { email: string; nome: string | null; papel: Papel; marcas: string[]; ativo: boolean; trocar_senha: boolean; bloqueado: boolean; ultimo_acesso: string | null; criado_em: string; eu: boolean }
+export interface Acesso { email: string; nome: string | null; papel: Papel; marcas: string[]; ativo: boolean; trocar_senha: boolean; bloqueado: boolean; ultimo_acesso: string | null; criado_em: string; eu: boolean; projetos?: string[] | null }
 export interface Candidato { email: string; nome: string | null; marcas: string[] }
 export interface Pessoa { user_id: string; nome: string; email: string }
-export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; nesta?: boolean; ativo?: boolean; papel?: Papel | null; marcas?: string[]; trocar_senha?: boolean; criar?: boolean; bloqueado_ate?: string | null }
+export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; nesta?: boolean; ativo?: boolean; papel?: Papel | null; marcas?: string[]; trocar_senha?: boolean; criar?: boolean; bloqueado_ate?: string | null
+  /** só estes projetos (24/11/2026: o Naor vê só o projeto dele); null/ausente = todos */
+  projetos?: string[] | null }
 export type ResultadoEntrada = { token: string; expira_em: string; papel: Papel; marcas: string[]; trocar_senha: boolean } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' } | { erro: 'criar' }
 export type ResultadoTroca = { ok: true } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' | 'fraca' | 'igual' }
 
@@ -84,6 +86,8 @@ export interface FinApi {
   candidatos(): Promise<Candidato[]>
   darAcesso(email: string, papel: Papel, marcas: string[], senha: string | null): Promise<void>
   tirarAcesso(email: string): Promise<void>
+  /** null = volta a ver todos os projetos; com ids = só esses (a pessoa precisa ser leitor) */
+  limitarProjetos(email: string, projetos: string[] | null): Promise<void>
   enviarAnexo(lancamentoId: string, arquivo: File): Promise<Anexo>
   linkDoAnexo(a: Anexo): Promise<string>
   apagarAnexo(a: Anexo): Promise<void>
@@ -239,6 +243,7 @@ export function finDoBanco(sessao: SessaoTeeds, marca: string): FinApi {
     candidatos: () => rpc<Candidato[]>('fin_candidatos'),
     darAcesso: async (email, papel, marcas, senha) => { await rpc('fin_dar_acesso', { p_email: email, p_papel: papel, p_marcas: marcas, p_senha: senha }) },
     tirarAcesso: async (email) => { await rpc('fin_tirar_acesso', { p_email: email }) },
+    limitarProjetos: async (email, projetos) => { await rpc('fin_limitar_projetos', { p_email: email, p_projetos: projetos }) },
     enviarAnexo: async (lancamentoId, arquivo) => {
       // o Storage só aceita com a sessão usada há pouco: renova antes de enviar
       if (!(await rpc<string | null>('fin_sessao'))) throw new FinTrancado()

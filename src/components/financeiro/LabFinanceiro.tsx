@@ -84,7 +84,7 @@ function apiEmMemoria(): FinApi {
   let acesso: MeuAcesso = ESTADO === 'criar' ? { admin: true, geral: true, tem: false }
     : ESTADO === 'sem' ? { admin: true, geral: false, tem: false }
       : ESTADO === 'convite' ? { admin: true, geral: false, tem: true, ativo: true, nesta: true, papel: 'editor', marcas: ['globalfly'], trocar_senha: true, criar: true }
-      : { admin: true, geral: PAPEL === 'dono', tem: true, ativo: true, papel: PAPEL, marcas: ['globalfly'], trocar_senha: ESTADO === 'provisoria' }
+      : { admin: true, geral: PAPEL === 'dono', tem: true, ativo: true, papel: PAPEL, marcas: ['globalfly'], trocar_senha: ESTADO === 'provisoria', projetos: q.get('restrito') === '1' ? ['lab'] : null }
   let senha = ESTADO === 'provisoria' ? 'provisoria1' : 'financeiro1'
   let falhas = 0
   const hist: Historico[] = []
@@ -109,7 +109,13 @@ function apiEmMemoria(): FinApi {
     sair: async () => { destravado = false },
     destravado: () => destravado,
     preparar: async () => undefined,
-    ler: () => espera(structuredClone(dados)),
+    // &restrito=1: a visão do Naor (o banco entrega só o Projeto Naor)
+    ler: () => {
+      if (q.get('restrito') !== '1') return espera(structuredClone(dados))
+      const ids = dados.projetos.filter((p) => p.nome === 'Projeto Naor').map((p) => p.id)
+      return espera(structuredClone({ ...dados, contas: [], projetos: dados.projetos.filter((p) => ids.includes(p.id)), partes: dados.partes.filter((x) => x.projeto_id && ids.includes(x.projeto_id)),
+        revshare: dados.revshare.filter((x) => ids.includes(x.projeto_id)), lancamentos: dados.lancamentos.filter((l) => l.projeto_id && ids.includes(l.projeto_id)) }))
+    },
     salvarLancamentos: async (l: NovoLancamento[]) => {
       const novos = l.map((x) => ({ ...x, id: x.id ?? id(), criado_por: 'u1', criado_em: new Date().toISOString(), atualizado_por: 'u1', atualizado_em: new Date().toISOString() }) as Lancamento)
       dados = { ...dados, lancamentos: [...novos, ...dados.lancamentos] }
@@ -143,6 +149,7 @@ function apiEmMemoria(): FinApi {
         : [...acessos, { email, nome: c?.nome ?? null, papel, marcas, ativo: true, trocar_senha: true, bloqueado: false, ultimo_acesso: null, criado_em: new Date().toISOString(), eu: false }]
     },
     tirarAcesso: async (email) => { acessos = acessos.map((a) => a.email === email ? { ...a, ativo: false } : a) },
+    limitarProjetos: async (email, projetos) => { acessos = acessos.map((a) => a.email === email ? { ...a, projetos } : a) },
     enviarAnexo: async (_l, f): Promise<Anexo> => espera({ path: `lab/${f.name}`, nome: f.name, tipo: f.type, tamanho: f.size }),
     linkDoAnexo: async () => 'about:blank',
     apagarAnexo: async () => undefined,

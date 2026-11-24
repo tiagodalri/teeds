@@ -1,6 +1,6 @@
 /* Acessos (só o dono): quem entra no financeiro, com que papel, em quais plataformas; senha provisória. */
 import { useEffect, useMemo, useState } from 'react'
-import type { Acesso, Candidato, FinApi, Papel } from '../../core/teeds/financeiro'
+import type { Acesso, Candidato, FinApi, Papel, Projeto } from '../../core/teeds/financeiro'
 import { MARCAS } from '../../marca/marcas'
 import { Icone } from '../Icone'
 import { Avatar, Campo, Janela, Vazio } from './ui'
@@ -20,7 +20,8 @@ function gerarSenha() {
   return `${Array.from({ length: 4 }, () => r(letras)).join('')}-${Array.from({ length: 4 }, () => r(numeros)).join('')}-${Array.from({ length: 4 }, () => r(letras)).join('')}`
 }
 
-export function Acessos({ api, aoMudar }: { api: FinApi; aoMudar: (m: string) => void }) {
+export function Acessos({ api, projetos, aoMudar }: { api: FinApi; projetos: Projeto[]; aoMudar: (m: string) => void }) {
+  const nomeDoProjeto = (id: string) => projetos.find((p) => p.id === id)?.nome ?? 'Projeto removido'
   const [lista, setLista] = useState<Acesso[] | null>(null)
   const [candidatos, setCandidatos] = useState<Candidato[]>([])
   const [erro, setErro] = useState<string | null>(null)
@@ -44,7 +45,7 @@ export function Acessos({ api, aoMudar }: { api: FinApi; aoMudar: (m: string) =>
         {lista.map((a) => <li key={a.email} className={a.ativo ? '' : 'inativo'}>
           <Avatar nome={a.nome || a.email} tamanho={38} />
           <span className="fin-acessos-quem"><b>{a.nome || a.email.split('@')[0]}{a.eu && <em className="fin-chip">Você</em>}</b><small>{a.email}</small></span>
-          <span className="fin-acessos-papel"><em className={`fin-papel ${a.papel}`}>{PAPEIS.find((p) => p.id === a.papel)?.nome}</em><small>{a.marcas.map(nomeDaMarca).join(', ')}</small></span>
+          <span className="fin-acessos-papel"><em className={`fin-papel ${a.papel}`}>{PAPEIS.find((p) => p.id === a.papel)?.nome}</em><small>{a.marcas.map(nomeDaMarca).join(', ')}</small>{a.projetos && <small className="fin-acessos-so">Só {a.projetos.map(nomeDoProjeto).join(', ')}</small>}</span>
           <span className="fin-acessos-quando"><small>Último acesso</small><b>{quando(a.ultimo_acesso)}</b></span>
           <span className="fin-acessos-sit">{!a.ativo ? <em className="fin-situacao vencido">Sem acesso</em> : a.bloqueado ? <em className="fin-situacao vencido">Travado 15 min</em> : a.trocar_senha ? <em className="fin-situacao pendente">Falta criar a senha</em> : <em className="fin-situacao pago">Ativo</em>}</span>
           <span className="fin-acessos-acoes">{!a.eu && !a.marcas.includes('*') && <button type="button" className="fin-btn pequeno" onClick={() => setEditando({ acesso: a })}>{a.ativo ? 'Editar' : 'Devolver acesso'}</button>}</span>
@@ -54,7 +55,7 @@ export function Acessos({ api, aoMudar }: { api: FinApi; aoMudar: (m: string) =>
     <p className="fin-explica"><Icone nome="cadeado" />
       <span>Cada pessoa tem a própria senha, diferente da senha de login. Quem recebe acesso cria a própria senha no primeiro acesso ao financeiro. Cinco senhas erradas seguidas travam o acesso por 15 minutos, e o financeiro se bloqueia sozinho depois de 20 minutos parado.</span></p>
 
-    {editando && <EditorAcesso api={api} acesso={editando.acesso} candidatos={editando.acesso ? [] : semAcesso}
+    {editando && <EditorAcesso api={api} projetos={projetos} acesso={editando.acesso} candidatos={editando.acesso ? [] : semAcesso}
       aoFechar={() => setEditando(null)}
       aoSalvar={(msg, senha, nome) => { setEditando(null); void ler(); aoMudar(msg); if (senha) setMostrarSenha({ senha, nome }) }}
       aoTirar={(msg) => { setEditando(null); void ler(); aoMudar(msg) }} />}
@@ -75,8 +76,8 @@ function SenhaProvisoria({ nome, senha, aoFechar }: { nome: string; senha: strin
   </Janela>
 }
 
-function EditorAcesso({ api, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: {
-  api: FinApi; acesso: Acesso | null; candidatos: Candidato[]
+function EditorAcesso({ api, projetos, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: {
+  api: FinApi; projetos: Projeto[]; acesso: Acesso | null; candidatos: Candidato[]
   aoFechar: () => void
   aoSalvar: (msg: string, senha: string | null, nome: string) => void
   aoTirar: (msg: string) => void
@@ -92,6 +93,10 @@ function EditorAcesso({ api, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: 
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const [confirmarTirar, setConfirmarTirar] = useState(false)
+  // o que vê: todos os projetos (null) ou só alguns (só como leitor; o banco corta o resto)
+  const [soProjetos, setSoProjetos] = useState<string[] | null>(acesso?.projetos ?? null)
+  const projetosAtivos = projetos.filter((p) => p.ativo || soProjetos?.includes(p.id))
+  const papelFinal: Papel = soProjetos ? 'leitor' : papel
 
   // trocar a pessoa escolhida já marca as plataformas em que ela é administradora
   useEffect(() => { if (!acesso && escolhido) setMarcas(escolhido.marcas.filter((m) => m !== 'teeds')) }, [email]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -100,10 +105,15 @@ function EditorAcesso({ api, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: 
   const salvar = async () => {
     if (!email) { setErro('Escolha a pessoa.'); return }
     if (!marcas.length) { setErro('Escolha pelo menos uma plataforma.'); return }
+    if (soProjetos && !soProjetos.length) { setErro('Escolha pelo menos um projeto.'); return }
     setSalvando(true); setErro(null)
     const senha = (acesso ? novaSenha : !convite) ? gerarSenha().replace(/^(....)/, (m) => m[0].toUpperCase() + m.slice(1)) : null
     try {
-      await api.darAcesso(email, papel, marcas, senha)
+      // tirar o limite antes de subir o papel; pôr o limite depois de virar leitor (o banco exige leitor)
+      if (!soProjetos && acesso?.projetos) await api.limitarProjetos(email, null)
+      await api.darAcesso(email, papelFinal, marcas, senha)
+      const antes = acesso?.projetos ?? null
+      if (soProjetos && (!antes || antes.length !== soProjetos.length || soProjetos.some((x) => !antes.includes(x)))) await api.limitarProjetos(email, soProjetos)
       aoSalvar(acesso ? 'Acesso atualizado.' : `${nome.split(' ')[0]} agora tem acesso ao financeiro.`, senha, nome.split(' ')[0])
     } catch (x) { setErro((x as Error).message); setSalvando(false) }
   }
@@ -133,9 +143,19 @@ function EditorAcesso({ api, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: 
         </Campo>}
         <div className="fin-campo largo"><span className="fin-campo-rot">Papel</span>
           <div className="fin-escolha coluna">
-            {PAPEIS.map((p) => <button key={p.id} type="button" className={papel === p.id ? 'on' : ''} onClick={() => setPapel(p.id)}><b>{p.nome}</b><small>{p.desc}</small></button>)}
+            {PAPEIS.map((p) => <button key={p.id} type="button" className={papelFinal === p.id ? 'on' : ''} disabled={!!soProjetos && p.id !== 'leitor'} onClick={() => setPapel(p.id)}><b>{p.nome}</b><small>{p.desc}</small></button>)}
           </div>
         </div>
+        {projetosAtivos.length > 0 && <div className="fin-campo largo"><span className="fin-campo-rot">O que vê</span>
+          <div className="fin-escolha coluna">
+            <button type="button" className={!soProjetos ? 'on' : ''} onClick={() => setSoProjetos(null)}><b>Tudo</b><small>Todos os projetos, o custo geral, as contas e o acerto entre os sócios.</small></button>
+            <button type="button" className={soProjetos ? 'on' : ''} onClick={() => setSoProjetos((l) => l ?? [])}><b>Só alguns projetos</b><small>Vê só os lançamentos e a divisão dos projetos marcados. Não vê contas, custo geral, sócios nem outros projetos. Entra como leitor.</small></button>
+          </div>
+          {soProjetos && <div className="fin-marcas">
+            {projetosAtivos.map((p) => <label key={p.id} className="fin-check"><input type="checkbox" checked={soProjetos.includes(p.id)}
+              onChange={(e) => setSoProjetos((l) => e.target.checked ? [...(l ?? []), p.id] : (l ?? []).filter((x) => x !== p.id))} /><span>{p.nome}</span></label>)}
+          </div>}
+        </div>}
         <div className="fin-campo largo"><span className="fin-campo-rot">Plataformas</span>
           <div className="fin-marcas">
             {opcoesMarca.map((m) => <label key={m} className="fin-check"><input type="checkbox" checked={marcas.includes(m)}

@@ -90,6 +90,7 @@
 .fin-cartao-pe { margin: 0; padding: 12px 20px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
 .fin-pad { margin: 16px 20px; }
 .fin-grade-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.fin-grade-1 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .fin-grade-2.larga { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); }
 .fin-grade-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .fin-total { font-size: 16px; font-weight: 800; white-space: nowrap; }
@@ -329,6 +330,8 @@ button.fin-kpi:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(
 .fin-acessos-lista li > span { display: grid; gap: 4px; min-width: 0; }
 .fin-acessos-quem b { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
 .fin-acessos-quem small, .fin-acessos-papel small, .fin-acessos-quando small { overflow: hidden; color: var(--muted); font-size: 11.5px; white-space: nowrap; text-overflow: ellipsis; }
+.fin-acessos-papel small.fin-acessos-so { color: var(--fin-destaque, #9A7330); font-weight: 600; }
+.fin-escolha button:disabled { opacity: .45; cursor: not-allowed; }
 .fin-acessos-quem .fin-chip { padding: 2px 8px; font-size: 10.5px; }
 .fin-acessos-quando b { font-size: 12.5px; font-weight: 650; }
 .fin-acessos-acoes { justify-items: end; }

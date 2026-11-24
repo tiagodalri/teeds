@@ -18,8 +18,10 @@ const compacto = (v: number) => {
 }
 const pct = (v: number) => `${(v * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`
 
-export function Resumo({ api, dados, todos, projeto, aoProjeto, periodo, rotuloPeriodo, podeEditar, aoNovo, aoAbrir, aoPagar, aoIr, aoMudar, aoTrancar }: {
+export function Resumo({ api, restrito = false, dados, todos, projeto, aoProjeto, periodo, rotuloPeriodo, podeEditar, aoNovo, aoAbrir, aoPagar, aoIr, aoMudar, aoTrancar }: {
   api: FinApi
+  /** vê só alguns projetos: sem o saldo das contas, sem aportes/retiradas e sem o quadro de todos os projetos */
+  restrito?: boolean
   /** salvou algo fora do editor de lançamento (o Revenue Share): mostra o aviso e relê */
   aoMudar: (mensagem: string) => void
   aoTrancar: () => void
@@ -76,16 +78,16 @@ export function Resumo({ api, dados, todos, projeto, aoProjeto, periodo, rotuloP
         <small>{r.nReceberVencido ? `${reais(r.aReceberVencido)} atrasado` : 'Tudo em dia'}</small></button>
       <button type="button" className={`fin-kpi ${r.nPagarVencido ? 'perigo' : ''}`} onClick={() => aoIr('lancamentos', 'pagar')}><span>A pagar</span><strong>{reais(r.aPagar)}</strong>
         <small>{r.nPagarVencido ? `${r.nPagarVencido} ${r.nPagarVencido === 1 ? 'conta vencida' : 'contas vencidas'} · ${reais(r.aPagarVencido)}` : 'Nada vencido'}</small></button>
-      <article className="fin-kpi"><span>Saldo nas contas</span><strong>{reais(r.saldoContas)}</strong><small>Hoje · {contas.length} {contas.length === 1 ? 'conta' : 'contas'}</small></article>
+      {!restrito && <article className="fin-kpi"><span>Saldo nas contas</span><strong>{reais(r.saldoContas)}</strong><small>Hoje · {contas.length} {contas.length === 1 ? 'conta' : 'contas'}</small></article>}
     </div>
-    {(r.aportes > 0 || r.retiradas > 0) && <p className="fin-nota-socios">
+    {!restrito && (r.aportes > 0 || r.retiradas > 0) && <p className="fin-nota-socios">
       No período os sócios colocaram <b>{reais(r.aportes)}</b> e tiraram <b>{reais(r.retiradas)}</b>. Isso não entra no resultado.
       <button type="button" onClick={() => aoIr('divisao')}>Ver a divisão</button></p>}
 
     {umMes && <PrevisaoRevShare api={api} dados={dados} todos={todos} projeto={projeto} periodo={periodo} mes={periodo.de}
       podeEditar={podeEditar} aoMudar={aoMudar} aoTrancar={aoTrancar} />}
 
-    <div className="fin-grade-2 larga">
+    <div className={restrito ? 'fin-grade-1' : 'fin-grade-2 larga'}>
       <section className="fin-cartao">
         <header><div><span className="fin-rot">Últimos 12 meses</span><h3>Receitas e despesas mês a mês</h3></div>
           <div className="fin-legenda"><span className="fin-entra">Receitas</span><span className="fin-sai">Despesas</span></div></header>
@@ -101,7 +103,7 @@ export function Resumo({ api, dados, todos, projeto, aoProjeto, periodo, rotuloP
         </div> : <p className="fin-cartao-vazio">Os meses aparecem aqui quando houver lançamentos pagos.</p>}
       </section>
 
-      <section className="fin-cartao">
+      {!restrito && <section className="fin-cartao">
         <header><div><span className="fin-rot">Hoje</span><h3>Saldo nas contas</h3></div>
           <button type="button" className="fin-link" onClick={() => aoIr('cadastros')}>Contas</button></header>
         <ul className="fin-contas-lista">
@@ -111,10 +113,10 @@ export function Resumo({ api, dados, todos, projeto, aoProjeto, periodo, rotuloP
           </li>)}
           {!contas.length && <li className="fin-cartao-vazio">Nenhuma conta cadastrada.</li>}
         </ul>
-      </section>
+      </section>}
     </div>
 
-    {(projetos.length > 1 || projetos.some((x) => x.projeto)) && <section className="fin-cartao">
+    {!restrito && (projetos.length > 1 || projetos.some((x) => x.projeto)) && <section className="fin-cartao">
       <header><div><span className="fin-rot">Projetos · {rotuloPeriodo}</span><h3>Custo e resultado por projeto</h3></div>
         {projeto && <button type="button" className="fin-link" onClick={() => aoProjeto('')}>Ver todos os projetos</button>}</header>
       <div className="fin-projetos" role="list">

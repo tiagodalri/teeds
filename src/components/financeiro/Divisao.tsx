@@ -7,8 +7,10 @@ import type { Rascunho } from './EditorLancamento'
 import { Partilha } from './Partilha'
 import type { FinApi } from '../../core/teeds/financeiro'
 
-export function Divisao({ api, dados, periodo, rotuloPeriodo, podeEditar, souDono, aoNovo, aoAbrir, aoIr, aoMudar }: {
+export function Divisao({ api, restrito = false, dados, periodo, rotuloPeriodo, podeEditar, souDono, aoNovo, aoAbrir, aoIr, aoMudar }: {
   api: FinApi
+  /** vê só alguns projetos: só a divisão desses projetos, sem o acerto entre os sócios */
+  restrito?: boolean
   aoMudar: (mensagem: string) => void
   dados: DadosFin; periodo: Periodo; rotuloPeriodo: string; podeEditar: boolean; souDono: boolean
   aoNovo: (r: Rascunho) => void
@@ -18,6 +20,8 @@ export function Divisao({ api, dados, periodo, rotuloPeriodo, podeEditar, souDon
   const d = useMemo(() => dividir(dados, periodo), [dados, periodo])
   const movimentos = useMemo(() => dados.lancamentos.filter((l) => l.socio_id).sort((a, b) => diaDe(b).localeCompare(diaDe(a))), [dados.lancamentos])
   const soc = new Map(dados.socios.map((s) => [s.id, s]))
+
+  if (restrito) return <div className="fin-divisao"><Partilha api={api} dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} souDono={false} restrito aoMudar={aoMudar} /></div>
 
   if (!dados.socios.length) {
     return <section className="fin-cartao"><Vazio icone={<Icone nome="parceiros" />} titulo="Cadastre os sócios"
