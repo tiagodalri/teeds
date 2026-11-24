@@ -9,11 +9,11 @@
 import { useEffect, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { ativarNotificacoes, desligarNotificacoes, estadoDasNotificacoes, testarNotificacoes, type EstadoDasNotificacoes } from '../../core/teeds/notificacoes'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import './notificacoes.css'
 import { ConviteDeBiometria } from '../biometria/Biometria'
 
-const IA = MARCA.id === 'globalfly'
+const IA = FAMILIA_GF
 const termo = IA ? 'a I.A.' : 'o robô'
 
 const SINO = 'M6 16V11a6 6 0 0112 0v5l2 2H4zM10 20a2 2 0 004 0'

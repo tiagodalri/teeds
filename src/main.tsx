@@ -11,7 +11,7 @@ import './styles/pagina.css'
 // o celular deitado (ilha do iPhone nas laterais, altura curta) vem depois de tudo
 import './styles/celular-deitado.css'
 import { aplicarTema, temaGuardado } from './core/tema'
-import { MARCA } from './marca'
+import { MARCA, familiaDa } from './marca'
 import { registrarVisita } from './core/teeds/visitas'
 import { appDaVitrine, lerParceiroDoLink, vitrine } from './core/teeds/parceiro'
 import { usarAppDaDeriv } from './core/deriv/auth'
@@ -91,6 +91,7 @@ const Decolagem = MARCA.decolagem ? lazy(() => import('./components/entrada/Deco
 
 // o tema entra antes do primeiro quadro, para a tela nao piscar clara
 document.documentElement.dataset.marca = MARCA.id
+document.documentElement.dataset.familia = familiaDa(MARCA.id)
 // App instalado na tela inicial (PWA): o CSS desenha o topo por trás da hora
 // e da bateria do iPhone (ver "app instalado" no tema da marca).
 if (matchMedia('(display-mode: standalone)').matches || (navigator as unknown as { standalone?: boolean }).standalone === true) {

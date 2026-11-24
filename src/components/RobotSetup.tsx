@@ -14,7 +14,7 @@ import './robot-launch.css'
 import './plano-de-voo.css'
 import { nomeDoAtivo } from '../core/deriv/market'
 import { metaEStopDoPreparo, sincronizarParaOPreparo } from '../core/teeds/planoDoDia'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { NomeDoRobo } from './NomeDoRobo'
 import { Monograma, TEM_MONOGRAMA } from './marca/Monograma'
@@ -116,12 +116,12 @@ export const modeloPedidoDaVitrine = () => modeloDaVitrine
    ------------------------------------------------------------------ */
 type Passo = 'escolha' | 'plano' | 'decolar'
 const FOTOS = `${import.meta.env.BASE_URL}robos-globalfly/`
-const TEM_FOTOS = MARCA.id === 'globalfly'
+const TEM_FOTOS = FAMILIA_GF
 /*
   O tema de aviação ("Plano de voo", "Decolar", azul e ouro) é da GlobalFly.
   Teeds e OMNI usam o mesmo preparo com palavras e cores delas (29/10/2026).
 */
-const GF = MARCA.id === 'globalfly'
+const GF = FAMILIA_GF
 const T = GF
   ? { escolha: 'Escolha a I.A.', escolhaTitulo: 'Escolha a sua I.A.', plano: 'Plano de voo', decolar: 'Decolar', topo: 'Plano de voo', antes: 'Antes de decolar', revisar: 'Revisar e decolar', indisponivel: 'Esta I.A. está indisponível agora. Escolha outra.' }
   : { escolha: 'Escolha o robô', escolhaTitulo: 'Escolha o seu robô', plano: 'Valores', decolar: 'Revisão', topo: 'Configurar robô', antes: 'Antes de iniciar', revisar: 'Revisar', indisponivel: 'Este robô está indisponível agora. Escolha outro.' }

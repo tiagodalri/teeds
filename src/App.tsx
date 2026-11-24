@@ -67,7 +67,7 @@ import { formatPrice } from './core/chart/scales'
 import { atualizarLimites, buyFromProposal, cancelarContrato, cotarMultiplicador, ehMultiplicador, requestProposal, sellContract, type CotacaoMultiplicador } from './core/deriv/trading'
 import { BoletaMultiplicador, type PedidoMultiplicador } from './components/operar/BoletaMultiplicador'
 import { CartaoMultiplicador } from './components/operar/CartaoMultiplicador'
-import { LIVES_AO_VIVO, MARCA } from './marca'
+import { LIVES_AO_VIVO, MARCA, FAMILIA_GF } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
 import { ModoSimuladoTopo, abrirPainelSimulado } from './components/modoSimulado/ModoSimuladoTopo'
@@ -672,7 +672,7 @@ export default function App() {
     responde (ou falha), o cliente que já era ativo fica trancado. Para o administrador não ver a tranca
     piscar a cada abertura, vale o que este aparelho já sabe dele (só para a tela; o banco confere tudo).
   */
-  const chaveEraAdmin = usuarioTeedsId && MARCA.id === 'globalfly' ? `${MARCA.id}.era-admin.${usuarioTeedsId}` : ''
+  const chaveEraAdmin = usuarioTeedsId && FAMILIA_GF ? `${MARCA.id}.era-admin.${usuarioTeedsId}` : ''
   const eraAdminNoAparelho = useMemo(() => { try { return !!chaveEraAdmin && !!localStorage.getItem(chaveEraAdmin) } catch { return false } }, [chaveEraAdmin])
   useEffect(() => {
     if (!chaveEraAdmin || admin === null) return
@@ -746,7 +746,7 @@ export default function App() {
   // O "visto" fica na ficha (vale em qualquer aparelho) e neste aparelho.
   const [tour, setTour] = useState<null | 'obrigatorio' | 'rever'>(null)
   // 08/11/2026 (GlobalFly): no primeiro acesso abre sozinha a aula de introdução, antes do tour
-  const chaveVideoInicio = teeds.sessao && MARCA.id === 'globalfly' ? `globalfly.boasvindas.video.${teeds.sessao.usuario.id}` : ''
+  const chaveVideoInicio = teeds.sessao && FAMILIA_GF ? `globalfly.boasvindas.video.${teeds.sessao.usuario.id}` : ''
   const [videoInicioVisto, setVideoInicioVisto] = useState(true)
   // sem vídeo publicado (ou o banco não respondeu): some só nesta visita, sem marcar como visto
   const [videoInicioDispensado, setVideoInicioDispensado] = useState(false)
@@ -1276,7 +1276,7 @@ export default function App() {
   */
   const linhaAberta = conta.conexao === 'open'
   // liberada para todos da GlobalFly em 10/11/2026 ("revise… e libere!"); antes, só administradores
-  const podeMultitela = MARCA.id === 'globalfly'
+  const podeMultitela = FAMILIA_GF
   const multitelaAtiva = podeMultitela && tela === 'operar' && multitela.n > 1
   // 29/10/2026: valor acima do saldo também trava a compra (antes o botão seguia ativo e a Deriv recusava)
   const acimaDoSaldo = saldoNaTela !== null && stake > saldoNaTela
@@ -1646,10 +1646,10 @@ export default function App() {
 
   // GlobalFly (19/11/2026, Tiago: "só administradores"): o Assistente é da equipe, sem código; os outros
   // não o veem (o servidor também recusa). Teeds e OMNI seguem com o código de acesso.
-  const assistenteAberto = MARCA.id === 'globalfly' ? admin === true : assistenteLiberado
+  const assistenteAberto = FAMILIA_GF ? admin === true : assistenteLiberado
   function abrirAssistente() {
     if (assistenteAberto) { setTela('assistente'); return }
-    if (MARCA.id === 'globalfly') return
+    if (FAMILIA_GF) return
     setPedirCodigoAssistente(true)
   }
 
@@ -1662,7 +1662,7 @@ export default function App() {
 
   return (
     <div className={`app workspace-app${JANELA ? ` em-janela-solta janela-${JANELA}` : ''}`}>
-      {!JANELA && <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} mostrarAssistente={MARCA.id === 'globalfly' ? admin === true : admin === true || assistenteLiberado} onNavigate={next => {
+      {!JANELA && <WorkspaceNav page={tela} admin={admin === true} aoVivoAgora={aoVivoAgora} mostrarAoVivo={mostrarAoVivo} mostrarInicio={!!MARCA.inicio} mostrarDivulgacao={!!linksDeParceiro} mostrarAssistente={FAMILIA_GF ? admin === true : admin === true || assistenteLiberado} onNavigate={next => {
         setVerPerfil(false)
         if (next === 'assistente') abrirAssistente()
         else setTela(next)
@@ -1730,7 +1730,7 @@ export default function App() {
           )}
 
           {/* conversor de moedas e calculadora (06/11/2026, ideia do Victor): só na GlobalFly */}
-          {!JANELA && MARCA.id === 'globalfly' && <BotoesDeFerramentas />}
+          {!JANELA && FAMILIA_GF && <BotoesDeFerramentas />}
 
           {!JANELA && <BotaoTelaCheia />}
 
@@ -1792,7 +1792,7 @@ export default function App() {
       )}
 
       {/* Gold sem saldo na conta real (GF, 16/11/2026): a janela "Libere a sua conta" e a trava dos cliques */}
-      {MARCA.id === 'globalfly' && !JANELA && teeds.sessao && !trancado && (
+      {FAMILIA_GF && !JANELA && teeds.sessao && !trancado && (
         <TravaDaConta sessao={teeds.sessao} marca={MARCA.id} tela={tela}
           contas={conta.status === 'logado' ? conta.todasAsContas : []} derivConectada={conta.status === 'logado'}
           vivas={vivasRobos} planos={meuSubplano?.subplanos ?? []} comprador={teeds.sessao.usuario}

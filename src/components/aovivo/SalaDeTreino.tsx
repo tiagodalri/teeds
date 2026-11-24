@@ -8,7 +8,7 @@ import './aovivo.css'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { BlocosDoChat } from './BlocosDoChat'
 import { MedidorDeVolume } from './MedidorDeVolume'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { ehCelular } from '../../core/celular'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
@@ -469,7 +469,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
       <div className={`cv-app ps-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
         <header className="cv-app-topo ps-topo">
           <div className="cv-app-marca">
-            {MARCA.id === 'globalfly' && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
+            {FAMILIA_GF && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
             <span><b>Sala de treino</b></span>
           </div>
           <div className={`ps-estado ${sim.ativa ? 'vivo' : ''} ${tr.teste ? 'teste' : ''}`}>

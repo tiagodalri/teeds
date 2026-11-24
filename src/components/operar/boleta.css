@@ -13,7 +13,7 @@
 /* tema claro: o ouro de destaque escurece para ler bem sobre o branco */
 :root:not([data-tema='escuro']) .bl { --bl-ouro-claro: color-mix(in srgb, var(--bl-ouro) 78%, #000); }
 /* a faixa do ativo é uma ilha azul no claro (tema da GlobalFly): ali o ouro volta a ser o claro */
-:root[data-marca='globalfly']:not([data-tema='escuro']) .bl-ativo { --bl-ouro-claro: color-mix(in srgb, var(--bl-ouro) 75%, #fff); }
+:root[data-familia='globalfly']:not([data-tema='escuro']) .bl-ativo { --bl-ouro-claro: color-mix(in srgb, var(--bl-ouro) 75%, #fff); }
 
 /* o ativo, ao vivo */
 .bl-ativo { position: relative; overflow: hidden; isolation: isolate; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
@@ -121,7 +121,7 @@
 /* o cartão de conectar a Deriv, quando aparece, fica acima da boleta com respiro */
 /* GlobalFly no claro: o "primary-soft" (azul a 13% sobre o marfim) deixava o cartão cinza e sujo.
    Fica como no escuro: fio de ouro e um véu leve de ouro sobre o branco (29/10/2026, revisão visual). */
-:root[data-marca='globalfly']:not([data-tema='escuro']) .trade > .sem-deriv.compacto {
+:root[data-familia='globalfly']:not([data-tema='escuro']) .trade > .sem-deriv.compacto {
   border-color: color-mix(in srgb, var(--gf-ouro, var(--primary)) 55%, var(--border));
   background: color-mix(in srgb, var(--gf-ouro, var(--primary)) 7%, var(--surface));
 }

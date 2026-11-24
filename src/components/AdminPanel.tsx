@@ -34,7 +34,7 @@ import { AdminCentroDeEstudo } from './AdminCentroDeEstudo'
 import { SeletorDePlataforma, opcoesDePlataforma } from './SeletorDePlataforma'
 import { useMarcaEmFoco } from '../core/teeds/marcaEmFoco'
 import { MARCAS } from '../marca/marcas'
-import { MARCA } from '../marca'
+import { MARCA, ehFamiliaGF } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { ExcluirCadastro } from './ExcluirCadastro'
 import { Icone, type NomeIcone } from './Icone'
@@ -479,7 +479,9 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
      "Criar acesso" saiu do menu: é o botão "Novo cliente" dentro de Clientes (o menu marca Clientes). */
   const soGeral = (id: string) => !restrito || !(SO_DO_ADMIN_GERAL as readonly string[]).includes(id)
   const item = (id: Aba, nome: string, icone: NomeIcone, selo?: ItemDoMenu['selo']): ItemDoMenu => ({ id, nome, icone, selo, onClick: () => setAba(id) })
-  const naGf = pleno && marcaFoco === 'globalfly'
+  const naGf = pleno && ehFamiliaGF(marcaFoco)
+  /** Só a GlobalFly: o que usa contas dela (anúncios da Meta, transmissão, live de lançamento). */
+  const naGfPropria = pleno && marcaFoco === 'globalfly'
   const gruposDoMenu: GrupoDoMenu[] = ([
     { id: 'topo', titulo: null, itens: [
       item('visao', 'Visão geral', 'inicio'),
@@ -487,15 +489,15 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       item('organizacao', 'Organização', 'organizacao', { n: minhasPendentes, urgente: true, dica: 'Suas tarefas atrasadas ou para hoje' }),
     ] },
     { id: 'captacao', titulo: 'Captação', itens: [
-      ...(naGf ? [item('anuncios', 'Anúncios', 'megafone')] : []),
+      ...(naGfPropria ? [item('anuncios', 'Anúncios', 'megafone')] : []),
       item('leads', 'Leads', 'leads'),
       ...(pleno && MARCA.parceiros?.length ? [item('parceiros', 'Parceiros', 'parceiros')] : []),
     ] },
     { id: 'contato', titulo: 'Lançamento e contato', itens: [
       // 12/11/2026: o link da transmissão ao vivo, colado pelos próprios administradores (popup + Ao vivo piscando)
-      ...(naGf ? [item('transmissao', 'Transmissão ao vivo', 'aovivo')] : []),
+      ...(naGfPropria ? [item('transmissao', 'Transmissão ao vivo', 'aovivo')] : []),
       // 18/11/2026 (Tiago): a tela da live de lançamento fica inativa por enquanto — volta trocando LIVE_DE_LANCAMENTO_ATIVA para true
-      ...(naGf && LIVE_DE_LANCAMENTO_ATIVA ? [item('lancamento', 'Live de lançamento', 'aovivo')] : []),
+      ...(naGfPropria && LIVE_DE_LANCAMENTO_ATIVA ? [item('lancamento', 'Live de lançamento', 'aovivo')] : []),
       ...(MARCA.aoVivo ? [{ id: 'central-ao-vivo', nome: 'Central ao vivo', icone: 'aovivo' as NomeIcone, sai: true, onClick: () => { pedirCentral(); onNavigate('aovivo') } }] : []),
       ...(naGf ? [item('notificacoes', 'Notificações', 'sino')] : []),
       // os Stories (08/11/2026): toda a equipe publica; o admin do parceiro, só para os clientes dele
@@ -517,11 +519,11 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       // 11/11/2026: custos, receitas e a divisão entre os sócios, com senha individual
       ...(veFinanceiro ? [item('financeiro', 'Financeiro', 'financeiro')] : []),
       // 10/11/2026: as vendas da Cakto (Black, Prestige), por conta do Victor e do Naor
-      ...(pleno && !naRede && marcaFoco === 'globalfly' ? [item('vendas', 'Vendas', 'comissoes')] : []),
+      ...(pleno && !naRede && ehFamiliaGF(marcaFoco) ? [item('vendas', 'Vendas', 'comissoes')] : []),
       // 16/11/2026: Gold sem saldo na conta real, o que fez na janela "Libere a sua conta" e quem liberou
-      ...(pleno && !naRede && marcaFoco === 'globalfly' ? [item('travadas', 'Contas travadas', 'cadeado')] : []),
+      ...(pleno && !naRede && ehFamiliaGF(marcaFoco) ? [item('travadas', 'Contas travadas', 'cadeado')] : []),
       // 11/11/2026: o compartilhamento de receita (Gold 10%, Black 5%, Prestige isento) e as faturas do mês
-      ...(pleno && !naRede && marcaFoco === 'globalfly' ? [item('receita', 'Compartilhamento de receita', 'fatura')] : []),
+      ...(pleno && !naRede && ehFamiliaGF(marcaFoco) ? [item('receita', 'Compartilhamento de receita', 'fatura')] : []),
       item('inteligencia', 'Inteligência', 'inteligencia'),
       item('estudo', 'Centro de estudo', 'estudo'),
       item('comissoes', 'Comissões', 'comissoes'),
@@ -561,22 +563,22 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
           ar em vez de mostrar a lista de alguma marca por acaso. A lista de
           clientes abaixo continua, porque consultar a rede inteira faz sentido. */}
       {/* 08/11/2026: a liberação do lançamento é este botão, não mais às 20h30 sozinha */}
-      {aba === 'clientes' && !naRede && naGf && <Suspense fallback={null}><LiberarAcessoGeral sessao={sessao} geral={souGeral} /></Suspense>}
+      {aba === 'clientes' && !naRede && naGfPropria && <Suspense fallback={null}><LiberarAcessoGeral sessao={sessao} geral={souGeral} /></Suspense>}
       {aba === 'clientes' && !naRede && <AdminPendentes key={chaveDoFoco} sessao={sessao} marca={marcaFoco} versao={versao} planos={planos} parceiros={souGeral ? parceirosDoFoco : []} onAprovado={()=>void recarregar()} />}
       {aba === 'clientes' && naRede && <section className="admin-card adm-pede-marca"><div><span className="rot">Aprovação de clientes</span><h3>Escolha uma plataforma para aprovar</h3><p>A conta nasce dentro de uma marca e o e-mail sai com a identidade dela. Na visão de Rede não há a quem aprovar — troque para {Object.values(MARCAS).map(m=>m.prosa).join(', ').replace(/, ([^,]*)$/, ' ou $1')} no topo.</p></div></section>}
       {aba === 'clientes' && <section className="admin-card full adm-base-clientes"><header><div><span className="rot">Base completa</span><h3>{totalClientes.toLocaleString('pt-BR')} clientes cadastrados</h3></div><button className="admin-primary" onClick={()=>setAba('acessos')}><Icone nome="mais" />Novo cliente</button></header>{tabelaClientes}</section>}
       {aba === 'acessos' && !naRede && <section className="admin-form-page"><div className="admin-form-intro"><span>01</span><h3>Dados do cliente</h3><p>O e-mail será usado para entrar na plataforma.</p></div><div className="admin-form-grid"><label><span>Nome completo *</span><input value={novo.nome} onChange={e=>setNovo({...novo,nome:e.target.value})} placeholder="Nome e sobrenome" /></label><label><span>E-mail de acesso *</span><input type="email" value={novo.email} onChange={e=>setNovo({...novo,email:e.target.value})} placeholder="cliente@email.com" /></label><label><span>Telefone</span><input value={novo.telefone} onChange={e=>setNovo({...novo,telefone:e.target.value})} placeholder="(00) 00000-0000" /></label><label><span>CPF</span><input value={novo.cpf} onChange={e=>setNovo({...novo,cpf:e.target.value})} placeholder="000.000.000-00" /></label><label><span>Senha provisória *</span><input type="password" value={novo.senha} onChange={e=>setNovo({...novo,senha:e.target.value})} placeholder="Mínimo de 6 caracteres" /></label><label><span>Plano inicial</span><select value={novo.planoId} onChange={e=>setNovo({...novo,planoId:e.target.value})}>{planos.filter(p=>p.ativo).map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select></label><label><span>Validade do acesso</span><input type="date" value={novo.expira} onChange={e=>setNovo({...novo,expira:e.target.value})} /></label>{marcaDeTrabalho === 'globalfly' && <label className="admin-check admin-stark"><input type="checkbox" checked={novo.stark} onChange={e=>setNovo({...novo,stark:e.target.checked})} /><span><b>Cliente da antiga Stark</b><small>Já pagou: libera as 5 I.A., com Gulf e Phenom. Sem marcar, ficam Raptor, Falcon e Legacy.</small></span></label>}</div><footer><p>No primeiro acesso o cliente é obrigado a trocar a senha provisória pela própria.</p><button className="admin-primary" onClick={()=>void criar()} disabled={salvando}>{salvando?'Criando…':'Criar e liberar acesso'}</button></footer></section>}
-      {aba === 'planos' && !naRede && marcaFoco === 'globalfly' && <AdminSubplanos key={`sub-${chaveDoFoco}`} sessao={sessao} marca={marcaFoco} />}
+      {aba === 'planos' && !naRede && ehFamiliaGF(marcaFoco) && <AdminSubplanos key={`sub-${chaveDoFoco}`} sessao={sessao} marca={marcaFoco} />}
       {aba === 'planos' && !naRede && <AdminPlanos key={chaveDoFoco} sessao={sessao} onMudou={() => void recarregar()} />}
       {aba === 'produtos' && !naRede && <section className="admin-catalogo"><header><button className="admin-primary" onClick={()=>setProdutoForm({id:'',nome:'',categoria:'robo',precoCentavos:19700,ativo:true})}><Icone nome="mais" />Criar produto</button></header><div>{produtos.map(p=><article key={p.id}><span className="admin-icon"><Icone nome="produtos" /></span><div><h3>{p.nome}</h3><p>{categoriaLegivel(p.categoria)} · {moeda(p.precoCentavos)}</p></div><em className={`adm-status ${p.ativo?'ativo':'cancelado'}`}>{p.ativo?'Ativo':'Inativo'}</em><button onClick={()=>setProdutoForm(p)}>Editar</button></article>)}</div></section>}
       {aba === 'aulas' && !naRede && <AdminAulas key={chaveDoFoco} sessao={sessao} marca={marcaFoco} />}
       {aba === 'resultados' && <RelatorioClientes key={chaveDoFoco} sessao={sessao} />}
-      {aba === 'vendas' && pleno && !naRede && marcaFoco === 'globalfly' && <Vendas key={`${chaveDoFoco}-${parceiroDoAdmin(papel, parceiroFoco) ?? parceiroFoco}`} sessao={sessao} marca={marcaFoco} parceiro={parceiroDoAdmin(papel, parceiroFoco) ?? (parceiroFoco || null)} pedido={pedidoAcessos}
+      {aba === 'vendas' && pleno && !naRede && ehFamiliaGF(marcaFoco) && <Vendas key={`${chaveDoFoco}-${parceiroDoAdmin(papel, parceiroFoco) ?? parceiroFoco}`} sessao={sessao} marca={marcaFoco} parceiro={parceiroDoAdmin(papel, parceiroFoco) ?? (parceiroFoco || null)} pedido={pedidoAcessos}
         onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} />}
-      {aba === 'travadas' && pleno && !naRede && marcaFoco === 'globalfly' && <ContasTravadas key={`${chaveDoFoco}-${parceiroDoAdmin(papel, parceiroFoco) ?? parceiroFoco}`} sessao={sessao} marca={marcaFoco} parceiro={parceiroDoAdmin(papel, parceiroFoco) ?? (parceiroFoco || null)} pedido={pedidoAcessos}
+      {aba === 'travadas' && pleno && !naRede && ehFamiliaGF(marcaFoco) && <ContasTravadas key={`${chaveDoFoco}-${parceiroDoAdmin(papel, parceiroFoco) ?? parceiroFoco}`} sessao={sessao} marca={marcaFoco} parceiro={parceiroDoAdmin(papel, parceiroFoco) ?? (parceiroFoco || null)} pedido={pedidoAcessos}
         onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} />}
       {aba === 'financeiro' && veFinanceiro && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><FinanceiroPainel key={marcaFoco} api={finApi} pedido={pedidoAcessos} nomeDaPlataforma={MARCAS[marcaFoco]?.prosa ?? marcaFoco} /></Suspense>}
-      {aba === 'receita' && pleno && !naRede && marcaFoco === 'globalfly' && <CompartilhamentoDeReceita key={`${chaveDoFoco}-${parceiroDoAdmin(papel, parceiroFoco) ?? parceiroFoco}`} sessao={sessao} marca={marcaFoco} parceiro={parceiroDoAdmin(papel, parceiroFoco) ?? (parceiroFoco || null)} parceiroProprio={papel && !papel.geral ? papel.parceiro : null} nomeDoParceiroProprio={papel?.nomeDoParceiro ?? null} pedido={pedidoAcessos}
+      {aba === 'receita' && pleno && !naRede && ehFamiliaGF(marcaFoco) && <CompartilhamentoDeReceita key={`${chaveDoFoco}-${parceiroDoAdmin(papel, parceiroFoco) ?? parceiroFoco}`} sessao={sessao} marca={marcaFoco} parceiro={parceiroDoAdmin(papel, parceiroFoco) ?? (parceiroFoco || null)} parceiroProprio={papel && !papel.geral ? papel.parceiro : null} nomeDoParceiroProprio={papel?.nomeDoParceiro ?? null} pedido={pedidoAcessos}
         onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} />}
       {aba === 'online' && pleno && !naRede && <AcessosAoVivo key={`${chaveDoFoco}-${parceiroDoAdmin(papel, parceiroFoco) ?? parceiroFoco}`} sessao={sessao} marca={marcaFoco} parceiro={parceiroDoAdmin(papel, parceiroFoco) ?? (parceiroFoco || null)} pedido={pedidoAcessos}
         onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} />}
@@ -586,7 +588,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       {aba === 'assessor' && marcaFoco === 'globalfly' && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminAssessor sessao={sessao} /></Suspense>}
       {aba === 'whatsapp' && marcaFoco === 'globalfly' && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><CentralWhatsApp key={chaveDoFoco} sessao={sessao} marca={marcaFoco} pedido={pedidoWpp}
         onAbrirCliente={(id) => { void clientesPorId(sessao, [id], marcaFoco).then((l) => { if (l[0]) abrirCliente(l[0]) }) }} /></Suspense>}
-      {aba === 'notificacoes' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminNotificacoes key={parceiroDoAdmin(papel, parceiroFoco) ?? ''} sessao={sessao} soDoParceiro={parceiroDoAdmin(papel, parceiroFoco)} /></Suspense>}
+      {aba === 'notificacoes' && pleno && ehFamiliaGF(marcaFoco) && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminNotificacoes key={parceiroDoAdmin(papel, parceiroFoco) ?? ''} sessao={sessao} soDoParceiro={parceiroDoAdmin(papel, parceiroFoco)} /></Suspense>}
       {aba === 'stories' && MARCA.stories && !naRede && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminStories sessao={sessao} papel={papel} /></Suspense>}
       {aba === 'lancamento' && LIVE_DE_LANCAMENTO_ATIVA && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminLancamento sessao={sessao} /></Suspense>}
       {aba === 'transmissao' && pleno && marcaFoco === 'globalfly' && <Suspense fallback={<p className="og-carregando">Carregando…</p>}><AdminTransmissao sessao={sessao} /></Suspense>}

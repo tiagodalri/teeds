@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Usuario } from '../core/teeds/conta'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { alternarSom, useSomLigado } from '../core/som'
 import { alternarMenuAdmin, useMenuAdminOculto } from '../core/menuDeAdmin'
 import { abrirFerramenta, IconeCifrao, IconeCalculadora } from './ferramentas/Ferramentas'
@@ -83,7 +83,7 @@ export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Pro
           </button>
 
           {/* celular (GlobalFly): o topo não tem espaço para os botões do conversor e da calculadora */}
-          {MARCA.id === 'globalfly' && <>
+          {FAMILIA_GF && <>
             <button className="menu-acao so-celular" role="menuitem" onClick={() => { setAberto(false); abrirFerramenta('cambio') }}>
               <IconeCifrao />Conversor de moedas
             </button>

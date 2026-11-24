@@ -43,6 +43,7 @@ import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
 import { assessorLiberado, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
 import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
+import { ehFamiliaGF } from '../../src/marca/marcas'
 
 /**
  * O login da Deriv, feito pelo servidor.
@@ -1365,7 +1366,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         const marcaDoChat = typeof corpo.marca === 'string' ? corpo.marca : 'teeds'
         // GlobalFly (19/11/2026, Tiago: "só administradores"): o Assistente é da equipe por enquanto.
         // A tela já esconde dos outros; aqui é a trava de verdade (cada mensagem custa na conta da Anthropic).
-        if (marcaDoChat === 'globalfly' && !(await papelDoAdmin(dono.id, marcaDoChat).catch(() => null))) {
+        if (ehFamiliaGF(marcaDoChat) && !(await papelDoAdmin(dono.id, marcaDoChat).catch(() => null))) {
           return json(403, { erro: 'O assistente ainda não está disponível para a sua conta.' })
         }
         const somenteDemo = somenteDemoDoUsuario(dono)

@@ -4,7 +4,7 @@ import { horasLegiveis, idiomaLegivel, lugarDoFuso } from '../core/teeds/insight
 import { todasAsAulas } from '../core/teeds/aulas'
 import { useModulosEmUso } from '../core/teeds/gradeAulas'
 import { ESTRATEGIAS_LOCAIS, nomeDoRoboNaMarca } from '../core/deriv/strategies'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { aparelhoLegivel, dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../core/teeds/termos'
 import { NomeDoRobo } from './NomeDoRobo'
@@ -237,7 +237,7 @@ export function PerfilCliente({ sessao, userId }: { sessao: SessaoTeeds; userId:
             <h4>Quem é</h4>
             <dl className="fc-dados">
               <div><dt>E-mail</dt><dd>{c.email || '—'}</dd></div>
-              <div><dt>Telefone</dt><dd>{c.telefone || '—'}{c.telefone && MARCA.id === 'globalfly' && <button type="button" className="fc-whatsapp" title="Abrir a conversa no WhatsApp oficial" onClick={() => window.dispatchEvent(new CustomEvent('whatsapp:conversar', { detail: { numero: c.telefone, nome: c.nome ?? '' } }))}>Conversar no WhatsApp</button>}</dd></div>
+              <div><dt>Telefone</dt><dd>{c.telefone || '—'}{c.telefone && FAMILIA_GF && <button type="button" className="fc-whatsapp" title="Abrir a conversa no WhatsApp oficial" onClick={() => window.dispatchEvent(new CustomEvent('whatsapp:conversar', { detail: { numero: c.telefone, nome: c.nome ?? '' } }))}>Conversar no WhatsApp</button>}</dd></div>
               <div><dt>CPF</dt><dd>{c.cpf || '—'}</dd></div>
               <div><dt>Nascimento</dt><dd>{c.nascimento ? <>{dataBr(c.nascimento)} <em>({idadeDe(c.nascimento)} anos{c.nascimentoFonte === 'deriv' ? ', pela Deriv' : c.nascimentoFonte === 'cliente' ? ', informada pelo cliente' : ''})</em></> : '—'}</dd></div>
               <div><dt>Situação</dt><dd>{rotulo(c.situacao)}</dd></div>

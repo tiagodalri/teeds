@@ -8,7 +8,7 @@ import { LogotipoDaIA, temLogotipo } from '../marca/LogotipoDaIA'
 import { fotoDoCartaoAlto } from '../marca/fotoDoCartao'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { alternarValores, MASCARA, useValoresOcultos } from '../../core/privacidade'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { DERIV } from '../../core/deriv/config'
 import { InstrumentoDoDia } from './InstrumentoDoDia'
 import './inicio.css'
@@ -159,7 +159,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             <div>
               <h1 id="in-ola">{saudacao()}{primeiro ? `, ${primeiro}` : ''}</h1>
               {/* 08/11/2026: a GF sem data na plataforma, por enquanto */}
-              {MARCA.id !== 'globalfly' && <span className="in-conta-data">{hojeExtenso()}</span>}
+              {!FAMILIA_GF && <span className="in-conta-data">{hojeExtenso()}</span>}
             </div>
             {d.conta.conectada && (
               <button type="button" className={`in-olho ${ocultos ? 'fechado' : ''}`} onClick={alternarValores} aria-pressed={ocultos}

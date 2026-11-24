@@ -1,5 +1,6 @@
 import type { TradingAccount } from './account'
 import { emailReal, marcaDaConta } from '../teeds/emailDaConta'
+import { ehFamiliaGF } from '../../marca/marcas'
 
 /**
  * Logins que operam SOMENTE em conta demo: as contas reais somem do seletor
@@ -57,7 +58,7 @@ export const tipoNaTela = (tipo: TradingAccount['type'], trocados: boolean): Tra
  * pra ninguém, somente para os administradores"). `admin` é a conferência do
  * banco; enquanto ela não volta (null), fica fechado.
  */
-export const sinalGFLiberado = (admin: boolean | null, marca?: string | null) => marca === 'globalfly' && admin === true
+export const sinalGFLiberado = (admin: boolean | null, marca?: string | null) => ehFamiliaGF(marca) && admin === true
 
 /**
  * `marca`: a marca da conta. Sem ela, vale a etiqueta do próprio e-mail

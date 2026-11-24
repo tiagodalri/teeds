@@ -31,7 +31,7 @@ import './styles/celular-deitado.css'
 import './components/robot-workspace.css'
 import './components/workspace.css'
 import { aplicarTema, temaGuardado } from './core/tema'
-import { MARCA } from './marca'
+import { MARCA, familiaDa } from './marca'
 import { SeletorDePlataforma, opcoesDePlataforma } from './components/SeletorDePlataforma'
 import './components/admin-topo.css'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
@@ -245,6 +245,7 @@ import { definirDonoDoPlano, lembrarMetaEStop } from './core/teeds/planoDoDia'
 if (new URLSearchParams(location.search).get('tela') === 'preparo') definirDonoDoPlano('lab')
 
 document.documentElement.dataset.marca = MARCA.id
+document.documentElement.dataset.familia = familiaDa(MARCA.id)
 // ?tela=treino&aparelhos=1 (19/11/2026): câmera, tela e microfone de mentira (desenhados), para testar o painel da sala como numa live
 if (new URLSearchParams(location.search).get('tela') === 'treino' && new URLSearchParams(location.search).has('aparelhos')) {
   const md = navigator.mediaDevices

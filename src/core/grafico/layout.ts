@@ -8,7 +8,7 @@
  */
 import { SUPABASE } from '../teeds/config'
 import type { SessaoTeeds } from '../teeds/conta'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 
 export interface IndicadorSalvo {
   id: string
@@ -88,7 +88,7 @@ function agendar(sessao: SessaoTeeds | null, simbolo: string, dados: unknown) {
 
 /** Os indicadores: o do navegador na hora; o do banco quando chegar (se houver). */
 export function carregarIndicadores(sessao: SessaoTeeds | null, aoChegar: (lista: IndicadorSalvo[]) => void, sinalLiberado = false): IndicadorSalvo[] {
-  comSinal = MARCA.id === 'globalfly' && sinalLiberado
+  comSinal = FAMILIA_GF && sinalLiberado
   const usar = (d: Guardado) => {
     const lista = oferecerSinal(d)
     if (comSinal && (lista !== d.indicadores || !d.sinalOferecido)) salvarIndicadores(sessao, lista)

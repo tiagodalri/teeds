@@ -13,10 +13,10 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { operacoesDaIADoDia, type OperacaoDaIADoDia } from '../../core/teeds/clientes'
 import { dinheiro, dinheiroComSinal } from '../../core/dinheiro'
 import { nomeDaOperacao } from '../PositionCard'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import './operacoes-da-ia-de-hoje.css'
 
-const GF = MARCA.id === 'globalfly'
+const GF = FAMILIA_GF
 const CHAVE_OCULTO = `${MARCA.id}.ia-de-hoje.oculto`
 const lerOculto = () => { try { return localStorage.getItem(CHAVE_OCULTO) === '1' } catch { return false } }
 const hora = (iso: string) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo' })

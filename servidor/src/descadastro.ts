@@ -19,6 +19,7 @@
  * descobre o e-mail de outra pessoa mexendo na URL.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { motorDaMarca } from '../../src/marca/marcas'
 
 const segredo = () => process.env.SUPABASE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const base = () => (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '')
@@ -51,9 +52,8 @@ export function abrirBilhete(t: string): { marca: string; email: string } | null
 
 /** O link do rodapé e do cabeçalho, para este e-mail e esta pessoa. */
 // Cada marca no próprio endereço (02/11/2026): e-mail da GlobalFly com link da Teeds confunde quem lê.
-const MOTOR_DA_MARCA: Record<string, string> = { globalfly: 'https://motor.globalflytrade.com' }
 export const linkDeDescadastro = (marca: string, email: string): string =>
-  `${MOTOR_DA_MARCA[marca] ?? ENDERECO_DO_MOTOR}/publico/descadastrar?t=${bilhete(marca, email)}`
+  `${motorDaMarca(marca)}/publico/descadastrar?t=${bilhete(marca, email)}`
 
 /**
  * Anota o pedido. Repetir não é erro: quem clica duas vezes continua fora.

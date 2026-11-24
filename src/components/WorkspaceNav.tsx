@@ -3,7 +3,7 @@ import { abrirAvisoDaLive } from '../core/teeds/lancamento'
 import { assinarTransmissao, transmissaoNoAr } from '../core/teeds/transmissao'
 import { useMenuAdminOculto } from '../core/menuDeAdmin'
 import { Brand } from './Brand'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import './workspace.css'
 import { RelogioTopo } from './RelogioTopo'
 import { abrirFerramenta, IconeCifrao, IconeCalculadora } from './ferramentas/Ferramentas'
@@ -48,11 +48,11 @@ export function WorkspaceNav({ page, admin, onNavigate, aoVivoAgora = false, mos
   const estaSelecionado = (id: WorkspacePage) => page === id || (id === 'gestao' && (page === 'monitoramento' || page === 'insights'))
   const item = (id: WorkspacePage) => <button key={id} data-tour={`nav-${id}`} className={`workspace-link ${estaSelecionado(id) ? 'selected' : ''} ${id === 'aovivo' && aoVivoAgora ? 'no-ar' : ''}`} aria-current={estaSelecionado(id) ? 'page' : undefined} title={PAGE_NAMES[id]} onClick={() => { if (id === 'aovivo' && transmissao) { abrirAvisoDaLive(); setOpen(false) } else navigate(id) }}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[id]} /></svg>
-    <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'aovivo' && aoVivoAgora && <i className="workspace-aovivo" aria-label="Transmissão no ar agora" title="Transmissão no ar agora"><b className="workspace-label">ao vivo</b></i>}{id === 'assistente' && MARCA.id !== 'globalfly' && <small className="workspace-lock workspace-label" aria-label="Acesso restrito" title="Acesso restrito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></small>}
+    <span className="workspace-label">{PAGE_NAMES[id]}</span>{id === 'aovivo' && aoVivoAgora && <i className="workspace-aovivo" aria-label="Transmissão no ar agora" title="Transmissão no ar agora"><b className="workspace-label">ao vivo</b></i>}{id === 'assistente' && !FAMILIA_GF && <small className="workspace-lock workspace-label" aria-label="Acesso restrito" title="Acesso restrito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></small>}
   </button>
   /* conversor e calculadora (11/11/2026): no computador ficam no topo; no celular em pé o topo não tem
      largura, então entram aqui, em Ferramentas (só aparecem no menu do celular: .so-celular) */
-  const ferramentas = MARCA.id === 'globalfly' && <>
+  const ferramentas = FAMILIA_GF && <>
     <button className="workspace-link so-celular" onClick={() => { setOpen(false); abrirFerramenta('cambio') }}><span className="workspace-ferr-icone"><IconeCifrao /></span><span className="workspace-label">Conversor de moedas</span></button>
     <button className="workspace-link so-celular" onClick={() => { setOpen(false); abrirFerramenta('calculadora') }}><span className="workspace-ferr-icone"><IconeCalculadora /></span><span className="workspace-label">Calculadora</span></button>
   </>

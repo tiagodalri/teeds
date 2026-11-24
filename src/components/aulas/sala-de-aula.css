@@ -58,7 +58,7 @@
 }
 /* A capa é sempre escura: o monograma é o claro também no tema claro
    (no claro aparecia só o traço dourado, o "GF" escuro sumia no fundo). */
-:root[data-marca='globalfly'] .ger.aulas .aulas-capa .aulas-selo::before { background-image: url(/globalfly-gf-escuro.png); }
+:root[data-familia='globalfly'] .ger.aulas .aulas-capa .aulas-selo::before { background-image: url(/globalfly-gf-escuro.png); }
 
 /* Linha de informações: o separador também depois do "Aula 1 de 19" e um
    tamanho que se lê no computador (era 11 px, 9,9 px com a escala de 90%). */

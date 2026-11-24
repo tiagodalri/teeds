@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { vitrine } from '../../core/teeds/parceiro'
 import { haQuanto, storyPublico, type StoryPublico as Dados } from '../../core/teeds/stories'
 import { Avatar, estiloDaMidia } from './VisualizadorDeStories'
@@ -48,7 +48,7 @@ export default function StoryPublico() {
   return (
     <main className="stp">
       {d && (d.tipo === 'imagem' || d.capa) && <div className="stp-fundo" aria-hidden="true"><img src={d.capa ?? d.midia} alt="" /></div>}
-      <header className="stp-topo">{MARCA.id === 'globalfly' ? <img src={logo} alt={MARCA.prosa} /> : <b>{MARCA.prosa}</b>}</header>
+      <header className="stp-topo">{FAMILIA_GF ? <img src={logo} alt={MARCA.prosa} /> : <b>{MARCA.prosa}</b>}</header>
 
       {d === undefined && <span className="sto-girando stp-carregando" aria-label="Carregando" />}
 

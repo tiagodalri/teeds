@@ -12,7 +12,7 @@ import {
 } from '../../core/teeds/gradeAulas'
 import { AcessoDoCursoPainel, AlunosDoCurso, CabecalhoDoCurso, InfoDoCurso, ListaDeCursos, type AbaDoCurso } from './EditorDoCurso'
 import { listarPlanos } from '../../core/teeds/clientes'
-import { MARCA } from '../../marca'
+import { MARCA, ehFamiliaGF } from '../../marca'
 import { DEMONSTRACAO_EM_AULA_SEM_VIDEO } from '../../core/teeds/modulosAulas'
 import { IconeFechar } from '../IconeFechar'
 import { CapaDaAula, capaResolvida } from './CapaDaAula'
@@ -389,7 +389,7 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
         </div>
       )}
 
-      {!curso && marca === 'globalfly' && (() => {
+      {!curso && ehFamiliaGF(marca) && (() => {
         const v = grade.boasVindas?.video ?? ''
         const p = playerDoVideo(v)
         const ok = !v || p?.tipo === 'mp4' || (p?.tipo === 'youtube' && !!p.id)

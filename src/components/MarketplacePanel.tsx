@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { listarProdutos } from '../core/teeds/clientes'
 import { linkDoCheckout } from '../core/teeds/checkout'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
@@ -141,7 +141,7 @@ const PRODUTOS_GF: Produto[] = [
     itens: ['Estratégia nos dígitos baixos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
   },
 ]
-const GF = MARCA.id === 'globalfly'
+const GF = FAMILIA_GF
 const CATALOGO_DA_MARCA = GF ? PRODUTOS_GF : PRODUTOS
 
 const CATEGORIAS: Categoria[] = ['Todos', 'Robôs', 'Mentorias', 'Ferramentas']

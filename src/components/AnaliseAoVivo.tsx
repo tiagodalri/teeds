@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { RadarDaEstrategia } from './RadarDaEstrategia'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { ESTRATEGIAS_LOCAIS } from '../core/deriv/strategies'
@@ -114,7 +114,7 @@ export function AnaliseAoVivo({ estado, estrategiaId, nomeEstrategia, moeda, gan
   const passo = emCurso ? 1 : estado.emOperacao ? 0 : ultima ? 2 : -1
   const concluido = passo === 2 ? (ultima!.ganhou ? 'ganhou' : 'perdeu') : ''
   const linhaContrato = emCurso
-    ? { esq: MARCA.id === 'globalfly' ? 'Contrato comprado' : `Comprado às ${relogio(emCurso.comprouEm)}` /* 08/11/2026: a GF sem a hora, por enquanto */, dir: `${simboloMoeda(moeda)} ${num(emCurso.valor)}`, classe: '' }
+    ? { esq: FAMILIA_GF ? 'Contrato comprado' : `Comprado às ${relogio(emCurso.comprouEm)}` /* 08/11/2026: a GF sem a hora, por enquanto */, dir: `${simboloMoeda(moeda)} ${num(emCurso.valor)}`, classe: '' }
     : estado.emOperacao
       ? { esq: 'Enviando a ordem', dir: `${simboloMoeda(moeda)} ${num(estado.valorAtual)}`, classe: '' }
       : ultima

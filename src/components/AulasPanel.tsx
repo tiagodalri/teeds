@@ -9,7 +9,7 @@ import { JanelaDoCursoTrancado, VitrineDeCursos } from './aulas/VitrineDeCursos'
 import { CapaDaAula } from './aulas/CapaDaAula'
 import { listarVideosDasAulas, tamanhoLegivel, type VideoDaAula } from '../core/teeds/aulasVideos'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { Destaques, bannersDaMarca } from './aulas/Destaques'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
@@ -402,7 +402,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
               // os links relacionados: os padrões da marca e os extras que o painel cadastrou nesta aula.
               // GlobalFly (08/11/2026, Victor): os três atalhos embaixo de TODA aula pareciam outras aulas
               // misturadas ("por card, tinha que ser uma aula"). Lá cada atalho só aparece na aula do assunto.
-              const soNaAula = MARCA.id === 'globalfly'
+              const soNaAula = FAMILIA_GF
               const abrirConta = afiliadoDaDeriv() && (!soNaAula || aberta.id === 'conta-deriv')
               const depositar = !soNaAula || aberta.id === 'primeiro-deposito'
               const comunidade = MARCA.comunidade && !soNaAula

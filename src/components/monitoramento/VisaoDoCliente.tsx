@@ -17,7 +17,7 @@ import type React from 'react'
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { ConfigEstrategia, EstadoMotor } from '../../core/deriv/engine'
 import { resumoDeEstudo } from '../../core/teeds/estudoDoDono'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { PAGE_NAMES, WorkspaceNav } from '../WorkspaceNav'
 import { BalanceLive } from '../BalanceLive'
 import { RobotOverview } from '../RobotOverview'
@@ -97,7 +97,7 @@ export const TelaDoCliente = forwardRef<HTMLDivElement, { d: DadosDaVisao; /** G
               <svg className="conta-seta" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"><path d="M2.5 4.5 L6 8 L9.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>
             </button>
           </div>
-          {MARCA.id === 'globalfly' && <BotoesDeFerramentas />}
+          {FAMILIA_GF && <BotoesDeFerramentas />}
           <button className="tema-btn" tabIndex={-1} aria-hidden="true">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
           </button>

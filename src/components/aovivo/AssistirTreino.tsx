@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { definirModoDoTreino, entrarNoTreino, esquecerTesteDoLink, modoForaDoTreino, sairDoTreino, simularTreino, testeDoLink, useTreino, type ModoDoTreino } from '../../core/live/treino'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { ICONE_PALCO, abrirPorCima, podeAbrirPorCima, useLargo, useTeatro } from './AoVivo'
 import PlayerDoTreino, { ChatDoTreino, PalcoDoTreino } from './PlayerDoTreino'
 import './aovivo.css'
@@ -45,8 +45,8 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
 
   return (
     <div className="tr-assistir av-aluno">
-      <header className="tr-cabeca" style={MARCA.id === 'globalfly' ? { '--tr-marca': `url(${import.meta.env.BASE_URL}globalfly-gf-escuro.png)` } as CSSProperties : undefined}>
-        {MARCA.id === 'globalfly' && <img className="tr-cabeca-selo" src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
+      <header className="tr-cabeca" style={FAMILIA_GF ? { '--tr-marca': `url(${import.meta.env.BASE_URL}globalfly-gf-escuro.png)` } as CSSProperties : undefined}>
+        {FAMILIA_GF && <img className="tr-cabeca-selo" src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
         {teste ? (
           <div className="tr-cabeca-texto">
             <span className="tr-cabeca-sobre">Transmissão de teste</span>

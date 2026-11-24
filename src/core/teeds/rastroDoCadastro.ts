@@ -14,7 +14,7 @@
  * Os eventos próprios só aparecem nos relatórios da Meta depois que o dono do pixel os libera no
  * Gerenciador de Eventos; aqui na central de rastreio eles valem na hora.
  */
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { SUPABASE } from './config'
 import { vitrine } from './parceiro'
 import { origemDoVisitante, visitante } from './visitas'
@@ -42,7 +42,7 @@ function toque() {
 const pagina = (sufixo = '') => { const v = vitrine(); return `/${v ? `${v}/` : ''}${paginaDeVenda}${sufixo}` }
 
 export function rastroDoCadastro(evento: string, detalhe?: Record<string, unknown>, email?: string, sufixo = ''): void {
-  if (LOCAL || MARCA.id !== 'globalfly') return
+  if (LOCAL || !FAMILIA_GF) return
   try {
     void fetch(`${SUPABASE.url}/rest/v1/rpc/gf_rastro`, {
       method: 'POST', keepalive: true,

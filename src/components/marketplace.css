@@ -47,20 +47,20 @@ main.marketplace .market-card-indisponivel { font-size: 13px; }
 /* GlobalFly: todos os cartões estão à venda, então o contorno e o brilho
    verdes não destacavam nada e brigavam com a identidade azul e ouro.
    O cartão fica neutro; o ouro aparece no passar do mouse e nos rótulos. */
-:root[data-marca='globalfly'] main.marketplace .market-card.disponivel {
+:root[data-familia='globalfly'] main.marketplace .market-card.disponivel {
   border-color: var(--border); box-shadow: 0 18px 50px -38px rgba(0, 0, 0, .8);
 }
-:root[data-marca='globalfly'] main.marketplace .market-card.disponivel:hover {
+:root[data-familia='globalfly'] main.marketplace .market-card.disponivel:hover {
   border-color: color-mix(in srgb, var(--gf-ouro, #B78D39) 60%, var(--border));
   box-shadow: 0 24px 55px -32px rgba(0, 0, 0, .6);
 }
-:root[data-marca='globalfly'] main.marketplace .market-card.disponivel .market-card-corpo > div .market-card-meta > span { color: var(--gf-ouro, #B78D39); }
-:root[data-marca='globalfly'] main.marketplace .market-card.disponivel .market-card-corpo footer button span { color: var(--gf-ouro, #B78D39); }
-:root[data-marca='globalfly'] main.marketplace .market-card.disponivel .market-card-capa .market-card-desconto {
+:root[data-familia='globalfly'] main.marketplace .market-card.disponivel .market-card-corpo > div .market-card-meta > span { color: var(--gf-ouro, #B78D39); }
+:root[data-familia='globalfly'] main.marketplace .market-card.disponivel .market-card-corpo footer button span { color: var(--gf-ouro, #B78D39); }
+:root[data-familia='globalfly'] main.marketplace .market-card.disponivel .market-card-capa .market-card-desconto {
   border: 1px solid rgba(183, 141, 57, .65); background: rgba(5, 21, 40, .82); color: #E3C27A;
 }
 /* Dourado sobre marfim não tem contraste: no tema claro o rótulo escurece. */
-:root[data-marca='globalfly']:not([data-tema='escuro']) main.marketplace .market-card.disponivel .market-card-corpo > div .market-card-meta > span {
+:root[data-familia='globalfly']:not([data-tema='escuro']) main.marketplace .market-card.disponivel .market-card-corpo > div .market-card-meta > span {
   color: color-mix(in srgb, var(--gf-ouro, #B78D39) 62%, var(--text));
 }
 

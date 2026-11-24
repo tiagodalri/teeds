@@ -1,7 +1,7 @@
-import { marcaPorId, type Marca } from './marcas'
+import { marcaPorId, ehFamiliaGF, type Marca } from './marcas'
 
 export type { Marca }
-export { MARCAS, marcaPorId } from './marcas'
+export { MARCAS, marcaPorId, familiaDa, ehFamiliaGF, motorDaMarca, MOTOR_PADRAO } from './marcas'
 
 /**
  * A marca deste build.
@@ -22,3 +22,6 @@ const escolhida =
 export const MARCA: Marca = marcaPorId(escolhida)
 /** As lives de verdade estão ligadas nesta marca? (a sala de treino depende só de `aoVivo`) */
 export const LIVES_AO_VIVO = !!MARCA.aoVivo && MARCA.livesAoVivo !== false
+
+/** Este build é da família GlobalFly (GlobalFly ou Legacy Pro)? Ver `familia` em marcas.ts. */
+export const FAMILIA_GF = ehFamiliaGF(MARCA.id)

@@ -6,10 +6,10 @@ import {
   type OperacaoServidor, type SessaoServidor,
 } from '../core/teeds/sessoesServidor'
 import { NomeDoRobo } from './NomeDoRobo'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 
 /** 08/11/2026 (Tiago): "por enquanto" a GF sem a hora nas operações. */
-const MOSTRAR_HORA = MARCA.id !== 'globalfly'
+const MOSTRAR_HORA = !FAMILIA_GF
 
 /**
  * Os robôs que estão rodando no servidor, vistos daqui.

@@ -6,7 +6,7 @@ import {
 import { SENHA_NO_CADASTRO, type ContaDoCadastro, type DadosFilaEspera } from '../core/teeds/leads'
 import { Brand } from './Brand'
 import { DerivLogo, IconeSaida } from './DerivMarca'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { abrirNoCadastro, abrirNoPrimeiroAcesso, paginaDeVenda } from '../core/teeds/entradaInicial'
 import { paginaComQuiz } from '../core/teeds/quizDoTrafego'
 import { vitrine } from '../core/teeds/parceiro'
@@ -185,7 +185,7 @@ export function LoginScreen({ ocupado, erro, limparErro, onEntrar, onCadastrar, 
       if (r.ok) {
         setSenha(''); setRepetir('')
         // a página de obrigado da GlobalFly diz como entrar conforme o que o servidor fez com a conta
-        if (MARCA.id === 'globalfly') {
+        if (FAMILIA_GF) {
           try {
             const guardado = JSON.parse(localStorage.getItem('gf-captacao') || '{}')
             const dados = JSON.stringify({ ...guardado, nome: nome.trim().split(/\s+/)[0], conta: r.conta ?? 'provisoria', quando: Date.now() })

@@ -11,7 +11,7 @@
  * (Desenho combinado com o Tiago em 16/09/2026: lista como padrão, mosaico
  * como segunda vista, foco só troca no clique.)
  */
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import type { ConfigEstrategia, EstadoMotor } from '../core/deriv/engine'
 import { markupDaOperacao } from '../core/deriv/markup'
 import { NomeDoRobo } from './NomeDoRobo'
@@ -164,7 +164,7 @@ function Quem({ p, fase }: { p: ResumoProps; fase: ReturnType<typeof faseDoEstad
         <b><span className="rs-nome"><NomeDoRobo nome={p.nome} /></span><Chip fase={fase} />{p.modo && <SeloDoModo modo={p.modo} />}</b>
         <small>
           {p.numero}
-          {p.inicio && MARCA.id !== 'globalfly' ? ` · ${hora(p.inicio)}` : '' /* 08/11/2026: a GF sem a hora, por enquanto */}
+          {p.inicio && !FAMILIA_GF ? ` · ${hora(p.inicio)}` : '' /* 08/11/2026: a GF sem a hora, por enquanto */}
           {conta && <> · <em className={conta === 'Real' ? 'real' : 'demo'}>{conta}</em></>}
           <span className="rs-contadores"> · <em className="up">{p.estado.vitorias} positivas</em> · <em className="down">{p.estado.derrotas} negativas</em></span>
         </small>
@@ -268,7 +268,7 @@ export function RobotCartao(p: ResumoProps & { onAbrirNaLista: () => void }) {
         {ultimas.length === 0 && <span className="rc-vazio">{e.rodando ? 'Nenhuma operação ainda' : 'Sem operações nesta sessão'}</span>}
         {ultimas.map((o) => (
           <div key={o.contractId} className="rc-op">
-            <span className="muted">{MARCA.id === 'globalfly' ? `Operação ${o.n}` : `${o.n} · ${horaSeg(o.quando)}`}</span>
+            <span className="muted">{FAMILIA_GF ? `Operação ${o.n}` : `${o.n} · ${horaSeg(o.quando)}`}</span>
             <span>{num(o.valor)}{o.pipSize !== undefined && o.digitoSaida !== null && <em className={`rs-dig ${o.ganhou ? 'up' : 'down'}`}>{o.digitoSaida}</em>}</span>
             <b className={o.lucro >= 0 ? 'up' : 'down'}>{assinado(o.lucro)}</b>
             {p.ceo && <em className="rc-markup" title={o.markupDeriv != null ? 'markup medido pela Deriv' : '3% do pagamento'}>{centavos(markupDaOperacao(o))}</em>}

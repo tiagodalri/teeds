@@ -20,9 +20,9 @@
 }
 
 /* GlobalFly: o detalhe em ouro, como o resto dos controles da casa */
-:root[data-marca='globalfly'] .js-botao svg { color: var(--gf-ouro); }
-:root[data-marca='globalfly'] .js-botao:hover { border-color: color-mix(in srgb, var(--gf-ouro) 60%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gf-ouro) 22%, transparent); }
-:root[data-marca='globalfly'] .js-botao.aberta svg { color: inherit; }
+:root[data-familia='globalfly'] .js-botao svg { color: var(--gf-ouro); }
+:root[data-familia='globalfly'] .js-botao:hover { border-color: color-mix(in srgb, var(--gf-ouro) 60%, var(--border)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gf-ouro) 22%, transparent); }
+:root[data-familia='globalfly'] .js-botao.aberta svg { color: inherit; }
 
 /* No cabeçalho do gráfico da manual: alinhado aos seletores de tempo e de tipo */
 .controls .js-botao { min-height: 30px; padding: 5px 11px; font-size: 12px; }
@@ -40,7 +40,7 @@
 .js-voltar:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(--border)); background: var(--surface); }
 .js-voltar:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .js-voltar svg { flex-shrink: 0; }
-:root[data-marca='globalfly'] .js-voltar:hover { border-color: color-mix(in srgb, var(--gf-ouro) 60%, var(--border)); }
+:root[data-familia='globalfly'] .js-voltar:hover { border-color: color-mix(in srgb, var(--gf-ouro) 60%, var(--border)); }
 
 @media (prefers-reduced-motion: reduce) { .js-botao { transition: none; } }
 

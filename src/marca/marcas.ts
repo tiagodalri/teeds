@@ -16,6 +16,20 @@
 
 export interface Marca {
   id: string
+  /**
+   * A família de funções da marca (24/11/2026, Legacy Pro).
+   *
+   * A GlobalFly ganhou um conjunto grande de funções só dela (WhatsApp
+   * oficial, anúncios, notificações, subplanos, I.A., gráfico, simulado...).
+   * A Legacy Pro nasce com tudo isso: ela é da família 'globalfly'. O código
+   * pergunta pela família (`ehFamiliaGF`), não pelo id, para a marca nova
+   * herdar sem copiar. O que é negócio só da GlobalFly (Naor, Victor, Stark,
+   * a live de 09/11) continua perguntando pelo id 'globalfly'.
+   * Sem família, a marca é a sua própria família.
+   */
+  familia?: string
+  /** O endereço do servidor (motor) desta marca. Sem ele, o da Teeds. */
+  motor?: string
   /** Como a marca aparece no logotipo, em caixa alta. */
   nome: string
   /** Como a marca aparece no meio de uma frase: "A Teeds opera pela...". */
@@ -390,6 +404,8 @@ export const MARCAS: Record<string, Marca> = {
     nome: 'GLOBALFLY',
     prosa: 'GlobalFly Trade',
     prefixoRobo: 'GlobalFly',
+    familia: 'globalfly',
+    motor: 'https://motor.globalflytrade.com',
     appId: '34H1Zr9Gp5fdho00X5BZT',
     redirectUri: 'https://globalflytrade.com/',
     // Link de abertura de conta da GlobalFly na Deriv (19/10/2026, enviado pelo Tiago).
@@ -540,9 +556,84 @@ export const MARCAS: Record<string, Marca> = {
   },
 }
 
+/*
+  Legacy Pro (24/11/2026): a quarta marca, da família da GlobalFly.
+  Nasce com todas as funções da GF (ver `familia`), mas é uma plataforma à
+  parte: domínio próprio (legacyprotrade.com, registrado na GoDaddy), app
+  própria na Deriv, contas próprias (ana+marca-legacypro@...). Nada do
+  negócio só da GF vem junto: sem os parceiros /n /v /d, sem o afiliado,
+  as comunidades e os apps da Deriv deles.
+
+  PROVISÓRIO até a identidade da Legacy Pro chegar: emblema, assinatura,
+  cores, fotos e nomes das I.A. ainda são os da GlobalFly. Antes de publicar:
+  appId (app nova na Deriv), afiliado, comunidade, nomes das I.A. (cuidado:
+  "Legacy" já é o nome de uma I.A. da GF) e os arquivos de marca.
+*/
+MARCAS.legacypro = {
+  ...MARCAS.globalfly,
+  id: 'legacypro',
+  nome: 'LEGACY PRO',
+  prosa: 'Legacy Pro',
+  prefixoRobo: 'Legacy Pro',
+  familia: 'globalfly',
+  motor: 'https://motor.legacyprotrade.com',
+  // PENDENTE: a app da Legacy Pro na Deriv (developers.deriv.com).
+  appId: '',
+  redirectUri: 'https://legacyprotrade.com/',
+  // PENDENTE: o link de afiliado da Legacy Pro na Deriv.
+  afiliado: '',
+  // PENDENTE: nomes definitivos das I.A. Provisório: os mesmos voos da GF com LP na frente.
+  nomesDosRobos: {
+    goreme: 'LP Raptor',
+    superior5: 'LP Gulf',
+    falcon: 'LP Falcon',
+    ag2: 'LP Phenom',
+    legacy: 'LP Legacy',
+    thepalm: 'LP Falcon (anterior)',
+    firstblock: 'LP H160',
+  },
+  // A comunidade, a apostila e os canais são da Legacy Pro: começam vazios.
+  comunidade: undefined,
+  comunidadeInstagram: undefined,
+  apostila: undefined,
+  // Os parceiros (/n Naor, /v Victor, /d Douglas) são da GlobalFly.
+  parceiros: undefined,
+  afiliadosDosParceiros: undefined,
+  comunidadesDosParceiros: undefined,
+  comunidadesInstagramDosParceiros: undefined,
+  appsDosParceiros: undefined,
+  // PENDENTE: os termos e políticas da Legacy Pro (empresa, CNPJ, foro). Os da GF
+  // (src/termos/globalfly) citam a GlobalFly e não podem aparecer aqui.
+  termos: false,
+  email: {
+    ...MARCAS.globalfly.email,
+    rodape:
+      'A Legacy Pro é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
+      'Negociar envolve risco de perda.',
+    remetente: 'Legacy Pro <nao-responda@legacyprotrade.com>',
+  },
+  telegram: '',
+}
+
 /** A marca padrão, quando ninguém disser qual. */
 export const MARCA_PADRAO = 'teeds'
 
 export function marcaPorId(id: string | undefined): Marca {
   return MARCAS[id ?? ''] ?? MARCAS[MARCA_PADRAO]
 }
+
+/** O endereço padrão do servidor, quando a marca não tem o seu. */
+export const MOTOR_PADRAO = 'https://motor.teedscompany.com'
+
+/** O servidor (motor) da marca. */
+export const motorDaMarca = (id: string | null | undefined): string => MARCAS[id ?? '']?.motor ?? MOTOR_PADRAO
+
+/** A família da marca: a própria marca, quando ela não declara outra. */
+export const familiaDa = (id: string | null | undefined): string => MARCAS[id ?? '']?.familia ?? id ?? ''
+
+/**
+ * A marca é da família GlobalFly? (GlobalFly e Legacy Pro.)
+ * Use para as FUNÇÕES que nasceram na GF. Para o negócio só da GlobalFly
+ * (parceiros Naor/Victor/Douglas, clientes Stark, live de 09/11), compare o id.
+ */
+export const ehFamiliaGF = (id: string | null | undefined): boolean => familiaDa(id) === 'globalfly'

@@ -9,7 +9,10 @@ import { cssDosChunksComVersao, versionarReferencias } from './versionar-assets.
 
 // Qualquer marca que exista em src/marca/marcas.ts (16/10/2026, GlobalFly):
 // o ternario antigo de duas marcas mandava uma terceira para a pasta da Teeds.
-const marca = ['omni', 'globalfly'].includes(process.env.MARCA ?? '') ? process.env.MARCA : 'teeds'
+// 24/11/2026: a lista fixa ['omni', 'globalfly'] carimbava o build da Legacy Pro
+// no index.html da Teeds. Agora vale a pasta que o vite.config.ts montou.
+const pedida = /^[a-z0-9]+$/.test(process.env.MARCA ?? '') ? process.env.MARCA : 'teeds'
+const marca = pedida !== 'teeds' && existsSync(`docs-${pedida}/index.html`) ? pedida : 'teeds'
 const pasta = marca === 'teeds' ? 'docs' : `docs-${marca}`
 const arquivo = `${pasta}/index.html`
 

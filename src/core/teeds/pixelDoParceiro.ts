@@ -13,7 +13,7 @@
  * e o código da Meta embaralha tudo no aparelho antes de enviar. O cadastro pelo app
  * também vai pelo servidor (supabase/functions/meta-conversoes), com o mesmo código.
  */
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { paginaDeVenda } from './entradaInicial'
 import { SUPABASE } from './config'
 import { vitrine } from './parceiro'
@@ -146,7 +146,7 @@ const jaNaJornada = new Set<string>()
 function naJornada(nome: string, dados?: Record<string, unknown>): void {
   try {
     const evento = NA_JORNADA[nome]
-    if (!evento || MARCA.id !== 'globalfly' || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
+    if (!evento || !FAMILIA_GF || /^(localhost|127\.|\[::1\])/.test(location.hostname)) return
     const visitante = lerJson<string>('globalfly.visitante'), token = lerJson<{ token?: string }>(`${MARCA.id}.conta`)?.token
     if (!visitante || !token || token === 'lab') return
     const tela = typeof dados?.content_name === 'string' ? dados.content_name : ''
@@ -170,7 +170,7 @@ function naJornada(nome: string, dados?: Record<string, unknown>): void {
  */
 const ASSINATURA_NO_CADASTRO = new Set(['n'])
 export function assinaturaDoCadastro(email: string): void {
-  if (MARCA.id === 'globalfly' && ASSINATURA_NO_CADASTRO.has(vitrine())) eventoDoPixel('Subscribe', { origem: 'app', content_name: 'cadastro' }, true, email)
+  if (FAMILIA_GF && ASSINATURA_NO_CADASTRO.has(vitrine())) eventoDoPixel('Subscribe', { origem: 'app', content_name: 'cadastro' }, true, email)
 }
 
 /** Abre o pixel (PageView) quando a plataforma sabe quem está usando (ou que ninguém está logado). */

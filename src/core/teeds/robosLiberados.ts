@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { SUPABASE } from './config'
 import type { SessaoTeeds } from './conta'
 
@@ -23,7 +23,7 @@ const ouvintes = new Set<() => void>()
 const mudar = (s: ReadonlySet<string>) => { bloqueados = s; ouvintes.forEach((f) => f()) }
 
 export async function carregarRobosBloqueados(sessao: SessaoTeeds | null): Promise<void> {
-  if (!sessao || MARCA.id !== 'globalfly') { mudar(new Set()); return }
+  if (!sessao || !FAMILIA_GF) { mudar(new Set()); return }
   try {
     const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_meus_robos_bloqueados`, {
       method: 'POST',

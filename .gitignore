@@ -13,6 +13,7 @@ vite.config.ts.timestamp-*
 docs-omni/
 .omni-publicacao/
 docs-globalfly/
+docs-legacypro/
 .globalfly-publicacao/
 
 # gerado por 'npm run emails' — previa dos e-mails, nao e fonte

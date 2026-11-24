@@ -8,7 +8,7 @@ import { perguntar, trocarChaveDaIA, type Extras, type Proposta, type Turno } fr
 import { acompanharVivas, pararNoServidor, sessoesVivas, verNoServidor, type SessaoViva } from '../core/teeds/servidorRobos'
 import { ChatProposta } from './ChatProposta'
 import { LocalRobotPanel } from './LocalRobotPanel'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { RespostaFormatada } from './assistente/RespostaFormatada'
 import { MAX_IMAGENS, TETO_ENVIO, imagemPronta, paraBase64, quadrosDoVideo, relogio, useGravador, type Gravacao } from './assistente/midia'
 import './assistente/assistente.css'
@@ -91,12 +91,12 @@ function mensagemDoFim(v: Vigiada, e: { resultado: number; operacoes: number; vi
   const motivo = (e.motivoParada ?? '').trim()
   const como = /meta/i.test(motivo) ? { emoji: '✅', txt: 'bateu a meta' }
     : /limite de perda|stop/i.test(motivo) ? { emoji: '🛡️', txt: 'parou no limite de perda' }
-    : /você pediu|desligad/i.test(motivo) ? { emoji: '⏹️', txt: MARCA.id === 'globalfly' ? 'foi desligada' : 'foi desligado' }
+    : /você pediu|desligad/i.test(motivo) ? { emoji: '⏹️', txt: FAMILIA_GF ? 'foi desligada' : 'foi desligado' }
     : /limite de \d+ opera/i.test(motivo) ? { emoji: '🏁', txt: 'completou as operações' }
     : { emoji: 'ℹ️', txt: 'terminou' }
   const sinal = e.resultado > 0 ? '+' : e.resultado < 0 ? '−' : ''
   const conta = (trocados ? !v.demo : v.demo && !demoComoReal) ? 'demonstração' : 'real'
-  return `${como.emoji} ${MARCA.id === 'globalfly' ? 'A' : 'O'} ${v.robo} ${como.txt} (conta ${conta}).\n` +
+  return `${como.emoji} ${FAMILIA_GF ? 'A' : 'O'} ${v.robo} ${como.txt} (conta ${conta}).\n` +
     `• Resultado: ${sinal}${din(Math.abs(e.resultado), v.moeda)}\n` +
     `• ${e.operacoes} ${e.operacoes === 1 ? 'operação' : 'operações'}: ${e.vitorias} ${e.vitorias === 1 ? 'ganho' : 'ganhos'}, ${e.derrotas} ${e.derrotas === 1 ? 'perda' : 'perdas'}`
 }
@@ -390,7 +390,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
   const vazio = itens.length === 0
   const resultadoVivo = vivas.reduce((s, v) => s + (v.estado?.resultado ?? 0), 0)
   // GF: o ícone do app (GF dourado no azul) — o emblema fino sumia no círculo de 30 px
-  const comIcone = MARCA.id === 'globalfly'
+  const comIcone = FAMILIA_GF
   const emblema = `${import.meta.env.BASE_URL}${comIcone ? 'pwa-globalfly/favicon-128.png' : MARCA.emblema}`
 
   /** Durante a resposta que aparece aos poucos, a tela acompanha — se a pessoa já estava no fim. */
@@ -593,7 +593,7 @@ export function AssistentePanel({ sessao, socket, symbols, symbolPadrao, conexao
                 onChange={(e) => setTexto(e.target.value)} onKeyDown={tecla}
                 onPaste={(e) => { const f = [...e.clipboardData.files]; if (f.length) { e.preventDefault(); void anexar(f) } }}
                 aria-label="Escreva sua mensagem"
-                placeholder={pendentes.length ? 'Escreva algo sobre o anexo (opcional)' : estreito ? 'Pergunte ou mande um áudio' : `Pergunte alguma coisa, mande um áudio ou peça para ligar ${MARCA.id === 'globalfly' ? 'uma I.A.' : 'um robô'}`} />
+                placeholder={pendentes.length ? 'Escreva algo sobre o anexo (opcional)' : estreito ? 'Pergunte ou mande um áudio' : `Pergunte alguma coisa, mande um áudio ou peça para ligar ${FAMILIA_GF ? 'uma I.A.' : 'um robô'}`} />
               {(texto.trim() || pendentes.length || gravador.gravando || pensando || !gravador.suportado) ? (
                 <button type="submit" className={`as-enviar${pensando ? ' indo' : ''}`}
                   onClick={gravador.gravando ? (e) => { e.preventDefault(); void enviarAudio() } : undefined}

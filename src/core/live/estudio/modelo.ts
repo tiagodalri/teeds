@@ -6,14 +6,14 @@
  * Os ids das fontes são fixos por tela e papel (`<tela>-<papel>`): editar um
  * texto não recarrega o vídeo de fundo nem corta o som dele.
  */
-import { MARCA } from '../../../marca'
+import { MARCA, FAMILIA_GF } from '../../../marca'
 import {
   ALTURA, CANAL_PADRAO, LARGURA, novoId,
   type CamposDoModelo, type Cena, type ConfigDoEstudio, type EstiloDeTexto, type Fonte, type TipoDeModelo,
 } from './tipos'
 
 const BASE = import.meta.env.BASE_URL
-const GF = MARCA.id === 'globalfly'
+const GF = FAMILIA_GF
 
 /** O dourado da arte da live (o mesmo nos dois temas: a tela é sempre noturna). */
 export const OURO = '#D6AE5B'

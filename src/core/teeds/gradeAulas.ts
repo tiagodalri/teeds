@@ -22,7 +22,7 @@
  *    e a capa do código dependem deles.
  */
 import { useEffect, useState } from 'react'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { aoMudarModulos, modulosEmUso, MODULOS, usarModulosDaGrade, type LinkDaAula, type Material, type Modulo } from './aulas'
@@ -131,7 +131,7 @@ export interface GradeAulas {
 }
 
 export const NIVEIS = ['Iniciante', 'Intermediário', 'Avançado', 'Todos os níveis'] as const
-export const CORES_DA_MARCA: string[] = MARCA.id === 'globalfly'
+export const CORES_DA_MARCA: string[] = FAMILIA_GF
   ? ['#B78D39', '#9CB1C7', '#29445F', '#5B7C9D', '#2F8F72', '#C95F5F', '#8A6A2A', '#051528']
   : ['#d2a337', '#245E9E', '#138048', '#BF3A40', '#7A5AF8', '#0E9AA7', '#E07A1F', '#5F5D56']
 
@@ -476,7 +476,7 @@ export function gradePublicadaEmCache(sessao: SessaoTeeds | null | undefined): P
   const chave = `${MARCA.id}:${sessao?.usuario.id ?? ''}`
   if (!cache || cache.chave !== chave) {
     parceiroDaConta = null
-    const parceiro = sessao && MARCA.id === 'globalfly' ? meuParceiro(sessao).then((p) => { parceiroDaConta = p }) : Promise.resolve()
+    const parceiro = sessao && FAMILIA_GF ? meuParceiro(sessao).then((p) => { parceiroDaConta = p }) : Promise.resolve()
     cache = { chave, promessa: Promise.all([lerGradePublicada(sessao), parceiro]).then(([g]) => g) }
   }
   return cache.promessa

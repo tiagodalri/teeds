@@ -1,5 +1,5 @@
 import type { WorkspacePage } from '../components/WorkspaceNav'
-import { MARCA } from '../marca'
+import { MARCA, FAMILIA_GF } from '../marca'
 import { vitrine } from './teeds/parceiro'
 
 /**
@@ -12,7 +12,7 @@ import { vitrine } from './teeds/parceiro'
  * /ia, devolve o 404.html, que manda para /?tela=ia; a plataforma abre a tela
  * e volta o endereço para /ia (vite.config.ts monta o 404.html).
  */
-const GF = MARCA.id === 'globalfly'
+const GF = FAMILIA_GF
 const SLUG: Record<WorkspacePage, string> = {
   inicio: 'inicio',
   operar: GF ? 'manual' : 'operar',

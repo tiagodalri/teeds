@@ -104,8 +104,8 @@
 .pdq-filtros{--pdq-on:var(--primary,#cfa94f);--pdq-on-texto:var(--bg,#fff);display:grid;gap:14px;margin:0 0 12px;padding:16px 18px;border:1px solid var(--border,#30343e);border-radius:14px;background:color-mix(in srgb,currentColor 2%,transparent)}
 .pdq-rot{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#9298a3)}
 /* GF: escolhido em azul-marinho no claro e em ouro no escuro (igual ao filtro de parceiros) */
-:root[data-marca='globalfly'] .pdq-filtros{--pdq-on:#0a1d36;--pdq-on-texto:#F3F0E9}
-:root[data-marca='globalfly'][data-tema='escuro'] .pdq-filtros{--pdq-on:#D0AA52;--pdq-on-texto:#051528}
+:root[data-familia='globalfly'] .pdq-filtros{--pdq-on:#0a1d36;--pdq-on-texto:#F3F0E9}
+:root[data-familia='globalfly'][data-tema='escuro'] .pdq-filtros{--pdq-on:#D0AA52;--pdq-on-texto:#051528}
 /* busca */
 .pdq-filtros .pdq-busca{position:relative;margin:0}
 .pdq-filtros .pdq-busca input{width:100%;min-height:44px;padding:0 44px 0 40px;border:1px solid var(--border,#343842);border-radius:11px;font-size:14.5px;

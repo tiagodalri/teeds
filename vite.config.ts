@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
-import { MARCAS, marcaPorId } from './src/marca/marcas'
+import { MARCAS, marcaPorId, familiaDa } from './src/marca/marcas'
 import { paletaDaMarca, type Paleta } from './scripts/paleta-da-marca'
 import { paginaDosTermos } from './scripts/pagina-dos-termos'
 
@@ -16,6 +16,8 @@ import { paginaDosTermos } from './scripts/pagina-dos-termos'
  * Um código, dois sites. Conserto feito uma vez vale para os dois.
  */
 const MARCA = marcaPorId(process.env.MARCA)
+/** A família da marca (Legacy Pro → globalfly): onde ela não tem peça própria, usa a da família. */
+const FAMILIA = familiaDa(MARCA.id)
 const SAIDA = MARCA.id === 'teeds' ? 'docs' : `docs-${MARCA.id}`
 
 const RAIZ = resolve(__dirname)
@@ -46,7 +48,8 @@ function arquivoExistente(base: string): string | null {
   return null
 }
 function cascaPorMarca() {
-  const pastaDaMarca = join(CASCA, MARCA.id)
+  // A marca sem casca própria usa a da família (Legacy Pro → casca/globalfly, 24/11/2026).
+  const pastaDaMarca = existsSync(join(CASCA, MARCA.id)) ? join(CASCA, MARCA.id) : join(CASCA, FAMILIA)
   return {
     name: 'teeds:casca-por-marca',
     enforce: 'pre' as const,
@@ -82,7 +85,7 @@ function cascaPorMarca() {
 /* Cor de fundo do app instalado e nome curto na tela inicial, por marca.
    Antes eram ternarios de duas marcas: a GlobalFly sairia instalada como
    "OMNI" (16/10/2026). */
-const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#051528' }
+const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#051528', legacypro: '#051528' }
 /* Paleta do manual da GlobalFly (Brand Book v1.0): toda cor herdada da base
    vira a família equivalente — vermelho → Alerta, quentes → Ouro GF,
    verdes → Positivo, frios → Aço/Ardósia. Ver scripts/paleta-da-marca.ts. */
@@ -178,7 +181,7 @@ function aberturaDoApp(): string {
 /* Legenda das telas que o Android mostra antes de instalar (pwa-<marca>/telas/).
    Só telas sem resultado de operação: nada de sessão de exemplo com ganho. */
 const ROTULO_DA_TELA: Record<string, string> = { entrar: 'Entrar na plataforma', robos: 'Escolha o seu robô e inicie as operações', 'sala-de-aula': 'Sala de aula com o treinamento completo' }
-const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly' }
+const NOME_CURTO: Record<string, string> = { teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly', legacypro: 'Legacy Pro' }
 // As fontes de cada marca entram direto no <head>, junto com o HTML: antes a
 // da GlobalFly e a da OMNI vinham por @import de dentro do CSS principal, e o
 // navegador só as descobria depois de baixar os 580 KB de estilo. A Cinzel
@@ -210,6 +213,8 @@ const VERIFICACAO_DERIV: Record<string, string[]> = {
     '5ebed82f7b63e2f2296ae5624ccce66d4b562fa99047176960b8da7835474e44', // GlobalFly Trade N
     '527ccbae0953ab8d835b0e74e86ba18d96fb9fbee9ca7cdc8595a81884cf8faf', // GlobalFly Trade D
   ],
+  // PENDENTE: o código da app da Legacy Pro na Deriv (Verify domains > HTML file).
+  legacypro: [],
 }
 const verificacaoDeriv = () =>
   (VERIFICACAO_DERIV[MARCA.id] ?? []).map((c) => `<meta name="deriv-site-verification" content="${c}" />`).join('\n    ')
@@ -297,7 +302,7 @@ export default defineConfig({
   css: { postcss: { plugins: [celularDeitado, paraSafari, medidasPelaTela] } },
   plugins: [
     cascaPorMarca(),
-    paletaDaMarca(PALETAS[MARCA.id]),
+    paletaDaMarca(PALETAS[MARCA.id] ?? PALETAS[FAMILIA]),
     react(),
     {
       // O nome e o emblema entram no index.html na hora do build. O titulo da
@@ -315,7 +320,7 @@ export default defineConfig({
             .replaceAll('%MARCA%', MARCA.id)
             .replaceAll('%THEME%', FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d')
             .replaceAll('%NOME%', NOME_CURTO[MARCA.id] ?? MARCA.nome)
-            .replace('%FONTES%', FONTES_DA_MARCA[MARCA.id] ?? FONTES_DA_MARCA.teeds)
+            .replace('%FONTES%', FONTES_DA_MARCA[MARCA.id] ?? FONTES_DA_MARCA[FAMILIA] ?? FONTES_DA_MARCA.teeds)
             .replace('%ABERTURA%', aberturaDoApp())
             .replace('%VERIFICACAO_DERIV%', verificacaoDeriv())
             .replace('</head>', `${telasDeAbertura()}</head>`),
@@ -377,7 +382,7 @@ export default defineConfig({
         rmSync(destinoCaptura, { recursive: true, force: true })
         // 26/10/2026: a GlobalFly tem a captação própria do lançamento
         // (cadastro -> questionário -> obrigado), em captura-globalfly/.
-        if (MARCA.id === 'globalfly') {
+        if (FAMILIA === 'globalfly') {
           cpSync(join(RAIZ, 'captura-globalfly'), destinoCaptura, { recursive: true })
           const estilo = readFileSync(join(destinoCaptura, 'estilo.css'), 'utf8')
           const comum = readFileSync(join(destinoCaptura, 'captura.js'), 'utf8')
@@ -405,6 +410,8 @@ export default defineConfig({
         }
         for (const outra of Object.values(MARCAS)) {
           if (outra.id === MARCA.id) continue
+          // As peças da família ficam (a Legacy Pro usa as da GlobalFly enquanto não tem as suas).
+          if (outra.id === FAMILIA) continue
           rmSync(join(SAIDA, outra.emblema), { force: true })
           // Toda peca de marca na raiz com o prefixo da outra (assinatura,
           // monograma claro da GlobalFly...) fica so no site dela.
@@ -434,7 +441,7 @@ export default defineConfig({
           rmSync(join(SAIDA, 'aulas-teeds'), { recursive: true, force: true })
         }
         // A GlobalFly tem as proprias capas (aulas-globalfly/): as da OMNI nao vao.
-        if (MARCA.id === 'globalfly') rmSync(join(SAIDA, 'aulas-especialista'), { recursive: true, force: true })
+        if (FAMILIA === 'globalfly') rmSync(join(SAIDA, 'aulas-especialista'), { recursive: true, force: true })
         // Links dos parceiros de divulgação (27/10/2026): /n, /v... abrem o cadastro
         // levando o código; quem guarda e grava é src/core/teeds/parceiro.ts.
         for (const codigo of MARCA.parceiros ?? []) {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { publicSocket } from '../../core/deriv/client'
 import { casasDecimais } from '../../core/deriv/types'
-import { MARCA } from '../../marca'
+import { MARCA, FAMILIA_GF } from '../../marca'
 import { LogotipoDaIA } from '../marca/LogotipoDaIA'
 import { fotoDoCartaoAlto } from '../marca/fotoDoCartao'
 import './recomendacao-da-ia.css'
@@ -25,7 +25,7 @@ import './recomendacao-da-ia.css'
  * Quem vê o cartão: todos da GlobalFly desde 23/11/2026 (Tiago: "pode liberar
  * pra todos"). Antes, só o usuário do Tiago. As outras marcas não têm o cartão.
  */
-export const recomendacaoLiberada = (email?: string | null) => !!email && MARCA.id === 'globalfly'
+export const recomendacaoLiberada = (email?: string | null) => !!email && FAMILIA_GF
 
 const IAS = [
   { id: 'goreme', nome: 'GF Raptor', curto: 'Raptor', ganha: (d: number) => d < 9, p: 0.9 },

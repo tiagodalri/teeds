@@ -7,6 +7,7 @@ import { contas, iniciar, listarRobos, parar, resumir, todas, ver } from './sess
 import { chaveDaAnthropicGuardada, chaveDoGeminiGuardada, contasDoUsuario, guardarChaveDaAnthropic, limitesDoCliente, registrarGastoDoChat, usoDeHojeDoChat } from './supabase'
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
 import { marcaPorId } from '../../src/marca/marcas'
+import { ehFamiliaGF } from '../../src/marca/marcas'
 
 /**
  * O chat da Teeds.
@@ -81,7 +82,7 @@ Ligar ${ia(marca).um}:
  * que listar_robos já devolve. As ferramentas continuam com o nome técnico: o cliente não as vê.
  */
 function ia(marca: string) {
-  if (marca === 'globalfly') {
+  if (ehFamiliaGF(marca)) {
     return {
       um: 'uma I.A.', plural: 'as I.A.',
       regra: `
@@ -593,7 +594,7 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
   // só quando é pedido de verdade ("quero saber como opera a Gulf" segue para a I.A. explicar)
   if (pedido && dono.pediuParaLigar) return cartaoDoPedido(dono, pedido, marca, anexos)
   if (q.length > 90) return null
-  const gf = marca === 'globalfly'
+  const gf = ehFamiliaGF(marca)
   const IA = gf ? '(i ?a|ias?|inteligencias?)' : '(robos?|i ?a|ias?)'
 
   if (new RegExp(`^(quais (sao )?(as )?minhas contas|minhas contas|(qual|quanto) (e |eh )?(o )?meu saldo|meu saldo|saldo|quanto (eu )?tenho( de saldo)?|quais contas eu tenho)$`).test(q)) {
@@ -775,7 +776,7 @@ export async function conversar(
   if (hoje >= limites.mensagensPorDia) {
     return {
       texto: `Você chegou ao limite de ${limites.mensagensPorDia} mensagens por hoje. ` +
-        `${marca === 'globalfly' ? 'As I.A.' : 'Os robôs'} continuam operando normalmente — o limite é só da conversa. Amanhã zera.`,
+        `${ehFamiliaGF(marca) ? 'As I.A.' : 'Os robôs'} continuam operando normalmente — o limite é só da conversa. Amanhã zera.`,
       uso: { hoje, teto: limites.mensagensPorDia },
     }
   }
@@ -894,7 +895,7 @@ export async function conversar(
       }
       if (gasto.idas > 0) anotar()
       return {
-        texto: marca === 'globalfly'
+        texto: ehFamiliaGF(marca)
           ? 'O assistente está indisponível agora. Suas I.A. continuam operando normalmente, e a tela das I.A. mostra tudo.'
           : 'O assistente está indisponível agora. Seus robôs continuam operando normalmente, e a tela de Robôs mostra tudo.',
         proposta,
