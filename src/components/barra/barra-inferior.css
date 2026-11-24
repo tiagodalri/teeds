@@ -26,6 +26,8 @@
   body:has(.barra-inferior) .workspace-app { padding-bottom: calc(64px + var(--sab, 0px)); }
   body:has(.barra-inferior) .sp-lancador-area { bottom: calc(76px + var(--sab, 0px)); }
   body:has(.barra-inferior) .av-pilula { bottom: calc(76px + var(--sab, 0px)); }
+  /* 24/11/2026: a miniatura da sala de treino ficava por cima das abas de baixo */
+  body:has(.barra-inferior) { --av-barra-h: 66px; }
   body:has(.barra-inferior):has(.av-pilula) .sp-lancador-area { bottom: calc(126px + var(--sab, 0px)); }
   body:has(.barra-inferior) .app-convite { bottom: calc(76px + var(--sab, 0px)); }
   body:has(.barra-inferior):has(.app-convite) .sp-lancador-area { bottom: calc(160px + var(--sab, 0px)); }

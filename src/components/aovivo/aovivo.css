@@ -162,6 +162,12 @@
 .av-botao-encerrar { min-height: 48px; border: 1px solid var(--down); background: transparent; color: var(--down); }
 .av-botao-encerrar:hover:not(:disabled) { background: color-mix(in srgb, var(--down) 10%, transparent); }
 .av-mesa > .av-erro { grid-column: 1 / -1; }
+/* 24/11/2026: celular — encerrar com confirmação, voltar à sala, outro admin no ar, dica de deixar o app aberto */
+.av-mesa > .tr-dica-celular { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.tr-confirmar-fim { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.tr-outro-no-ar { display: grid; gap: 2px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--down) 45%, transparent); border-radius: 12px; color: var(--muted); font-size: 12.5px; }
+.tr-outro-no-ar b { color: var(--text); font-size: 14px; }
+.tr-botao-voltar { min-height: 48px; padding: 0 18px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; }
 @media (max-width: 1100px) {
   .av-mesa { grid-template-columns: 1fr; }
   .av-mesa-fontes { justify-content: flex-start; }
@@ -743,7 +749,7 @@ body.av-teatro-aberto { overflow: hidden; }
 .tr-cabeca p b { color: #F3F0E9; font-weight: 600; }
 .tr-status {
   display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 14px; border: 1px solid rgba(243, 240, 233, .2); border-radius: 999px;
-  color: rgba(243, 240, 233, .78); font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+  color: rgba(243, 240, 233, .78); font-size: 12px; font-weight: 700; letter-spacing: .01em; white-space: nowrap;
 }
 .tr-status-curto { display: none; }
 @media (max-width: 640px) { .tr-status-curto { display: inline; } }

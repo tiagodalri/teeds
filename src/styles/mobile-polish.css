@@ -591,6 +591,7 @@
   html.vv-desalinhado .sp-painel,
   html.vv-desalinhado .mcb,
   html.vv-desalinhado .av-pilula,
+  html.vv-desalinhado .av-flutuante.embaixo:not(.arrastando),
   html.vv-desalinhado .app-convite,
   html.vv-desalinhado .mon-replay-controles,
   /* 18/11/2026: o resto do que fica preso no pé da tela (o print do Tiago mostrou o chat da equipe subindo junto) */

@@ -217,7 +217,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
   const pip = () => abrirPorCima(caixa.current)
   const temImagem = eu ? !!t.local.tela || !!t.local.camera : !!t.tela || !!t.camera
   const rotuloFechar = eu ? 'Encerrar a sala de treino' : 'Sair da transmissão'
-  const descricao = eu ? `Sala de treino · ${t.membros} ${t.membros === 1 ? 'membro' : 'membros'}` : 'Sala de treino · ao vivo'
+  const descricao = eu ? `Sala de treino · ${t.membros} ${t.membros === 1 ? 'membro' : 'membros'}` : 'Sala de treino · Ao vivo'
 
   if (modo === 'pilula') {
     return (
@@ -251,7 +251,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
       <aside className="av-lado" aria-label="Sala de treino" ref={caixa}>
         <SomDoTreino />
         <div className="av-lado-video"><PalcoDoTreino compacto />{controles}</div>
-        <div className="av-lado-info"><b>Sala de treino</b><span>{eu ? `${t.membros} ${t.membros === 1 ? 'membro assistindo' : 'membros assistindo'}` : 'ao vivo'}</span></div>
+        <div className="av-lado-info"><b>Sala de treino</b><span>{eu ? `${t.membros} ${t.membros === 1 ? 'membro assistindo' : 'membros assistindo'}` : 'Ao vivo'}</span></div>
         <ChatDoTreino titulo={false} />
       </aside>
     )
@@ -267,7 +267,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
     ? { left: arrasto.x, top: arrasto.y, width: largura }
     : {
       width: largura,
-      ...(t.cantoPlayer.startsWith('sup') ? { top: `calc(var(--topo-h, 76px) + ${margem}px)` } : { bottom: `calc(${margem}px + var(--sab, 0px))` }),
+      ...(t.cantoPlayer.startsWith('sup') ? { top: `calc(var(--topo-h, 76px) + ${margem}px)` } : { bottom: `calc(${margem}px + var(--sab, 0px) + var(--av-barra-h, 0px))` }),
       ...(t.cantoPlayer.endsWith('esq') ? { left: `calc(${margem}px + var(--sal, 0px))` } : { right: `calc(${margem}px + var(--sar, 0px))` }),
     }
   const descer = (e: PEvent) => {
@@ -321,7 +321,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
         <div className="av-folha-fundo" onClick={() => setChat(false)}>
           <div className="av-folha" role="dialog" aria-label="Chat da sala de treino" onClick={(e) => e.stopPropagation()}>
             <button className="av-folha-alca" aria-label="Fechar o chat" onClick={() => setChat(false)}><i aria-hidden /></button>
-            <div className="av-folha-cabeca"><b>Sala de treino</b><span>{eu ? `${t.membros} ${t.membros === 1 ? 'membro' : 'membros'}` : 'ao vivo'}</span></div>
+            <div className="av-folha-cabeca"><b>Sala de treino</b><span>{eu ? `${t.membros} ${t.membros === 1 ? 'membro' : 'membros'}` : 'Ao vivo'}</span></div>
             <ChatDoTreino titulo={false} />
           </div>
         </div>

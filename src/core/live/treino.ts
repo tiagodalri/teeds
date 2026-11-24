@@ -30,6 +30,7 @@ import { MARCA } from '../../marca'
 import type { CantoDaCamera } from './api'
 import { mensagemDeMembro, ouvirSimulacao, pararSimulacao, simulacaoAgora, type MensagemSimulada, type Momento } from './simulacao'
 import { marcarTreinoAtivo } from './presenca'
+import { marcarEmUso } from '../atualizacaoSegura'
 import { aplicarFundo, fundoGuardado, guardarFundo, prepararFundo, type EscolhaDeFundo } from './fundos'
 import { vitrine } from '../teeds/parceiro'
 import { abrirTransmissao, gravarTransmissao, type Presenca } from './historico'
@@ -113,7 +114,59 @@ const zerado = (): EstadoDoTreino => {
 let estado: EstadoDoTreino = INICIAL
 estado = zerado()
 const ouvintes = new Set<() => void>()
-const mudar = (p: Partial<EstadoDoTreino>) => { estado = { ...estado, ...p }; ouvintes.forEach((f) => f()) }
+const mudar = (p: Partial<EstadoDoTreino>) => {
+  estado = { ...estado, ...p }
+  // 24/11/2026: na sala (assistindo ou transmitindo), versão nova do site não recarrega a página sozinha
+  const naSala = estado.fase !== 'fora'
+  marcarEmUso('treino', naSala)
+  void manterTelaAcesa(naSala)
+  ouvintes.forEach((f) => f())
+}
+
+/* -------------------------------------------- tela acesa e volta sozinho */
+
+let tranca: { release: () => Promise<void> } | null = null
+let pedindoTranca = false
+/** 24/11/2026: na sala, a tela do celular não apaga (o iPhone bloqueado para a câmera e derruba a live). */
+async function manterTelaAcesa(ligar: boolean): Promise<void> {
+  try {
+    if (!ligar) { const t = tranca; tranca = null; await t?.release(); return }
+    if (tranca || pedindoTranca || typeof document === 'undefined' || document.visibilityState !== 'visible') return
+    pedindoTranca = true
+    tranca = await (navigator as Navigator & { wakeLock?: { request: (t: 'screen') => Promise<{ release: () => Promise<void> }> } }).wakeLock?.request('screen') ?? null
+    tranca && (tranca as unknown as EventTarget).addEventListener?.('release', () => { tranca = null })
+  } catch { tranca = null /* sem suporte ou sem permissão: segue normal */ } finally { pedindoTranca = false }
+}
+/** Quem saiu de propósito (botão Sair) não volta sozinho. */
+let saiuDeProposito = false
+let tentativas = 0
+let timerDeVolta: number | undefined
+/** Caiu sem a pessoa pedir: tenta de novo, esperando um pouco mais a cada vez (até 6 vezes). */
+function tentarVoltar(): boolean {
+  if (saiuDeProposito || !ultimaEntrada || tentativas >= 6) return false
+  tentativas++
+  window.clearTimeout(timerDeVolta)
+  timerDeVolta = window.setTimeout(() => { if (!sala && !saiuDeProposito && ultimaEntrada) void entrarNoTreino(ultimaEntrada.sessao, ultimaEntrada.nome, ultimaEntrada.comoCentral) }, Math.min(2000 * tentativas, 10_000))
+  return true
+}
+if (typeof document !== 'undefined') {
+  // voltou para o app (celular desbloqueado, aba de volta) ou a internet voltou: entra de novo na hora
+  const voltar = () => {
+    if (document.visibilityState !== 'visible') return
+    if (sala) { void manterTelaAcesa(true); return }
+    if (saiuDeProposito || !ultimaEntrada || (estado.fase !== 'fora' && estado.fase !== 'erro')) return
+    tentativas = 0
+    void entrarNoTreino(ultimaEntrada.sessao, ultimaEntrada.nome, ultimaEntrada.comoCentral)
+  }
+  document.addEventListener('visibilitychange', voltar)
+  window.addEventListener('online', voltar)
+}
+/** O erro do navegador ("Failed to fetch", "Load failed") vira uma frase que a pessoa entende. */
+const erroLegivel = (e: unknown, deNovo: boolean): string => {
+  const m = e instanceof Error ? e.message : ''
+  if (!m || /fetch|load failed|network|timeout|abort/i.test(m)) return deNovo ? 'Sem conexão com a sala. Tentando de novo…' : 'Sem conexão com a sala. Confira a internet e tente de novo.'
+  return m
+}
 export const useTreino = () => useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => estado, () => estado)
 
 const TOPICO = 'treino'
@@ -229,7 +282,8 @@ function comecarARepassar() {
     const ativa = simulacaoAgora().ativa
     // 23/11/2026: ao entrar no ar, o "estou no ar" vai antes das mensagens (quem assiste aceita só o dono)
     if (ativa && !eraNoArAntes) void enviar(pacoteDeEstado())
-    repassar()
+    // 24/11/2026: fora do ar não repassa mensagens nem "limpar" (outro admin pode estar no ar)
+    if (ativa || eraNoArAntes) repassar()
     if (ativa !== eraAtiva) { eraAtiva = ativa; void (ativa ? republicarFontes() : encerrarTransmissao()); if (ativa) comecarRegistro(); else fecharRegistro() }
     conferirAnuncio()
     // 23/11/2026: fora do ar, este admin não fala com os alunos (outro pode estar transmitindo)
@@ -297,9 +351,18 @@ function pararDeAnunciar() {
 let ultimaEntrada: { sessao: SessaoTeeds | null; nome: string; comoCentral: boolean } | null = null
 /** A Central volta para a sala depois de uma queda (o botão "Voltar à sala"). */
 export function voltarATreinar(): Promise<void> | void { if (ultimaEntrada && !sala) return entrarNoTreino(ultimaEntrada.sessao, ultimaEntrada.nome, ultimaEntrada.comoCentral) }
-export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', comoCentral = false): Promise<void> {
+let entrando: Promise<void> | null = null
+export function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', comoCentral = false): Promise<void> {
+  // 24/11/2026: dois toques (ou a volta automática junto do botão) não abrem duas salas
+  if (entrando) return entrando
+  saiuDeProposito = false
+  entrando = entrarDeVerdade(sessao, nome, comoCentral).finally(() => { entrando = null })
+  return entrando
+}
+async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCentral: boolean): Promise<void> {
   if (sala && estado.fase !== 'erro') return
   ultimaEntrada = { sessao, nome, comoCentral }
+  window.clearTimeout(timerDeVolta)
   await desconectar()
   // a Central usa o teste que ela mesma ligou; quem assiste, o do link que abriu
   testeAtual = comoCentral ? (apresentarNoTeste ? testeAtual : null) : testeDoLink()
@@ -340,18 +403,28 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', como
       .on(RoomEvent.AudioPlaybackStatusChanged, () => mudar({ somBloqueado: !r.canPlaybackAudio }))
       .on(RoomEvent.Disconnected, (motivo?: DisconnectReason) => {
         if (sala !== r) return
-        sala = null; marcarTreinoAtivo(false)
+        sala = null
         const transmitia = estado.apresentador
-        mudar({ fase: 'fora', tela: null, camera: null, audios: [], presente: false })
         // 06/11/2026: a Central ficava presa em "Abrindo a sala…" e a transmissão parava sem aviso.
-        // Agora quem transmite vê o motivo e um botão para voltar; queda de rede tenta de novo sozinha.
-        if (!transmitia || motivo === DisconnectReason.CLIENT_INITIATED) return
+        // 24/11/2026: quem assiste também volta sozinho (antes o player do aluno sumia no celular
+        // depois de minimizar o app), e a volta tenta várias vezes, esperando mais a cada uma.
+        if (motivo === DisconnectReason.CLIENT_INITIATED || saiuDeProposito) {
+          marcarTreinoAtivo(false); mudar({ fase: 'fora', tela: null, camera: null, audios: [], presente: false }); return
+        }
         if (motivo === DisconnectReason.DUPLICATE_IDENTITY) {
-          mudar({ fase: 'erro', erro: 'A sua conta entrou na sala em outra aba ou aparelho, e a transmissão parou aqui. Para assistir ao teste, use outra conta.' })
+          marcarTreinoAtivo(false)
+          mudar({ fase: 'erro', tela: null, camera: null, audios: [], presente: false, erro: transmitia
+            ? 'A sua conta entrou na sala em outra aba ou aparelho, e a transmissão parou aqui. Para assistir ao teste, use outra conta.'
+            : 'Você abriu a sala de treino em outra aba ou aparelho. Ela continua lá.' })
           return
         }
-        mudar({ fase: 'erro', erro: 'A conexão com a sala caiu. Tentando de novo…' })
-        window.setTimeout(() => { if (!sala && ultimaEntrada) void entrarNoTreino(ultimaEntrada.sessao, ultimaEntrada.nome, ultimaEntrada.comoCentral) }, 3000)
+        if (tentarVoltar()) {
+          // o player continua na tela (sem sumir) enquanto volta
+          mudar({ fase: 'reconectando', tela: null, camera: null, audios: [], presente: false, erro: transmitia ? 'A conexão com a sala caiu. Tentando de novo…' : null })
+          return
+        }
+        marcarTreinoAtivo(false)
+        mudar({ fase: transmitia ? 'erro' : 'fora', tela: null, camera: null, audios: [], presente: false, erro: transmitia ? 'Não consegui voltar para a sala. Confira a internet e toque em Voltar à sala.' : null })
       })
       .on(RoomEvent.DataReceived, (dados: Uint8Array, p?: RemoteParticipant, _k?: unknown, topico?: string) => {
         if (topico !== TOPICO || !p) return
@@ -403,9 +476,12 @@ export async function entrarNoTreino(sessao: SessaoTeeds | null, nome = '', como
       mudar({ erro: 'Outro administrador assumiu a live enquanto você estava sem conexão. A sua transmissão foi encerrada.' })
     } else if (ingresso.moderador) await republicarFontes()
     atualizarSala()
+    tentativas = 0
   } catch (e) {
     sala = null
-    mudar({ fase: 'erro', erro: e instanceof Error ? e.message : 'Não consegui abrir a sala de treino.' })
+    // 24/11/2026: sem internet na hora de voltar, tenta de novo sozinho (antes ficava no erro, em inglês)
+    const deNovo = !saiuDeProposito && tentativas > 0 && tentarVoltar()
+    mudar({ fase: deNovo ? 'reconectando' : 'erro', erro: erroLegivel(e, deNovo) })
   }
 }
 
@@ -426,6 +502,7 @@ async function desconectar(): Promise<void> {
  * É o "Sair" do player e da página; trocar de tela NÃO chama isto.
  */
 export async function sairDoTreino(): Promise<void> {
+  saiuDeProposito = true; window.clearTimeout(timerDeVolta); tentativas = 0
   const eraApresentador = estado.apresentador
   if (eraApresentador && registro.inicio) fecharRegistro()
   await desconectar()

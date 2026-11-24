@@ -198,7 +198,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   // a lixeira do chat arma no 1º clique e apaga no 2º (volta sozinha em 4 s)
   const [limparArmado, setLimparArmado] = useState(false)
   useEffect(() => { if (!limparArmado) return; const t = window.setTimeout(() => setLimparArmado(false), 4000); return () => window.clearTimeout(t) }, [limparArmado])
-  const [confirmarFim, setConfirmarFim] = useState(false)
+  const [confirmarFim, setConfirmarFim] = useState<false | 'fim' | 'sair'>(false)
   // o "Encerrar agora" volta sozinho a "Encerrar transmissão" depois de 5 s (não fica armado)
   useEffect(() => {
     if (!confirmarFim) return
@@ -245,6 +245,9 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   )
 
   const comecar = () => {
+    // 24/11/2026: fora da sala (caiu, abrindo) ninguém receberia a live: não começa
+    if (sessao && tr.fase !== 'conectada') { setErro(tr.fase === 'conectando' || tr.fase === 'reconectando' ? 'A sala ainda está abrindo. Espere um instante e comece de novo.' : 'Você está fora da sala. Toque em Voltar à sala e depois comece.'); return }
+    setErro(null)
     // 23/11/2026: com outro administrador no ar, não começa outra live por cima
     const outro = outroNoAr()
     if (outro) { setErro(`${outro} já está transmitindo nesta sala. Espere ele encerrar para começar.`); return }
@@ -526,14 +529,14 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
             ? <button type="button" className="ps-comecar" onClick={comecar}><i aria-hidden />Começar transmissão</button>
             : confirmarFim
               ? <span className="ps-confirmar-fim" role="group" aria-label="Confirmar o fim da transmissão">
-                <button type="button" className="ps-encerrar sim" onClick={() => { setConfirmarFim(false); pararSimulacao() }}>Encerrar agora</button>
+                <button type="button" className="ps-encerrar sim" onClick={() => { const sair = confirmarFim === 'sair'; setConfirmarFim(false); pararSimulacao(); if (sair) sairDaSala() }}>{confirmarFim === 'sair' ? 'Encerrar e sair' : 'Encerrar agora'}</button>
                 <button type="button" className="ps-cancelar" onClick={() => setConfirmarFim(false)}>Continuar no ar</button>
               </span>
-              : <button type="button" className="ps-encerrar" onClick={() => setConfirmarFim(true)}><i aria-hidden />Encerrar transmissão</button>}
+              : <button type="button" className="ps-encerrar" onClick={() => setConfirmarFim('fim')}><i aria-hidden />Encerrar transmissão</button>}
           <button type="button" className="ps-ico-topo" aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'} onClick={alternarTelaCheia}>
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={cheia ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} /></svg>
           </button>
-          <button type="button" className="ps-sair" onClick={sairDaSala} title={sim.ativa ? 'A transmissão continua no ar no player flutuante' : undefined}>Sair</button>
+          <button type="button" className="ps-sair" onClick={() => (sim.ativa ? setConfirmarFim('sair') : sairDaSala())} title={sim.ativa ? 'Sair encerra a transmissão para todos' : undefined}>Sair</button>
         </header>
         {(erro || (tr.fase === 'conectada' && tr.erro)) && <p className="av-erro cv-app-erro" role="alert">{erro ?? tr.erro}</p>}
 
@@ -641,11 +644,21 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         </div>
         <div className="av-mesa-acao">
           {sim.ativa
-            ? <button className="av-botao-encerrar" onClick={() => pararSimulacao()}>Encerrar transmissão</button>
-            : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar transmissão</button>}
-          <button className="av-link" onClick={sairDaSala}>Sair da Central</button>
+            ? confirmarFim
+              ? <span className="tr-confirmar-fim" role="group" aria-label="Confirmar o fim da transmissão">
+                <button className="av-botao-encerrar" onClick={() => { const sair = confirmarFim === 'sair'; setConfirmarFim(false); pararSimulacao(); if (sair) sairDaSala() }}>{confirmarFim === 'sair' ? 'Encerrar e sair' : 'Encerrar agora'}</button>
+                <button className="av-link" onClick={() => setConfirmarFim(false)}>Continuar no ar</button>
+              </span>
+              : <button className="av-botao-encerrar" onClick={() => setConfirmarFim('fim')}>Encerrar transmissão</button>
+            : tr.outroTransmitindo
+              ? <span className="tr-outro-no-ar" role="status"><b>{tr.outroTransmitindo.split(' ')[0]} está no ar</b> Para começar, ele precisa encerrar</span>
+              : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar transmissão</button>}
+          {sessao && (tr.fase === 'erro' || tr.fase === 'fora') && <button className="tr-botao-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button>}
+          {!confirmarFim && <button className="av-link" onClick={() => (sim.ativa ? setConfirmarFim('sair') : sairDaSala())}>Sair da Central</button>}
         </div>
-        {erro && <p className="av-erro" role="alert">{erro}</p>}
+        {sim.ativa && sessao && tr.fase !== 'conectada' && <p className="av-erro" role="alert">Você está fora da sala: os alunos não estão vendo. {tr.fase === 'reconectando' ? 'Voltando…' : ''}</p>}
+        {(erro || (tr.fase === 'conectada' && tr.erro)) && <p className="av-erro" role="alert">{erro ?? tr.erro}</p>}
+        {sim.ativa && <p className="tr-dica-celular">Deixe o app aberto durante a transmissão: com a tela bloqueada ou em outro app, a câmera para.</p>}
       </section>
 
       {sessao && <DestinoDaTransmissao sessao={sessao} noAr={sim.ativa} />}
