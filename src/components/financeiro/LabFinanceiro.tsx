@@ -1,6 +1,6 @@
 /**
  * Laboratório: Administração › Financeiro com o banco em memória (laboratorio.html?tela=financeiro).
- *   &estado=trava (padrão: aberto) | criar (1º acesso do geral) | provisoria (senha 'provisoria1') | sem (sem acesso) | vazio
+ *   &estado=trava (padrão: aberto) | criar (1º acesso do geral) | provisoria (senha 'provisoria1') | sem (sem acesso) | convite (liberado, cria a senha no 1º acesso) | vazio
  *   &papel=leitor|editor (padrão: dono)
  * Senha do laboratório: 'financeiro1'.
  */
@@ -83,6 +83,7 @@ function apiEmMemoria(): FinApi {
   let destravado = ESTADO === 'aberto' || ESTADO === 'vazio'
   let acesso: MeuAcesso = ESTADO === 'criar' ? { admin: true, geral: true, tem: false }
     : ESTADO === 'sem' ? { admin: true, geral: false, tem: false }
+      : ESTADO === 'convite' ? { admin: true, geral: false, tem: true, ativo: true, nesta: true, papel: 'editor', marcas: ['globalfly'], trocar_senha: true, criar: true }
       : { admin: true, geral: PAPEL === 'dono', tem: true, ativo: true, papel: PAPEL, marcas: ['globalfly'], trocar_senha: ESTADO === 'provisoria' }
   let senha = ESTADO === 'provisoria' ? 'provisoria1' : 'financeiro1'
   let falhas = 0
@@ -97,7 +98,7 @@ function apiEmMemoria(): FinApi {
   return {
     marca: 'globalfly',
     meuAcesso: () => espera(acesso),
-    criarMinhaSenha: async (s) => { senha = s; acesso = { admin: true, geral: true, tem: true, ativo: true, papel: 'dono', marcas: ['*'], trocar_senha: false } },
+    criarMinhaSenha: async (s) => { senha = s; acesso = ESTADO === 'convite' ? { ...acesso, criar: false, trocar_senha: false } : { admin: true, geral: true, tem: true, ativo: true, papel: 'dono', marcas: ['*'], trocar_senha: false } },
     entrar: async (s) => {
       await espera(null)
       if (s !== senha) { falhas++; return falhas >= 5 ? { erro: 'bloqueado', ate: new Date(Date.now() + 9e5).toISOString() } : { erro: 'senha', restam: 5 - falhas } }

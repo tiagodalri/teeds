@@ -52,7 +52,7 @@ export function Acessos({ api, aoMudar }: { api: FinApi; aoMudar: (m: string) =>
       </ul> : <Vazio titulo="Só você tem acesso" texto="Dê acesso aos administradores que precisam ver ou lançar no financeiro." />)}
     </section>
     <p className="fin-explica"><Icone nome="cadeado" />
-      <span>Cada pessoa tem a própria senha, diferente da senha de login. Quem recebe acesso entra com uma senha provisória e cria a dela no primeiro acesso. Cinco senhas erradas seguidas travam o acesso por 15 minutos, e o financeiro se bloqueia sozinho depois de 20 minutos parado.</span></p>
+      <span>Cada pessoa tem a própria senha, diferente da senha de login. Quem recebe acesso cria a própria senha no primeiro acesso ao financeiro. Cinco senhas erradas seguidas travam o acesso por 15 minutos, e o financeiro se bloqueia sozinho depois de 20 minutos parado.</span></p>
 
     {editando && <EditorAcesso api={api} acesso={editando.acesso} candidatos={editando.acesso ? [] : semAcesso}
       aoFechar={() => setEditando(null)}
@@ -86,7 +86,9 @@ function EditorAcesso({ api, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: 
   const escolhido = acesso ? null : candidatos.find((c) => c.email === email)
   const opcoesMarca = acesso ? [...new Set([...acesso.marcas, ...Object.keys(MARCAS)])] : escolhido?.marcas.filter((m) => m !== 'teeds' || escolhido.marcas.length === 1) ?? []
   const [marcas, setMarcas] = useState<string[]>(acesso?.marcas ?? [])
-  const [novaSenha, setNovaSenha] = useState(!acesso || !acesso.ativo)
+  const [novaSenha, setNovaSenha] = useState(!!acesso && !acesso.ativo)
+  // pessoa nova: cria a senha no primeiro acesso (convite) ou entra com uma provisória que você envia
+  const [convite, setConvite] = useState(!acesso)
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const [confirmarTirar, setConfirmarTirar] = useState(false)
@@ -99,7 +101,7 @@ function EditorAcesso({ api, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: 
     if (!email) { setErro('Escolha a pessoa.'); return }
     if (!marcas.length) { setErro('Escolha pelo menos uma plataforma.'); return }
     setSalvando(true); setErro(null)
-    const senha = novaSenha ? gerarSenha().replace(/^(....)/, (m) => m[0].toUpperCase() + m.slice(1)) : null
+    const senha = (acesso ? novaSenha : !convite) ? gerarSenha().replace(/^(....)/, (m) => m[0].toUpperCase() + m.slice(1)) : null
     try {
       await api.darAcesso(email, papel, marcas, senha)
       aoSalvar(acesso ? 'Acesso atualizado.' : `${nome.split(' ')[0]} agora tem acesso ao financeiro.`, senha, nome.split(' ')[0])
@@ -143,7 +145,13 @@ function EditorAcesso({ api, acesso, candidatos, aoFechar, aoSalvar, aoTirar }: 
         {acesso?.ativo && <div className="fin-campo largo">
           <label className="fin-check"><input type="checkbox" checked={novaSenha} onChange={(e) => setNovaSenha(e.target.checked)} /><span>Gerar uma senha provisória nova (a atual deixa de valer)</span></label>
         </div>}
-        {(!acesso || !acesso.ativo) && <p className="fin-explica sem-borda largo">Ao salvar, o sistema gera uma senha provisória para você enviar. A pessoa troca no primeiro acesso.</p>}
+        {!acesso && <div className="fin-campo largo"><span className="fin-campo-rot">Senha</span>
+          <div className="fin-escolha coluna">
+            <button type="button" className={convite ? 'on' : ''} onClick={() => setConvite(true)}><b>A pessoa cria no primeiro acesso</b><small>Quando abrir o financeiro, ela cria a senha dela. Você não precisa enviar nada.</small></button>
+            <button type="button" className={!convite ? 'on' : ''} onClick={() => setConvite(false)}><b>Senha provisória</b><small>O sistema gera uma senha para você enviar. A pessoa troca no primeiro acesso.</small></button>
+          </div>
+        </div>}
+        {acesso && !acesso.ativo && <p className="fin-explica sem-borda largo">Ao salvar, o sistema gera uma senha provisória para você enviar. A pessoa troca no primeiro acesso.</p>}
       </div>
       {erro && <p className="fin-erro" role="alert">{erro}</p>}
     </fieldset>

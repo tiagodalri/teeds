@@ -38,8 +38,8 @@ export interface Historico { id: number; lancamento_id: string | null; acao: 'cr
 export interface Acesso { email: string; nome: string | null; papel: Papel; marcas: string[]; ativo: boolean; trocar_senha: boolean; bloqueado: boolean; ultimo_acesso: string | null; criado_em: string; eu: boolean }
 export interface Candidato { email: string; nome: string | null; marcas: string[] }
 export interface Pessoa { user_id: string; nome: string; email: string }
-export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; nesta?: boolean; ativo?: boolean; papel?: Papel | null; marcas?: string[]; trocar_senha?: boolean; bloqueado_ate?: string | null }
-export type ResultadoEntrada = { token: string; expira_em: string; papel: Papel; marcas: string[]; trocar_senha: boolean } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' }
+export interface MeuAcesso { admin: boolean; geral?: boolean; tem: boolean; nesta?: boolean; ativo?: boolean; papel?: Papel | null; marcas?: string[]; trocar_senha?: boolean; criar?: boolean; bloqueado_ate?: string | null }
+export type ResultadoEntrada = { token: string; expira_em: string; papel: Papel; marcas: string[]; trocar_senha: boolean } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' } | { erro: 'criar' }
 export type ResultadoTroca = { ok: true } | { erro: 'senha'; restam: number } | { erro: 'bloqueado'; ate: string } | { erro: 'sem-acesso' | 'fraca' | 'igual' }
 
 /** Quem leva quanto do lucro de um projeto (projeto_id null = custo geral). quem = 's:<sócio>' ou 'p:<parceiro>'. */

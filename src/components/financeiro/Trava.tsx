@@ -2,6 +2,7 @@
   A trava do Financeiro: a senha individual, que não é a do login.
     - quem tem senha: digita e destrava (5 erros seguidos travam 15 min, no banco);
     - o admin geral no primeiro acesso: cria a senha dele;
+    - quem recebeu convite do dono (24/11/2026): cria a senha dele no primeiro acesso;
     - quem entrou com a senha provisória: cria a senha pessoal antes de ver qualquer número;
     - admin sem acesso: o aviso de a quem pedir.
 */
@@ -64,6 +65,7 @@ export function Trava({ api, acesso, aviso, aoDestravar, aoMudarAcesso }: {
       }
       if (r.erro === 'senha') setErro(r.restam === 1 ? 'Senha incorreta. Resta 1 tentativa antes de travar por 15 minutos.' : `Senha incorreta. Restam ${r.restam} tentativas.`)
       else if (r.erro === 'bloqueado') { setErro(`Muitas tentativas erradas. O financeiro destrava às ${horaDe(r.ate)}.`); aoMudarAcesso() }
+      else if (r.erro === 'criar') aoMudarAcesso()
       else setErro('Você não tem acesso ao financeiro.')
       setSenha('')
     } catch (x) { setErro((x as Error).message) } finally { setIndo(false) }
@@ -113,6 +115,16 @@ export function Trava({ api, acesso, aviso, aoDestravar, aoMudarAcesso }: {
       <h2>Sem acesso nesta plataforma</h2>
       <p>A sua senha do financeiro vale para outra plataforma. Troque a plataforma no topo, ou peça ao responsável pelo financeiro para liberar esta.</p>
     </div>
+  } else if (acesso.criar) {
+    conteudo = <form onSubmit={criar}>
+      <h2>Crie a sua senha do financeiro</h2>
+      <p>O seu acesso ao financeiro foi liberado. Crie agora uma senha só sua, diferente da senha de login. Ela vai ser pedida sempre que você abrir o financeiro.</p>
+      <CampoSenha id="fin-nova" rotulo="Senha nova" valor={senha} aoMudar={setSenha} auto="new-password" foco />
+      <CampoSenha id="fin-confirma" rotulo="Repita a senha" valor={confirma} aoMudar={setConfirma} auto="new-password" />
+      <Regras senha={senha} confirma={confirma} />
+      {erro && <p className="fin-trava-erro" role="alert">{erro}</p>}
+      <button className="fin-btn primario grande" disabled={!senhaBoa(senha, confirma) || indo}>{indo ? 'Criando…' : 'Criar senha e entrar'}</button>
+    </form>
   } else if (provisoria) {
     conteudo = <form onSubmit={trocar}>
       <h2>Crie a sua senha pessoal</h2>
