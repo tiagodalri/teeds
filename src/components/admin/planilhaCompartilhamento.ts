@@ -113,7 +113,8 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     { t: 'Nº', w: 6 }, { t: 'Nome completo', w: 30 }, { t: 'Telefone', w: 17 }, { t: 'E-mail', w: 30 }, { t: 'Entrou em', w: 12 },
     { t: 'Corretora', w: 11 }, { t: 'Plano', w: 10 }, { t: 'Depósito inicial (US$)', w: 15 }, { t: 'Lucro do mês (%)', w: 13 },
     { t: 'Lucro do mês (US$)', w: 16 }, { t: 'Saldo final (US$)', w: 16 }, { t: 'Lucro em reais', w: 16 },
-    { t: 'Participação', w: 12 }, { t: 'Paga (US$)', w: 13 }, { t: 'Paga (R$)', w: 13 }, { t: 'Situação', w: 19 },
+    // 24/11/2026 (Tiago): sem a coluna Situação — a tabela termina em Paga (R$)
+    { t: 'Participação', w: 12 }, { t: 'Paga (US$)', w: 14 }, { t: 'Paga (R$)', w: 15 },
   ]
   COLS.forEach((c, i) => { wc.getColumn(i + 1).width = c.w })
   const iniC = cabecalho(wc, COLS.length, 'Compartilhamento de receita · Clientes', `${d.mesNome} · ${d.simulado ? 'base simulada' : 'conta real, I.A. e manual'}`)
@@ -121,7 +122,7 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
   COLS.forEach((c, i) => {
     const x = cab.getCell(i + 1); x.value = c.t
     x.font = { bold: true, size: 10.5, color: { argb: OURO } }; fundo(x, AZUL2)
-    x.alignment = { vertical: 'middle', horizontal: i < 7 || i === 15 ? 'left' : 'right', wrapText: true }
+    x.alignment = { vertical: 'middle', horizontal: i < 7 ? 'left' : 'right', wrapText: true }
     x.border = { bottom: { style: 'medium', color: { argb: OURO_ESCURO } } }
   })
   cab.height = 34
@@ -145,8 +146,6 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     const pagaUsd = lucro > 0 ? r2(lucro * p) : 0
     // os valores de cada linha, como o Excel calcula: todos os totais somam estes (fecham centavo a centavo)
     Object.assign(l as LinhaDaPlanilha, { _lucro: lucro, _lucroR: r2(lucro * d.cotacao), _paga: pagaUsd, _pagaR: r2(pagaUsd * d.cotacao) })
-    const sitFixa = l.fatura ? (l.fatura.situacao === 'paga' ? 'Fatura paga' : l.fatura.situacao === 'cancelada' ? 'Cancelada' : 'Fatura em aberto')
-      : lucro <= 0 ? 'Negativo: não paga' : p <= 0 ? 'Prestige: isento' : d.simulado ? `Paga ${Math.round(p * 100)}% do lucro` : d.fechado ? 'A faturar' : 'Prévia do mês'
     row.values = [
       k + 1, l.nome || l.email || 'Sem nome', telefone(l.telefone), l.email || '—', l.entrou_em ? new Date(l.entrou_em) : '—', l.corretora || 'Deriv',
       nomePlano(plano(l)), dep ?? '—',
@@ -157,13 +156,12 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
       p,
       { formula: `ROUND(MAX(0,J${r})*M${r},2)`, result: pagaUsd },
       { formula: `ROUND(N${r}*${celCot},2)`, result: r2(pagaUsd * d.cotacao) },
-      d.simulado ? { formula: `IF(J${r}<0,"Negativo: não paga",IF(M${r}=0,"Prestige: isento","Paga "&ROUND(M${r}*100,0)&"% do lucro"))`, result: sitFixa } : sitFixa,
     ]
     row.height = 20
     row.eachCell({ includeEmpty: true }, (c, col) => {
       if (k % 2 === 1) fundo(c, CREME)
       c.font = { size: 10.5, color: { argb: TEXTO } }
-      c.alignment = { vertical: 'middle', horizontal: col <= 7 || col === 16 ? 'left' : 'right' }
+      c.alignment = { vertical: 'middle', horizontal: col <= 7 ? 'left' : 'right' }
       c.border = { bottom: { style: 'hair', color: { argb: LINHA } } }
     })
     row.getCell(1).font = { size: 10, color: { argb: SUAVE } }
@@ -226,8 +224,8 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     wc.getRow(r0 + 1).height = 3
     r0 += 3
 
-    // cartões: [coluna inicial, coluna final] — B:D, E:I, J:L, M:P
-    const BLOCOS: Array<[number, number]> = [[2, 4], [5, 9], [10, 12], [13, 16]]
+    // cartões: [coluna inicial, coluna final] — B:D, E:I, J:L, M:O (a tabela termina em O desde 24/11)
+    const BLOCOS: Array<[number, number]> = [[2, 4], [5, 9], [10, 12], [13, 15]]
     type Cartao = { rot: string; valor: unknown; fmt: string; cor: string; sub?: unknown; subFmt?: string; destaque?: boolean }
     const cartao = (linha: number, [a, b]: [number, number], k: Cartao) => {
       wc.mergeCells(linha, a, linha, b); wc.mergeCells(linha + 1, a, linha + 1, b); wc.mergeCells(linha + 2, a, linha + 2, b)
