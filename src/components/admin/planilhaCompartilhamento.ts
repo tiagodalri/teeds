@@ -79,6 +79,15 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
   const perc = (l: Linha) => l.fatura?.percentual ?? l.percentual
   // cópia: o lucro da planilha (_lucro) é gravado na linha sem mexer no que a tela mostra
   const linhas = [...d.linhas].map((l) => ({ ...l })).sort((a, b) => b.resultado - a.resultado)
+  // simulação (24/11/2026, Tiago: "ordem misturada os positivos e negativos, aleatoriamente, pra ficar natural"):
+  // embaralha com uma semente tirada dos próprios clientes — a mesma base sai sempre na mesma ordem
+  if (d.simulado) {
+    let h = 2166136261
+    for (const l of linhas) for (const ch of l.user_id) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0 }
+    h = h || 1
+    const acaso = () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296 }
+    for (let i = linhas.length - 1; i > 0; i--) { const j = Math.floor(acaso() * (i + 1)); [linhas[i], linhas[j]] = [linhas[j], linhas[i]] }
+  }
   const n = linhas.length
 
   type Ws = ReturnType<typeof wb.addWorksheet>
