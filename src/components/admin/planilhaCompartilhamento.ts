@@ -113,8 +113,8 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     { t: 'Nº', w: 6 }, { t: 'Nome completo', w: 30 }, { t: 'Telefone', w: 17 }, { t: 'E-mail', w: 30 }, { t: 'Entrou em', w: 12 },
     { t: 'Corretora', w: 11 }, { t: 'Plano', w: 10 }, { t: 'Depósito inicial (US$)', w: 15 }, { t: 'Lucro do mês (%)', w: 13 },
     { t: 'Lucro do mês (US$)', w: 16 }, { t: 'Saldo final (US$)', w: 16 }, { t: 'Lucro em reais', w: 16 },
-    // 24/11/2026 (Tiago): sem a coluna Situação — a tabela termina em Paga (R$)
-    { t: 'Participação', w: 12 }, { t: 'Paga (US$)', w: 14 }, { t: 'Paga (R$)', w: 15 },
+    // 24/11/2026 (Tiago): sem a coluna Situação — a tabela termina em Pago (R$)
+    { t: 'Participação', w: 12 }, { t: 'Pago (US$)', w: 14 }, { t: 'Pago (R$)', w: 15 },
   ]
   COLS.forEach((c, i) => { wc.getColumn(i + 1).width = c.w })
   const iniC = cabecalho(wc, COLS.length, 'Compartilhamento de receita · Clientes', `${d.mesNome} · ${d.simulado ? 'base simulada' : 'conta real, I.A. e manual'}`)
@@ -279,7 +279,7 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     // conta por plano alinhada às colunas da tabela (Plano em H, US$ em J, R$ em L, % em M, paga em N e O)
     const rP = r1 + 4
     const hp = wc.getRow(rP); hp.height = 24
-    const cabP: Array<[number, string]> = [[2, 'Conta por plano'], [7, 'Plano'], [8, 'No lucro'], [10, 'Lucro (US$)'], [12, 'Lucro em reais'], [13, 'Participação'], [14, 'Paga (US$)'], [15, 'Paga (R$)']]
+    const cabP: Array<[number, string]> = [[2, 'Conta por plano'], [7, 'Plano'], [8, 'No lucro'], [10, 'Lucro (US$)'], [12, 'Lucro em reais'], [13, 'Participação'], [14, 'Pago (US$)'], [15, 'Pago (R$)']]
     for (let c = 2; c <= COLS.length; c++) { const x = hp.getCell(c); fundo(x, AZUL2); x.border = { bottom: { style: 'medium', color: { argb: OURO_ESCURO } } } }
     for (const [c, t] of cabP) { const x = hp.getCell(c); x.value = t; x.font = { bold: true, size: 10, color: { argb: OURO } }; x.alignment = { vertical: 'middle', horizontal: c >= 8 ? 'right' : 'left', indent: c === 2 ? 1 : 0 } }
     ;(['gold', 'black', 'prestige'] as const).forEach((p, k) => {
