@@ -98,23 +98,15 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     if (idLogo !== null) ws.addImage(idLogo, { tl: { col: 0.25, row: 0.45 }, ext: { width: 200, height: 63 } })
     const t = ws.getCell(2, 4); t.value = titulo; t.font = { name: 'Calibri', size: 18, bold: true, color: { argb: OURO } }
     const s = ws.getCell(3, 4); s.value = sub; s.font = { name: 'Calibri', size: 11, color: { argb: 'FFC9D3DF' } }
-    let linha = 5
-    if (d.simulado) {
-      ws.mergeCells(linha, 1, linha, colunas)
-      const a = ws.getCell(linha, 1)
-      a.value = 'SIMULAÇÃO · nomes e números fictícios, gerados para explicar o modelo de compartilhamento. Não é resultado de clientes reais nem promessa de lucro.'
-      a.font = { bold: true, size: 10.5, color: { argb: 'FF2A1F10' } }
-      a.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 }
-      fundo(a, LARANJA); ws.getRow(linha).height = 30
-      linha++
-    }
-    return linha + 1
+    // 24/11/2026 (Tiago): "por enquanto, pode remover a linha 5" — sai a faixa laranja da simulação; o aviso fica
+    // no subtítulo ("base simulada"), na nota do rodapé e no nome do arquivo
+    return 6
   }
 
   /* ------------------------------------------------------------------------------------------ aba Clientes */
   // o Resumo é criado antes, para ser a 1ª aba (é preenchido depois, porque lê a aba Clientes)
   const wr = wb.addWorksheet('Resumo', { views: [{ showGridLines: false }] })
-  const wc = wb.addWorksheet('Clientes', { views: [{ state: 'frozen', ySplit: d.simulado ? 7 : 6, showGridLines: false }] })
+  const wc = wb.addWorksheet('Clientes', { views: [{ state: 'frozen', ySplit: 6, showGridLines: false }] })
   // 24/11/2026 (Victor): sem a coluna de parceiro, e a conta na ordem em que se explica — depósito × % = lucro,
   // depósito + lucro = saldo final, e a participação só sobre o lucro
   const COLS: Array<{ t: string; w: number }> = [
@@ -135,7 +127,7 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
   cab.height = 34
   // cotação: uma célula só, que as fórmulas leem (quem trocar ela vê a planilha inteira mudar)
   // Resumo: cabeçalho (5 linhas, +1 com a faixa da simulação) + 1, Como funciona (6) e a 9ª linha dos números
-  const celCot = `Resumo!$C$${(d.simulado ? 7 : 6) + 6 + 9}`
+  const celCot = `Resumo!$C$${6 + 6 + 9}`
   const L = (l: Linha) => (l as LinhaDaPlanilha)._lucro ?? l.resultado
   const LR = (l: Linha) => (l as LinhaDaPlanilha)._lucroR ?? 0
   const PG = (l: Linha) => (l as LinhaDaPlanilha)._paga ?? 0
