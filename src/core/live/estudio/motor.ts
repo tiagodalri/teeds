@@ -1195,6 +1195,7 @@ let anteriorNoAr: string | null = null
 /** O vídeo da tela no ar terminou: se a tela pede, volta para a de antes (ou para o Ao vivo). */
 function videoTerminou(fonteId: string): void {
   const c = estado.config
+  if (!c) return
   const cena = cenaPorId(c.programa)
   if (!cena || !cena.fontes.some((f) => f.id === fonteId) || transicao) return
   if (cena.modelo?.campos.aoTerminar !== 'voltar') return
@@ -1207,6 +1208,8 @@ function videoTerminou(fonteId: string): void {
 /** O vídeo da tela no ar agora (tempo e o que faz no fim), ou null se ela não tem vídeo. */
 export function videoNoAr(): { atual: number; duracao: number; aoTerminar: string; volta: string | null } | null {
   const c = estado.config
+  // 24/11/2026: antes de o motor abrir não há config (a Central ficava em branco se a leitura chegasse antes)
+  if (!estado.pronto || !c) return null
   const cena = cenaPorId(c.programa)
   const f = cena?.fontes.find((x) => x.tipo === 'video' && x.visivel)
   const m = f ? midias.get(f.id)?.el : undefined
@@ -1218,4 +1221,4 @@ export function videoNoAr(): { atual: number; duracao: number; aoTerminar: strin
   return { atual: m.currentTime, duracao: m.duration, aoTerminar, volta }
 }
 
-const cenaDaFonte = (fonteId: string): string | undefined => estado.config.cenas.find((c) => c.fontes.some((f) => f.id === fonteId))?.id
+const cenaDaFonte = (fonteId: string): string | undefined => estado.config?.cenas.find((c) => c.fontes.some((f) => f.id === fonteId))?.id
