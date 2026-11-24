@@ -166,9 +166,10 @@ export function painelSimulado(ajuste: AjusteSimulado, mes: string, base: Painel
     const deposito = Math.min(a.depMax, Math.max(a.depMin,
       arredondarDeposito(a.depMin * Math.pow(a.depMax / a.depMin, Math.pow(acaso.u(), 1.35)))))
     // resultado: quem lucrou fica entre o mínimo e o máximo, com mais gente perto do meio-baixo
-    const taxa = negativo.has(i)
+    // % redonda em uma casa (37,4%): o lucro é exatamente depósito × % — a conta fecha na mão (24/11, Victor)
+    const taxa = Math.round((negativo.has(i)
       ? -(0.03 + 0.32 * Math.pow(acaso.u(), 1.4))
-      : a.lucroMin + (a.lucroMax - a.lucroMin) * Math.pow(acaso.u(), 1.6)
+      : a.lucroMin + (a.lucroMax - a.lucroMin) * Math.pow(acaso.u(), 1.6)) * 1000) / 1000
     const r = Math.round(deposito * taxa * 100) / 100
 
     const subplano = planos[i]
