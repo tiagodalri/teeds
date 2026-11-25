@@ -453,3 +453,5 @@ html:has(body.sl) { overflow-x: hidden; }
 .sl-ip-conv p i { width: 6px; height: 6px; border-radius: 50%; background: #5FC48C; animation: sl-piscar 1.4s infinite; }
 @keyframes sl-piscar { 50% { opacity: .25 } }
 .sl-conv-linha b { white-space: nowrap; }
+.sl-iphone .sl-fone-topo b { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.sl-zap-selo { width: 16px; height: 16px; flex: none; }
