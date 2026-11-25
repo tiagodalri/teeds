@@ -141,24 +141,29 @@ export async function liberadoAntesDaLive(sessao: SessaoTeeds): Promise<boolean>
   } catch { return false }
 }
 
+/** As fichas que esta aba já garantiu (criou ou viu que existem) desde que abriu. */
+const fichasGarantidas = new Set<string>()
+
 export async function registrarPresenca(sessao: SessaoTeeds, segundos = 0): Promise<void> {
   if (!autenticacaoConfigurada()) return
   const u = sessao.usuario
   try {
+    // 25/11/2026 (Victor trocou o telefone no perfil e o número antigo voltava): o nome, o telefone e o CPF da
+    // sessão são os do LOGIN. Regravar a cada sinal desfazia o que a pessoa acabou de salvar em Meu perfil.
+    // Agora eles só entram se a ficha ainda não existe (ignore-duplicates); o sinal de sempre só marca visto_em.
+    if (!fichasGarantidas.has(`${u.id}:${MARCA.id}`)) {
+      await rest('/clientes?on_conflict=user_id,marca', sessao.token, {
+        method: 'POST',
+        headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+        // marca: em qual plataforma esta pessoa entrou. É o que separa a lista de clientes de cada admin.
+        body: JSON.stringify({ user_id: u.id, marca: MARCA.id, nome: u.nome, email: u.email, telefone: u.telefone, cpf: u.cpf, visto_em: new Date().toISOString() }),
+      })
+      fichasGarantidas.add(`${u.id}:${MARCA.id}`)
+    }
     await rest('/clientes?on_conflict=user_id,marca', sessao.token, {
       method: 'POST',
       headers: MESCLAR,
-      body: JSON.stringify({
-        user_id: u.id,
-        // Em qual plataforma esta pessoa entrou. É o que separa a lista de
-        // clientes de cada admin.
-        marca: MARCA.id,
-        nome: u.nome,
-        email: u.email,
-        telefone: u.telefone,
-        cpf: u.cpf,
-        visto_em: new Date().toISOString(),
-      }),
+      body: JSON.stringify({ user_id: u.id, marca: MARCA.id, email: u.email, visto_em: new Date().toISOString() }),
     })
   } catch (e) {
     console.warn('[teeds] nao consegui gravar a ficha na presenca:', (e as Error).message)
