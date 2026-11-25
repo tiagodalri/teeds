@@ -56,8 +56,8 @@ export function CenaDoLogin({ variante }: { variante: VarianteDaCena }) {
 
       <div className="entrada-cena-texto">
         <Monograma tamanho={58} rotulo={MARCA.prosa} />
-        <h2>Precisão para navegar mercados em movimento.</h2>
-        <p>Tecnologia, método e visão global.</p>
+        <h2>{MARCA.lema?.titulo ?? 'Precisão para navegar mercados em movimento.'}</h2>
+        <p>{MARCA.lema?.apoio ?? 'Tecnologia, método e visão global.'}</p>
       </div>
 
       {mercado.length > 0 && (

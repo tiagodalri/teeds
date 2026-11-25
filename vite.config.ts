@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statS
 import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId, familiaDa } from './src/marca/marcas'
-import { paletaDaMarca, type Paleta } from './scripts/paleta-da-marca'
+import { paletaDaMarca, traduzir, type Paleta, type Traducao } from './scripts/paleta-da-marca'
 import { paginaDosTermos } from './scripts/pagina-dos-termos'
 
 /**
@@ -85,7 +85,7 @@ function cascaPorMarca() {
 /* Cor de fundo do app instalado e nome curto na tela inicial, por marca.
    Antes eram ternarios de duas marcas: a GlobalFly sairia instalada como
    "OMNI" (16/10/2026). */
-const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#051528', legacypro: '#051528' }
+const FUNDO_DA_MARCA: Record<string, string> = { teeds: '#090a0d', omni: '#081525', globalfly: '#051528', legacypro: '#08080A' }
 /* Paleta do manual da GlobalFly (Brand Book v1.0): toda cor herdada da base
    vira a família equivalente — vermelho → Alerta, quentes → Ouro GF,
    verdes → Positivo, frios → Aço/Ardósia. Ver scripts/paleta-da-marca.ts. */
@@ -139,6 +139,19 @@ const PALETAS: Record<string, Paleta> = {
     superficies: [[0.075, 0.88], [0.145, 0.72], [0.18, 0.68], [0.26, 0.52], [0.46, 0.26]],
   },
 }
+/* Legacy Pro (25/11/2026, manual da marca v1.0): monta com a paleta da GlobalFly e traduz o
+   resultado: marinho e aço viram chumbo e platina, o Ouro GF vira o Ouro Legacy (#C9A24A).
+   As cores de terceiros ficam. Ver `Traducao` em scripts/paleta-da-marca.ts. */
+const TRADUCOES: Record<string, Traducao> = {
+  legacypro: {
+    manter: ['#1877F2', '#2AABEE', '#53BDEB', '#027EB5', '#38BDF8', '#2563EB', '#A78BFA', '#8B5CF6', '#6228D7', '#F9CE34'],
+    frio: { de: 188, ate: 252, h: 225, sEscuro: 0.055, sClaro: 0.07 },
+    ouro: { de: 26, ate: 54, origem: [183 / 255, 141 / 255, 57 / 255], destino: [201 / 255, 162 / 255, 74 / 255] },
+  },
+}
+const TRADUCAO = TRADUCOES[MARCA.id]
+/** A cor de destaque da abertura do app (a barrinha): o ouro de cada marca. */
+const OURO_DA_MARCA: Record<string, [string, string]> = { legacypro: ['rgba(201,162,74,.22)', '#C9A24A'] }
 /* Telas de abertura do iPhone/iPad: só a marca que gerou a pasta
    (scripts/pwa-globalfly.mjs) recebe os <link>. Sem elas o iOS abre o app
    instalado numa tela branca. */
@@ -163,14 +176,15 @@ function aberturaDoApp(): string {
   const img = join(__dirname, 'public', `pwa-${MARCA.id}`, 'abertura.png')
   if (!MARCA.appNativo || !existsSync(img)) return ''
   const fundo = FUNDO_DA_MARCA[MARCA.id] ?? '#090a0d'
+  const [ouroSuave, ouro] = OURO_DA_MARCA[MARCA.id] ?? ['rgba(183,141,57,.22)', '#B78D39']
   return `<div id="app-abertura" aria-hidden="true"><img src="${MARCA.base}pwa-${MARCA.id}/abertura.png" alt="" /><i></i></div>
     <style>
       #app-abertura{position:fixed;inset:0;z-index:2147483000;display:none;place-items:center;background:${fundo};transition:opacity .5s cubic-bezier(.4,0,.2,1),visibility .5s}
       @media (display-mode: standalone){#app-abertura{display:grid}html{background:${fundo}}}
       #app-abertura img{width:58vw;height:auto;transition:transform .5s cubic-bezier(.4,0,.2,1)}
       @media (min-width:700px){#app-abertura img{width:36vw}}
-      #app-abertura i{position:absolute;left:50%;bottom:calc(72px + env(safe-area-inset-bottom));width:48px;height:2px;margin-left:-24px;border-radius:2px;background:rgba(183,141,57,.22);overflow:hidden;opacity:0;animation:abre-surge .3s .7s forwards}
-      #app-abertura i::after{content:'';position:absolute;top:0;bottom:0;width:40%;background:#B78D39;animation:abre-corre 1.1s ease-in-out infinite}
+      #app-abertura i{position:absolute;left:50%;bottom:calc(72px + env(safe-area-inset-bottom));width:48px;height:2px;margin-left:-24px;border-radius:2px;background:${ouroSuave};overflow:hidden;opacity:0;animation:abre-surge .3s .7s forwards}
+      #app-abertura i::after{content:'';position:absolute;top:0;bottom:0;width:40%;background:${ouro};animation:abre-corre 1.1s ease-in-out infinite}
       #app-abertura.saindo{opacity:0;visibility:hidden}
       #app-abertura.saindo img{transform:scale(1.04)}
       @keyframes abre-surge{to{opacity:1}}
@@ -301,7 +315,7 @@ export default defineConfig({
   css: { postcss: { plugins: [celularDeitado, paraSafari, medidasPelaTela] } },
   plugins: [
     cascaPorMarca(),
-    paletaDaMarca(PALETAS[MARCA.id] ?? PALETAS[FAMILIA]),
+    paletaDaMarca(PALETAS[MARCA.id] ?? PALETAS[FAMILIA], TRADUCAO),
     react(),
     {
       // O nome e o emblema entram no index.html na hora do build. O titulo da
@@ -398,6 +412,8 @@ export default defineConfig({
                 .replace(/GlobalFly/g, MARCA.nomeCurto ?? MARCA.prosa)
                 .replace(/\bGF (?=(Raptor|Falcon|Legacy|Gulf|Phenom|Member)\b)/g, `${MARCA.sigla ?? 'GF'} `)
                 .replace(/globalflytrade\.com/g, host))
+              // e as cores do manual dela (a página é escrita na paleta da GF)
+              if (TRADUCAO) writeFileSync(arquivo, traduzir(readFileSync(arquivo, 'utf8'), TRADUCAO))
             }
           }
           rmSync(join(destinoCaptura, 'estilo.css'), { force: true })
@@ -497,6 +513,25 @@ export default defineConfig({
         // plataforma); os e-mails, os avisos no celular e a agenda apontam para cá
         if (MARCA.id === 'globalfly' && existsSync(join(RAIZ, 'live-globalfly'))) {
           cpSync(join(RAIZ, 'live-globalfly'), join(SAIDA, 'live'), { recursive: true })
+        }
+
+        /*
+          Peças próprias de uma marca da família (25/11/2026, Legacy Pro). A casca da GlobalFly
+          cita os arquivos dela pelo nome (globalfly-gf-claro.png, login-globalfly/...). No site
+          da outra marca, o que estiver em sobrepor-<marca>/ entra POR CIMA, com o mesmo nome:
+          o endereço fica o da família, o desenho é o da marca. Os ícones do app (pwa-<marca>/)
+          também cobrem os da família, que alguns componentes citam direto.
+          As peças saem de scripts/marca-legacypro/gerar.py.
+        */
+        if (MARCA.id !== FAMILIA) {
+          const sobrepor = join(RAIZ, `sobrepor-${MARCA.id}`)
+          if (existsSync(sobrepor)) cpSync(sobrepor, SAIDA, { recursive: true })
+          const pwaDaMarca = join(RAIZ, 'public', `pwa-${MARCA.id}`)
+          if (existsSync(pwaDaMarca)) {
+            // as telas da loja e as de abertura da família mostram a outra marca: saem
+            rmSync(join(SAIDA, `pwa-${FAMILIA}`), { recursive: true, force: true })
+            cpSync(pwaDaMarca, join(SAIDA, `pwa-${FAMILIA}`), { recursive: true })
+          }
         }
 
         const pwaDir = `pwa-${MARCA.id}`

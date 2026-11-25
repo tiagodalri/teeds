@@ -111,8 +111,62 @@ export function recolorir(codigo: string, p: Paleta): string {
     })
 }
 
-/** Plugin do Vite: recolore CSS e componentes de `src/`, menos o cadastro das marcas e a casca (que já é escrita na paleta). */
-export function paletaDaMarca(p: Paleta | undefined) {
+/**
+ * Tradução de uma paleta pronta para a de outra marca da mesma família (25/11/2026, Legacy Pro).
+ *
+ * A Legacy Pro monta com a casca e a paleta da GlobalFly e, no fim, cada cor da GF vira a
+ * equivalente do manual dela: o marinho e o aço viram chumbo e platina (mesma luz, quase sem
+ * saturação) e o Ouro GF vira o Ouro Legacy. Assim nada da GlobalFly precisa ser reescrito e
+ * nenhuma outra marca passa por aqui.
+ */
+export interface Traducao {
+  /** Cores que não se mexem (marcas de terceiros: Facebook, Telegram, WhatsApp...). */
+  manter: string[]
+  /** Faixa de matiz (graus) dos frios da origem e o matiz/saturação do neutro de destino. */
+  frio: { de: number; ate: number; h: number; sEscuro: number; sClaro: number }
+  /** Faixa de matiz do ouro da origem, o tom oficial da origem e o do destino (r,g,b em 0–1). */
+  ouro: { de: number; ate: number; origem: [number, number, number]; destino: [number, number, number] }
+}
+
+export function corTraduzida(r: number, g: number, b: number, t: Traducao): [number, number, number] {
+  const [h, l, s] = hls(r, g, b)
+  if (s < 0.08 || l < 0.02 || l > 0.985) return [r, g, b]
+  if (h >= t.ouro.de && h <= t.ouro.ate && s >= 0.22) {
+    const [ho, lo] = hls(...t.ouro.origem)
+    const [hd, ld, sd] = hls(...t.ouro.destino)
+    if (Math.abs(l - lo) < 0.035 && Math.abs(h - ho) < 6) return t.ouro.destino
+    // mesma família, luz original deslocada na mesma proporção do tom oficial
+    return rgb(hd, Math.min(0.96, l * (ld / lo)), Math.min(s, Math.max(sd, 0.3)))
+  }
+  if (h >= t.frio.de && h <= t.frio.ate) return rgb(t.frio.h, l, Math.min(s, l < 0.5 ? t.frio.sEscuro : t.frio.sClaro))
+  return [r, g, b]
+}
+
+export function traduzir(codigo: string, t: Traducao): string {
+  const manter = new Set(t.manter.map((c) => c.toLowerCase()))
+  return codigo
+    .replace(HEX, (todo, h: string) => {
+      const curto = h.length === 3
+      const seis = curto ? h.split('').map((c) => c + c).join('') : h.slice(0, 6)
+      if (manter.has('#' + seis.toLowerCase())) return todo
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(seis.slice(i, i + 2), 16) / 255)
+      const novo = corTraduzida(r, g, b, t).map(hex2).join('')
+      if (novo === seis.toLowerCase()) return todo
+      return '#' + novo + (h.length === 8 ? h.slice(6) : '')
+    })
+    .replace(RGB, (todo, a: string, b: string, c: string) => {
+      const seis = [a, b, c].map((x) => Number(x).toString(16).padStart(2, '0')).join('')
+      if (manter.has('#' + seis)) return todo
+      const novo = corTraduzida(+a / 255, +b / 255, +c / 255, t).map((x) => Math.round(x * 255))
+      return todo.replace(/\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}/, `(${novo.join(', ')}`)
+    })
+}
+
+/**
+ * Plugin do Vite: recolore CSS e componentes de `src/`, menos o cadastro das marcas e a casca (que já é escrita na paleta).
+ * Com `t` (tradução), o resultado ainda passa para a paleta da outra marca da família, e aí a casca também entra.
+ */
+export function paletaDaMarca(p: Paleta | undefined, t?: Traducao) {
   return {
     name: 'teeds:paleta-da-marca',
     enforce: 'pre' as const,
@@ -120,9 +174,12 @@ export function paletaDaMarca(p: Paleta | undefined) {
       if (!p) return null
       const arquivo = id.split('?')[0]
       if (!arquivo.includes('/src/') || arquivo.includes('node_modules')) return null
-      if (arquivo.endsWith('/src/marca/marcas.ts') || arquivo.includes('/src/casca/')) return null
+      if (arquivo.endsWith('/src/marca/marcas.ts')) return null
       if (!/\.(css|tsx?)$/.test(arquivo)) return null
-      const novo = recolorir(codigo, p)
+      const casca = arquivo.includes('/src/casca/')
+      if (casca && !t) return null
+      const recolorido = casca ? codigo : recolorir(codigo, p)
+      const novo = t ? traduzir(recolorido, t) : recolorido
       return novo === codigo ? null : { code: novo, map: null }
     },
   }

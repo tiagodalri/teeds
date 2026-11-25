@@ -34,6 +34,8 @@ export interface Marca {
   nome: string
   /** Como a marca aparece no meio de uma frase: "A Teeds opera pela...". */
   prosa: string
+  /** A frase da marca na cena da tela de entrada (25/11/2026, Legacy Pro). Sem isto, vale a da GlobalFly. */
+  lema?: { titulo: string; apoio: string }
   /** O nome curto nos textos ("abra a GlobalFly pelo ícone"). Sem ele, a prosa. */
   nomeCurto?: string
   /** A sigla (botões curtos, prefixo das I.A.): GF, LP. Sem ela, o nome curto. */
@@ -573,10 +575,12 @@ export const MARCAS: Record<string, Marca> = {
   negócio só da GF vem junto: sem os parceiros /n /v /d, sem o afiliado,
   as comunidades e os apps da Deriv deles.
 
-  PROVISÓRIO até a identidade da Legacy Pro chegar: emblema, assinatura,
-  cores, fotos e nomes das I.A. ainda são os da GlobalFly. Antes de publicar:
-  appId (app nova na Deriv), afiliado, comunidade, nomes das I.A. (cuidado:
-  "Legacy" já é o nome de uma I.A. da GF) e os arquivos de marca.
+  Identidade própria desde 25/11/2026 (manual da marca v1.0: chumbo e ouro,
+  monograma LP). As peças têm o MESMO nome das da GlobalFly e entram por cima
+  no site dela (sobrepor-legacypro/, ver vite.config.ts); as cores da casca são
+  traduzidas no build (TRADUCOES). Aqui ficam só as cores que o código lê da ficha.
+  PENDENTE: nomes e fotos das I.A. (ainda os voos da GF), afiliado, comunidade
+  e termos. Cuidado: "Legacy" já é o nome de uma I.A. da GF.
 */
 MARCAS.legacypro = {
   ...MARCAS.globalfly,
@@ -617,8 +621,18 @@ MARCAS.legacypro = {
   // PENDENTE: os termos e políticas da Legacy Pro (empresa, CNPJ, foro). Os da GF
   // (src/termos/globalfly) citam a GlobalFly e não podem aparecer aqui.
   termos: false,
+  // Chumbo organiza, ouro indica seleção (manual da Legacy Pro, pág. 33).
+  cor: { claro: '#17181B', escuro: '#C9A24A' },
+  lema: { titulo: 'Construído para permanecer.', apoio: 'Tecnologia, método e gestão de risco.' },
+  desenhoDosRobos: Object.fromEntries(Object.entries(MARCAS.globalfly.desenhoDosRobos ?? {})
+    .map(([id, d]) => [id, { ...d, cor: '#7B8089', corSuave: '#E9EAEC' }])),
   email: {
     ...MARCAS.globalfly.email,
+    faixa: '#08080A',
+    letreiro: '#F3EFE6',
+    botao: '#C9A24A',
+    tintaDoBotao: '#08080A',
+    fundo: '#F3EFE6',
     rodape:
       'A Legacy Pro é uma plataforma de operações que funciona com a sua própria conta na Deriv. ' +
       'Negociar envolve risco de perda.',
