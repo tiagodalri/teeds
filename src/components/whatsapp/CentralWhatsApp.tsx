@@ -575,6 +575,8 @@ function Conversa(p: {
     catch (e) { setSugerindo((e as Error).message); setTimeout(() => setSugerindo(null), 6000) }
   }
   const rolagem = useRef<HTMLDivElement>(null)
+  const abertaEm = useRef(Date.now() - 1500)
+  const [longeDoFim, setLongeDoFim] = useState(false)
   const noFim = useRef(true)
   const qtd = useRef(0)
   const perfil = api.perfil
@@ -733,10 +735,11 @@ function Conversa(p: {
         {contato.situacao === 'aberta'
           ? <button className="wz-btn resolver" onClick={() => p.onMudar({ situacao: 'resolvida' })}><I.certo /><span className="wz-btn-texto">Resolver</span></button>
           : <button className="wz-btn" onClick={() => p.onMudar({ situacao: 'aberta' })}><span className="wz-btn-texto">Reabrir</span></button>}
-        <button className={`wz-icone-btn ${buscando ? 'on' : ''}`} onClick={() => { setBuscando((v) => !v); setTermo('') }} title="Pesquisar na conversa" aria-label="Pesquisar na conversa"><I.lupa /></button>
+        <button className={`wz-icone-btn wz-so-largo ${buscando ? 'on' : ''}`} onClick={() => { setBuscando((v) => !v); setTermo('') }} title="Pesquisar na conversa" aria-label="Pesquisar na conversa"><I.lupa /></button>
         <span className="wz-menu-ancora">
           <button className={`wz-icone-btn ${menuTopo ? 'on' : ''}`} onClick={() => setMenuTopo((v) => !v)} aria-label="Mais opções" aria-expanded={menuTopo}><I.mais /></button>
           {menuTopo && <div className="wz-menu" role="menu" onMouseLeave={() => setMenuTopo(false)}>
+            <button role="menuitem" className="wz-so-estreito" onClick={() => { setBuscando(true); setTermo(''); setMenuTopo(false) }}><I.lupa />Pesquisar na conversa</button>
             <button role="menuitem" onClick={() => { p.onDados(); setMenuTopo(false) }}><I.pessoa />Dados do contato</button>
             <button role="menuitem" onClick={() => { p.onMudar({ fixada: !contato.fixada }); setMenuTopo(false) }}><I.alfinete />{contato.fixada ? 'Desafixar conversa' : 'Fixar conversa'}</button>
             <button role="menuitem" onClick={() => { p.onMudar({ naoLidas: 1 }); setMenuTopo(false); p.onVoltar() }}><I.balao />Marcar como não lida</button>
@@ -760,8 +763,12 @@ function Conversa(p: {
 
     <div className="wz-mensagens" ref={rolagem} onScroll={(e) => {
       const el = e.currentTarget
-      noFim.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+      const falta = el.scrollHeight - el.scrollTop - el.clientHeight
+      noFim.current = falta < 80
       if (noFim.current && novasEmbaixo) setNovasEmbaixo(0)
+      // a seta de descer aparece quando a pessoa subiu bastante, como no WhatsApp (só muda o estado quando cruza o limite)
+      const longe = falta > 600
+      if (longe !== longeDoFim) setLongeDoFim(longe)
       // pede as antigas antes de bater no topo (rolagem contínua, sem esperar)
       if (el.scrollTop < 400) pedirAntigas()
     }}>
@@ -774,20 +781,20 @@ function Conversa(p: {
         </div>}
         {blocos.map((b) => <div key={b.dia} className="wz-dia">
           <span className="wz-dia-rotulo">{b.dia}</span>
-          {b.itens.map((m, i) => <div key={m.id} data-msg={m.id} className={achados[achado] === m.id ? 'wz-achado' : undefined}>
+          {b.itens.map((m, i) => <div key={m.id} data-msg={m.id} className={[achados[achado] === m.id ? 'wz-achado' : '', Date.parse(m.criadoEm) > abertaEm.current ? 'wz-entrou' : ''].filter(Boolean).join(' ') || undefined}>
             {m.id === idPrimeiraNaoLida && <div className="wz-marco-nao-lidas">{p.naoLidasAoAbrir} mensage{p.naoLidasAoAbrir > 1 ? 'ns' : 'm'} não lida{p.naoLidasAoAbrir > 1 ? 's' : ''}</div>}
             <BalaoLeve m={m} anterior={b.itens[i - 1]} citada={m.citando ? porWamid.get(m.citando) ?? null : null} termo={buscando ? termo.trim() : ''}
               contato={contato} api={api} janelaAberta={j.aberta} a={acoesFixas} />
           </div>)}
         </div>)}
       </div>
+      <div className="wz-descer-trilho">{(novasEmbaixo > 0 || longeDoFim) && <button className="wz-descer" onClick={() => { const el = rolagem.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: el.scrollHeight - el.scrollTop > 4000 ? 'auto' : 'smooth' }); setNovasEmbaixo(0) }} aria-label={novasEmbaixo ? 'Ir para as mensagens novas' : 'Ir para o fim da conversa'}>{novasEmbaixo > 0 && <b>{novasEmbaixo}</b>}<I.baixo /></button>}</div>
     </div>
-    {novasEmbaixo > 0 && <button className="wz-descer" onClick={() => { const el = rolagem.current; if (el) el.scrollTop = el.scrollHeight; setNovasEmbaixo(0) }} aria-label="Ir para as mensagens novas"><b>{novasEmbaixo}</b><I.baixo /></button>}
     {arrastando && <div className="wz-soltar"><span><I.clipe /></span><b>Solte para anexar</b><small>Foto, vídeo, áudio ou PDF</small></div>}
 
     {perfil?.assessor && <div className={`wz-faixa-assumir ${contato.iaPausada ? 'com-equipe' : ''}`}>
       {contato.iaPausada
-        ? <><I.pessoa /><span><b>{p.nomeDe(contato.pausadaPor ?? contato.responsavel) ?? 'A equipe'} assumiu esta conversa.</b> O Assessor fica quieto até alguém devolver (ou 6 h sem a equipe escrever).</span><button className="wz-btn" onClick={() => p.onMudar({ iaPausada: false })}>Devolver ao Assessor</button></>
+        ? <><I.pessoa /><span title="O Assessor fica quieto até alguém devolver (ou 6 h sem a equipe escrever)."><b>{(() => { const q = p.nomeDe(contato.pausadaPor ?? contato.responsavel); return q === 'Você' ? 'Você assumiu esta conversa' : `${q ?? 'A equipe'} assumiu esta conversa` })()}</b><small> · O Assessor fica quieto até alguém devolver (ou 6 h sem a equipe escrever).</small></span><button className="wz-btn" onClick={() => p.onMudar({ iaPausada: false })}>Devolver ao Assessor</button></>
         : <><I.whats /><span>{p.estado.assessorPausadoGeral ? 'O Assessor está pausado para todos: responda por aqui.' : 'O Assessor está respondendo. Se você escrever, assume a conversa e ele para de responder aqui.'}</span></>}
       {api.sugerirResposta && contato.userId && <button className="wz-btn sugerir" disabled={sugerindo === 'Escrevendo…'} onClick={() => void sugerir()} title="O Assessor escreve a resposta para a última mensagem do cliente, com os dados dele. Você revisa antes de enviar; nada é ligado nem enviado sozinho.">{sugerindo === 'Escrevendo…' ? 'Escrevendo…' : <><I.raio />Sugerir resposta</>}</button>}
     </div>}
@@ -847,7 +854,7 @@ function Balao({ m, anterior, citada, termo, contato, api, janelaAberta, nomeDe,
   const [menu, setMenu] = useState(false)
   const emSequencia = !!anterior && anterior.direcao === m.direcao && anterior.direcao !== 'nota' && new Date(m.criadoEm).getTime() - new Date(anterior.criadoEm).getTime() < 5 * 60_000
   if (m.direcao === 'nota') {
-    return <div className="wz-nota"><span className="wz-nota-rot"><I.nota />Nota interna de {nomeDe(m.autor) ?? 'Equipe'} · o cliente não vê</span>
+    return <div className="wz-nota"><span className="wz-nota-rot"><I.nota />{(() => { const quem = nomeDe(m.autor) ?? 'Equipe'; return quem === 'Você' ? 'Sua nota interna' : `Nota interna de ${quem}` })()} · o cliente não vê</span>
       <p>{formatar(m.texto ?? '', termo)}</p><time title={dataEHora(m.criadoEm)}>{m.favorita && <I.estrela />}{horaCurta(m.criadoEm)}</time></div>
   }
   const sai = m.direcao === 'saida'

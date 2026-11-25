@@ -857,3 +857,86 @@
 /* 25/11/2026: rolagem — a âncora é feita no código (o navegador não pula sozinho), a rolagem não vaza para a página e fica lisa no trackpad/celular */
 .wz-mensagens { overflow-anchor: none; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: stable; }
 .wz-itens, .wz-dados-rolagem { overscroll-behavior: contain; }
+
+/* ================= 25/11/2026 noite: polimento nível WhatsApp/Apple ================= */
+/* o topo da conversa se ajusta à largura DA CONVERSA (não da tela): com a ficha aberta os botões viram ícones e o nome nunca some */
+.wz-conversa { container: conversa / inline-size; }
+@container conversa (max-width: 760px) {
+  .wz-conversa-acoes .wz-btn-texto { display: none; }
+  .wz-conversa-acoes .wz-btn { width: 36px; padding: 0; }
+  .wz-dono { padding: 0 2px 0 8px; }
+  .wz-dono select { max-width: 92px; }
+  .wz-faixa-assumir small { display: none; }
+}
+@container conversa (max-width: 600px) { .wz-dono { display: none; } }
+.wz-conversa-quem > span:not(.wz-avatar) { flex: 1; }
+.wz-conversa-quem > .wz-avatar { flex: none; }
+.wz-conversa-quem b { font-weight: 600; letter-spacing: -.005em; }
+
+/* faixa de assumir: uma linha só, explicação cortada com reticências */
+.wz-faixa-assumir { min-height: 46px; padding: 6px 12px 6px 16px; }
+.wz-faixa-assumir > span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wz-faixa-assumir small { font-size: 12.5px; color: var(--wz-sub); }
+.wz-faixa-assumir .wz-btn { min-height: 32px; }
+
+/* filtros e etiquetas da lista: rolam de lado com a borda esfumada (sem corte seco) */
+.wz-filtros, .wz-filtro-etiquetas { -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent); padding-right: 28px; scroll-padding-inline: 12px; }
+.wz-filtros button, .wz-filtro-etiquetas button { transition: background .18s, color .18s, transform .12s; }
+
+/* barras de rolagem finas e discretas, como no WhatsApp Web */
+.wz-mensagens, .wz-itens, .wz-dados-rolagem { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--wz-icone) 30%, transparent) transparent; }
+.wz-mensagens::-webkit-scrollbar, .wz-itens::-webkit-scrollbar, .wz-dados-rolagem::-webkit-scrollbar { width: 6px; }
+.wz-mensagens::-webkit-scrollbar-thumb, .wz-itens::-webkit-scrollbar-thumb, .wz-dados-rolagem::-webkit-scrollbar-thumb { border-radius: 6px; background: color-mix(in srgb, var(--wz-icone) 30%, transparent); }
+.wz-mensagens::-webkit-scrollbar-track, .wz-itens::-webkit-scrollbar-track, .wz-dados-rolagem::-webkit-scrollbar-track { background: transparent; }
+.wz-mensagens { scrollbar-gutter: auto; }
+
+/* data fixa no topo: pílula de vidro */
+.wz-dia-rotulo { background: color-mix(in srgb, var(--wz-app) 82%, transparent); -webkit-backdrop-filter: blur(10px) saturate(1.4); backdrop-filter: blur(10px) saturate(1.4); font-weight: 500; letter-spacing: .01em; box-shadow: 0 1px 2px var(--wz-sombra); }
+
+/* mensagem nova entra deslizando; menus surgem com leve escala */
+.wz-entrou > .wz-linha, .wz-entrou > .wz-nota { animation: wz-msg-entra .26s cubic-bezier(.2, .9, .3, 1) both; }
+.wz-entrou > .wz-linha.sai { transform-origin: bottom right; } .wz-entrou > .wz-linha.entra { transform-origin: bottom left; }
+@keyframes wz-msg-entra { from { opacity: 0; transform: translateY(10px) scale(.97); } }
+.wz-menu, .wz-menu-msg { animation: wz-surge .16s cubic-bezier(.2, .9, .3, 1) both; transform-origin: top right; }
+@keyframes wz-surge { from { opacity: 0; transform: translateY(-4px) scale(.96); } }
+.wz-descer-trilho { position: sticky; bottom: 14px; z-index: 3; height: 0; }
+.wz-descer-trilho .wz-descer { position: absolute; right: 18px; bottom: 0; top: auto; animation: wz-surge .18s ease both; }
+.wz-descer:hover { color: var(--wz-texto); }
+
+/* toque com resposta: botões afundam de leve, foco visível só no teclado */
+.wz-btn, .wz-icone-btn, .wz-enviar, .wz-filtros button { transition: background .15s, border-color .15s, color .15s, transform .1s; }
+.wz-btn:active:not(:disabled), .wz-icone-btn:active:not(:disabled), .wz-enviar:active:not(:disabled), .wz-filtros button:active { transform: scale(.96); }
+.wz :focus { outline: none; }
+.wz :focus-visible { outline: 2px solid color-mix(in srgb, var(--wz-verde) 70%, transparent); outline-offset: 2px; border-radius: 10px; }
+.wz textarea:focus-visible, .wz input:focus-visible { outline: none; }
+
+/* item da lista: troca de fundo suave e selecionado com marca lateral */
+.wz-item-corpo { transition: background .15s; }
+.wz-item.on .wz-item-corpo { box-shadow: inset 3px 0 0 var(--wz-verde); }
+
+@media (prefers-reduced-motion: reduce) { .wz-entrou > *, .wz-menu, .wz-menu-msg, .wz-descer { animation: none !important; } .wz-btn:active, .wz-icone-btn:active { transform: none; } }
+
+/* celular: faixa do Assessor em duas linhas compactas (abas + nome; botões lado a lado), sem tela cheia */
+@media (max-width: 640px) {
+  .wz-faixa.wz-faixa-assessor { flex-wrap: wrap; row-gap: 8px; column-gap: 8px; padding: 8px; }
+  .wz-faixa.wz-faixa-assessor > .aas-vistas { order: 0; }
+  .wz-faixa-assessor > div { flex: 1 1 0; min-width: 0; }
+  .wz-faixa-assessor .wz-num { display: none; }
+  .wz-faixa-assessor > div > b { display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+  .wz-faixa.wz-faixa-assessor .wz-btn { flex: 1 1 40%; width: auto; min-height: 36px; }
+  .wz-faixa-assessor > .wz-icone-btn { display: none; }
+}
+/* conversa estreita (celular): o nome tem prioridade; a pesquisa vai para o menu ⋮ */
+@container conversa (max-width: 440px) {
+  .wz-conversa-acoes { gap: 2px; }
+  .wz-conversa-acoes > .wz-icone-btn.wz-so-largo { display: none; }
+  .wz-conversa-quem { gap: 10px; }
+  .wz-conversa-quem small .wz-tel { display: none; }
+}
+.wz-menu > button.wz-so-estreito { display: none; }
+@container conversa (max-width: 440px) { .wz-menu > button.wz-so-estreito { display: flex; } }
+@media (max-width: 640px) {
+  .wz-faixa-assessor > .wz-faixa-icone { display: none; }
+  .wz-faixa.wz-faixa-assessor b .wz-ponto { margin-left: 2px; font-size: 0; padding: 0; width: 18px; height: 18px; display: inline-grid; place-items: center; }
+  .wz-faixa.wz-faixa-assessor b .wz-ponto::before { margin: 0; width: 8px; height: 8px; }
+}
