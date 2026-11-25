@@ -124,10 +124,11 @@ export function RecomendacaoDaIA({ aoLigar, aoMudar, ciclo, membros }: Props) {
       onPointerMove={mover} onPointerLeave={soltar}>
       <span className="rc-fotos" aria-hidden="true">
         {fotos.map((f) => <img key={f.id} src={f.src} srcSet={f.srcSet} sizes="(max-width: 700px) 100vw, 60vw" alt="" loading="lazy" decoding="async" className={vista?.id === f.id ? 'vista' : ''} />)}
+        {/* o reflexo do sol no metal: a mesma foto, mais clara e contrastada, só numa faixa que atravessa */}
+        {!analisando && vista && (() => { const f = fotos.find((x) => x.id === vista.id); return f ? <img key={`reflexo-${f.id}-${rec?.de ?? 0}`} className="rc-reflexo" src={f.src} srcSet={f.srcSet} sizes="(max-width: 700px) 100vw, 60vw" alt="" decoding="async" /> : null })()}
       </span>
       <i className="rc-veu" aria-hidden="true" />
       <i className="rc-luz" aria-hidden="true" />
-      <i className="rc-eixo" aria-hidden="true"><b /></i>
       <i className="rc-scan" aria-hidden="true" />
       <i className="rc-grao" aria-hidden="true" />
 

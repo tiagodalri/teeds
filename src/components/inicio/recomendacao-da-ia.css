@@ -45,11 +45,21 @@
 .rc.pronta .rc-luz { opacity: 1; }
 @keyframes rc-respira { 50% { transform: scale(1.12); opacity: .65; } }
 
-/* o eixo do manual (pág. 18), com um brilho que corre pelo fio */
-.rc-eixo { position: absolute; z-index: -1; left: 58%; top: -45%; width: 1.5px; height: 190%; background: rgba(183, 141, 57, .45); transform: rotate(32deg); pointer-events: none; overflow: hidden; }
-.rc-eixo b { position: absolute; left: -1px; width: 3.5px; height: 22%; top: -25%; border-radius: 4px;
-  background: linear-gradient(180deg, transparent, #F6D58A 50%, transparent); filter: drop-shadow(0 0 6px #E8BF63); animation: rc-corre 5.5s 1.2s cubic-bezier(.5, 0, .3, 1) infinite; }
-@keyframes rc-corre { 0% { top: -25%; } 55%, 100% { top: 110%; } }
+/* o reflexo do sol no metal (25/11/2026; antes um fio dourado na diagonal cortava o jato): uma cópia da
+   foto, mais clara e contrastada, aparece só numa faixa que atravessa a cada 10 s. O contraste deixa o céu
+   mais escuro que o original e o "lighten" fica com o mais claro dos dois: acende só a fuselagem. Mesma
+   câmera lenta da foto, para andar junto. */
+.rc-fotos img.rc-reflexo { opacity: 1; transform: scale(1); transition: none;
+  filter: contrast(2.1) brightness(1.4) saturate(.5) sepia(.2); mix-blend-mode: lighten;
+  -webkit-mask-image: linear-gradient(100deg, transparent 42%, rgba(0, 0, 0, .35) 46.5%, #000 50%, rgba(0, 0, 0, .35) 53.5%, transparent 58%);
+          mask-image: linear-gradient(100deg, transparent 42%, rgba(0, 0, 0, .35) 46.5%, #000 50%, rgba(0, 0, 0, .35) 53.5%, transparent 58%);
+  -webkit-mask-size: 300% 100%; mask-size: 300% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: 100% 0; mask-position: 100% 0;
+  animation: rc-camera 26s ease-in-out infinite alternate, rc-reflexo-sol 10s 1.8s cubic-bezier(.45, .1, .4, 1) infinite; }
+@keyframes rc-reflexo-sol {
+  0% { -webkit-mask-position: 100% 0; mask-position: 100% 0; }
+  34%, 100% { -webkit-mask-position: 0% 0; mask-position: 0% 0; }
+}
 
 /* analisando: uma faixa de luz varre o cartão */
 .rc-scan { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: 0;
@@ -138,7 +148,6 @@
   .rc-fotos img { object-position: 60% 50%; }
   .rc-veu, .rc.analisando .rc-veu { background: linear-gradient(180deg, rgba(5, 21, 40, .55) 0%, rgba(5, 21, 40, .08) 24%, rgba(5, 21, 40, .78) 50%, var(--rc-azul) 66%); }
   .rc-luz { left: -20%; top: 44%; width: 110%; height: 50%; }
-  .rc-eixo { left: 72%; }
   .rc-corpo { min-height: 510px; padding: 16px 16px 22px; gap: 10px; transform: none; }
   .rc-topo { flex-wrap: nowrap; }
   .rc-rotulo { font-size: 11px; letter-spacing: .06em; gap: 7px; white-space: nowrap; }
@@ -160,6 +169,7 @@
 .in-jato.recomendada .in-jato-mono { opacity: 0; }
 
 @media (prefers-reduced-motion: reduce) {
+  .rc-fotos img.rc-reflexo { display: none; }
   .rc *, .rc *::before, .rc *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .rc-fotos, .rc-corpo { transform: none !important; }
 }
