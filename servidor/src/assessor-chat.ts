@@ -149,6 +149,19 @@ export async function guardarMidiaRecebida(idWpp: string, numero: string, corpo:
   } catch (e) { console.warn(`[assessor-chat] mídia de …${numero.slice(-4)} não guardada: ${(e as Error).message}`) }
 }
 
+/** Endereço assinado para a TELA subir um arquivo grande direto no bucket (até 16 MB), sem passar pelo teto de 2 MB do servidor. */
+export async function urlParaSubir(numero: unknown, nome: unknown, mime: unknown, tamanho: unknown): Promise<{ url: string; caminho: string }> {
+  const n = numeroValido(numero)
+  const t = Number(tamanho)
+  if (!Number.isFinite(t) || t <= 0) throw new Error('Arquivo vazio.')
+  if (t > 16_000_000) throw new Error('O WhatsApp aceita arquivos de até 16 MB por aqui. Mande um menor.')
+  const caminho = `assessor/${n}/equipe_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${extDe(String(mime ?? ''), String(nome ?? ''))}`
+  const r = await fetch(`${URL_BASE}/storage/v1/object/upload/sign/whatsapp/${caminho}`, { method: 'POST', headers: { apikey: CHAVE, Authorization: `Bearer ${CHAVE}`, 'Content-Type': 'application/json' }, body: '{}' })
+  const d = await r.json().catch(() => ({} as any))
+  if (!r.ok || !d?.url) throw new Error('Não consegui preparar o envio do arquivo agora.')
+  return { url: `${URL_BASE}/storage/v1${d.url}`, caminho }
+}
+
 export async function linkDoArquivo(caminho: unknown): Promise<string> {
   const c = String(caminho ?? '')
   if (!/^assessor\/\d{10,15}\/[\w.-]+$/.test(c)) throw new Error('Arquivo inválido.')

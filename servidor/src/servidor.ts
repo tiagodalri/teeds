@@ -41,7 +41,7 @@ import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
-import { apagarPelaEquipe, arquivoPelaEquipe, bloquearContato, editarPelaEquipe, encaminharPelaEquipe, enviarPelaEquipe, fotoDoWhatsapp, marcarLidaPelaEquipe, numeroNoWhatsapp, pausarAssessorGeral, postarStatus, presencasRecentes, reagirPelaEquipe, sugerirResposta } from './zapi'
+import { apagarPelaEquipe, arquivoPelaEquipe, bloquearContato, contatoPelaEquipe, localizacaoPelaEquipe, editarPelaEquipe, encaminharPelaEquipe, enviarPelaEquipe, fotoDoWhatsapp, marcarLidaPelaEquipe, numeroNoWhatsapp, pausarAssessorGeral, postarStatus, presencasRecentes, reagirPelaEquipe, sugerirResposta } from './zapi'
 import { fichaCompleta, talvezSeja } from './ficha-cliente'
 import * as chatDoAssessor from './assessor-chat'
 import { assessorLiberado, assessorLiberadoPara, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
@@ -1403,6 +1403,9 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
             return json(200, { numero: await chatDoAssessor.novaConversa(dono.id, numero, corpo.nome) })
           }
           if (r === 'encaminhar') return json(200, { enviados: await encaminharPelaEquipe(dono.id, corpo.numero, corpo.id, corpo.destinos) })
+          if (r === 'subir') return json(200, await chatDoAssessor.urlParaSubir(corpo.numero, corpo.nome, corpo.mime, corpo.tamanho))
+          if (r === 'localizacao') return json(200, { mensagem: await localizacaoPelaEquipe(dono.id, corpo) })
+          if (r === 'contato') return json(200, { mensagem: await contatoPelaEquipe(dono.id, corpo) })
           if (r === 'apagar') { await apagarPelaEquipe(corpo.numero, corpo.id); return json(200, { ok: true }) }
           if (r === 'editar') { await editarPelaEquipe(corpo.numero, corpo.id, corpo.texto); return json(200, { ok: true }) }
           if (r === 'status') { await postarStatus(corpo); return json(200, { ok: true }) }

@@ -43,6 +43,16 @@ const paraBase64 = (f: File) => new Promise<string>((ok, nao) => {
   r.readAsDataURL(f)
 })
 
+/** Sobe o arquivo direto para o bucket pelo endereço assinado e pede ao servidor para mandar pelo Assessor. */
+async function subirEEnviar(sessao: SessaoTeeds, numero: string, arquivo: File, extra: Record<string, unknown>): Promise<void> {
+  if (arquivo.size > 16_000_000) throw new Error('O WhatsApp aceita arquivos de até 16 MB por aqui. Mande um menor.')
+  const mime = arquivo.type || 'application/octet-stream'
+  const { url, caminho } = await postar<{ url: string; caminho: string }>(sessao, 'subir', { numero, nome: arquivo.name, mime, tamanho: arquivo.size })
+  const r = await fetch(url, { method: 'PUT', headers: { 'Content-Type': mime, 'x-upsert': 'true' }, body: arquivo }).catch(() => null)
+  if (!r?.ok) throw new Error('Não consegui subir o arquivo. Confira a internet e tente de novo.')
+  await postar(sessao, 'arquivo', { numero, caminho, nome: arquivo.name, mime, tamanho: arquivo.size, ...extra })
+}
+
 export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
   const banco = whatsappDoBanco(sessao, 'globalfly')
   const links = new Map<string, Promise<string>>()
@@ -63,10 +73,11 @@ export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
     async contatos() { return (await pedir<{ conversas: ContatoWpp[] }>(sessao, 'conversas')).conversas },
     async mensagens(id, antesDe) { return (await pedir<{ mensagens: MensagemWpp[] }>(sessao, `mensagens?numero=${encodeURIComponent(id)}${antesDe ? `&antes=${encodeURIComponent(antesDe)}` : ''}`)).mensagens },
     async enviarTexto(id, texto, citando) { await postar(sessao, 'enviar', { numero: id, texto, citando: citando ?? null }) },
-    async enviarArquivo(id, arquivo, legenda) {
-      if (arquivo.size > 1_400_000) throw new Error('Pelo Assessor dá para mandar arquivo de até 1,4 MB. Mande um menor.')
-      await postar(sessao, 'arquivo', { numero: id, nome: arquivo.name, mime: arquivo.type, dados: await paraBase64(arquivo), legenda: legenda ?? '' })
-    },
+    // 25/11/2026: o arquivo sobe direto para o armazenamento (até 16 MB) e a Z-API busca de lá: sem o teto de 2 MB do servidor
+    async enviarArquivo(id, arquivo, legenda, citando) { await subirEEnviar(sessao, id, arquivo, { legenda: legenda ?? '', citando: citando ?? null }) },
+    async enviarFigurinha(id, arquivo) { await subirEEnviar(sessao, id, arquivo, { figurinha: true }) },
+    async enviarLocalizacao(id, d) { await postar(sessao, 'localizacao', { numero: id, ...d }) },
+    async enviarContato(id, d) { await postar(sessao, 'contato', { numero: id, ...d }) },
     enviarModelo: () => Promise.reject(new Error('O Assessor não usa modelos aprovados.')),
     async nota(id, texto) { return (await postar<{ mensagem: MensagemWpp }>(sessao, 'nota', { numero: id, texto })).mensagem },
     async ler(id) { await postar(sessao, 'ler', { numero: id }) },
@@ -152,6 +163,9 @@ export function assessorDeExemplo(euId = 'eu'): WhatsAppApi {
     async editar() { await new Promise((r) => setTimeout(r, 300)) },
     async postarStatus() { await new Promise((r) => setTimeout(r, 700)) },
     async bloquear() { await new Promise((r) => setTimeout(r, 300)) },
+    async enviarFigurinha() { await new Promise((r) => setTimeout(r, 400)) },
+    async enviarLocalizacao() { await new Promise((r) => setTimeout(r, 400)) },
+    async enviarContato() { await new Promise((r) => setTimeout(r, 400)) },
     async fotoDoContato(id) { return id.endsWith('1') ? null : `https://i.pravatar.cc/240?u=${id}` },
     async fichaCompleta(id) {
       await new Promise((r) => setTimeout(r, 500))
@@ -194,7 +208,17 @@ export function assessorDeExemplo(euId = 'eu'): WhatsAppApi {
       return l.map((c, i) => ({ ...c, iaPausada: pausas.get(c.id) ?? i === 1 }))
     },
     async mensagens(id, antes) {
-      const l = await base.mensagens(id, antes)
+      let l = await base.mensagens(id, antes)
+      // laboratório com ?historico: 300 mensagens antigas, para testar a rolagem e a carga por páginas
+      if (typeof location !== 'undefined' && location.search.includes('historico')) {
+        const ini = new Date(l[0]?.criadoEm ?? Date.now()).getTime()
+        const velhas: MensagemWpp[] = Array.from({ length: 300 }, (_, i) => ({ ...l[0], id: `h-${id}-${i}`, wamid: null, direcao: i % 3 ? 'entrada' : 'saida', tipo: 'texto', midia: null, citando: null, reacao: null, reacaoEquipe: null, status: 'lida',
+          texto: `Mensagem antiga nº ${i + 1}${i % 7 === 0 ? ' — um texto mais comprido para variar a altura das bolhas e ver se a rolagem continua no lugar certo quando carregar mais' : ''}`,
+          criadoEm: new Date(ini - (300 - i) * 37 * 60_000).toISOString() } as MensagemWpp))
+        const tudo = [...velhas, ...l.filter((m) => !antes || m.criadoEm < antes)]
+        l = antes ? tudo.filter((m) => m.criadoEm < antes).slice(-60) : [...velhas.slice(-Math.max(0, 60 - l.length)), ...l]
+        await new Promise((r) => setTimeout(r, 350))
+      }
       // na conversa que a equipe não assumiu, quem respondeu foi o Assessor
       const comEquipe = (await this.contatos()).find((c) => c.id === id)?.iaPausada
       return l.map((m) => (m.direcao === 'saida' && !comEquipe ? { ...m, autor: 'assessor' } : m))

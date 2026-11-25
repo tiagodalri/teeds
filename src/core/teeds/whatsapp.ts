@@ -131,6 +131,10 @@ export interface WhatsAppApi {
   editar?(contatoId: string, m: MensagemWpp, texto: string): Promise<void>
   postarStatus?(d: { tipo: 'texto' | 'imagem' | 'video'; texto: string; arquivo?: File | null }): Promise<void>
   bloquear?(contatoId: string, sim: boolean): Promise<void>
+  /** só no Assessor: figurinha, localização e cartão de contato */
+  enviarFigurinha?(contatoId: string, arquivo: File): Promise<void>
+  enviarLocalizacao?(contatoId: string, d: { titulo: string; endereco: string; latitude: number; longitude: number }): Promise<void>
+  enviarContato?(contatoId: string, d: { nome: string; telefone: string }): Promise<void>
 }
 
 /* ------------------------------------------------------------ apoio */

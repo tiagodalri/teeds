@@ -10,7 +10,7 @@
  *
  * Antes de conectar o número, a central abre com conversas de EXEMPLO (marcadas).
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
   whatsappDoBanco, whatsappDeExemplo, janela, JANELA_LIVRE, textoDaJanela, telefoneBonito, nomeDoContato, conferirArquivo,
@@ -19,7 +19,7 @@ import {
   type PessoaDaEquipe, type MidiaWpp, type ArquivosDoContato, type AchadoWpp,
 } from '../../core/teeds/whatsapp'
 import { EscolherModelo, GerirRespostas, Conexao, Janela } from './JanelasWpp'
-import { JanelaEditar, JanelaEncaminhar, JanelaStatus } from './JanelasAssessor'
+import { JanelaContato, JanelaEditar, JanelaEncaminhar, JanelaLocalizacao, JanelaStatus } from './JanelasAssessor'
 import { NovaConversaPainel, type EscolhaDeContato } from './NovaConversaPainel'
 import { FichaDoCliente } from '../assessor/FichaDoCliente'
 import { GaleriaDoContato, Visualizador, FaixaDeMidias, NotasDoContato } from './MidiasDoContato'
@@ -179,7 +179,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
     void api.respostas().then((l) => vivo && setRespostas(l))
     void api.modelos().then((l) => vivo && setModelos(l))
     const parar = api.acompanhar((m) => {
-      if (m.tipo === 'presenca') { setPresencas(m.item); return }
+      if (m.tipo === 'presenca') { setPresencas((a) => (JSON.stringify(a) === JSON.stringify(m.item) ? a : m.item)); return }
       if (m.tipo === 'contato') {
         const antes = contatosRef.current?.find((c) => c.id === m.item.id)
         const chegou = m.item.ultimaDirecao === 'entrada' && m.item.naoLidas > (antes?.naoLidas ?? 0)
@@ -295,12 +295,17 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
     setAvisos(ok); try { localStorage.setItem(CHAVE_AVISOS, ok ? '1' : '0') } catch { /* */ }
   }
 
+  // 25/11/2026: uma carga por vez (o topo da rolagem pedia várias seguidas e trazia o histórico inteiro, às vezes em dobro)
+  const carregandoAntigas = useRef<Set<string>>(new Set())
   const maisAntigas = useCallback(async (id: string) => {
     const l = msgs[id]
-    if (!l?.length || tudo[id]) return
-    const antes = await api.mensagens(id, l[0].criadoEm).catch(() => [])
-    setMsgs((t) => ({ ...t, [id]: [...antes, ...(t[id] ?? [])] }))
-    setTudo((t) => ({ ...t, [id]: antes.length < POR_PAGINA }))
+    if (!l?.length || tudo[id] || carregandoAntigas.current.has(id)) return
+    carregandoAntigas.current.add(id)
+    try {
+      const antes = await api.mensagens(id, l[0].criadoEm).catch(() => [])
+      setMsgs((t) => { const atuais = t[id] ?? []; const ja = new Set(atuais.map((x) => x.id)); return { ...t, [id]: [...antes.filter((x) => !ja.has(x.id)), ...atuais] } })
+      setTudo((t) => ({ ...t, [id]: antes.length < POR_PAGINA }))
+    } finally { carregandoAntigas.current.delete(id) }
   }, [api, msgs, tudo])
 
   const recarregar = useCallback(async (id: string) => {
@@ -546,6 +551,11 @@ function Conversa(p: {
   const [menuTopo, setMenuTopo] = useState(false)
   const [sugestao, setSugestao] = useState<{ texto: string; vez: number } | null>(null)
   const [encaminhando, setEncaminhando] = useState<MensagemWpp | null>(null)
+  const [localizando, setLocalizando] = useState(false)
+  const [mandandoContato, setMandandoContato] = useState(false)
+  const seletorFigurinha = useRef<HTMLInputElement>(null)
+  // a mensagem nova chega pelo acompanhamento ao vivo (a cada 3 s)
+  const recarregarDepois = () => undefined
   const [editando, setEditando] = useState<MensagemWpp | null>(null)
   const [avisoTopo, setAvisoTopo] = useState<string | null>(null)
   const avisar = (t: string) => { setAvisoTopo(t); setTimeout(() => setAvisoTopo(null), 4000) }
@@ -590,24 +600,67 @@ function Conversa(p: {
     } finally { setExportando(false) }
   }
 
+  // âncora: ao carregar as antigas, a tela fica onde a pessoa estava (sem pular nem contar como "novas embaixo")
+  const ancora = useRef<{ altura: number; topo: number; primeiro: string | undefined } | null>(null)
+  const pedirAntigas = () => {
+    const el = rolagem.current
+    if (!el || !p.temMais || !mensagens || mensagens.length < POR_PAGINA || ancora.current) return
+    const a = { altura: el.scrollHeight, topo: el.scrollTop, primeiro: mensagens[0]?.id }
+    ancora.current = a
+    p.onMaisAntigas()
+    setTimeout(() => { if (ancora.current === a) ancora.current = null }, 8000)
+  }
+  useLayoutEffect(() => {
+    const el = rolagem.current, a = ancora.current
+    if (!el || !a || !mensagens || mensagens[0]?.id === a.primeiro) return
+    el.scrollTop = el.scrollHeight - a.altura + a.topo
+    ancora.current = null
+    qtd.current = mensagens.length
+  }, [mensagens])
+  // foto, vídeo e prévia carregando mudam a altura: quem está no fim continua no fim
   useEffect(() => {
+    const el = rolagem.current, trilho = el?.firstElementChild
+    if (!el || !trilho || typeof ResizeObserver === 'undefined') return
+    const o = new ResizeObserver(() => { if (noFim.current && !ancora.current) el.scrollTop = el.scrollHeight })
+    o.observe(trilho)
+    return () => o.disconnect()
+  }, [])
+
+  // posição da rolagem decidida antes de pintar a tela (sem piscar no topo e sem pulo visível)
+  useLayoutEffect(() => {
     const el = rolagem.current
     if (!el || !mensagens) return
     const cresceu = mensagens.length > qtd.current
     const primeira = qtd.current === 0
     qtd.current = mensagens.length
+    // a mensagem que eu acabei de mandar sempre aparece (mesmo com a conversa rolada para cima)
+    const ultima = mensagens[mensagens.length - 1]
+    if (cresceu && ultima?.enviando) { el.scrollTop = el.scrollHeight; noFim.current = true; setNovasEmbaixo(0); return }
     if (primeira) {
       // abre na primeira não lida, como o WhatsApp; senão, no fim
-      requestAnimationFrame(() => {
-        const marco = el.querySelector('.wz-marco-nao-lidas') as HTMLElement | null
-        if (marco) el.scrollTop = marco.offsetTop - 80
-        else el.scrollTop = el.scrollHeight
-      })
-    } else if (cresceu && noFim.current) requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; setNovasEmbaixo(0) })
+      const marco = el.querySelector('.wz-marco-nao-lidas') as HTMLElement | null
+      if (marco) { el.scrollTop += marco.getBoundingClientRect().top - el.getBoundingClientRect().top - 80; noFim.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80 }
+      else { el.scrollTop = el.scrollHeight; noFim.current = true }
+    } else if (cresceu && noFim.current) { el.scrollTop = el.scrollHeight; setNovasEmbaixo(0) }
     else if (cresceu) setNovasEmbaixo((n) => n + 1)
   }, [mensagens])
 
   const porWamid = useMemo(() => new Map((mensagens ?? []).filter((m) => m.wamid).map((m) => [m.wamid!, m])), [mensagens])
+  // ações das bolhas sempre com o estado atual, mas com a mesma identidade (assim cada bolha só redesenha quando ela muda)
+  const acoes: AcoesDoBalao = {
+    nomeDe: p.nomeDe, citar: (m) => setCitando(m), repetir: (m) => p.onRepetir(m),
+    encaminhar: (m) => setEncaminhando(m), editar: (m) => setEditando(m), apagar: (m) => void apagar(m),
+    ampliar: (m) => p.onAbrirMidia(m, (mensagens ?? []).filter((x) => (x.tipo === 'imagem' || x.tipo === 'video' || x.tipo === 'figurinha') && x.midia && !x.enviando)),
+    reagir: (m, emoji) => p.onReagir(m, emoji), favoritar: (m) => p.onFavoritar(m),
+    irPara: (w) => rolagem.current?.querySelector(`[data-msg="${porWamid.get(w)?.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+  }
+  const acoesAtuais = useRef(acoes); acoesAtuais.current = acoes
+  const acoesFixas = useMemo<AcoesDoBalao>(() => ({
+    nomeDe: (id) => acoesAtuais.current.nomeDe(id), citar: (m) => acoesAtuais.current.citar(m), repetir: (m) => acoesAtuais.current.repetir(m),
+    encaminhar: (m) => acoesAtuais.current.encaminhar(m), editar: (m) => acoesAtuais.current.editar(m), apagar: (m) => acoesAtuais.current.apagar(m),
+    ampliar: (m) => acoesAtuais.current.ampliar(m), reagir: (m, e) => acoesAtuais.current.reagir(m, e), favoritar: (m) => acoesAtuais.current.favoritar(m),
+    irPara: (w) => acoesAtuais.current.irPara(w),
+  }), [])
   // o marco "N mensagens não lidas" fica onde estava quando a conversa abriu
   const marco = useRef<string | null | undefined>(undefined)
   if (marco.current === undefined && mensagens) {
@@ -633,7 +686,7 @@ function Conversa(p: {
     if (el) {
       el.scrollIntoView({ block: 'center', behavior: 'smooth' })
       el.classList.remove('wz-piscar'); void el.offsetWidth; el.classList.add('wz-piscar')
-    } else if (p.temMais && mensagens.length >= POR_PAGINA) p.onMaisAntigas()
+    } else pedirAntigas()
   }, [p.irPara?.vez, mensagens]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // busca dentro da conversa
@@ -709,11 +762,12 @@ function Conversa(p: {
       const el = e.currentTarget
       noFim.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
       if (noFim.current && novasEmbaixo) setNovasEmbaixo(0)
-      if (el.scrollTop < 40 && p.temMais && mensagens && mensagens.length >= POR_PAGINA) p.onMaisAntigas()
+      // pede as antigas antes de bater no topo (rolagem contínua, sem esperar)
+      if (el.scrollTop < 400) pedirAntigas()
     }}>
       <div className="wz-mensagens-trilho">
         {mensagens === null && <div className="wz-carregando pequeno"><i />Carregando a conversa…</div>}
-        {mensagens && p.temMais && mensagens.length >= POR_PAGINA && <button className="wz-mais" onClick={p.onMaisAntigas}>Ver mensagens anteriores</button>}
+        {mensagens && p.temMais && mensagens.length >= POR_PAGINA && <button className="wz-mais" onClick={pedirAntigas}>Ver mensagens anteriores</button>}
         {mensagens && <div className="wz-aviso-cripto"><I.cadeado />{perfil?.aviso ?? 'As mensagens chegam pelo WhatsApp oficial da Meta e ficam guardadas na plataforma. Só a equipe autorizada vê esta conversa.'}</div>}
         {mensagens && !mensagens.length && <div className="wz-conversa-vazia">
           <b>Conversa nova</b><small>{perfil?.assessor ? 'Escreva a primeira mensagem: ela sai pelo WhatsApp do Assessor e a conversa já fica com você (o Assessor quieto).' : j.aberta ? 'Escreva a primeira mensagem.' : 'Para falar primeiro com alguém, o WhatsApp pede um modelo aprovado. Quando a pessoa responder, a conversa fica livre por 24 horas.'}</small>
@@ -722,11 +776,8 @@ function Conversa(p: {
           <span className="wz-dia-rotulo">{b.dia}</span>
           {b.itens.map((m, i) => <div key={m.id} data-msg={m.id} className={achados[achado] === m.id ? 'wz-achado' : undefined}>
             {m.id === idPrimeiraNaoLida && <div className="wz-marco-nao-lidas">{p.naoLidasAoAbrir} mensage{p.naoLidasAoAbrir > 1 ? 'ns' : 'm'} não lida{p.naoLidasAoAbrir > 1 ? 's' : ''}</div>}
-            <Balao m={m} anterior={b.itens[i - 1]} citada={m.citando ? porWamid.get(m.citando) ?? null : null} termo={buscando ? termo.trim() : ''}
-              contato={contato} api={api} janelaAberta={j.aberta} nomeDe={p.nomeDe} onCitar={() => setCitando(m)} onRepetir={() => p.onRepetir(m)}
-              onEncaminhar={api.encaminhar ? () => setEncaminhando(m) : undefined} onEditar={api.editar ? () => setEditando(m) : undefined} onApagar={api.apagar ? () => void apagar(m) : undefined}
-              onAmpliar={() => p.onAbrirMidia(m, (mensagens ?? []).filter((x) => (x.tipo === 'imagem' || x.tipo === 'video' || x.tipo === 'figurinha') && x.midia && !x.enviando))}
-              onReagir={(emoji) => p.onReagir(m, emoji)} onFavoritar={() => p.onFavoritar(m)} onIrPara={(w) => rolagem.current?.querySelector(`[data-msg="${porWamid.get(w)?.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })} />
+            <BalaoLeve m={m} anterior={b.itens[i - 1]} citada={m.citando ? porWamid.get(m.citando) ?? null : null} termo={buscando ? termo.trim() : ''}
+              contato={contato} api={api} janelaAberta={j.aberta} a={acoesFixas} />
           </div>)}
         </div>)}
       </div>
@@ -741,7 +792,12 @@ function Conversa(p: {
       {api.sugerirResposta && contato.userId && <button className="wz-btn sugerir" disabled={sugerindo === 'Escrevendo…'} onClick={() => void sugerir()} title="O Assessor escreve a resposta para a última mensagem do cliente, com os dados dele. Você revisa antes de enviar; nada é ligado nem enviado sozinho.">{sugerindo === 'Escrevendo…' ? 'Escrevendo…' : <><I.raio />Sugerir resposta</>}</button>}
     </div>}
     {sugerindo && sugerindo !== 'Escrevendo…' && <div className="wz-aviso-sugestao" role="alert">{sugerindo}</div>}
-    <Compositor key={contato.id} contato={contato} janelaAberta={j.aberta} semModelos={!!perfil?.semModelos} textoNovo={sugestao} respostas={p.respostas} citando={citando} arquivoSolto={soltou}
+    <Compositor key={contato.id} contato={contato} janelaAberta={j.aberta} semModelos={!!perfil?.semModelos} textoNovo={sugestao}
+      extras={perfil?.assessor ? {
+        localizacao: api.enviarLocalizacao ? () => setLocalizando(true) : undefined,
+        contato: api.enviarContato ? () => setMandandoContato(true) : undefined,
+        figurinha: api.enviarFigurinha ? () => seletorFigurinha.current?.click() : undefined,
+      } : undefined} respostas={p.respostas} citando={citando} arquivoSolto={soltou}
       rascunho={p.rascunho} onRascunho={p.onRascunho} onRespostas={p.onRespostas}
       onSoltouUsado={() => setSoltou(null)} onTirarCitacao={() => setCitando(null)} onModelo={() => setEscolhendoModelo(true)}
       onTexto={(t) => { const c = citando; setCitando(null); if (perfil?.assessor && !contato.iaPausada) p.onMudarLocal?.({ iaPausada: true, pausadaPor: api.euId }); p.onEnviar({ texto: t, citando: c?.wamid ?? null }, () => api.enviarTexto(contato.id, t, c?.wamid ?? null)) }}
@@ -754,6 +810,14 @@ function Conversa(p: {
       onNota={p.onNota} />
 
     {avisoTopo && <div className="wz-aviso-sugestao" role="status">{avisoTopo}</div>}
+    {localizando && <JanelaLocalizacao api={api} contato={contato} onFechar={() => setLocalizando(false)} onFeito={() => { setLocalizando(false); if (perfil?.assessor && !contato.iaPausada) p.onMudarLocal?.({ iaPausada: true, pausadaPor: api.euId }); recarregarDepois() }} />}
+    {mandandoContato && <JanelaContato api={api} contato={contato} onFechar={() => setMandandoContato(false)} onFeito={() => { setMandandoContato(false); if (perfil?.assessor && !contato.iaPausada) p.onMudarLocal?.({ iaPausada: true, pausadaPor: api.euId }); recarregarDepois() }} />}
+    <input ref={seletorFigurinha} type="file" hidden accept="image/webp,image/png,image/jpeg,image/gif" onChange={(e) => {
+      const f = e.target.files?.[0]; e.target.value = ''
+      if (!f || !api.enviarFigurinha) return
+      if (perfil?.assessor && !contato.iaPausada) p.onMudarLocal?.({ iaPausada: true, pausadaPor: api.euId })
+      p.onEnviar({ tipo: 'figurinha', midia: { exemplo: URL.createObjectURL(f), nome: f.name, mime: f.type, tamanho: f.size } }, () => api.enviarFigurinha!(contato.id, f))
+    }} />
     {encaminhando && <JanelaEncaminhar api={api} origem={contato} mensagem={encaminhando} contatos={p.contatos ?? []} onFechar={() => setEncaminhando(null)} onFeito={(n) => { setEncaminhando(null); avisar(`Encaminhada para ${n} conversa${n > 1 ? 's' : ''}.`) }} />}
     {editando && <JanelaEditar api={api} contato={contato} mensagem={editando} onFechar={() => setEditando(null)} onFeito={(t) => { p.onMensagemLocal?.(editando.id, { texto: t, status: 'editada' }); setEditando(null) }} />}
     {escolhendoModelo && <EscolherModelo api={api} estado={p.estado} contato={contato} modelos={p.modelos} onModelos={p.onModelosMudaram} onFechar={() => setEscolhendoModelo(false)}
@@ -762,6 +826,18 @@ function Conversa(p: {
 }
 
 /* ================================================================ balão */
+type AcoesDoBalao = {
+  nomeDe: (id: string | null) => string | null; citar: (m: MensagemWpp) => void; repetir: (m: MensagemWpp) => void
+  encaminhar: (m: MensagemWpp) => void; editar: (m: MensagemWpp) => void; apagar: (m: MensagemWpp) => void
+  ampliar: (m: MensagemWpp) => void; reagir: (m: MensagemWpp, emoji: string) => void; favoritar: (m: MensagemWpp) => void; irPara: (wamid: string) => void
+}
+const BalaoLeve = memo(function BalaoLeve({ m, anterior, citada, termo, contato, api, janelaAberta, a }: {
+  m: MensagemWpp; anterior?: MensagemWpp; citada: MensagemWpp | null; termo: string; contato: ContatoWpp; api: WhatsAppApi; janelaAberta: boolean; a: AcoesDoBalao
+}) {
+  return <Balao m={m} anterior={anterior} citada={citada} termo={termo} contato={contato} api={api} janelaAberta={janelaAberta} nomeDe={a.nomeDe}
+    onCitar={() => a.citar(m)} onRepetir={() => a.repetir(m)} onAmpliar={() => a.ampliar(m)} onReagir={(e) => a.reagir(m, e)} onFavoritar={() => a.favoritar(m)} onIrPara={a.irPara}
+    onEncaminhar={api.encaminhar ? () => a.encaminhar(m) : undefined} onEditar={api.editar ? () => a.editar(m) : undefined} onApagar={api.apagar ? () => a.apagar(m) : undefined} />
+})
 function Balao({ m, anterior, citada, termo, contato, api, janelaAberta, nomeDe, onCitar, onAmpliar, onRepetir, onReagir, onIrPara, onFavoritar, onEncaminhar, onEditar, onApagar }: {
   m: MensagemWpp; anterior?: MensagemWpp; citada: MensagemWpp | null; termo: string; contato: ContatoWpp; api: WhatsAppApi; janelaAberta: boolean
   nomeDe: (id: string | null) => string | null; onCitar: () => void; onAmpliar: (url: string) => void; onRepetir: () => void
@@ -865,18 +941,28 @@ function Audio({ url, exemplo, duracaoExemplo, falhou, voz, sai }: { url: string
     </span>
     <small>{duracao(tocando || pos ? pos : total)}</small>
     {url && <button className="wz-audio-vel" onClick={() => { const v = vel === 1 ? 1.5 : vel === 1.5 ? 2 : 1; setVel(v); if (el.current) el.current.playbackRate = v }} aria-label="Velocidade">{String(vel).replace('.', ',')}x</button>}
+    {url && !exemplo && <a className="wz-audio-baixar" href={url} download="audio" target="_blank" rel="noreferrer" aria-label="Baixar o áudio" title="Baixar o áudio"><I.baixar /></a>}
   </div>
 }
 
 /* ================================================================ compositor */
-function Compositor({ contato, janelaAberta, semModelos, textoNovo, respostas, citando, arquivoSolto, rascunho, onRascunho, onRespostas, onSoltouUsado, onTirarCitacao, onModelo, onTexto, onArquivo, onNota }: {
-  contato: ContatoWpp; janelaAberta: boolean; semModelos?: boolean; textoNovo?: { texto: string; vez: number } | null; respostas: RespostaPronta[]; citando: MensagemWpp | null; arquivoSolto: File[] | null
+function Compositor({ contato, janelaAberta, semModelos, textoNovo, extras, respostas, citando, arquivoSolto, rascunho, onRascunho, onRespostas, onSoltouUsado, onTirarCitacao, onModelo, onTexto, onArquivo, onNota }: {
+  contato: ContatoWpp; janelaAberta: boolean; semModelos?: boolean; textoNovo?: { texto: string; vez: number } | null
+  extras?: { localizacao?: () => void; contato?: () => void; figurinha?: () => void }; respostas: RespostaPronta[]; citando: MensagemWpp | null; arquivoSolto: File[] | null
   rascunho: string; onRascunho: (t: string) => void; onRespostas: () => void
   onSoltouUsado: () => void; onTirarCitacao: () => void; onModelo: () => void
   onTexto: (t: string) => void; onArquivo: (f: File, legenda: string) => void; onNota: (t: string) => Promise<void>
 }) {
   const [texto, setTextoInterno] = useState(rascunho)
-  const setTexto = (t: string) => { setTextoInterno(t); onRascunho(t) }
+  // 25/11/2026: o rascunho vai para a lista só depois de uma pausa (cada letra redesenhava a conversa inteira e a lista)
+  const rascunhoPendente = useRef<{ t: string; timer: ReturnType<typeof setTimeout> } | null>(null)
+  const guardarRascunho = useRef(onRascunho); guardarRascunho.current = onRascunho
+  const setTexto = (t: string) => {
+    setTextoInterno(t)
+    if (rascunhoPendente.current) clearTimeout(rascunhoPendente.current.timer)
+    rascunhoPendente.current = { t, timer: setTimeout(() => { rascunhoPendente.current = null; guardarRascunho.current(t) }, 500) }
+  }
+  useEffect(() => () => { const r = rascunhoPendente.current; if (r) { clearTimeout(r.timer); guardarRascunho.current(r.t) } }, [])
   const [nota, setNota] = useState(!janelaAberta)
   const [arquivos, setArquivos] = useState<File[]>([])
   const arquivo = arquivos[0] ?? null
@@ -991,6 +1077,9 @@ function Compositor({ contato, janelaAberta, semModelos, textoNovo, respostas, c
     {painel === 'mais' && <div className="wz-menu wz-menu-mais" role="menu">
       <button role="menuitem" disabled={!janelaAberta} onClick={() => seletorFoto.current?.click()}><span className="roxo"><I.foto /></span>Fotos e vídeos</button>
       <button role="menuitem" disabled={!janelaAberta} onClick={() => seletor.current?.click()}><span className="azul"><I.doc /></span>Documento</button>
+      {extras?.figurinha && <button role="menuitem" onClick={() => { setPainel(null); extras.figurinha!() }}><span className="verde"><I.emoji /></span>Figurinha</button>}
+      {extras?.localizacao && <button role="menuitem" onClick={() => { setPainel(null); extras.localizacao!() }}><span className="verde"><I.local /></span>Localização</button>}
+      {extras?.contato && <button role="menuitem" onClick={() => { setPainel(null); extras.contato!() }}><span className="azul"><I.pessoa /></span>Contato</button>}
       <button role="menuitem" onClick={() => { setPainel(null); setTexto('/'); campo.current?.focus() }}><span className="verde"><I.raio /></span>Resposta pronta</button>
       {!semModelos && <button role="menuitem" onClick={() => { setPainel(null); onModelo() }}><span className="ouro"><I.modelo /></span>Modelo aprovado</button>}
       <button role="menuitem" onClick={() => { setPainel(null); setNota(true); campo.current?.focus() }}><span className="amarelo"><I.nota /></span>Nota interna</button>
@@ -1230,4 +1319,5 @@ const I = {
   estrela: icone('M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 18.9l.9-5.4L4.2 9.7l5.4-.8z'),
   lapis: icone('M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4'),
   encaminhar: icone('M14 5l6 6-6 6M20 11H9a5 5 0 0 0-5 5v3'),
+  local: icone('M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 1 1 13 0c0 5.4-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'),
 }

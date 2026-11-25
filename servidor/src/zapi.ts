@@ -5,7 +5,7 @@ import { ver } from './sessoes'
 import { loginDoUsuario, papelDoAdmin, restDoBanco as rest, somenteDemoDoUsuario } from './supabase'
 import { appDaVitrine, vitrineDoPedido } from './apps-parceiros'
 import { rotulosTrocados } from '../../src/core/deriv/accountAccess'
-import { aposMensagem, assessorPausado, equipeAssumiu, guardarArquivo, guardarDaEquipe, guardarMidiaRecebida, marcarReacao, numeroValido, usuarioDaConversa, type MensagemDoChat } from './assessor-chat'
+import { linkDoArquivo, aposMensagem, assessorPausado, equipeAssumiu, guardarArquivo, guardarDaEquipe, guardarMidiaRecebida, marcarReacao, numeroValido, usuarioDaConversa, type MensagemDoChat } from './assessor-chat'
 
 /*
   Assessor GF no WhatsApp pela Z-API (19/11/2026, Tiago).
@@ -278,28 +278,68 @@ export async function arquivoPelaEquipe(adminId: string, d: any): Promise<Mensag
   const mime = String(d?.mime ?? '').split(';')[0].trim().toLowerCase()
   const nome = String(d?.nome ?? 'arquivo').replace(/[\\/]/g, '_').slice(0, 120)
   const legenda = String(d?.legenda ?? '').trim().slice(0, 1000)
-  const dados = Buffer.from(String(d?.dados ?? ''), 'base64')
-  if (!dados.length) throw new Error('Arquivo vazio.')
-  if (dados.length > 1_400_000) throw new Error('O arquivo passou de 1,4 MB. Mande um menor.')
   const c = await config()
   if (!c) throw new Error('O WhatsApp do Assessor não está conectado.')
-  const tipo = mime.startsWith('image/') ? 'imagem' : mime.startsWith('audio/') ? 'audio' : mime.startsWith('video/') ? 'video' : 'documento'
-  const uri = `data:${mime || 'application/octet-stream'};base64,${dados.toString('base64')}`
+  // 25/11/2026: o arquivo grande sobe direto da tela para o bucket (/subir); aqui só vem o caminho, e a Z-API busca pelo link assinado
+  let fonte: string, guardado: string | null = null, tamanho = 0
+  if (typeof d?.caminho === 'string') {
+    if (!d.caminho.startsWith(`assessor/${n}/`)) throw new Error('Arquivo inválido.')
+    guardado = d.caminho
+    fonte = await linkDoArquivo(d.caminho)
+    tamanho = Math.max(0, Math.floor(Number(d?.tamanho) || 0))
+  } else {
+    const dados = Buffer.from(String(d?.dados ?? ''), 'base64')
+    if (!dados.length) throw new Error('Arquivo vazio.')
+    if (dados.length > 1_400_000) throw new Error('O arquivo passou de 1,4 MB. Mande um menor.')
+    fonte = `data:${mime || 'application/octet-stream'};base64,${dados.toString('base64')}`
+    tamanho = dados.length
+    guardado = await guardarArquivo(n, `equipe_${Date.now()}`, dados, mime, nome)
+  }
+  const figurinha = d?.figurinha === true && mime.startsWith('image/')
+  const tipo = figurinha ? 'figurinha' : mime.startsWith('image/') ? 'imagem' : mime.startsWith('audio/') ? 'audio' : mime.startsWith('video/') ? 'video' : 'documento'
   const ext = (nome.match(/\.([a-z0-9]{2,5})$/i)?.[1] ?? (mime === 'application/pdf' ? 'pdf' : 'bin')).toLowerCase()
   const voz = tipo === 'audio' && nome.startsWith('audio-gravado')
-  const caminho = tipo === 'imagem' ? 'send-image' : tipo === 'audio' ? 'send-audio' : tipo === 'video' ? 'send-video' : `send-document/${ext}`
-  const corpo = tipo === 'imagem' ? { phone: n, image: uri, caption: legenda || undefined }
-    : tipo === 'audio' ? { phone: n, audio: uri, waveform: voz }
-    : tipo === 'video' ? { phone: n, video: uri, caption: legenda || undefined }
-    : { phone: n, document: uri, fileName: nome, caption: legenda || undefined }
+  const cit = typeof d?.citando === 'string' && /^[\w-]{4,80}$/.test(d.citando) ? { messageId: d.citando } : {}
+  const caminho = tipo === 'figurinha' ? 'send-sticker' : tipo === 'imagem' ? 'send-image' : tipo === 'audio' ? 'send-audio' : tipo === 'video' ? 'send-video' : `send-document/${ext}`
+  const corpo = tipo === 'figurinha' ? { phone: n, sticker: fonte, ...cit }
+    : tipo === 'imagem' ? { phone: n, image: fonte, caption: legenda || undefined, ...cit }
+    : tipo === 'audio' ? { phone: n, audio: fonte, waveform: voz }
+    : tipo === 'video' ? { phone: n, video: fonte, caption: legenda || undefined, ...cit }
+    : { phone: n, document: fonte, fileName: nome, caption: legenda || undefined, ...cit }
   const r = await zapi<{ messageId?: string }>(c, caminho, { method: 'POST', body: JSON.stringify(corpo) })
-  const chave = r?.messageId ? `env_${r.messageId}` : `equipe_${Date.now()}`
-  const guardado = await guardarArquivo(n, chave, dados, mime, nome)
   await equipeAssumiu(n, adminId)
   return guardarDaEquipe({
     numero: n, papel: 'equipe', tipo, texto: legenda || null, autor: adminId, idWhatsapp: r?.messageId ? `env:${r.messageId}` : null,
-    midia: guardado ? { caminho: guardado, mime, nome, tamanho: dados.length, voz } : null, userId: await usuarioDaConversa(n),
+    midia: guardado ? { caminho: guardado, mime, nome, tamanho, voz } : null, userId: await usuarioDaConversa(n), citando: (cit as any).messageId ?? null,
   })
+}
+
+/** Localização da equipe para o cliente (Z-API send-location). */
+export async function localizacaoPelaEquipe(adminId: string, d: any): Promise<MensagemDoChat> {
+  const n = numeroValido(d?.numero)
+  const lat = Number(d?.latitude), lon = Number(d?.longitude)
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error('Latitude ou longitude inválida.')
+  const titulo = String(d?.titulo ?? '').trim().slice(0, 100) || 'Localização'
+  const endereco = String(d?.endereco ?? '').trim().slice(0, 200)
+  const c = await config()
+  if (!c) throw new Error('O WhatsApp do Assessor não está conectado.')
+  const r = await zapi<{ messageId?: string }>(c, 'send-location', { method: 'POST', body: JSON.stringify({ phone: n, title: titulo, address: endereco || titulo, latitude: String(lat), longitude: String(lon) }) })
+  await equipeAssumiu(n, adminId)
+  return guardarDaEquipe({ numero: n, papel: 'equipe', tipo: 'localizacao', texto: `📍 ${titulo}${endereco ? ` · ${endereco}` : ''}\nhttps://maps.google.com/?q=${lat},${lon}`, autor: adminId, idWhatsapp: r?.messageId ? `env:${r.messageId}` : null, userId: await usuarioDaConversa(n) })
+}
+
+/** Cartão de contato da equipe para o cliente (Z-API send-contact). */
+export async function contatoPelaEquipe(adminId: string, d: any): Promise<MensagemDoChat> {
+  const n = numeroValido(d?.numero)
+  const nome = String(d?.nome ?? '').trim().slice(0, 80)
+  let tel = String(d?.telefone ?? '').replace(/\D/g, '')
+  if (tel.length === 10 || tel.length === 11) tel = `55${tel}`
+  if (!nome || !/^\d{12,15}$/.test(tel)) throw new Error('Informe o nome e o telefone com DDD.')
+  const c = await config()
+  if (!c) throw new Error('O WhatsApp do Assessor não está conectado.')
+  const r = await zapi<{ messageId?: string }>(c, 'send-contact', { method: 'POST', body: JSON.stringify({ phone: n, contactName: nome, contactPhone: tel }) })
+  await equipeAssumiu(n, adminId)
+  return guardarDaEquipe({ numero: n, papel: 'equipe', tipo: 'contato', texto: `👤 Contato: ${nome} · +${tel}`, autor: adminId, idWhatsapp: r?.messageId ? `env:${r.messageId}` : null, userId: await usuarioDaConversa(n) })
 }
 
 /**
@@ -547,7 +587,15 @@ const SITE = 'https://globalflytrade.com'
 
 async function atender(numero: string, corpo: any): Promise<void> {
   const texto = String(corpo.text?.message ?? corpo.image?.caption ?? corpo.video?.caption ?? '').trim().slice(0, 2000)
-  const tipo = corpo.audio ? 'audio' : corpo.image ? 'imagem' : corpo.video ? 'video' : corpo.document ? 'documento' : corpo.sticker ? 'figurinha' : corpo.text ? 'texto' : 'outro'
+  const tipo = corpo.audio ? 'audio' : corpo.image ? 'imagem' : corpo.video ? 'video' : corpo.document ? 'documento' : corpo.sticker ? 'figurinha'
+    : corpo.location ? 'localizacao' : corpo.contact ? 'contato' : corpo.poll ? 'enquete' : corpo.text ? 'texto' : 'outro'
+  // 25/11/2026: localização, cartão de contato e enquete viram texto legível no chat do ADM (o mapa abre pelo link)
+  const loc = corpo.location
+  const textoGuardado = tipo === 'localizacao' && loc
+    ? `📍 ${String(loc.address ?? loc.name ?? 'Localização').trim() || 'Localização'}\nhttps://maps.google.com/?q=${Number(loc.latitude)},${Number(loc.longitude)}`
+    : tipo === 'contato' ? `👤 Contato: ${String(corpo.contact?.displayName ?? 'sem nome')}${Array.isArray(corpo.contact?.phones) && corpo.contact.phones.length ? ` · ${corpo.contact.phones.join(', ')}` : ''}`
+    : tipo === 'enquete' ? `📊 Enquete: ${String(corpo.poll?.question ?? '')}${Array.isArray(corpo.poll?.options) ? `\n${corpo.poll.options.map((o: any) => `• ${o?.name ?? ''}`).join('\n')}` : ''}`
+    : null
   const idWpp = corpo.messageId ? `rec:${corpo.messageId}` : null
   // o nome que a pessoa usa no WhatsApp (aparece na lista do chat até ela ser reconhecida)
   const nomeNoWhats = String(corpo.senderName ?? corpo.chatName ?? '').trim() || null
@@ -583,7 +631,7 @@ async function atender(numero: string, corpo: any): Promise<void> {
   const validos: Vinculo[] = []
   for (const v of candidatos) if (chaveDoTelefone(await telefoneDoPerfil(v.user_id)) === chave) validos.push(v)
   const dono = validos.length === 1 ? validos[0] : null
-  if (!(await guardarMensagem({ numero, userId: dono?.user_id ?? null, papel: 'cliente', texto: texto || `[${tipo}]`, tipo, idWhatsapp: idWpp, nome: nomeNoWhats, citando }))) return
+  if (!(await guardarMensagem({ numero, userId: dono?.user_id ?? null, papel: 'cliente', texto: textoGuardado ?? (texto || `[${tipo}]`), tipo, idWhatsapp: idWpp, nome: nomeNoWhats, citando }))) return
   // a foto, o áudio, o vídeo ou o documento ficam guardados para a equipe ver no chat (sem segurar a resposta)
   if (idWpp && tipo !== 'texto') void guardarMidiaRecebida(idWpp, numero, corpo)
   // a equipe assumiu esta conversa no ADM: o Assessor fica quieto (a mensagem já aparece no chat)
@@ -624,7 +672,9 @@ async function atender(numero: string, corpo: any): Promise<void> {
     const mime = String(corpo.image.mimeType ?? i.mime ?? 'image/jpeg').split(';')[0].trim().toLowerCase()
     anexos.imagens = [{ mime: /^image\/(jpeg|png|webp)$/.test(mime) ? mime : 'image/jpeg', dados: i.dados }]
   }
-  if (!texto && !anexos.audio && !anexos.imagens) return enviar(numero, 'Por aqui eu entendo texto, áudio e foto. Me conta o que você precisa?', dono.user_id)
+  // figurinha não pede resposta (é como um emoji); localização, contato e enquete ficam para a equipe ver no chat
+  if (tipo === 'figurinha') return
+  if (!texto && !anexos.audio && !anexos.imagens) return enviar(numero, tipo === 'localizacao' || tipo === 'contato' ? 'Recebi! Por aqui eu entendo texto, áudio e foto. Me conta o que você precisa?' : 'Por aqui eu entendo texto, áudio e foto. Me conta o que você precisa?', dono.user_id)
 
   // 4) o Assistente, com as travas de sempre
   void marcarLida(numero, corpo.messageId)

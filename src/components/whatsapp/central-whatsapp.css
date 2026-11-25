@@ -846,3 +846,14 @@
 .wza-escolher small { color: rgba(255, 255, 255, .6); font-weight: 500; }
 .wz-erro { margin: 8px 0 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--down, #D8504D) 10%, transparent); color: var(--down, #D8504D); font-size: 12.5px; }
 .wz-faixa.wz-faixa-assessor > .aas-vistas { display: inline-flex; flex: none; gap: 2px; }
+.wza-campos { display: grid; gap: 10px; }
+.wza-campos label { display: grid; gap: 4px; font-size: 12px; color: var(--wz-sub); }
+.wza-campos input { padding: 9px 12px; border: 1px solid var(--wz-linha); border-radius: 10px; background: var(--wz-app); color: var(--wz-texto); font: inherit; font-size: 14px; }
+.wza-mapa { font-size: 13px; font-weight: 600; color: var(--wz-verde); }
+.wz-audio-baixar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--wz-sub); flex: none; }
+.wz-audio-baixar:hover { background: var(--wz-hover); color: var(--wz-texto); }
+.wz-audio-baixar svg { width: 16px; height: 16px; }
+
+/* 25/11/2026: rolagem — a âncora é feita no código (o navegador não pula sozinho), a rolagem não vaza para a página e fica lisa no trackpad/celular */
+.wz-mensagens { overflow-anchor: none; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: stable; }
+.wz-itens, .wz-dados-rolagem { overscroll-behavior: contain; }

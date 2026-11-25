@@ -104,3 +104,65 @@ export function JanelaStatus({ api, onFechar, onFeito }: { api: WhatsAppApi; onF
     <div className="wza-acoes"><small>O WhatsApp não deixa listar nem apagar status por aqui.</small><button className="wz-btn verde" disabled={!pronto || indo} onClick={() => void publicar()}>{indo ? 'Publicando…' : 'Publicar'}</button></div>
   </Janela>
 }
+
+/** Lê latitude e longitude de um link do Google Maps (…/@-23.55,-46.63,15z ou ?q=-23.55,-46.63) ou de "-23.55, -46.63". */
+export function coordenadasDoTexto(t: string): { lat: number; lon: number } | null {
+  const m = t.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/) ?? t.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/) ?? t.match(/^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/)
+  if (!m) return null
+  const lat = Number(m[1]), lon = Number(m[2])
+  return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null
+}
+
+/** Mandar uma localização: a deste computador, um link do Google Maps ou as coordenadas. */
+export function JanelaLocalizacao({ api, contato, onFechar, onFeito }: { api: WhatsAppApi; contato: ContatoWpp; onFechar: () => void; onFeito: () => void }) {
+  const [titulo, setTitulo] = useState('')
+  const [endereco, setEndereco] = useState('')
+  const [link, setLink] = useState('')
+  const [coord, setCoord] = useState<{ lat: number; lon: number } | null>(null)
+  const [indo, setIndo] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  useEffect(() => { const c = coordenadasDoTexto(link); if (c) setCoord(c) }, [link])
+  function daqui() {
+    if (!navigator.geolocation) { setErro('Este navegador não informa a localização.'); return }
+    setErro(null)
+    navigator.geolocation.getCurrentPosition((p) => setCoord({ lat: Number(p.coords.latitude.toFixed(6)), lon: Number(p.coords.longitude.toFixed(6)) }), () => setErro('O navegador não liberou a localização. Cole um link do Google Maps.'), { enableHighAccuracy: true, timeout: 10_000 })
+  }
+  async function enviar() {
+    if (!coord || !api.enviarLocalizacao) return
+    setIndo(true); setErro(null)
+    try { await api.enviarLocalizacao(contato.id, { titulo: titulo.trim() || 'Localização', endereco: endereco.trim(), latitude: coord.lat, longitude: coord.lon }); onFeito() } catch (e) { setErro((e as Error).message) } finally { setIndo(false) }
+  }
+  return <Janela titulo="Enviar localização" subtitulo={`Para ${nomeDoContato(contato)}. Chega no WhatsApp como um mapa.`} onFechar={onFechar}>
+    <div className="wza-campos">
+      <button className="wz-btn" onClick={daqui}>📍 Usar a localização deste computador</button>
+      <label><span>Ou cole um link do Google Maps (ou "latitude, longitude")</span><input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://maps.google.com/…" /></label>
+      <label><span>Nome do lugar</span><input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Escritório GlobalFly" maxLength={100} /></label>
+      <label><span>Endereço (opcional)</span><input value={endereco} onChange={(e) => setEndereco(e.target.value)} placeholder="Rua, número, cidade" maxLength={200} /></label>
+      {coord && <a className="wza-mapa" href={`https://maps.google.com/?q=${coord.lat},${coord.lon}`} target="_blank" rel="noreferrer">✓ {coord.lat}, {coord.lon} · conferir no mapa</a>}
+    </div>
+    {erro && <p className="wz-erro" role="alert">{erro}</p>}
+    <div className="wza-acoes"><small>{coord ? 'Pronto para enviar' : 'Falta a localização'}</small><button className="wz-btn verde" disabled={!coord || indo} onClick={() => void enviar()}>{indo ? 'Enviando…' : 'Enviar'}</button></div>
+  </Janela>
+}
+
+/** Mandar um cartão de contato (o cliente toca e salva o número). */
+export function JanelaContato({ api, contato, onFechar, onFeito }: { api: WhatsAppApi; contato: ContatoWpp; onFechar: () => void; onFeito: () => void }) {
+  const [nome, setNome] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [indo, setIndo] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+  const ok = nome.trim().length >= 2 && telefone.replace(/\D/g, '').length >= 10
+  async function enviar() {
+    if (!ok || !api.enviarContato) return
+    setIndo(true); setErro(null)
+    try { await api.enviarContato(contato.id, { nome: nome.trim(), telefone }); onFeito() } catch (e) { setErro((e as Error).message) } finally { setIndo(false) }
+  }
+  return <Janela titulo="Enviar contato" subtitulo={`Para ${nomeDoContato(contato)}. Ele toca no cartão e salva o número.`} onFechar={onFechar}>
+    <div className="wza-campos">
+      <label><span>Nome</span><input autoFocus value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Suporte GlobalFly" maxLength={80} /></label>
+      <label><span>Telefone com DDD</span><input value={telefone} onChange={(e) => setTelefone(e.target.value)} inputMode="tel" placeholder="(11) 91234-5678" /></label>
+    </div>
+    {erro && <p className="wz-erro" role="alert">{erro}</p>}
+    <div className="wza-acoes"><small /><button className="wz-btn verde" disabled={!ok || indo} onClick={() => void enviar()}>{indo ? 'Enviando…' : 'Enviar'}</button></div>
+  </Janela>
+}
