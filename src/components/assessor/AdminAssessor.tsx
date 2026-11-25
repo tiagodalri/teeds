@@ -29,13 +29,15 @@ export function AdminAssessor({ sessao, onAbrirCliente, onVista, apiDeTeste }: {
   useEffect(() => { onVista?.(vista) }, [vista]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => onVista?.('conexao'), []) // eslint-disable-line react-hooks/exhaustive-deps
   const api = useMemo(() => apiDeTeste ?? assessorDoServidor(sessao), [apiDeTeste, sessao])
+  const vistas = <div className="aas-vistas" role="tablist" aria-label="WhatsApp do Assessor">
+    <button role="tab" aria-selected={vista === 'conversas'} className={vista === 'conversas' ? 'on' : ''} onClick={() => setVista('conversas')}>Conversas</button>
+    <button role="tab" aria-selected={vista === 'conexao'} className={vista === 'conexao' ? 'on' : ''} onClick={() => setVista('conexao')}>Conexão</button>
+  </div>
   return <div className={`aas-pagina ${vista}`}>
-    <div className="aas-vistas" role="tablist" aria-label="WhatsApp do Assessor">
-      <button role="tab" aria-selected={vista === 'conversas'} className={vista === 'conversas' ? 'on' : ''} onClick={() => setVista('conversas')}>Conversas</button>
-      <button role="tab" aria-selected={vista === 'conexao'} className={vista === 'conexao' ? 'on' : ''} onClick={() => setVista('conexao')}>Conexão</button>
-    </div>
+    {/* 25/11/2026 (Tiago: "o título ocupa muito espaço… chat precisa ficar grande"): em Conversas a chave vai para dentro da faixa */}
+    {vista !== 'conversas' && vistas}
     {vista === 'conversas'
-      ? <Suspense fallback={<p className="og-carregando">Abrindo as conversas…</p>}><CentralWhatsApp sessao={sessao} marca="globalfly" apiDeTeste={api} onAbrirCliente={onAbrirCliente} onConexao={() => setVista('conexao')} /></Suspense>
+      ? <Suspense fallback={<p className="og-carregando">Abrindo as conversas…</p>}><CentralWhatsApp sessao={sessao} marca="globalfly" apiDeTeste={api} onAbrirCliente={onAbrirCliente} onConexao={() => setVista('conexao')} extraFaixa={vistas} /></Suspense>
       : <ConexaoDoAssessor sessao={sessao} />}
   </div>
 }

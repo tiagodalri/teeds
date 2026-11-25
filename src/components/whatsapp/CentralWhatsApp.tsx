@@ -10,7 +10,7 @@
  *
  * Antes de conectar o número, a central abre com conversas de EXEMPLO (marcadas).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
   whatsappDoBanco, whatsappDeExemplo, janela, JANELA_LIVRE, textoDaJanela, telefoneBonito, nomeDoContato, conferirArquivo,
@@ -19,6 +19,7 @@ import {
   type PessoaDaEquipe, type MidiaWpp, type ArquivosDoContato, type AchadoWpp,
 } from '../../core/teeds/whatsapp'
 import { EscolherModelo, GerirRespostas, Conexao, Janela } from './JanelasWpp'
+import { JanelaEditar, JanelaEncaminhar, JanelaStatus } from './JanelasAssessor'
 import { NovaConversaPainel, type EscolhaDeContato } from './NovaConversaPainel'
 import { FichaDoCliente } from '../assessor/FichaDoCliente'
 import { GaleriaDoContato, Visualizador, FaixaDeMidias, NotasDoContato } from './MidiasDoContato'
@@ -39,8 +40,10 @@ const CHAVE_AVISOS = 'wpp-avisos-no-computador'
 const chaveRascunhos = (marca: string) => `wpp-rascunhos-${marca}`
 
 /* ================================================================ casca */
-export function CentralWhatsApp({ sessao, marca, apiDeTeste, onAbrirCliente, pedido, onConexao }: {
+export function CentralWhatsApp({ sessao, marca, apiDeTeste, onAbrirCliente, pedido, onConexao, extraFaixa }: {
   sessao: SessaoTeeds; marca: string; apiDeTeste?: WhatsAppApi
+  /** só no Assessor: o que vai à esquerda da faixa (a chave Conversas | Conexão) */
+  extraFaixa?: ReactNode
   /** só no Assessor: o botão "Conexão" da faixa leva à aba de conexão */
   onConexao?: () => void
   /** abre a ficha completa do cliente no painel */
@@ -52,6 +55,15 @@ export function CentralWhatsApp({ sessao, marca, apiDeTeste, onAbrirCliente, ped
   const [estado, setEstado] = useState<EstadoWpp | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [conectando, setConectando] = useState(false)
+  // 25/11/2026: o chat em tela cheia (Esc volta)
+  const [expandido, setExpandido] = useState(false)
+  const [postandoStatus, setPostandoStatus] = useState(false)
+  const [avisoStatus, setAvisoStatus] = useState(false)
+  useEffect(() => {
+    if (!expandido) return
+    const f = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('.wz-fundo, .wz-menu')) setExpandido(false) }
+    window.addEventListener('keydown', f); return () => window.removeEventListener('keydown', f)
+  }, [expandido])
 
   const carregar = useCallback(async () => {
     setErro(null)
@@ -73,15 +85,16 @@ export function CentralWhatsApp({ sessao, marca, apiDeTeste, onAbrirCliente, ped
       <p>O WhatsApp conectado nesta plataforma é {estado.dono ? <>do parceiro <b>/{estado.dono}</b></> : 'da equipe geral'}. As conversas ficam só com o dono do número e com o administrador geral.</p></section>
   }
 
-  return <div className={`wz ${api.perfil?.assessor ? 'wz-assessor' : ''}`}>
-    {api.perfil?.assessor ? <FaixaDoAssessor estado={estado} onConexao={onConexao} onGeral={api.pausarGeral ? async (sim) => { await api.pausarGeral!(sim); await carregar() } : undefined} /> : <FaixaDaConexao estado={estado} onAbrir={() => setConectando(true)} />}
+  return <div className={`wz ${api.perfil?.assessor ? 'wz-assessor' : ''} ${expandido ? 'wz-expandido' : ''}`}>
+    {api.perfil?.assessor ? <FaixaDoAssessor estado={estado} extra={extraFaixa} expandido={expandido} onExpandir={() => setExpandido((v) => !v)} onStatus={api.postarStatus ? () => setPostandoStatus(true) : undefined} statusPublicado={avisoStatus} onConexao={onConexao} onGeral={api.pausarGeral ? async (sim) => { await api.pausarGeral!(sim); await carregar() } : undefined} /> : <FaixaDaConexao estado={estado} onAbrir={() => setConectando(true)} />}
     <Mesa key={api.exemplo ? 'exemplo' : 'real'} api={api} estado={estado} marca={marca} onAbrirCliente={onAbrirCliente} pedido={pedido ?? null} />
     {conectando && <Conexao api={real} estado={estado} onFechar={() => setConectando(false)} onMudou={() => void carregar()} />}
+    {postandoStatus && <JanelaStatus api={api} onFechar={() => setPostandoStatus(false)} onFeito={() => { setPostandoStatus(false); setAvisoStatus(true); setTimeout(() => setAvisoStatus(false), 5000) }} />}
   </div>
 }
 
 /** A faixa do topo no chat do Assessor (Z-API): número, ao vivo e o atalho para a conexão. */
-function FaixaDoAssessor({ estado, onConexao, onGeral }: { estado: EstadoWpp; onConexao?: () => void; onGeral?: (sim: boolean) => Promise<void> }) {
+function FaixaDoAssessor({ estado, onConexao, onGeral, extra, expandido, onExpandir, onStatus, statusPublicado }: { estado: EstadoWpp; onConexao?: () => void; onGeral?: (sim: boolean) => Promise<void>; extra?: ReactNode; expandido?: boolean; onExpandir?: () => void; onStatus?: () => void; statusPublicado?: boolean }) {
   const c = estado.conta
   const pausado = !!estado.assessorPausadoGeral
   const [indo, setIndo] = useState(false)
@@ -90,14 +103,16 @@ function FaixaDoAssessor({ estado, onConexao, onGeral }: { estado: EstadoWpp; on
     if (!pausado && !window.confirm('Pausar o Assessor em TODAS as conversas? A I.A. para de responder todo mundo até você religar. As mensagens continuam chegando aqui.')) return
     setIndo(true); try { await onGeral(!pausado) } catch (e) { window.alert((e as Error).message) } finally { setIndo(false) }
   }
-  return <div className={`wz-faixa ${!estado.conectado || pausado ? 'perigo' : 'ok'}`}>
+  return <div className={`wz-faixa wz-faixa-assessor ${!estado.conectado || pausado ? 'perigo' : 'ok'}`}>
+    {extra}
     <span className="wz-faixa-icone"><I.whats /></span>
     <div><b>Assessor GF {c?.numero && <span className="wz-num">{telefoneBonito(c.numero)}</span>}{estado.conectado && <em className={`wz-ponto ${pausado ? 'perigo' : 'ok'}`}>{pausado ? 'Pausado para todos' : 'Respondendo'}</em>}</b>
       <small>{!estado.conectado ? (c?.erro || 'O WhatsApp do Assessor está desconectado: as mensagens novas não chegam até reconectar.')
         : pausado ? 'A I.A. não está respondendo ninguém: tudo o que chegar fica para a equipe responder por aqui.'
         : 'A I.A. responde sozinha. Toque em Assumir para responder você mesmo: o Assessor fica quieto naquela conversa até você devolver.'}</small></div>
     {onGeral && estado.conectado && <button className={`wz-btn ${pausado ? 'ouro' : ''}`} disabled={indo} onClick={() => void alternar()}>{indo ? '…' : pausado ? 'Religar o Assessor' : 'Pausar para todos'}</button>}
-    {onConexao && <button className={`wz-btn ${estado.conectado ? '' : 'ouro'}`} onClick={onConexao}>Conexão</button>}
+    {onStatus && estado.conectado && <button className={`wz-btn ${statusPublicado ? 'verde' : ''}`} onClick={onStatus} title="Publicar um status (story) no WhatsApp do Assessor">{statusPublicado ? '✓ Status publicado' : 'Postar status'}</button>}
+    {onExpandir && <button className="wz-icone-btn" onClick={onExpandir} title={expandido ? 'Sair da tela cheia (Esc)' : 'Chat em tela cheia'} aria-label={expandido ? 'Sair da tela cheia' : 'Chat em tela cheia'}><I.ampliar /></button>}
   </div>
 }
 
@@ -133,6 +148,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
   const [respostas, setRespostas] = useState<RespostaPronta[]>([])
   const [modelos, setModelos] = useState<ModeloWpp[]>([])
   const [aoVivo, setAoVivo] = useState(false)
+  const [presencas, setPresencas] = useState<Record<string, string>>({})
   const [dadosAbertos, setDadosAbertos] = useState(() => (typeof window !== 'undefined' ? window.innerWidth > 1320 : true))
   const [novaConversa, setNovaConversa] = useState(false)
   const [gerirRespostas, setGerirRespostas] = useState(false)
@@ -163,6 +179,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
     void api.respostas().then((l) => vivo && setRespostas(l))
     void api.modelos().then((l) => vivo && setModelos(l))
     const parar = api.acompanhar((m) => {
+      if (m.tipo === 'presenca') { setPresencas(m.item); return }
       if (m.tipo === 'contato') {
         const antes = contatosRef.current?.find((c) => c.id === m.item.id)
         const chegou = m.item.ultimaDirecao === 'entrada' && m.item.naoLidas > (antes?.naoLidas ?? 0)
@@ -231,7 +248,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
     setFiltro('todas'); setBusca(''); setEtiquetaFiltro(null)
     await abrirRef.current?.(id)
     const c = (l ?? contatos ?? []).find((x) => x.id === id)
-    if (!janela(c ?? null).aberta) setPedirModelo(id)
+    if (!api.perfil?.semJanela && !janela(c ?? null).aberta) setPedirModelo(id)
   }, [api, contatos])
   // "Conversar no WhatsApp" pedido por fora (ficha do cliente no painel)
   useEffect(() => {
@@ -399,6 +416,8 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
     <main className="wz-centro">
       {contato
         ? <Conversa key={contato.id} api={api} estado={estado} contato={contato} mensagens={msgs[contato.id] ?? null} temMais={!tudo[contato.id]}
+            presenca={presencas[contato.waId] ?? null} contatos={contatos ?? []}
+            onMensagemLocal={(id, x) => setMsgs((t) => ({ ...t, [contato.id]: (t[contato.id] ?? []).map((y) => (y.id === id ? { ...y, ...x } : y)) }))}
             equipe={equipe} respostas={respostas} modelos={modelos} nomeDe={nomeDe} naoLidasAoAbrir={naoLidasAoAbrir[contato.id] ?? 0}
             rascunho={rascunhos[contato.id] ?? ''} onRascunho={(t) => setRascunhos((r) => ({ ...r, [contato.id]: t }))}
             irPara={irPara} onAbrirMidia={(m, itens) => setVisor({ itens, inicial: m.id })}
@@ -441,6 +460,7 @@ function BoasVindas({ exemplo, perfil, onNova }: { exemplo: boolean; perfil?: Wh
     <div className="wz-sem-conversa-arte" aria-hidden><span className="a" /><span className="b" /><I.whats /></div>
     <h3>{perfil.titulo ?? 'Assessor GF'} no WhatsApp</h3>
     <p>{perfil.boasVindas}</p>
+    <button className="wz-btn verde" onClick={onNova}><I.novaConversa />Nova conversa com um cliente</button>
     <ul><li><b>Assumir</b> pausa o Assessor só naquela conversa · <b>Devolver</b> religa</li><li>Responder à mão também assume a conversa</li><li>Sem a equipe escrever por 6 h, a conversa volta sozinha para o Assessor</li><li><kbd>/</kbd> abre as respostas prontas · nota interna o cliente não vê</li></ul>
     <small className="wz-cadeado"><I.cadeado /> {perfil.aviso}</small>
   </div>
@@ -509,6 +529,10 @@ function Conversa(p: {
   onModelosMudaram: (l: ModeloWpp[]) => void; onRespostas: () => void; onRepetir: (m: MensagemWpp) => void
   /** muda a conversa só na tela (o servidor já fez: responder à mão assume a conversa do Assessor) */
   onMudarLocal?: (c: Partial<ContatoWpp>) => void
+  /** Assessor: "digitando…", "gravando áudio…", online (aviso de presença da Z-API) */
+  presenca?: string | null
+  contatos?: ContatoWpp[]
+  onMensagemLocal?: (id: string, x: Partial<MensagemWpp>) => void
 }) {
   const { api, contato, mensagens } = p
   const [citando, setCitando] = useState<MensagemWpp | null>(null)
@@ -521,6 +545,18 @@ function Conversa(p: {
   const [achado, setAchado] = useState(0)
   const [menuTopo, setMenuTopo] = useState(false)
   const [sugestao, setSugestao] = useState<{ texto: string; vez: number } | null>(null)
+  const [encaminhando, setEncaminhando] = useState<MensagemWpp | null>(null)
+  const [editando, setEditando] = useState<MensagemWpp | null>(null)
+  const [avisoTopo, setAvisoTopo] = useState<string | null>(null)
+  const avisar = (t: string) => { setAvisoTopo(t); setTimeout(() => setAvisoTopo(null), 4000) }
+  async function apagar(m: MensagemWpp) {
+    if (!api.apagar || !window.confirm('Apagar esta mensagem para todos? Ela some do WhatsApp do cliente (aqui fica riscada para a equipe).')) return
+    try { await api.apagar(contato.id, m); p.onMensagemLocal?.(m.id, { status: 'apagada' }) } catch (e) { avisar((e as Error).message) }
+  }
+  async function bloquear() {
+    if (!api.bloquear || !window.confirm(`Bloquear ${nomeDoContato(contato)} no WhatsApp do Assessor? A pessoa não consegue mais mandar mensagem para este número.`)) return
+    try { await api.bloquear(contato.id, true); avisar('Contato bloqueado no WhatsApp do Assessor.') } catch (e) { avisar((e as Error).message) }
+  }
   const [sugerindo, setSugerindo] = useState<string | null>(null)
   async function sugerir() {
     if (!api.sugerirResposta) return
@@ -624,7 +660,9 @@ function Conversa(p: {
         <span>
           <b>{nomeDoContato(contato)}</b>
           <small><span className="wz-tel">{telefoneBonito(contato.waId)}</span>{perfil?.assessor
-            ? <span className={`wz-janela ${contato.iaPausada || p.estado.assessorPausadoGeral ? 'fechada' : 'aberta'}`}><i />{contato.iaPausada ? <>Com a equipe · Assessor quieto</> : p.estado.assessorPausadoGeral ? <>Assessor pausado para todos</> : !contato.userId ? <>Número não confirmado</> : <>Assessor respondendo</>}</span>
+            ? p.presenca === 'COMPOSING' || p.presenca === 'RECORDING' || p.presenca === 'AVAILABLE'
+              ? <span className="wz-presenca"><i />{p.presenca === 'COMPOSING' ? 'digitando…' : p.presenca === 'RECORDING' ? 'gravando áudio…' : 'online'}</span>
+              : <span className={`wz-janela ${contato.iaPausada || p.estado.assessorPausadoGeral ? 'fechada' : 'aberta'}`}><i />{contato.iaPausada ? <>Com a equipe · Assessor quieto</> : p.estado.assessorPausadoGeral ? <>Assessor pausado para todos</> : !contato.userId ? <>Número não confirmado</> : <>Assessor respondendo</>}</span>
             : <span className={`wz-janela ${j.aberta ? 'aberta' : 'fechada'}`}><i />{j.aberta ? <>Janela aberta · {textoDaJanela(j.restaMs)}</> : <>Janela de 24 h fechada</>}</span>}</small>
         </span>
       </button>
@@ -651,6 +689,7 @@ function Conversa(p: {
             <button role="menuitem" onClick={() => { p.onMudar({ naoLidas: 1 }); setMenuTopo(false); p.onVoltar() }}><I.balao />Marcar como não lida</button>
             {!perfil?.semModelos && <button role="menuitem" onClick={() => { setEscolhendoModelo(true); setMenuTopo(false) }}><I.modelo />Mandar modelo aprovado</button>}
             <button role="menuitem" onClick={() => { void navigator.clipboard?.writeText(telefoneBonito(contato.waId)); setMenuTopo(false) }}><I.copiar />Copiar número</button>
+            {api.bloquear && <button role="menuitem" onClick={() => { setMenuTopo(false); void bloquear() }}><I.alerta />Bloquear contato</button>}
             <button role="menuitem" disabled={exportando} onClick={() => { void exportar(); setMenuTopo(false) }}><I.baixar />{exportando ? 'Exportando…' : 'Exportar conversa'}</button>
           </div>}
         </span>
@@ -677,7 +716,7 @@ function Conversa(p: {
         {mensagens && p.temMais && mensagens.length >= POR_PAGINA && <button className="wz-mais" onClick={p.onMaisAntigas}>Ver mensagens anteriores</button>}
         {mensagens && <div className="wz-aviso-cripto"><I.cadeado />{perfil?.aviso ?? 'As mensagens chegam pelo WhatsApp oficial da Meta e ficam guardadas na plataforma. Só a equipe autorizada vê esta conversa.'}</div>}
         {mensagens && !mensagens.length && <div className="wz-conversa-vazia">
-          <b>Conversa nova</b><small>{perfil?.assessor ? 'Ainda sem mensagens guardadas.' : j.aberta ? 'Escreva a primeira mensagem.' : 'Para falar primeiro com alguém, o WhatsApp pede um modelo aprovado. Quando a pessoa responder, a conversa fica livre por 24 horas.'}</small>
+          <b>Conversa nova</b><small>{perfil?.assessor ? 'Escreva a primeira mensagem: ela sai pelo WhatsApp do Assessor e a conversa já fica com você (o Assessor quieto).' : j.aberta ? 'Escreva a primeira mensagem.' : 'Para falar primeiro com alguém, o WhatsApp pede um modelo aprovado. Quando a pessoa responder, a conversa fica livre por 24 horas.'}</small>
         </div>}
         {blocos.map((b) => <div key={b.dia} className="wz-dia">
           <span className="wz-dia-rotulo">{b.dia}</span>
@@ -685,6 +724,7 @@ function Conversa(p: {
             {m.id === idPrimeiraNaoLida && <div className="wz-marco-nao-lidas">{p.naoLidasAoAbrir} mensage{p.naoLidasAoAbrir > 1 ? 'ns' : 'm'} não lida{p.naoLidasAoAbrir > 1 ? 's' : ''}</div>}
             <Balao m={m} anterior={b.itens[i - 1]} citada={m.citando ? porWamid.get(m.citando) ?? null : null} termo={buscando ? termo.trim() : ''}
               contato={contato} api={api} janelaAberta={j.aberta} nomeDe={p.nomeDe} onCitar={() => setCitando(m)} onRepetir={() => p.onRepetir(m)}
+              onEncaminhar={api.encaminhar ? () => setEncaminhando(m) : undefined} onEditar={api.editar ? () => setEditando(m) : undefined} onApagar={api.apagar ? () => void apagar(m) : undefined}
               onAmpliar={() => p.onAbrirMidia(m, (mensagens ?? []).filter((x) => (x.tipo === 'imagem' || x.tipo === 'video' || x.tipo === 'figurinha') && x.midia && !x.enviando))}
               onReagir={(emoji) => p.onReagir(m, emoji)} onFavoritar={() => p.onFavoritar(m)} onIrPara={(w) => rolagem.current?.querySelector(`[data-msg="${porWamid.get(w)?.id}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })} />
           </div>)}
@@ -713,16 +753,20 @@ function Conversa(p: {
       }}
       onNota={p.onNota} />
 
+    {avisoTopo && <div className="wz-aviso-sugestao" role="status">{avisoTopo}</div>}
+    {encaminhando && <JanelaEncaminhar api={api} origem={contato} mensagem={encaminhando} contatos={p.contatos ?? []} onFechar={() => setEncaminhando(null)} onFeito={(n) => { setEncaminhando(null); avisar(`Encaminhada para ${n} conversa${n > 1 ? 's' : ''}.`) }} />}
+    {editando && <JanelaEditar api={api} contato={contato} mensagem={editando} onFechar={() => setEditando(null)} onFeito={(t) => { p.onMensagemLocal?.(editando.id, { texto: t, status: 'editada' }); setEditando(null) }} />}
     {escolhendoModelo && <EscolherModelo api={api} estado={p.estado} contato={contato} modelos={p.modelos} onModelos={p.onModelosMudaram} onFechar={() => setEscolhendoModelo(false)}
       onEnviar={(m, vars, texto) => { setEscolhendoModelo(false); p.onEnviar({ tipo: 'modelo', texto, modelo: { nome: m.nome, idioma: m.idioma } }, () => api.enviarModelo(contato.id, m, vars)) }} />}
   </section>
 }
 
 /* ================================================================ balão */
-function Balao({ m, anterior, citada, termo, contato, api, janelaAberta, nomeDe, onCitar, onAmpliar, onRepetir, onReagir, onIrPara, onFavoritar }: {
+function Balao({ m, anterior, citada, termo, contato, api, janelaAberta, nomeDe, onCitar, onAmpliar, onRepetir, onReagir, onIrPara, onFavoritar, onEncaminhar, onEditar, onApagar }: {
   m: MensagemWpp; anterior?: MensagemWpp; citada: MensagemWpp | null; termo: string; contato: ContatoWpp; api: WhatsAppApi; janelaAberta: boolean
   nomeDe: (id: string | null) => string | null; onCitar: () => void; onAmpliar: (url: string) => void; onRepetir: () => void
   onReagir: (emoji: string) => void; onIrPara: (wamid: string) => void; onFavoritar: () => void
+  onEncaminhar?: () => void; onEditar?: () => void; onApagar?: () => void
 }) {
   const [menu, setMenu] = useState(false)
   const emSequencia = !!anterior && anterior.direcao === m.direcao && anterior.direcao !== 'nota' && new Date(m.criadoEm).getTime() - new Date(anterior.criadoEm).getTime() < 5 * 60_000
@@ -736,21 +780,30 @@ function Balao({ m, anterior, citada, termo, contato, api, janelaAberta, nomeDe,
   const quemCitada = citada ? (citada.direcao === 'entrada' ? nomeDoContato(contato) : 'Você') : null
   const reacoes = [m.reacao, m.reacaoEquipe].filter(Boolean) as string[]
   const podeReagir = !sai && !!m.wamid && janelaAberta
+  const apagada = m.status === 'apagada'
+  const minutos = (Date.now() - new Date(m.criadoEm).getTime()) / 60_000
+  const podeEditar = !!onEditar && sai && m.tipo === 'texto' && !!m.wamid && !apagada && minutos < 15
+  const podeApagar = !!onApagar && sai && !!m.wamid && !apagada && minutos < 60 * 48
   return <div className={`wz-linha ${sai ? 'sai' : 'entra'} ${emSequencia ? 'seguida' : 'cauda'} ${reacoes.length ? 'com-reacao' : ''}`} onMouseLeave={() => setMenu(false)}>
-    <div className={`wz-balao ${m.tipo} ${grande ? 'emoji' : ''} ${midiaCheia ? 'midia-cheia' : ''} ${m.falhouAqui || m.status === 'falhou' ? 'falhou' : ''}`}>
+    <div className={`wz-balao ${m.tipo} ${grande ? 'emoji' : ''} ${midiaCheia ? 'midia-cheia' : ''} ${m.falhouAqui || m.status === 'falhou' ? 'falhou' : ''} ${apagada ? 'apagada' : ''}`}
+      onContextMenu={(e) => { if (m.enviando || m.falhouAqui) return; e.preventDefault(); setMenu(true) }}>
       {sai && m.autor && !emSequencia && <span className="wz-autor">{nomeDe(m.autor)}</span>}
       {m.tipo === 'modelo' && <span className="wz-modelo-rot"><I.modelo />Modelo · {m.modelo?.nome?.replace(/_/g, ' ')}</span>}
       {citada && <button className="wz-citada" onClick={() => citada.wamid && onIrPara(citada.wamid)}><b>{quemCitada}</b><span>{citada.texto || rotuloDoTipo(citada.tipo)}</span></button>}
       {m.midia && <Midia m={m} api={api} onAmpliar={onAmpliar} />}
+      {apagada && <p className="wz-apagada-rot">🚫 {sai ? 'Você apagou esta mensagem para todos' : 'O cliente apagou esta mensagem'}</p>}
       {m.texto && <p className={grande ? 'grande' : ''}>{formatar(m.texto, termo)}<span className="wz-espaco-pe" aria-hidden /></p>}
-      <span className={`wz-pe ${midiaCheia ? 'sobre' : ''}`} title={dataEHora(m.criadoEm)}>{m.favorita && <I.estrela />}<time>{horaCurta(m.criadoEm)}</time>{sai && <Tique status={m.enviando ? 'pendente' : m.status} />}</span>
+      <span className={`wz-pe ${midiaCheia ? 'sobre' : ''}`} title={dataEHora(m.criadoEm)}>{m.favorita && <I.estrela />}{m.status === 'editada' && <em className="wz-editada">editada</em>}<time>{horaCurta(m.criadoEm)}</time>{sai && !apagada && <Tique status={m.enviando ? 'pendente' : m.status === 'editada' ? 'enviada' : m.status} />}</span>
       {!m.enviando && !m.falhouAqui && <button className={`wz-balao-seta ${menu ? 'on' : ''}`} onClick={() => setMenu((v) => !v)} aria-label="Opções da mensagem" aria-expanded={menu}><I.seta /></button>}
       {menu && <div className={`wz-menu wz-menu-msg ${sai ? 'esq' : 'dir'}`} role="menu">
         {podeReagir && <div className="wz-reagir" role="group" aria-label="Reagir">{REACOES.map((e) => <button key={e} className={m.reacaoEquipe === e ? 'on' : ''} onClick={() => { onReagir(m.reacaoEquipe === e ? '' : e); setMenu(false) }} aria-label={`Reagir com ${e}`}>{e}</button>)}</div>}
         {m.wamid && <button role="menuitem" onClick={() => { onCitar(); setMenu(false) }}><I.responder />Responder</button>}
         {m.texto && <button role="menuitem" onClick={() => { void navigator.clipboard?.writeText(m.texto ?? ''); setMenu(false) }}><I.copiar />Copiar texto</button>}
+        {onEncaminhar && m.wamid && !apagada && <button role="menuitem" onClick={() => { setMenu(false); onEncaminhar() }}><I.encaminhar />Encaminhar</button>}
+        {podeEditar && <button role="menuitem" onClick={() => { setMenu(false); onEditar!() }}><I.lapis />Editar</button>}
+        {podeApagar && <button role="menuitem" className="perigo" onClick={() => { setMenu(false); onApagar!() }}><I.lixo />Apagar para todos</button>}
         {!m.id.startsWith('tmp-') && <button role="menuitem" onClick={() => { onFavoritar(); setMenu(false) }}><I.estrela />{m.favorita ? 'Tirar dos favoritos' : 'Favoritar'}</button>}
-        <div className="wz-menu-info"><small>{sai ? `Enviada por ${nomeDe(m.autor) ?? 'Equipe'}` : `Recebida`} · {dataEHora(m.criadoEm)}</small>{sai && <small>{({ pendente: 'Enviando…', enviada: 'Enviada', entregue: 'Entregue', lida: 'Lida pelo cliente', falhou: 'Não enviada', recebida: '' } as Record<string, string>)[m.status]}</small>}</div>
+        <div className="wz-menu-info"><small>{sai ? `Enviada por ${nomeDe(m.autor) ?? 'Equipe'}` : `Recebida`} · {dataEHora(m.criadoEm)}</small>{sai && <small>{({ pendente: 'Enviando…', enviada: 'Enviada', entregue: 'Entregue no celular do cliente', lida: 'Lida pelo cliente', falhou: 'Não enviada', recebida: '', apagada: 'Apagada para todos', editada: 'Editada' } as Record<string, string>)[m.status]}</small>}</div>
       </div>}
     </div>
     {reacoes.length > 0 && <span className="wz-reacao" title={[m.reacao && 'Reação do cliente', m.reacaoEquipe && 'Reação da equipe'].filter(Boolean).join(' · ')}>{reacoes.join('')}</span>}
@@ -1176,4 +1229,5 @@ const I = {
   teclado: icone('M3 7h18v10H3zM7 10.5h.01M10.5 10.5h.01M14 10.5h.01M17.5 10.5h.01M8 14h8'),
   estrela: icone('M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.4 7.2 18.9l.9-5.4L4.2 9.7l5.4-.8z'),
   lapis: icone('M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4'),
+  encaminhar: icone('M14 5l6 6-6 6M20 11H9a5 5 0 0 0-5 5v3'),
 }

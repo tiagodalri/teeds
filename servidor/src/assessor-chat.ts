@@ -45,7 +45,7 @@ export function paraMensagem(l: any): MensagemDoChat {
   return {
     id: String(l.id), contatoId: l.numero, wamid: wamidDe(l.id_whatsapp), direcao, tipo: l.tipo || 'texto',
     texto, midia: l.midia ?? null, modelo: null, citando: l.citando ?? null, reacao: l.reacao ?? null, reacaoEquipe: l.reacao_equipe ?? null,
-    favorita: !!l.favorita, status: l.papel === 'cliente' ? 'recebida' : l.status || 'enviada', erro: null,
+    favorita: !!l.favorita, status: l.status === 'apagada' || l.status === 'editada' ? l.status : l.papel === 'cliente' ? 'recebida' : l.status || 'enviada', erro: null,
     // o Assessor (I.A.) assina "assessor"; a equipe, o próprio id
     autor: l.papel === 'assessor' ? 'assessor' : l.autor ?? null, criadoEm: l.criado_em,
   }
@@ -309,6 +309,64 @@ export async function marcarReacao(numero: string, wamid: string, emoji: string)
   await rest(`/assessor_whatsapp_mensagens?marca=eq.${MARCA_DO_CHAT}&numero=eq.${numero}&id_whatsapp=in.(rec:${wamid},env:${wamid})`, {
     method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ reacao_equipe: emoji || null, atualizado_em: new Date().toISOString() }),
   })
+}
+
+/** DDD + 8 últimos dígitos (o mesmo número com ou sem 55 e com ou sem o 9). */
+function chaveTel(bruto: unknown): string | null {
+  let d = String(bruto ?? '').replace(/\D/g, '')
+  if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2)
+  return d.length >= 10 && d.length <= 11 ? d.slice(0, 2) + d.slice(-8) : null
+}
+
+/**
+ * Clientes com celular no cadastro, para começar uma conversa (25/11/2026, Tiago: "uma opção de iniciar uma conversa
+ * no WhatsApp com um contato… os clientes que possuem número de celular cadastrado no perfil"). Sem busca: os que
+ * entraram por último. Com busca: nome, e-mail ou número.
+ */
+export async function clientesComCelular(q: unknown): Promise<Array<{ origem: 'cliente'; id: string; nome: string | null; email: string | null; telefone: string; parceiro: string | null; subplano: string | null; contatoId: string | null; criadoEm: string | null }>> {
+  const t = String(q ?? '').trim().replace(/[%*,()]/g, ' ').slice(0, 60)
+  const digitos = t.replace(/\D/g, '')
+  let filtro = ''
+  if (digitos.length >= 4 && digitos.length === t.replace(/[\s()+-]/g, '').length) filtro = `&telefone=ilike.*${digitos.slice(-8, -4) || digitos}*`
+  else if (t) filtro = `&or=(nome.ilike.*${encodeURIComponent(t)}*,email.ilike.*${encodeURIComponent(t)}*)`
+  const l = await rest<any[]>(`/clientes?marca=eq.${MARCA_DO_CHAT}&telefone=not.is.null${filtro}&select=user_id,nome,email,telefone,parceiro,categoria,criado_em,visto_em&order=visto_em.desc.nullslast&limit=60`)
+  const contatos = await rest<any[]>(`/assessor_whatsapp_contatos?marca=eq.${MARCA_DO_CHAT}&select=numero,user_id`).catch(() => [])
+  return l.filter((x) => { const d = String(x.telefone ?? '').replace(/\D/g, ''); return d.length >= 10 && (!digitos || digitos.length < 4 || d.includes(digitos.slice(-8))) })
+    .slice(0, 40)
+    .map((x) => {
+      const d = String(x.telefone).replace(/\D/g, '')
+      const numero = d.length <= 11 ? `55${d}` : d
+      const ja = contatos.find((c) => c.user_id === x.user_id || chaveTel(c.numero) === chaveTel(d))
+      return { origem: 'cliente' as const, id: x.user_id, nome: x.nome ?? null, email: x.email ? String(x.email).replace(/\+marca-[a-z0-9-]+@/i, '@') : null, telefone: numero, parceiro: x.parceiro ?? null, subplano: x.categoria ?? null, contatoId: ja?.numero ?? null, criadoEm: x.criado_em ?? null }
+    })
+}
+
+/**
+ * Começa uma conversa com um número: cria a conversa (já com a equipe, o Assessor quieto, quem abriu de responsável) e
+ * liga ao cadastro do cliente pelo telefone, para a ficha aparecer ao lado. Se já existe conversa com o mesmo número
+ * (com ou sem o 9), devolve a existente.
+ */
+export async function novaConversa(adminId: string, numero: unknown, nome: unknown): Promise<string> {
+  let n = String(numero ?? '').replace(/\D/g, '')
+  if (n.length === 10 || n.length === 11) n = `55${n}`
+  if (!/^\d{12,15}$/.test(n)) throw new Error('Número inválido: use o DDD e o número.')
+  const chave = chaveTel(n)
+  const existentes = await rest<any[]>(`/assessor_whatsapp_contatos?marca=eq.${MARCA_DO_CHAT}&select=numero`).catch(() => [])
+  const ja = existentes.find((c) => chaveTel(c.numero) === chave)
+  if (ja) return ja.numero
+  const clientes = chave ? await rest<any[]>(`/clientes?marca=eq.${MARCA_DO_CHAT}&telefone=ilike.*${chave.slice(-4)}*&select=user_id,nome,telefone&limit=20`).catch(() => []) : []
+  const dono = clientes.filter((x) => chaveTel(x.telefone) === chave)
+  const agora = new Date().toISOString()
+  await rest('/assessor_whatsapp_contatos', {
+    method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      marca: MARCA_DO_CHAT, numero: n, user_id: dono.length === 1 ? dono[0].user_id : null,
+      nome: String(nome ?? '').trim().slice(0, 80) || (dono.length === 1 ? dono[0].nome : null),
+      responsavel: adminId, ia_pausada: true, pausada_em: agora, pausada_por: adminId, situacao: 'aberta', criado_em: agora, atualizado_em: agora,
+    }),
+  })
+  console.log(`[assessor-chat] conversa nova com …${n.slice(-4)} aberta pela equipe`)
+  return n
 }
 
 export async function fotoDaPlataforma(userId: string): Promise<string | null> {

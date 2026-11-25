@@ -14,10 +14,10 @@ import { whatsappDeExemplo, whatsappDoBanco, type ContatoWpp, type MensagemWpp, 
 */
 
 const PERFIL_DO_ASSESSOR = {
-  assessor: true, semJanela: true, semModelos: true, semNovaConversa: true,
+  assessor: true, semJanela: true, semModelos: true,
   titulo: 'Assessor GF',
   aviso: 'As mensagens chegam pelo WhatsApp do Assessor e ficam guardadas na plataforma. Só a administração geral vê esta conversa.',
-  boasVindas: 'Aqui aparecem as conversas dos clientes com o Assessor GF, ao vivo. Abra uma para ler o que a I.A. respondeu. Para responder você mesmo, toque em Assumir: o Assessor fica quieto naquela conversa até você devolver.',
+  boasVindas: 'Aqui aparecem as conversas dos clientes com o Assessor GF, ao vivo. Abra uma para ler o que a I.A. respondeu. Para responder você mesmo, toque em Assumir: o Assessor fica quieto naquela conversa até você devolver. Para falar primeiro com um cliente, toque em Nova conversa.',
 } as const
 
 async function pedir<T>(sessao: SessaoTeeds, caminho: string, init: RequestInit = {}): Promise<T> {
@@ -72,18 +72,26 @@ export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
     async ler(id) { await postar(sessao, 'ler', { numero: id }) },
     async mudarContato(id, campos) { await postar(sessao, 'conversa', { numero: id, campos }) },
     async reagir(id, wamid, emoji) { await postar(sessao, 'reagir', { numero: id, wamid, emoji }) },
-    novo: () => Promise.reject(new Error('No Assessor o cliente chama primeiro.')),
+    async novo(numero, nome) { return (await postar<{ numero: string }>(sessao, 'nova', { numero, nome })).numero },
     respostas: () => banco.respostas(),
     salvarResposta: (r) => banco.salvarResposta(r),
     apagarResposta: (id) => banco.apagarResposta(id),
     modelos: async () => [],
     async ficha(id) { return pedir(sessao, `ficha?numero=${encodeURIComponent(id)}`) },
     async arquivos(id) { return pedir(sessao, `arquivos?numero=${encodeURIComponent(id)}`) },
-    buscarPessoas: async () => [],
+    async buscarPessoas(q) { return (await pedir<{ pessoas: any[] }>(sessao, `pessoas?q=${encodeURIComponent(q)}`)).pessoas },
     async buscarMensagens(q) { return (await pedir<{ achados: any[] }>(sessao, `buscar?q=${encodeURIComponent(q)}`)).achados },
     async favoritar(id, sim) { await postar(sessao, 'favoritar', { id, sim }) },
     async sugerirResposta(id) { return (await postar<{ texto: string }>(sessao, 'sugerir', { numero: id })).texto },
     async pausarGeral(sim) { await postar(sessao, 'geral', { pausado: sim }) },
+    async encaminhar(id, m, destinos) { return (await postar<{ enviados: number }>(sessao, 'encaminhar', { numero: id, id: m.id, destinos })).enviados },
+    async apagar(id, m) { await postar(sessao, 'apagar', { numero: id, id: m.id }) },
+    async editar(id, m, texto) { await postar(sessao, 'editar', { numero: id, id: m.id, texto }) },
+    async postarStatus(d) {
+      if (d.arquivo && d.arquivo.size > 1_400_000) throw new Error('Pelo Assessor dá para mandar arquivo de até 1,4 MB. Mande um menor.')
+      await postar(sessao, 'status', { tipo: d.tipo, texto: d.texto, ...(d.arquivo ? { dados: await paraBase64(d.arquivo), mime: d.arquivo.type } : {}) })
+    },
+    async bloquear(id, sim) { await postar(sessao, 'bloquear', { numero: id, sim }) },
     async fotoDoContato(id) { return (await pedir<{ url: string | null }>(sessao, `foto?numero=${encodeURIComponent(id)}`).catch(() => ({ url: null }))).url },
     async fichaCompleta(id) { return pedir(sessao, `ficha-completa?numero=${encodeURIComponent(id)}`) },
     async todasMensagens(id) { return (await pedir<{ mensagens: MensagemWpp[] }>(sessao, `todas?numero=${encodeURIComponent(id)}`)).mensagens },
@@ -111,8 +119,9 @@ export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
       const passo = async () => {
         if (!vivo) return
         try {
-          const d = await pedir<{ agora: string; contatos: ContatoWpp[]; mensagens: MensagemWpp[] }>(sessao, `mudancas?desde=${encodeURIComponent(desde)}`)
+          const d = await pedir<{ agora: string; contatos: ContatoWpp[]; mensagens: MensagemWpp[]; presencas?: Record<string, string> }>(sessao, `mudancas?desde=${encodeURIComponent(desde)}`)
           desde = d.agora
+          aoMudar({ tipo: 'presenca', item: d.presencas ?? {} })
           for (const c of d.contatos) aoMudar({ tipo: 'contato', item: c })
           for (const m of d.mensagens) { aoMudar({ tipo: 'mensagem', item: m, nova: !vistas.has(m.id) }); vistas.add(m.id) }
           if (vistas.size > 4000) vistas.clear()
@@ -138,6 +147,11 @@ export function assessorDeExemplo(euId = 'eu'): WhatsAppApi {
     perfil: PERFIL_DO_ASSESSOR,
     async estado() { return { ...(await base.estado()), assessorPausadoGeral: geral, conta: { marca: 'globalfly', parceiro: null, numero: '+5511914801613', nomeVerificado: 'Assessor GF', qualidade: null, limite: null, situacao: 'conectado', erro: null, ultimoAvisoEm: null, conectadoEm: null, phoneNumberId: null, wabaId: null, appId: null } } },
     async pausarGeral(sim) { geral = sim },
+    async encaminhar(_id, _m, destinos) { await new Promise((r) => setTimeout(r, 500)); return destinos.length },
+    async apagar() { await new Promise((r) => setTimeout(r, 300)) },
+    async editar() { await new Promise((r) => setTimeout(r, 300)) },
+    async postarStatus() { await new Promise((r) => setTimeout(r, 700)) },
+    async bloquear() { await new Promise((r) => setTimeout(r, 300)) },
     async fotoDoContato(id) { return id.endsWith('1') ? null : `https://i.pravatar.cc/240?u=${id}` },
     async fichaCompleta(id) {
       await new Promise((r) => setTimeout(r, 500))

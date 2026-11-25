@@ -78,7 +78,7 @@ export function NovaConversaPainel({ api, onFechar, onEscolher }: { api: WhatsAp
       {clientes.length > 0 && <Grupo titulo={q ? 'Clientes da plataforma' : 'Clientes que entraram por último'}>{clientes.map((o) => <Item key={o.chave} o={o} on={indice(o.chave) === sel} onMouseEnter={() => setSel(indice(o.chave))} onClick={() => onEscolher(o.escolha)} />)}</Grupo>}
       {leads.length > 0 && <Grupo titulo={q ? 'Leads (sem conta ainda)' : 'Leads recentes'}>{leads.map((o) => <Item key={o.chave} o={o} on={indice(o.chave) === sel} onMouseEnter={() => setSel(indice(o.chave))} onClick={() => onEscolher(o.escolha)} />)}</Grupo>}
       {pessoas !== null && !clientes.length && !leads.length && q.trim() && !numero && <div className="wz-vazio-lista"><b>Ninguém encontrado</b><small>Confira o nome ou o e-mail. Para falar com alguém que não está na plataforma, digite o número com DDD.</small></div>}
-      <p className="wz-nova-rodape">Pela regra do WhatsApp, quem não falou com vocês nas últimas 24 horas recebe primeiro um modelo aprovado. Depois que a pessoa responder, a conversa fica livre.</p>
+      {!api.perfil?.semJanela && <p className="wz-nova-rodape">Pela regra do WhatsApp, quem não falou com vocês nas últimas 24 horas recebe primeiro um modelo aprovado. Depois que a pessoa responder, a conversa fica livre.</p>}
     </div>
   </section>
 }

@@ -44,7 +44,7 @@ export interface ContatoWpp {
   iaPausada?: boolean; pausadaEm?: string | null; pausadaPor?: string | null
 }
 export type TipoMsg = 'texto' | 'imagem' | 'audio' | 'video' | 'documento' | 'figurinha' | 'modelo' | 'localizacao' | 'contato' | 'botao' | 'outro'
-export type StatusMsg = 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou' | 'recebida'
+export type StatusMsg = 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou' | 'recebida' | 'apagada' | 'editada'
 export interface MidiaWpp { caminho?: string | null; mime?: string; nome?: string | null; tamanho?: number | null; voz?: boolean; falhou?: boolean; exemplo?: string; duracao?: number }
 export interface MensagemWpp {
   id: string; contatoId: string; wamid: string | null; direcao: 'entrada' | 'saida' | 'nota'; tipo: TipoMsg
@@ -73,7 +73,7 @@ export interface AchadoWpp { id: string; contatoId: string; texto: string; direc
 /** Tudo o que a conversa já trocou de arquivo, link e nota (para os Dados do contato). */
 export interface ArquivosDoContato { midias: MensagemWpp[]; docs: MensagemWpp[]; links: MensagemWpp[]; notas: MensagemWpp[]; favoritas: MensagemWpp[] }
 
-export type MudancaWpp = { tipo: 'contato'; item: ContatoWpp } | { tipo: 'mensagem'; item: MensagemWpp; nova: boolean }
+export type MudancaWpp = { tipo: 'contato'; item: ContatoWpp } | { tipo: 'mensagem'; item: MensagemWpp; nova: boolean } | { tipo: 'presenca'; item: Record<string, string> }
 
 /**
  * O que muda quando a central serve a outro número (25/11/2026: o chat do Assessor GF, pela Z-API):
@@ -125,6 +125,12 @@ export interface WhatsAppApi {
   fotoDoContato?(contatoId: string): Promise<string | null>
   /** só no Assessor: a ficha completa do cliente para a lateral */
   fichaCompleta?(contatoId: string): Promise<import('./fichaDoCliente').FichaDoContato>
+  /** só no Assessor (Z-API): encaminhar, apagar para todos, editar, postar status, bloquear */
+  encaminhar?(contatoId: string, m: MensagemWpp, destinos: string[]): Promise<number>
+  apagar?(contatoId: string, m: MensagemWpp): Promise<void>
+  editar?(contatoId: string, m: MensagemWpp, texto: string): Promise<void>
+  postarStatus?(d: { tipo: 'texto' | 'imagem' | 'video'; texto: string; arquivo?: File | null }): Promise<void>
+  bloquear?(contatoId: string, sim: boolean): Promise<void>
 }
 
 /* ------------------------------------------------------------ apoio */

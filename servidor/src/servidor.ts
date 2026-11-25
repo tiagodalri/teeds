@@ -41,7 +41,7 @@ import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
-import { arquivoPelaEquipe, enviarPelaEquipe, fotoDoWhatsapp, pausarAssessorGeral, reagirPelaEquipe, sugerirResposta } from './zapi'
+import { apagarPelaEquipe, arquivoPelaEquipe, bloquearContato, editarPelaEquipe, encaminharPelaEquipe, enviarPelaEquipe, fotoDoWhatsapp, marcarLidaPelaEquipe, numeroNoWhatsapp, pausarAssessorGeral, postarStatus, presencasRecentes, reagirPelaEquipe, sugerirResposta } from './zapi'
 import { fichaCompleta, talvezSeja } from './ficha-cliente'
 import * as chatDoAssessor from './assessor-chat'
 import { assessorLiberado, assessorLiberadoPara, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
@@ -946,7 +946,7 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
     let corpo: any = {}
     if (req.method === 'POST') {
       // o chat leva áudio e imagens (19/11/2026): 1,9 MB só nele, abaixo do teto de 2 MB do Caddy
-      const grande = url.pathname === '/api/chat' || url.pathname === '/api/admin/assessor/arquivo'
+      const grande = url.pathname === '/api/chat' || url.pathname === '/api/admin/assessor/arquivo' || url.pathname === '/api/admin/assessor/status'
       const pedacos = await lerCorpoComTeto(req, grande ? 1_900_000 : 1_000_000)
       if (!pedacos) return json(413, { erro: url.pathname === '/api/chat' ? 'O anexo passou do tamanho máximo. Mande um áudio mais curto ou menos imagens.' : 'Pedido grande demais.' })
       const cru = Buffer.concat(pedacos).toString('utf8')
@@ -1357,10 +1357,11 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           if (r === 'conversas') return json(200, { conversas: await chatDoAssessor.conversas() })
           if (r === 'mensagens') return json(200, { mensagens: await chatDoAssessor.mensagens(q.get('numero'), q.get('antes') ?? undefined) })
           if (r === 'todas') return json(200, { mensagens: await chatDoAssessor.todasAsMensagens(q.get('numero')) })
-          if (r === 'mudancas') return json(200, await chatDoAssessor.mudancas(q.get('desde')))
+          if (r === 'mudancas') return json(200, { ...(await chatDoAssessor.mudancas(q.get('desde'))), presencas: presencasRecentes() })
           if (r === 'ficha') return json(200, await chatDoAssessor.ficha(q.get('numero')))
           if (r === 'arquivos') return json(200, await chatDoAssessor.arquivos(q.get('numero')))
           if (r === 'buscar') return json(200, { achados: await chatDoAssessor.buscar(q.get('q')) })
+          if (r === 'pessoas') return json(200, { pessoas: await chatDoAssessor.clientesComCelular(q.get('q')) })
           if (r === 'arquivo') return json(200, { url: await chatDoAssessor.linkDoArquivo(q.get('caminho')) })
           if (r === 'foto') {
             const numero = chatDoAssessor.numeroValido(q.get('numero'))
@@ -1391,10 +1392,21 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
             return json(200, { mensagem: await chatDoAssessor.guardarDaEquipe({ numero: chatDoAssessor.numeroValido(corpo.numero), papel: 'nota', texto: t, autor: dono.id }) })
           }
           if (r === 'conversa') { await chatDoAssessor.mudarConversa(corpo.numero, corpo.campos ?? {}, dono.id); return json(200, { ok: true }) }
-          if (r === 'ler') { await chatDoAssessor.lerConversa(corpo.numero); return json(200, { ok: true }) }
+          if (r === 'ler') { await chatDoAssessor.lerConversa(corpo.numero); void marcarLidaPelaEquipe(chatDoAssessor.numeroValido(corpo.numero)).catch(() => null); return json(200, { ok: true }) }
           if (r === 'reagir') { await reagirPelaEquipe(corpo.numero, corpo.wamid, corpo.emoji); return json(200, { ok: true }) }
           if (r === 'favoritar') { await chatDoAssessor.favoritar(corpo.id, corpo.sim); return json(200, { ok: true }) }
           if (r === 'sugerir') return json(200, { texto: await sugerirResposta(corpo.numero) })
+          if (r === 'nova') {
+            let numero = String(corpo.numero ?? '').replace(/\D/g, '')
+            if (numero.length === 10 || numero.length === 11) numero = `55${numero}`
+            if (/^\d{12,15}$/.test(numero)) numero = await numeroNoWhatsapp(numero)
+            return json(200, { numero: await chatDoAssessor.novaConversa(dono.id, numero, corpo.nome) })
+          }
+          if (r === 'encaminhar') return json(200, { enviados: await encaminharPelaEquipe(dono.id, corpo.numero, corpo.id, corpo.destinos) })
+          if (r === 'apagar') { await apagarPelaEquipe(corpo.numero, corpo.id); return json(200, { ok: true }) }
+          if (r === 'editar') { await editarPelaEquipe(corpo.numero, corpo.id, corpo.texto); return json(200, { ok: true }) }
+          if (r === 'status') { await postarStatus(corpo); return json(200, { ok: true }) }
+          if (r === 'bloquear') { await bloquearContato(corpo.numero, corpo.sim !== false); return json(200, { ok: true }) }
           if (r === 'geral') return json(200, await pausarAssessorGeral(!!corpo.pausado, dono.id))
         }
         return json(404, { erro: 'Rota do chat do Assessor não encontrada.' })
