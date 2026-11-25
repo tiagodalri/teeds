@@ -62,6 +62,9 @@ const HERANCA = new Set([
   '.cine-player .cine-play-grande', '.cine-player .cine-play-grande svg',
   '.aulas .aula-play', '.aulas .aula-play::before', '.cine-erro-cheia',
   '.cine-player:fullscreen', '.cine-player:fullscreen video',
+  // 25/11/2026: o X fixo das janelas (core/janelasNoCelular.ts) só é criado com a tela até 900 px, então no
+  // computador ele nunca existe; as regras ficam soltas porque o elemento é só do celular
+  '#x-da-janela', '#x-da-janela[hidden]', '#x-da-janela svg', '#x-da-janela:focus-visible', '@keyframes x-da-janela-entra',
 ])
 conferir('nenhuma regra NOVA fora de um @media', soltas.filter((s) => !HERANCA.has(s)), [])
 conferir('e a herança continua exatamente a mesma (nem mais, nem menos)',
