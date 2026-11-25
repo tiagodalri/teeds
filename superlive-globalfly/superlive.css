@@ -417,3 +417,15 @@ html:has(body.sl) { overflow-x: hidden; }
 .sl-com-botao:hover { filter: brightness(1.06); }
 .sl-com-botao svg { width: 26px; height: 26px; flex: none; }
 .sl-comunidade small { display: block; margin-top: 10px; color: var(--aco); font-size: 13px; }
+
+/* os tiques do WhatsApp: 1 cinza (enviada), 2 cinza (entregue), 2 azuis (lida) */
+.sl-zap-msg time { display: inline-flex; align-items: center; gap: 3px; }
+.sl-tique { display: inline-flex; align-items: center; height: 11px; color: rgba(233, 237, 239, .6); transition: color .25s; }
+.sl-tique svg { height: 11px; width: auto; display: block; }
+.sl-tique .sl-tq2 { display: none; }
+.sl-tique[data-tique="entregue"] .sl-tq1, .sl-tique[data-tique="lida"] .sl-tq1 { display: none; }
+.sl-tique[data-tique="entregue"] .sl-tq2, .sl-tique[data-tique="lida"] .sl-tq2 { display: block; animation: sl-tique .18s ease-out; }
+.sl-tique[data-tique="lida"] { color: #53BDEB; }
+@keyframes sl-tique { from { transform: scale(.7); opacity: .4 } }
+.sl-zap-eu time { color: rgba(233, 237, 239, .6); }
+.sl-zap-ouvido .sl-zap-onda i.sl-ouvida { background: #53BDEB; }

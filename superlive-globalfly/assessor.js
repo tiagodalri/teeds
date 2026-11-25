@@ -23,7 +23,13 @@
     { de: 'eu', html: 'Boa! Qual I.A. você recomenda agora?', espera: 900 },
     { de: 'gf', digita: 1300, html: 'Agora a recomendada é a <b>GF Phenom</b>. Quer que eu ligue? É só me dizer a conta, a entrada, a meta e o limite.', espera: 0 },
   ]
-  var timers = [], rodada = 0, jaRodou = false
+  // os tiques do WhatsApp, com o desenho de lá: 1 cinza = enviada, 2 cinza = entregue, 2 azuis = lida
+  var TIQUE1 = '<svg class="sl-tq1" viewBox="0 0 12 11" aria-hidden="true"><path fill="currentColor" d="M11.155.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178L4.28 8.365 1.875 6.093a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.19-.374l-.337-.273Z"/></svg>'
+  var TIQUE2 = '<svg class="sl-tq2" viewBox="0 0 16 11" aria-hidden="true"><path fill="currentColor" d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.19-.374L11.07.653Zm-2.45 7.674a15.31 15.31 0 0 1-.546-.355.43.43 0 0 0-.317-.12.46.46 0 0 0-.362.158l-.292.33a.482.482 0 0 0 .013.666l1.079 1.073c.135.135.3.203.495.203a.699.699 0 0 0 .552-.267l6.62-8.391a.446.446 0 0 0 .109-.298.487.487 0 0 0-.178-.38l-.355-.273a.487.487 0 0 0-.673.076L8.62 8.327Z"/></svg>'
+  var TIQUES = '<span class="sl-tique" data-tique="enviada" role="img" aria-label="Enviada">' + TIQUE1 + TIQUE2 + '</span>'
+  var NOMES = { enviada: 'Enviada', entregue: 'Entregue', lida: 'Lida' }
+  function tique(b, estado) { var t = b && b.querySelector('.sl-tique'); if (t) { t.dataset.tique = estado; t.setAttribute('aria-label', NOMES[estado]) } }
+  var timers = [], rodada = 0, jaRodou = false, ultimaMinha = null
   function depois(f, ms) { timers.push(setTimeout(f, ms)) }
   function limpar() { timers.forEach(clearTimeout); timers = []; conversa.innerHTML = ''; notifs.innerHTML = ''; status.textContent = 'online'; raiz.dataset.cena = 'zap' }
   function descer() { conversa.scrollTop = conversa.scrollHeight }
@@ -37,9 +43,14 @@
       b.innerHTML = '<button type="button" class="sl-zap-play" aria-label="Tocar o áudio de novo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg></button>' +
         '<span class="sl-zap-onda">' + onda.map(function (h) { return '<i style="height:' + h + 'px"></i>' }).join('') + '</span>' +
         '<span class="sl-zap-dur">0:0' + p.seg + '</span>' +
-        '<p class="sl-zap-transc" hidden><em>Transcrição</em> ' + p.transcricao + '</p><time>' + horaAgora + ' ✓✓</time>'
-    } else b.innerHTML = '<p>' + p.html + '</p><time>' + horaAgora + (p.de === 'eu' ? ' ✓✓' : '') + '</time>'
-    conversa.appendChild(b); descer(); return b
+        '<p class="sl-zap-transc" hidden><em>Transcrição</em> ' + p.transcricao + '</p><time>' + horaAgora + TIQUES + '</time>'
+    } else b.innerHTML = '<p>' + p.html + '</p><time>' + horaAgora + (p.de === 'eu' ? TIQUES : '') + '</time>'
+    conversa.appendChild(b); descer()
+    if (p.de === 'eu') {
+      ultimaMinha = b
+      if (reduzir) tique(b, 'lida'); else depois(function () { tique(b, 'entregue') }, 650)
+    }
+    return b
   }
   function notificar(n) {
     var el = document.createElement('div'); el.className = 'sl-ip-notif' + (n.zap ? ' sl-ip-notif-zap' : '')
@@ -75,13 +86,14 @@
       else if (p.tipo === 'audio') {
         var b = bolha(p)
         b.querySelector('.sl-zap-play').addEventListener('click', function () { tocarAudio(b, p.seg) })
-        depois(function () { tocarAudio(b, p.seg, seguir) }, reduzir ? 0 : 500)
+        depois(function () { tocarAudio(b, p.seg, function () { tique(b, 'lida'); b.classList.add('sl-zap-ouvido'); seguir() }) }, reduzir ? 0 : 900)
       } else if (p.de === 'gf' && p.digita && !reduzir) {
+        tique(ultimaMinha, 'lida')
         status.textContent = 'digitando…'
         var d = document.createElement('div'); d.className = 'sl-zap-msg sl-zap-gf sl-zap-digitando'; d.innerHTML = '<i></i><i></i><i></i>'
         conversa.appendChild(d); descer()
         depois(function () { d.remove(); status.textContent = 'online'; bolha(p); seguir() }, p.digita)
-      } else { bolha(p); seguir() }
+      } else { if (p.de === 'gf') tique(ultimaMinha, 'lida'); bolha(p); seguir() }
     })()
   }
   if (deNovo) deNovo.addEventListener('click', function () { raiz.scrollIntoView({ block: 'center', behavior: reduzir ? 'auto' : 'smooth' }); rodar() })
