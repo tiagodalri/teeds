@@ -41,7 +41,8 @@ import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
-import { arquivoPelaEquipe, enviarPelaEquipe, pausarAssessorGeral, reagirPelaEquipe, sugerirResposta } from './zapi'
+import { arquivoPelaEquipe, enviarPelaEquipe, fotoDoWhatsapp, pausarAssessorGeral, reagirPelaEquipe, sugerirResposta } from './zapi'
+import { fichaCompleta, talvezSeja } from './ficha-cliente'
 import * as chatDoAssessor from './assessor-chat'
 import { assessorLiberado, assessorLiberadoPara, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
 import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
@@ -1361,6 +1362,25 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           if (r === 'arquivos') return json(200, await chatDoAssessor.arquivos(q.get('numero')))
           if (r === 'buscar') return json(200, { achados: await chatDoAssessor.buscar(q.get('q')) })
           if (r === 'arquivo') return json(200, { url: await chatDoAssessor.linkDoArquivo(q.get('caminho')) })
+          if (r === 'foto') {
+            const numero = chatDoAssessor.numeroValido(q.get('numero'))
+            const whats = await fotoDoWhatsapp(numero).catch(() => null)
+            if (whats) return json(200, { url: whats })
+            const userId = await chatDoAssessor.usuarioDaConversa(numero)
+            const plataforma = userId ? await chatDoAssessor.fotoDaPlataforma(userId) : null
+            return json(200, { url: plataforma })
+          }
+          // a ficha completa da lateral (25/11/2026): o cliente inteiro, a foto do WhatsApp (ou da plataforma) e, sem dono, quem pode ser
+          if (r === 'ficha-completa') {
+            const numero = chatDoAssessor.numeroValido(q.get('numero'))
+            const userId = await chatDoAssessor.usuarioDaConversa(numero)
+            const [ficha, foto, talvez] = await Promise.all([
+              userId ? fichaCompleta(userId, numero) : Promise.resolve(null),
+              fotoDoWhatsapp(numero).catch(() => null),
+              userId ? Promise.resolve([]) : talvezSeja(numero),
+            ])
+            return json(200, { ficha, fotoWhatsapp: foto, talvez })
+          }
         }
         if (req.method === 'POST') {
           if (r === 'enviar') return json(200, { mensagem: await enviarPelaEquipe(dono.id, corpo.numero, corpo.texto, corpo.citando) })

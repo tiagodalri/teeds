@@ -84,6 +84,8 @@ export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
     async favoritar(id, sim) { await postar(sessao, 'favoritar', { id, sim }) },
     async sugerirResposta(id) { return (await postar<{ texto: string }>(sessao, 'sugerir', { numero: id })).texto },
     async pausarGeral(sim) { await postar(sessao, 'geral', { pausado: sim }) },
+    async fotoDoContato(id) { return (await pedir<{ url: string | null }>(sessao, `foto?numero=${encodeURIComponent(id)}`).catch(() => ({ url: null }))).url },
+    async fichaCompleta(id) { return pedir(sessao, `ficha-completa?numero=${encodeURIComponent(id)}`) },
     async todasMensagens(id) { return (await pedir<{ mensagens: MensagemWpp[] }>(sessao, `todas?numero=${encodeURIComponent(id)}`)).mensagens },
     equipe: () => banco.equipe(),
     parceiros: () => banco.parceiros(),
@@ -136,6 +138,41 @@ export function assessorDeExemplo(euId = 'eu'): WhatsAppApi {
     perfil: PERFIL_DO_ASSESSOR,
     async estado() { return { ...(await base.estado()), assessorPausadoGeral: geral, conta: { marca: 'globalfly', parceiro: null, numero: '+5511914801613', nomeVerificado: 'Assessor GF', qualidade: null, limite: null, situacao: 'conectado', erro: null, ultimoAvisoEm: null, conectadoEm: null, phoneNumberId: null, wabaId: null, appId: null } } },
     async pausarGeral(sim) { geral = sim },
+    async fotoDoContato(id) { return id.endsWith('1') ? null : `https://i.pravatar.cc/240?u=${id}` },
+    async fichaCompleta(id) {
+      await new Promise((r) => setTimeout(r, 500))
+      const c = (await base.contatos()).find((x) => x.id === id)
+      if (id.endsWith('1')) return { ficha: null, fotoWhatsapp: null, talvez: [{ nome: 'Rafael Costa', email: 'rafael@exemplo.com' }] }
+      const hoje = Date.now(), dia = 86_400_000, iso = (d: number) => new Date(hoje - d * dia).toISOString()
+      return {
+        fotoWhatsapp: `https://i.pravatar.cc/240?u=${id}`, talvez: [],
+        ficha: {
+          pessoa: { userId: 'u-' + id, nome: c?.nome ?? 'Cliente', email: 'cliente@exemplo.com', telefone: '(11) 98765-4321', cidade: 'Joinville', uf: 'SC', nascimento: '1991-04-12', fotoPlataforma: null, parceiro: 'v', parceiroNome: 'Victor Cordeiro', criadoEm: iso(41), vistoEm: iso(0.001), online: true, status: 'ativo', validade: null, subplano: 'black', whatsappConfirmadoEm: iso(2) },
+          dinheiro: { saldoReal: 1284.6, saldoDemo: 9820, contaReal: 'ROT90001234', contaDemo: 'DOT90005678', saldoLidoEm: iso(0.003), depositos: 1500, saques: 320, qtdDepositos: 3, qtdSaques: 1, ultimoDeposito: iso(6), markupReal: 84.32, markupMes: 31.1 },
+          resultado: {
+            real: { total: 104.6, ia: 122.4, manual: -17.8, operacoes: 1840, ganhas: 1210, perdidas: 630, sessoes: 46 },
+            demo: { total: -412.5, ia: -380, manual: -32.5, operacoes: 9200, ganhas: 5900, perdidas: 3300, sessoes: 120 },
+            porIa: [{ nome: 'GF Raptor', real: 140.2, demo: -120, sessoes: 30 }, { nome: 'GF Falcon', real: -22.5, demo: -260, sessoes: 12 }, { nome: 'GF Legacy', real: 4.7, demo: 0, sessoes: 4 }],
+            dias30: Array.from({ length: 30 }, (_, i) => ({ dia: new Date(hoje - (29 - i) * dia).toISOString().slice(0, 10), real: Math.round((Math.sin(i * 1.7) * 30 + (i % 4 === 0 ? 0 : 6)) * 100) / 100, demo: Math.round(Math.cos(i) * 80) })),
+            primeiraOperacao: iso(39), ultimaOperacao: iso(0.02),
+          },
+          agora: [{ ia: 'GF Raptor', demo: false, resultado: 3.2, operacoes: 12, desde: iso(0.02) }],
+          aulas: { total: 31, vistas: 22, concluidas: 17, minutos: 214, ultima: iso(1), ultimaTitulo: 'Gestão de banca na prática', faltam: ['Psicologia do trader', 'Recuperação inteligente', 'Lendo o mercado em 30 s'] },
+          lives: { plataforma: 3, plataformaTotal: 5, minutos: 96, externasOnline: 18, externasTotal: 31, ultima: iso(1) },
+          acessos: { total: 612, diasAtivos: 33, horas: 88.4, dispositivo: 'celular', ultimos7: 6 },
+          compras: [{ quando: iso(20), produto: 'GF Member Black', valor: 997, origem: 'Cakto', situacao: 'aprovada' }],
+          produtos: [{ nome: 'GF Member Black', desde: iso(20), ate: iso(-345), ativo: true, origem: 'cakto' }],
+          faturas: [{ mes: '2026-10', valor: 52.3, situacao: 'paga' }],
+          suporte: { conversas: 2, abertas: 0, ultima: iso(9) },
+          assessor: { mensagens: 34, desde: iso(2), iasLigadas: 5 },
+          linhaDoTempo: [
+            { quando: iso(0.001), tipo: 'acesso', texto: 'Último acesso na plataforma' }, { quando: iso(1), tipo: 'live', texto: 'Assistiu uma live na plataforma' },
+            { quando: iso(2), tipo: 'whatsapp', texto: 'Confirmou o WhatsApp do Assessor' }, { quando: iso(6), tipo: 'deposito', texto: 'Depósito · US$ 500,00' },
+            { quando: iso(20), tipo: 'compra', texto: 'GF Member Black · R$ 997,00 · aprovada' }, { quando: iso(39), tipo: 'operacao', texto: 'Primeira operação' }, { quando: iso(41), tipo: 'cadastro', texto: 'Criou a conta na GlobalFly' },
+          ],
+        },
+      }
+    },
     async sugerirResposta() { await new Promise((r) => setTimeout(r, 900)); return 'Oi! Pra ligar a *GF Raptor* é só me dizer a conta (demo ou real), a entrada, a meta e o limite de perda. Quer que eu ligue na demo com entrada de US$ 1?' },
     async ficha(id) { const f = await base.ficha(id); return f ? { ...f, extras: [{ rotulo: 'Operando agora', valor: 'GF Raptor · demo · +US$ 3,20 em 12 op.', tom: 'ok' }, { rotulo: 'Hoje na real', valor: '−US$ 4,00 em 1 sessão' }, { rotulo: 'Saldo real', valor: 'ROT92075216 · US$ 0,00', tom: 'alerta' }, { rotulo: 'WhatsApp', valor: 'Confirmado no perfil', tom: 'ok' }] } : f },
     async contatos() {

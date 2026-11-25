@@ -324,6 +324,22 @@ export async function sugerirResposta(numero: unknown): Promise<string> {
   return paraWhatsapp(r.texto || '')
 }
 
+/** A foto de perfil do WhatsApp do número (link temporário da Z-API), guardada 6 h. Sem foto ou foto privada: null. */
+const fotos = new Map<string, { link: string | null; em: number }>()
+export async function fotoDoWhatsapp(numero: unknown): Promise<string | null> {
+  const n = numeroValido(numero)
+  const g = fotos.get(n)
+  if (g && Date.now() - g.em < 6 * 3600_000) return g.link
+  const c = await config()
+  if (!c) return null
+  const r = await zapi<any>(c, `profile-picture?phone=${n}`).catch(() => null)
+  const link = (Array.isArray(r) ? r[0]?.link : r?.link) ?? null
+  const ok = typeof link === 'string' && /^https:\/\//.test(link) ? link : null
+  fotos.set(n, { link: ok, em: Date.now() })
+  if (fotos.size > 3000) fotos.clear()
+  return ok
+}
+
 /** Reação da equipe numa mensagem do cliente (vazio tira a reação). */
 export async function reagirPelaEquipe(numero: unknown, wamid: unknown, emoji: unknown): Promise<void> {
   const n = numeroValido(numero)

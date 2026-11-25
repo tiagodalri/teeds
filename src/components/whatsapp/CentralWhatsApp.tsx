@@ -20,6 +20,7 @@ import {
 } from '../../core/teeds/whatsapp'
 import { EscolherModelo, GerirRespostas, Conexao, Janela } from './JanelasWpp'
 import { NovaConversaPainel, type EscolhaDeContato } from './NovaConversaPainel'
+import { FichaDoCliente } from '../assessor/FichaDoCliente'
 import { GaleriaDoContato, Visualizador, FaixaDeMidias, NotasDoContato } from './MidiasDoContato'
 import { formatar, soEmoji, rotuloDoTipo, horaCurta, dataCurta, dataEHora, tamanho, duracao, horaOuDia, diaDaMensagem, haQuanto, corDaEtiqueta, EMOJIS, REACOES } from './textoWpp'
 import './central-whatsapp.css'
@@ -383,7 +384,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
             : filtro === 'resolvidas' ? <><b>Nenhuma resolvida</b><small>Quando terminar um atendimento, toque em "Resolver".</small></>
             : <><b>Nenhuma conversa ainda</b><small>Quando alguém mandar mensagem para o {api.perfil?.assessor ? 'Assessor' : 'número'}, ela aparece aqui na hora.</small></>}
         </div>}
-        {lista.map((c) => <ItemDaLista key={c.id} c={c} semJanela={!!api.perfil?.semJanela} ativo={c.id === aberto} rascunho={c.id !== aberto ? rascunhos[c.id] : undefined} nomeDe={nomeDe} onAbrir={() => void abrir(c.id)} onMudar={(x) => mudar(c.id, x)} />)}
+        {lista.map((c) => <ItemDaLista key={c.id} c={c} api={api.fotoDoContato ? api : undefined} semJanela={!!api.perfil?.semJanela} ativo={c.id === aberto} rascunho={c.id !== aberto ? rascunhos[c.id] : undefined} nomeDe={nomeDe} onAbrir={() => void abrir(c.id)} onMudar={(x) => mudar(c.id, x)} />)}
         {achados.length > 0 && <div className="wz-achados">
           <span className="wz-achados-titulo">Mensagens</span>
           {achados.map((a) => { const c = contatos?.find((x) => x.id === a.contatoId); if (!c) return null; return <button key={a.id} className="wz-achado-item" onClick={() => { void abrir(c.id).then(() => setIrPara({ id: a.id, vez: Date.now() })) }}>
@@ -453,16 +454,16 @@ function BoasVindas({ exemplo, perfil, onNova }: { exemplo: boolean; perfil?: Wh
   </div>
 }
 
-function ItemDaLista({ c, ativo, rascunho, nomeDe, onAbrir, onMudar, semJanela }: {
+function ItemDaLista({ c, ativo, rascunho, nomeDe, onAbrir, onMudar, semJanela, api }: {
   c: ContatoWpp; ativo: boolean; rascunho?: string; nomeDe: (id: string | null) => string | null
-  onAbrir: () => void; onMudar: (c: Parameters<WhatsAppApi['mudarContato']>[1]) => void; semJanela?: boolean
+  onAbrir: () => void; onMudar: (c: Parameters<WhatsAppApi['mudarContato']>[1]) => void; semJanela?: boolean; api?: WhatsAppApi
 }) {
   const [menu, setMenu] = useState(false)
   const j = semJanela ? JANELA_LIVRE : janela(c)
   const e = espera(c)
   return <div className={`wz-item ${ativo ? 'on' : ''} ${c.naoLidas ? 'nao-lida' : ''}`} onMouseLeave={() => setMenu(false)}>
     <button className="wz-item-corpo" onClick={onAbrir}>
-      <Avatar nome={nomeDoContato(c)} />
+      {api ? <AvatarDoContato api={api} contato={c} /> : <Avatar nome={nomeDoContato(c)} />}
       <span className="wz-item-meio">
         <span className="wz-item-topo"><b>{nomeDoContato(c)}</b><time>{c.ultimaEm ? horaOuDia(c.ultimaEm) : ''}</time></span>
         <span className="wz-item-baixo">
@@ -619,7 +620,7 @@ function Conversa(p: {
     <header className="wz-conversa-topo">
       <button className="wz-voltar" onClick={p.onVoltar} aria-label="Voltar para as conversas"><I.voltar /></button>
       <button className="wz-conversa-quem" onClick={p.onDados} title="Dados do contato">
-        <Avatar nome={nomeDoContato(contato)} />
+        <AvatarDoContato api={api} contato={contato} />
         <span>
           <b>{nomeDoContato(contato)}</b>
           <small><span className="wz-tel">{telefoneBonito(contato.waId)}</span>{perfil?.assessor
@@ -993,9 +994,9 @@ function DadosDoContato({ api, contato, equipe, mensagens, nomeDe, onFechar, onM
   }
   const midias = arquivos?.midias ?? [], docs = arquivos?.docs ?? [], links = arquivos?.links ?? [], notas = arquivos?.notas ?? [], favoritas = arquivos?.favoritas ?? []
   return <aside className="wz-dados" aria-label="Dados do contato">
-    <header><button className="wz-icone-btn" onClick={onFechar} aria-label="Fechar"><I.x /></button><b>Dados do contato</b></header>
-    <div className="wz-dados-rolagem">
-      <section className="wz-dados-quem">
+    <header><button className="wz-icone-btn" onClick={onFechar} aria-label="Fechar"><I.x /></button><b>{api.fichaCompleta ? 'Ficha do cliente' : 'Dados do contato'}</b></header>
+    <div className={`wz-dados-rolagem ${api.fichaCompleta ? 'com-ficha' : ''}`}>
+      {api.fichaCompleta ? <FichaDoCliente api={api} contato={contato} onAbrirCliente={onAbrirCliente} /> : <section className="wz-dados-quem">
         <Avatar nome={nomeDoContato(contato)} grande />
         {editandoNome
           ? <form className="wz-dados-nome" onSubmit={(e) => { e.preventDefault(); onMudar({ nome: novoNome.trim() || null }); setEditandoNome(false) }}>
@@ -1010,13 +1011,13 @@ function DadosDoContato({ api, contato, equipe, mensagens, nomeDe, onFechar, onM
           <button onClick={() => onMudar({ fixada: !contato.fixada })} className={contato.fixada ? 'on' : ''}><I.alfinete /><span>{contato.fixada ? 'Fixada' : 'Fixar'}</span></button>
           <button onClick={() => onMudar({ situacao: contato.situacao === 'aberta' ? 'resolvida' : 'aberta' })}><I.certo /><span>{contato.situacao === 'aberta' ? 'Resolver' : 'Reabrir'}</span></button>
         </div>
-      </section>
+      </section>}
 
       {arquivos === null
         ? <section className="wz-dados-bloco"><span className="wz-dados-titulo">Mídia, links e docs</span><div className="wz-faixa-midias-tira">{[0, 1, 2].map((i) => <span key={i} className="wz-mini grande esqueleto" />)}</div></section>
         : <FaixaDeMidias api={api} midias={midias} docs={docs} links={links} onAbrirGaleria={setGaleria} onAbrir={(m) => onAbrirMidia(m, midias)} />}
 
-      <section className="wz-dados-bloco">
+      {!api.fichaCompleta && <section className="wz-dados-bloco">
         <span className="wz-dados-titulo">Na plataforma</span>
         {ficha === undefined && <div className="wz-carregando pequeno"><i />Procurando o cadastro…</div>}
         {ficha?.extras && ficha.extras.length > 0 && <dl className="wz-dados-extras">
@@ -1044,7 +1045,7 @@ function DadosDoContato({ api, contato, equipe, mensagens, nomeDe, onFechar, onM
           {k && onAbrirCliente && <button className="wz-btn" onClick={() => onAbrirCliente(k.userId)}><I.pessoa />Abrir ficha completa</button>}
           {k?.email && <button className="wz-link" onClick={() => void navigator.clipboard?.writeText(k.email!)}>Copiar e-mail</button>}
         </div>
-      </section>
+      </section>}
 
       <section className="wz-dados-bloco">
         <span className="wz-dados-titulo">Atendimento</span>
@@ -1093,6 +1094,32 @@ function trechoAoRedor(texto: string, termo: string): string {
   return `${ini > 0 ? '…' : ''}${texto.slice(ini, ini + 90)}${ini + 90 < texto.length ? '…' : ''}`
 }
 const TONS = ['#00A884', '#53BDEB', '#B78D39', '#9C6B9E', '#C2724F', '#5B7FA6', '#3E8E7E']
+/** A foto do contato (Assessor: a do WhatsApp; sem ela, a da plataforma), pedida uma vez por aba e no máximo 4 por vez. */
+const fotosGuardadas = new Map<string, Promise<string | null>>()
+let fotosPedindo = 0
+const filaDeFotos: Array<() => void> = []
+function pedirFoto(api: WhatsAppApi, id: string): Promise<string | null> {
+  let p = fotosGuardadas.get(id)
+  if (p) return p
+  p = new Promise<string | null>((ok) => {
+    const ir = () => { fotosPedindo++; api.fotoDoContato!(id).catch(() => null).then((u) => { ok(u); fotosPedindo--; filaDeFotos.shift()?.() }) }
+    if (fotosPedindo < 4) ir(); else filaDeFotos.push(ir)
+  })
+  fotosGuardadas.set(id, p)
+  return p
+}
+function AvatarDoContato({ api, contato, grande }: { api: WhatsAppApi; contato: ContatoWpp; grande?: boolean }) {
+  const [url, setUrl] = useState<string | null>(null)
+  const [falhou, setFalhou] = useState(false)
+  useEffect(() => {
+    if (!api.fotoDoContato) return
+    let vivo = true
+    void pedirFoto(api, contato.id).then((u) => vivo && setUrl(u))
+    return () => { vivo = false }
+  }, [api, contato.id])
+  if (url && !falhou) return <span className={`wz-avatar foto ${grande ? 'grande' : ''}`} aria-hidden><img src={url} alt="" loading="lazy" onError={() => setFalhou(true)} /></span>
+  return <Avatar nome={nomeDoContato(contato)} grande={grande} />
+}
 function Avatar({ nome, grande }: { nome: string; grande?: boolean }) {
   let h = 0; for (const ch of nome) h = (h * 31 + ch.charCodeAt(0)) >>> 0
   const iniciais = nome.replace(/^\+/, '').split(/\s+/).filter((p) => /\p{L}/u.test(p)).slice(0, 2).map((p) => p[0].toUpperCase()).join('')

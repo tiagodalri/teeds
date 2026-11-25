@@ -121,6 +121,10 @@ export interface WhatsAppApi {
   sugerirResposta?(contatoId: string): Promise<string>
   /** só no Assessor: pausa (ou religa) a I.A. em todas as conversas */
   pausarGeral?(sim: boolean): Promise<void>
+  /** só no Assessor: a foto do contato (a do WhatsApp; sem ela, a da plataforma) */
+  fotoDoContato?(contatoId: string): Promise<string | null>
+  /** só no Assessor: a ficha completa do cliente para a lateral */
+  fichaCompleta?(contatoId: string): Promise<import('./fichaDoCliente').FichaDoContato>
 }
 
 /* ------------------------------------------------------------ apoio */

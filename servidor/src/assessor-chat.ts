@@ -311,4 +311,9 @@ export async function marcarReacao(numero: string, wamid: string, emoji: string)
   })
 }
 
+export async function fotoDaPlataforma(userId: string): Promise<string | null> {
+  const [c] = await rest<any[]>(`/clientes?marca=eq.${MARCA_DO_CHAT}&user_id=eq.${userId}&select=foto_url&limit=1`).catch(() => [])
+  return typeof c?.foto_url === 'string' && /^https:\/\//.test(c.foto_url) ? c.foto_url : null
+}
+
 export { numeroValido }

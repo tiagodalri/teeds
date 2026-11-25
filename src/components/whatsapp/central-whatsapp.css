@@ -791,3 +791,6 @@
 .wz-dados-extras { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--wz-linha); }
 .wz-dados-extras dd.ok { color: var(--wz-verde); }
 .wz-dados-extras dd.alerta { color: var(--down); }
+
+.wz-avatar.foto { padding: 0; overflow: hidden; background: var(--wz-busca); }
+.wz-avatar.foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
