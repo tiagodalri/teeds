@@ -8,7 +8,7 @@
   <meta name="description" content="Domingo, 29/11, às 20h: a Super Live com Victor Cordeiro e Naor Bezerra, direto de casa. Aprenda, sem comprar curso, a ganhar no mercado dolarizado aproveitando a alta do dólar." />
   <meta property="og:title" content="Super Live · Domingo 29/11 às 20h" />
   <meta property="og:description" content="O seu novo programa de domingo: Victor Cordeiro e Naor Bezerra ao vivo, direto de casa." />
-  <meta property="og:image" content="https://globalflytrade.com/superlive/img/casa-celular.webp" />
+  <meta property="og:image" content="https://globalflytrade.com/superlive/img/victor-tela.webp" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/png" sizes="32x32" href="/pwa-globalfly/favicon-32.png" />
   <link rel="apple-touch-icon" href="/pwa-globalfly/icon-180.png" />
@@ -25,7 +25,7 @@
     oportunidade de aprender, sem ter que comprar curso, a ganhar dinheiro no mercado dolarizado,
     aproveitando a alta do dólar." Cadastro com os mesmos dados do lançamento de 09/11 (nome, e-mail,
     WhatsApp). Tiago (25/11): o acesso fica liberado desde já, sem trava até a live.
-    As fotos do Victor em casa foram geradas no Higgsfield a partir de quadros da VSL dele.
+    Fotos: quadros reais das VSLs do Victor e do Naor (25/11, Tiago: "use fotos mais reais deles").
   -->
   <header class="sl-topo">
     <img src="/globalfly-assinatura.png" alt="GlobalFly Trade" width="900" height="283" />
@@ -33,32 +33,37 @@
   </header>
 
   <section class="sl-heroi" aria-labelledby="titulo">
-    <picture class="sl-heroi-foto">
-      <source media="(max-width: 720px)" srcset="./img/casa-celular.webp" data-heroi-celular />
-      <img src="./img/casa.webp" alt="Victor Cordeiro na área da churrasqueira da casa dele, num domingo à noite" width="2400" height="1340" data-heroi />
-    </picture>
+    <div class="sl-heroi-miolo">
+      <figure class="sl-tvzao">
+        <img src="./img/victor-tela.webp" alt="Victor Cordeiro" width="1600" height="900" data-tela fetchpriority="high" />
+        <span class="sl-bug"><i aria-hidden="true"></i> Ao vivo</span>
+        <span class="sl-placa">Domingo · 20h</span>
+        <figcaption data-legenda-tela><b>Victor Cordeiro</b><span>&amp; Naor Bezerra</span></figcaption>
+      </figure>
+      <div class="sl-heroi-texto">
+        <span class="sl-selo"><i aria-hidden="true"></i> Ao vivo · Domingo 29/11 · 20h</span>
+        <h1 id="titulo"><span class="sl-super">Super</span> <span class="sl-live">Live</span></h1>
+        <p class="sl-frase">O seu novo programa de domingo.</p>
+        <p class="sl-texto">Domingo à noite, todo mundo em casa, no sofá. Desta vez, o seu compromisso é com a gente: <b data-dupla>Victor Cordeiro e Naor Bezerra ao vivo</b>, direto de casa, para você aprender, <b>sem ter que comprar curso</b>, a ganhar no mercado dolarizado aproveitando a alta do dólar.</p>
+        <div class="sl-relogio" data-relogio aria-label="Tempo até a Super Live">
+          <div><b data-d>0</b><span>dias</span></div>
+          <div><b data-h>00</b><span>horas</span></div>
+          <div><b data-m>00</b><span>min</span></div>
+          <div><b data-s>00</b><span>seg</span></div>
+        </div>
+        <a class="botao sl-cta" href="#cadastro" data-ir-ao-form>Garantir meu lugar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <p class="sl-gratis">Grátis · Nome, e-mail e WhatsApp</p>
+      </div>
+    </div>
     <script>
-      // o /n abre direto com a foto do Naor (sem piscar a do Victor antes)
+      // o /n abre direto com o Naor na tela (sem piscar o Victor antes)
       if (/^\/n\//.test(location.pathname)) {
         document.documentElement.classList.add('sl-n')
-        document.querySelector('[data-heroi-celular]').srcset = './img/naor-casa-celular.webp'
-        document.querySelector('[data-heroi]').src = './img/naor-casa.webp'
+        document.querySelector('[data-tela]').src = './img/naor-tela.webp'
+        document.querySelector('[data-tela]').alt = 'Naor Bezerra'
+        document.querySelector('[data-legenda-tela]').innerHTML = '<b>Naor Bezerra</b><span>&amp; Victor Cordeiro</span>'
       }
     </script>
-    <div class="sl-heroi-miolo">
-      <span class="sl-selo"><i aria-hidden="true"></i> Ao vivo · Domingo 29/11 · 20h</span>
-      <h1 id="titulo"><span class="sl-super">Super</span> <span class="sl-live">Live</span></h1>
-      <p class="sl-frase">O seu novo programa de domingo.</p>
-      <p class="sl-texto">Domingo à noite, todo mundo em casa, no sofá. Desta vez, o seu compromisso é com a gente: <b data-dupla>Victor Cordeiro e Naor Bezerra ao vivo</b>, direto de casa, para você aprender, <b>sem ter que comprar curso</b>, a ganhar no mercado dolarizado aproveitando a alta do dólar.</p>
-      <div class="sl-relogio" data-relogio aria-label="Tempo até a Super Live">
-        <div><b data-d>0</b><span>dias</span></div>
-        <div><b data-h>00</b><span>horas</span></div>
-        <div><b data-m>00</b><span>min</span></div>
-        <div><b data-s>00</b><span>seg</span></div>
-      </div>
-      <a class="botao sl-cta" href="#cadastro" data-ir-ao-form>Garantir meu lugar no sofá <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-      <p class="sl-gratis">Grátis · Nome, e-mail e WhatsApp</p>
-    </div>
   </section>
 
   <div class="sl-faixa" aria-hidden="true">
@@ -70,19 +75,21 @@
 
   <main class="sl-corpo">
     <section class="sl-tv" aria-labelledby="titulo-tv">
-      <div class="sl-tv-cena">
-        <img src="./img/sala.webp" alt="" width="1800" height="1005" loading="lazy" />
-        <div class="sl-tela" aria-hidden="true">
-          <span class="sl-tela-ao-vivo"><i></i> Domingo · 20h</span>
-          <b>Super Live</b>
-          <span class="sl-tela-quem" data-dupla-curta>Victor &amp; Naor</span>
-          <span class="sl-tela-falta" data-falta-tv>Entra no ar em breve</span>
-        </div>
+      <div class="sl-grade" role="img" aria-label="Programação de domingo, 29 de novembro: às 20h, Super Live ao vivo">
+        <div class="sl-grade-topo"><b>Domingo</b><span>29 de novembro</span></div>
+        <ol>
+          <li><time>16h</time><span>Futebol</span></li>
+          <li><time>18h</time><span>Jornal da tarde</span></li>
+          <li><time>19h</time><span>Programa de auditório</span></li>
+          <li class="sl-agora"><time>20h</time><span><b>Super Live</b><small data-dupla-curta>Victor &amp; Naor · direto de casa</small></span><em>Ao vivo</em></li>
+          <li><time>22h</time><span>Filme da noite</span></li>
+        </ol>
+        <p class="sl-grade-falta" data-falta-tv>Entra no ar em breve</p>
       </div>
       <div class="sl-tv-texto">
         <span class="sl-rotulo">Domingão em família</span>
-        <h2 id="titulo-tv">Todo brasileiro tem o seu programa de domingo. Agora, o seu é com a gente.</h2>
-        <p>Às 20h a família já está em casa, no sofá, no quarto, esperando a TV. Neste domingo, troque o controle remoto por uma conversa de verdade: simples, de casa, falando de história e de oportunidade.</p>
+        <h2 id="titulo-tv">A grade do seu domingo ganhou um programa novo.</h2>
+        <p>Às 20h a família já está em casa, no sofá, esperando a TV. Neste domingo, troque o controle remoto por uma conversa de verdade: simples, de casa, falando de história e de oportunidade.</p>
         <p>O Victor faz a live da área da churrasqueira da casa dele, para todo mundo se sentir à vontade. Um aprendendo um mercado novo, outro encontrando uma oportunidade, e quem sabe até uma mudança de vida.</p>
       </div>
     </section>
@@ -99,22 +106,19 @@
     </section>
 
     <section class="sl-casa" aria-labelledby="titulo-casa">
-      <figure class="sl-casa-foto">
-        <img src="./img/victor-casa.webp" alt="Victor Cordeiro em casa, pronto para entrar ao vivo" width="760" height="1350" loading="lazy" data-foto-casa />
-      </figure>
       <div class="sl-casa-texto">
         <span class="sl-rotulo">Quem apresenta</span>
         <h2 id="titulo-casa" data-titulo-casa>Victor e Naor, ao vivo, de casa para a sua casa</h2>
-        <div class="sl-dupla" data-rostos>
-          <div class="sl-pessoa" data-pessoa="v"><img src="./img/victor.webp" alt="" width="400" height="400" loading="lazy" /><div><b>Victor Cordeiro</b><span>Direto da casa dele</span></div></div>
-          <div class="sl-pessoa" data-pessoa="n"><img src="./img/naor.webp" alt="" width="400" height="400" loading="lazy" /><div><b>Naor Bezerra</b><span data-naor-papel>Junto na live</span></div></div>
-        </div>
         <ul class="sl-lista">
           <li><b>Domingo, 29 de novembro</b>, às 20h de Brasília.</li>
           <li><b>De graça</b>: é só garantir o seu lugar com nome, e-mail e WhatsApp.</li>
           <li><b>Sua conta na GlobalFly</b> é criada no cadastro e já fica liberada.</li>
           <li><b>Antes da live</b>, você recebe o lembrete e o link para entrar.</li>
         </ul>
+      </div>
+      <div class="sl-dupla" data-rostos>
+        <figure class="sl-pessoa" data-pessoa="v"><img src="./img/victor-retrato.webp" alt="Victor Cordeiro" width="800" height="1000" loading="lazy" /><figcaption><b>Victor Cordeiro</b><span>Ao vivo com você</span></figcaption></figure>
+        <figure class="sl-pessoa" data-pessoa="n"><img src="./img/naor-retrato.webp" alt="Naor Bezerra" width="800" height="1000" loading="lazy" /><figcaption><b>Naor Bezerra</b><span data-naor-papel>Junto na live</span></figcaption></figure>
       </div>
     </section>
 
@@ -162,13 +166,10 @@
       // 25/11/2026 (Tiago: "o Naor também vai precisar, com a identidade dele"): no /n a página abre
       // com o Naor em casa e o nome dele na frente; no /v e no direto, com o Victor
       if (GF.parceiro() === 'n') {
-        document.querySelector('[data-heroi]').alt = 'Naor Bezerra em casa, num domingo à noite, pronto para entrar ao vivo'
         document.querySelector('[data-dupla]').textContent = 'Naor Bezerra e Victor Cordeiro ao vivo'
-        document.querySelector('[data-dupla-curta]').textContent = 'Naor & Victor'
-        document.querySelector('[data-foto-casa]').src = './img/naor-retrato.webp'
-        document.querySelector('[data-foto-casa]').alt = 'Naor Bezerra em casa, pronto para entrar ao vivo'
+        document.querySelector('[data-dupla-curta]').textContent = 'Naor & Victor · direto de casa'
         document.querySelector('[data-titulo-casa]').textContent = 'Naor e Victor, ao vivo, de casa para a sua casa'
-        document.querySelector('[data-naor-papel]').textContent = 'Ao vivo com você'
+        document.querySelector('[data-naor-papel]').textContent = 'Ao vivo com você'; document.querySelector('[data-pessoa="v"] span').textContent = 'Junto na live'
         var rostos = document.querySelector('[data-rostos]'); rostos.insertBefore(rostos.querySelector('[data-pessoa="n"]'), rostos.firstChild)
         Array.prototype.forEach.call(document.querySelectorAll('.sl-faixa span'), function (s) { if (s.textContent === 'Victor Cordeiro & Naor Bezerra') s.textContent = 'Naor Bezerra & Victor Cordeiro' })
       }
