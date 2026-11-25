@@ -174,6 +174,11 @@ export interface Dono {
    * uma pergunta ("quanto daria a Raptor com 1 dólar?") ou o texto de uma imagem nunca viram sessão.
    */
   pediuParaLigar?: boolean
+  /**
+   * 25/11/2026 (Tiago, WhatsApp do Assessor: "perguntar qual conta"): sem tela para conferir, um pedido de ligar
+   * que não diz a conta não escolhe sozinho: pergunta "demo ou real?" e liga com a resposta.
+   */
+  perguntarConta?: boolean
 }
 
 /** As contas Deriv que são deste cliente E que a autorização enxerga. */
@@ -261,6 +266,11 @@ async function executar(
 
       const disponiveis = await contasDele(dono)
       if (!disponiveis.length) throw new Error('Nenhuma conta Deriv está ligada a este login.')
+      if (!args.conta && dono.perguntarConta && !dono.somenteDemo && disponiveis.some((c) => c.type === 'demo') && disponiveis.some((c) => c.type !== 'demo')) {
+        const ok = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : undefined)
+        lembrarPedidoSemConta(dono.id, { robo: roboId, nome: ficha.nome, entrada: ok(args.entrada), meta: ok(args.take_profit), stop: ok(args.stop_loss) })
+        return { recusado: true, motivo: `Falta saber a conta. Pergunte ao cliente se liga na demonstração (${disponiveis.find((c) => c.type === 'demo')!.accountId}) ou na real (${disponiveis.find((c) => c.type !== 'demo')!.accountId}); não ligue antes de ele responder.` }
+      }
       const conta = args.conta
         ? disponiveis.find((c) => c.accountId === String(args.conta))
         : (disponiveis.find((c) => c.type === 'demo') ?? disponiveis[0])
@@ -599,8 +609,29 @@ export function textoDaRecomendacao(r: Recomendacao | null): string {
 }
 export const PERGUNTA_DA_RECOMENDADA = /\brecomendad[ao]s?\b|^(qual|que) (e |eh )?(a )?(melhor )?(i ?a|ia|inteligencia) (pra |para )?(eu )?(ligar|usar|operar|devo ligar|devo usar)( agora| hoje| no momento| nesse momento)?$|^(qual|que) (e |eh )?(a )?melhor (i ?a|ia|inteligencia)( pra| para)?( agora| hoje| no momento| nesse momento)?$/
 
+/** O pedido de ligar que esperava a pessoa dizer a conta (10 min; some ao mudar de assunto). */
+const pedidosSemConta = new Map<string, { pedido: PedidoDeLigar; ate: number }>()
+function lembrarPedidoSemConta(id: string, pedido: PedidoDeLigar) { pedidosSemConta.set(id, { pedido, ate: Date.now() + 10 * 60_000 }) }
+export const RESPOSTA_DE_CONTA = /^(e |eh |pode ser |pode |liga )?(na |em |a |o )?(conta )?(de )?(demo|demonstracao|virtual|treino|teste|real)( mesmo| por favor| pf| pfv| ok)?$/
+
+/** Sem a conta dita (WhatsApp): pergunta em qual, com as duas e o saldo de cada. null = não precisa perguntar. */
+async function perguntaDaConta(dono: Dono, pedido: PedidoDeLigar, marca: string): Promise<string | null> {
+  if (!dono.perguntarConta || dono.somenteDemo) return null
+  const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string; moeda: string; saldo: number }> }).contas
+  const demo = contas.find((c) => c.tipo !== 'real'); const real = contas.find((c) => c.tipo === 'real')
+  if (!demo || !real) return null
+  lembrarPedidoSemConta(dono.id, pedido)
+  return `Em qual conta eu ligo a **${pedido.nome}**?\n\nDemo · ${demo.conta} (${dinheiro(demo.saldo, demo.moeda)})\nReal · ${real.conta} (${dinheiro(real.saldo, real.moeda)})\n\nResponda "demo" ou "real".`
+}
+
 async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexos: Anexos = {}): Promise<string | null> {
   let q = normalizar(pergunta)
+  const pendente = pedidosSemConta.get(dono.id)
+  if (pendente) {
+    pedidosSemConta.delete(dono.id)
+    const escolha = Date.now() <= pendente.ate ? q.match(RESPOSTA_DE_CONTA)?.[5] : undefined
+    if (escolha) return cartaoDoPedido({ ...dono, pediuParaLigar: true }, { ...pendente.pedido, tipo: escolha === 'real' ? 'real' : 'demo' }, marca, anexos)
+  }
   if (ehFamiliaGF(marca) && PERGUNTA_DA_RECOMENDADA.test(q)) {
     const rec = await recomendacaoRapida()
     // "liga a recomendada na demo": vira o nome da I.A. do cartão e segue como pedido de ligar
@@ -644,6 +675,10 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
       const tipo = ligar[7] === 'real' ? 'real' : ligar[7] ? 'demo' : null
       const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string }> }).contas
       const conta = tipo ? contas.find((c) => (tipo === 'real' ? c.tipo === 'real' : c.tipo !== 'real'))?.conta : undefined
+      if (!tipo) {
+        const pergunta = await perguntaDaConta(dono, { robo: ficha.id, nome: ficha.nome, ...(ligar[6] ? { entrada: Number(ligar[6].replace(',', '.')) } : {}) }, marca)
+        if (pergunta) return pergunta
+      }
       if (tipo && !conta) return `Não achei uma conta ${tipo === 'real' ? 'real' : 'de demonstração'} da Deriv ligada a este login.`
       let proposta: Proposta | undefined
       const r = await executar(dono, 'propor_sessao', { robo: ficha.id, ...(conta ? { conta } : {}), ...(ligar[6] ? { entrada: Number(ligar[6].replace(',', '.')) } : {}) }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
@@ -715,7 +750,7 @@ export function pedidoDeLigar(q: string, robos: Array<{ id: string; nome: string
   })()
   const meta = achar('meta(?: de ganho| de lucro| diaria)?|take(?: profit)?|alvo|objetivo|gain|lucro')
   const stop = achar('stop(?: loss)?|limite(?: de perda)?|loss|perda(?: maxima)?|prejuizo')
-  const tipo = /\b(conta real|na real|em real|real)\b/.test(q.replace(/\breais\b/g, '')) ? 'real'
+  const tipo = /\b(conta real|na real|em real|real)\b/.test(q.replace(/\breais\b/g, '').replace(/\b(\d+(?:[.,]\d+)?|um|uma|dois|cinco|dez|vinte) real\b/g, '')) ? 'real'
     : /\b(demo|demonstracao|treino|virtual|teste|simulacao)\b/.test(q) ? 'demo' : undefined
   const ok = (v?: number) => (v !== undefined && Number.isFinite(v) && v > 0 ? v : undefined)
   return { robo: citadas[0].id, nome: citadas[0].nome, entrada: ok(entrada), meta: ok(meta), stop: ok(stop), tipo }
@@ -725,6 +760,10 @@ async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, 
   const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string }> }).contas
   // a pessoa fala pelo que vê: com os rótulos trocados, a "real" da tela é a virtual
   const tipoDeVerdade = pedido.tipo && anexos.trocados ? (pedido.tipo === 'real' ? 'demo' : 'real') : pedido.tipo
+  if (!tipoDeVerdade && !anexos.contaAtual) {
+    const pergunta = await perguntaDaConta(dono, pedido, marca)
+    if (pergunta) return pergunta
+  }
   const conta = tipoDeVerdade
     ? contas.find((c) => (tipoDeVerdade === 'real' ? c.tipo === 'real' : c.tipo !== 'real'))?.conta
     : contas.find((c) => c.conta === anexos.contaAtual)?.conta
