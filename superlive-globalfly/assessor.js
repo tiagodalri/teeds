@@ -94,7 +94,7 @@
   var alvoX = 0, alvoY = 0, x = 0, y = 0, pedido = false
   function aplicar() {
     x += (alvoX - x) * 0.12; y += (alvoY - y) * 0.12
-    raiz.style.setProperty('--ry', x.toFixed(2) + 'deg'); raiz.style.setProperty('--rx', y.toFixed(2) + 'deg'); raiz.style.setProperty('--brilho', (50 + x * 4).toFixed(1) + '%')
+    raiz.style.setProperty('--ry', x.toFixed(2) + 'deg'); raiz.style.setProperty('--rx', y.toFixed(2) + 'deg'); raiz.style.setProperty('--brilho', (50 + x * 4).toFixed(1) + '%'); raiz.style.setProperty('--esp', (-x * 0.55).toFixed(2) + 'px')
     if (Math.abs(alvoX - x) > 0.02 || Math.abs(alvoY - y) > 0.02) requestAnimationFrame(aplicar); else pedido = false
   }
   function pedir() { if (!pedido) { pedido = true; requestAnimationFrame(aplicar) } }

@@ -37,6 +37,18 @@
       <section class="cartao obrigado">
         <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
         <h1 data-titulo>Seu lugar está garantido!</h1>
+        <!-- 25/11/2026 (Tiago: "na página de obrigado de cada um deles quero o botão para a comunidade do WhatsApp"):
+             a comunidade é o primeiro passo, em destaque; o link é o do parceiro do endereço (captura.js, COMUNIDADE) -->
+        <section class="sl-comunidade" aria-labelledby="titulo-comunidade">
+          <span class="sl-com-passo">Último passo · leva 5 segundos</span>
+          <h2 id="titulo-comunidade" data-com-titulo>Entre agora na comunidade da GlobalFly no&nbsp;WhatsApp</h2>
+          <p data-com-texto>É por lá que a gente avisa quando a Super Live vai começar e manda o link para você entrar ao vivo no&nbsp;domingo.</p>
+          <a class="sl-com-botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3a9 9 0 0 0-7.700 13.600L3 21l4.500-1.200A9 9 0 1 0 12 3zm4.400 12.300c-.200.500-1.100 1-1.500 1-.400.100-.900.100-1.500-.100-2.600-.900-4.300-3.600-4.400-3.800-.100-.200-1-1.400-1-2.600 0-1.200.600-1.800.900-2.100.200-.200.500-.300.700-.300h.500c.200 0 .400 0 .600.500l.800 2c.100.200.100.400 0 .500l-.600.800c-.100.100-.200.300-.100.500.600 1.100 1.500 1.900 2.700 2.400.200.100.400.100.500-.100l.700-.900c.200-.200.300-.200.500-.100l1.900.900c.200.100.300.200.400.300 0 .200 0 .600-.100 1.100z"/></svg>
+            <span data-com-botao>Entrar na comunidade</span>
+          </a>
+          <small>Quem está na comunidade não perde a live.</small>
+        </section>
         <!-- 25/11/2026: o ingresso da Super Live (domingo 29/11, 20h) com a agenda -->
         <div class="sl-ingresso-obrigado">
           <div class="sl-io-topo"><span>Ingresso · Super Live</span><span>Dom 29/11 · 20h</span></div>
@@ -54,7 +66,7 @@
         <!-- 11/11/2026: o obrigado do cadastro com planos (o do lançamento de 09/11 está em
              arquivo/landing-lancamento-09-11/obrigado/). A conta nasce no cadastro e já entra. -->
         <p class="chamada" data-chamada>E tem mais: a sua conta na GlobalFly já foi criada e está liberada. Até domingo, entre e conheça as I.A., as aulas e as salas ao&nbsp;vivo.</p>
-        <p class="ultimo">Para começar com tudo pronto</p>
+        <p class="ultimo">Enquanto o domingo não chega</p>
         <ol class="o-passos">
           <li>
             <span class="o-n">1</span>
@@ -74,11 +86,6 @@
             </div>
             <button class="botao o-botao o-claro" type="button" id="avisos">Ativar notificações</button>
           </li>
-          <li>
-            <span class="o-n">4</span>
-            <div><strong>Entre na comunidade do&nbsp;WhatsApp</strong><span>Avisos, novidades e os horários das salas ao vivo chegam por&nbsp;lá.</span></div>
-            <a class="botao o-botao o-claro" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">Entrar na comunidade</a>
-          </li>
         </ol>
         <div class="acesso">
           <strong>Seu acesso</strong>
@@ -94,7 +101,7 @@
           </div>
           <div data-acesso="provisoria" hidden>
             <!-- 18/11/2026 (Tiago): cadastro sem senha; a senha nasce no Primeiro acesso, por um link no e-mail -->
-            <p>Agora é só <b>criar a sua senha</b>: toque em <b>Entrar na GlobalFly</b>, digite o <b>e-mail do cadastro</b> e enviamos um link para ele.</p>
+            <p>Para usar a plataforma, é só <b>criar a sua senha</b>: toque em <b>Entrar na GlobalFly</b>, digite o <b>e-mail do cadastro</b> e enviamos um link para ele.</p>
             <p>Abra o e-mail, toque no link e crie a senha. Não chegou? Confira o <b>Spam</b> ou o <b>Lixo eletrônico</b>.</p>
           </div>
         </div>
@@ -118,6 +125,10 @@
       var PLANOS = { gold: 'Gold', black: 'Black', prestige: 'Prestige' }
       if (PLANOS[dados.plano]) document.querySelector('[data-chamada]').innerHTML = 'Bem-vindo a bordo. Seu <b>GF Member ' + PLANOS[dados.plano] + '</b> está pronto: entre com o e-mail e a senha que você criou e conheça as I.A., as aulas e as salas ao&nbsp;vivo.'
       document.getElementById('comunidade').href = GF.COMUNIDADE
+      var DONO = { v: 'do Victor Cordeiro', n: 'do Naor Bezerra' }[GF.parceiro()]
+      if (DONO) {
+        document.querySelector('[data-com-titulo]').innerHTML = 'Entre agora na comunidade ' + DONO + ' no&nbsp;WhatsApp'
+      }
       // a tela de ENTRAR guardando o parceiro (/n/inicio); o /n/ sozinho abriria o formulário de cadastro
       document.getElementById('plataforma').href = GF.parceiro() ? '/' + GF.parceiro() + '/inicio' : '/'
       // quem se cadastrou pelo app não passou pelo questionário: a etapa não aparece como feita
