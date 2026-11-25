@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { publicSocket } from '../../core/deriv/client'
-import { casasDecimais } from '../../core/deriv/types'
+import { IAS_DA_RECOMENDACAO as IAS, JANELA_DA_RECOMENDACAO_S, MINIMO_DE_TICKS, digitosDosPrecos, inicioDaJanela, ordemDaRecomendacao, pedidoDosTicks, type IADaRecomendacao as IA } from '../../core/recomendacao'
 import { MARCA, FAMILIA_GF } from '../../marca'
 import { LogotipoDaIA } from '../marca/LogotipoDaIA'
 import { fotoDoCartaoAlto } from '../marca/fotoDoCartao'
@@ -27,32 +27,15 @@ import './recomendacao-da-ia.css'
  */
 export const recomendacaoLiberada = (email?: string | null) => !!email && FAMILIA_GF
 
-const IAS = [
-  { id: 'goreme', nome: 'GF Raptor', curto: 'Raptor', ganha: (d: number) => d < 9, p: 0.9 },
-  { id: 'falcon', nome: 'GF Falcon', curto: 'Falcon', ganha: (d: number) => d < 6, p: 0.6 },
-  { id: 'legacy', nome: 'GF Legacy', curto: 'Legacy', ganha: (d: number) => d > 3, p: 0.6 },
-  { id: 'superior5', nome: 'GF Gulf', curto: 'Gulf', ganha: (d: number) => d > 6, p: 0.3 },
-  { id: 'ag2', nome: 'GF Phenom', curto: 'Phenom', ganha: (d: number) => d < 3, p: 0.3 },
-] as const
-type IA = (typeof IAS)[number]
-
-/** A ordem da leitura (interna): quem mais passou do normal nos 100 ticks. */
-function recomendar(digitos: number[]): IA[] {
-  const n = digitos.length || 1
-  return [...IAS].map((ia) => ({ ia, z: (digitos.filter(ia.ganha).length - n * ia.p) / Math.sqrt(n * ia.p * (1 - ia.p)) }))
-    .sort((a, b) => b.z - a.z).map((r) => r.ia)
-}
-
-/** Os 100 ticks do 75 Index que terminam em `ate` (segundos) ou os mais novos. */
+/** Os 100 ticks do 75 Index que terminam em `ate` (segundos) ou os mais novos. A conta mora em core/recomendacao (o servidor usa a mesma). */
 async function digitosAte(ate: number | 'latest'): Promise<number[]> {
-  const res = await publicSocket.send({ ticks_history: 'R_75', end: ate, count: 100, style: 'ticks' })
-  const precos = (res.history as { prices?: number[] } | undefined)?.prices ?? []
-  const casas = res.pip_size === undefined ? 4 : casasDecimais(res.pip_size)
-  return precos.map((p) => Number(Number(p).toFixed(casas).slice(-1)))
+  const res = await publicSocket.send(pedidoDosTicks(ate))
+  return digitosDosPrecos((res.history as { prices?: number[] } | undefined)?.prices ?? [], res.pip_size)
 }
+const recomendar = ordemDaRecomendacao
 
 const hora = (ms: number) => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}` }
-const JANELA = 30 * 60
+const JANELA = JANELA_DA_RECOMENDACAO_S
 const ANALISE_MS = 3200
 const CHAVE_VISTA = `${MARCA.id}.recomendacao.vista`
 const jaVista = (de: number) => { try { return localStorage.getItem(CHAVE_VISTA) === String(de) } catch { return false } }
@@ -94,7 +77,7 @@ export function RecomendacaoDaIA({ aoLigar, aoMudar, ciclo, membros }: Props) {
     pedindo.current = true
     try {
       const d = await digitosAte(ciclo ? 'latest' : Math.floor(de / 1000))
-      if (d.length < 50) return
+      if (d.length < MINIMO_DE_TICKS) return
       const ordem = recomendar(d)
       setRec({ de, ate: de + passo, ordem })
       // a roleta só passa quando a recomendação é nova neste aparelho; voltar à Início mostra direto
@@ -105,13 +88,13 @@ export function RecomendacaoDaIA({ aoLigar, aoMudar, ciclo, membros }: Props) {
   }
 
   useEffect(() => {
-    void analisar(ciclo ? Date.now() : Math.floor(Date.now() / passo) * passo)
+    void analisar(ciclo ? Date.now() : inicioDaJanela(Date.now(), passo))
     const t = window.setInterval(() => setAgora(Date.now()), 250)
     return () => { window.clearInterval(t); timers.current.forEach(clearTimeout) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!rec) { if (agora % 5000 < 250) void analisar(ciclo ? Date.now() : Math.floor(agora / passo) * passo); return }
+    if (!rec) { if (agora % 5000 < 250) void analisar(ciclo ? Date.now() : inicioDaJanela(agora, passo)); return }
     if (fase === 'pronta' && agora >= rec.ate) void analisar(rec.ate)
   }, [agora]) // eslint-disable-line react-hooks/exhaustive-deps
 

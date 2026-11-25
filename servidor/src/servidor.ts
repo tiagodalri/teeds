@@ -41,7 +41,7 @@ import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
-import { assessorLiberado, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
+import { assessorLiberado, assessorLiberadoPara, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
 import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
 import { ehFamiliaGF } from '../../src/marca/marcas'
 
@@ -1329,9 +1329,9 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
       }
 
       // ---- Assessor GF no WhatsApp (19/11/2026): o número do perfil confirmado vira o login no WhatsApp.
-      // Por enquanto só os e-mails de LIBERADOS (zapi.ts); o resto recebe { liberado: false } e a tela não mostra nada.
+      // Desde 25/11/2026 todos os administradores da GF (assessorLiberadoPara); o resto recebe { liberado: false } e a tela não mostra nada.
       if (url.pathname.startsWith('/api/assessor/whatsapp')) {
-        if (!assessorLiberado(dono.email) || (dono.marca ?? 'teeds') !== MARCA_DO_ASSESSOR) return json(200, { liberado: false })
+        if ((dono.marca ?? 'teeds') !== MARCA_DO_ASSESSOR || !(await assessorLiberadoPara(dono.id))) return json(200, { liberado: false })
         if (url.pathname === '/api/assessor/whatsapp' && req.method === 'GET') return json(200, { liberado: true, ...(await estadoDoPerfil(dono.id)) })
         if (url.pathname === '/api/assessor/whatsapp/codigo' && req.method === 'POST') return json(200, { liberado: true, ...(await codigoDoPerfil(dono.id)) })
         if (url.pathname === '/api/assessor/whatsapp/desvincular' && req.method === 'POST') { await desvincularPerfil(dono.id); return json(200, { liberado: true, ok: true }) }

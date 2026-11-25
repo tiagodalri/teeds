@@ -2,7 +2,7 @@ import './ambiente'
 import { randomBytes, randomInt } from 'node:crypto'
 import { conversar, type Anexos, type Turno } from './chat'
 import { ver } from './sessoes'
-import { loginDoUsuario, restDoBanco as rest, somenteDemoDoUsuario } from './supabase'
+import { loginDoUsuario, papelDoAdmin, restDoBanco as rest, somenteDemoDoUsuario } from './supabase'
 import { appDaVitrine, vitrineDoPedido } from './apps-parceiros'
 
 /*
@@ -21,7 +21,11 @@ import { appDaVitrine, vitrineDoPedido } from './apps-parceiros'
 
 export const MARCA_DO_ASSESSOR = 'globalfly'
 const LIBERADOS = ['tiagodalri1@live.com']
+/** Quem liga a Z-API no ADM (os códigos): só o Tiago. */
 export const assessorLiberado = (email?: string | null) => !!email && LIBERADOS.includes(email.trim().toLowerCase())
+/** Quem conversa com o Assessor (25/11/2026, Tiago: "pode liberar para todos os ADMs por enquanto"): a mesma regra
+ * do Assistente da GF, qualquer administrador da marca (geral ou do parceiro). Os outros recebem "em fase de testes". */
+export const assessorLiberadoPara = (userId: string) => papelDoAdmin(userId, MARCA_DO_ASSESSOR).then((p) => !!p).catch(() => false)
 
 const CHAVE_CONFIG = 'ZAPI_GLOBALFLY'
 const BASE = 'https://api.z-api.io'
@@ -298,7 +302,7 @@ async function atender(numero: string, corpo: any): Promise<void> {
   }
 
   const login = await loginDoUsuario(dono.user_id)
-  if (!login || !assessorLiberado(login.email)) {
+  if (!login || !(await assessorLiberadoPara(dono.user_id))) {
     if (!jaAvisado(numero)) await enviar(numero, 'Olá! O *Assessor GF* está em fase de testes e logo vai estar disponível para a sua conta. Enquanto isso, a plataforma segue com tudo funcionando normalmente.', null)
     return
   }

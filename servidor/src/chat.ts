@@ -8,6 +8,7 @@ import { chaveDaAnthropicGuardada, chaveDoGeminiGuardada, contasDoUsuario, guard
 import { PADRAO, conferir, sugerir, type Limites } from './limites'
 import { marcaPorId } from '../../src/marca/marcas'
 import { ehFamiliaGF } from '../../src/marca/marcas'
+import { horaDeBrasilia, recomendacaoAgora, type Recomendacao } from './recomendacao'
 
 /**
  * O chat da Teeds.
@@ -587,8 +588,25 @@ const regraDe = (r: { ganhaQuando: string; descricao?: string }) =>
 const propostaDireta = new Map<string, Proposta>()
 
 /** Resposta pronta, sem I.A., para as perguntas que só pedem um dado. Nada (null) quando a pergunta é outra coisa. */
+/** A recomendada do cartão da Início, sem passar de 3 s (sem ela a conversa segue normal). */
+const recomendacaoRapida = () => Promise.race([recomendacaoAgora(), new Promise<null>((r) => setTimeout(() => r(null), 3000))]).catch(() => null)
+
+/** 25/11/2026 (Tiago: "tem que sempre bater com o que está mostrando lá na plataforma"): a mesma I.A. e a mesma validade do cartão. */
+export function textoDaRecomendacao(r: Recomendacao | null): string {
+  if (!r) return 'Não consegui ler o mercado agora para a recomendação. Tente de novo em instantes, ou veja o cartão na Início da plataforma.'
+  return `✨ **I.A. recomendada agora: ${r.ia.nome}**\nNa análise das ${horaDeBrasilia(r.de)}, o mercado ficou alinhado com a estratégia dela.\n\n` +
+    `Válida até **${horaDeBrasilia(r.ate)}**\nTambém alinhada: ${r.segunda.nome}\n\nPara ligar, é só dizer: "liga a ${r.ia.curto} na demo".`
+}
+export const PERGUNTA_DA_RECOMENDADA = /\brecomendad[ao]s?\b|^(qual|que) (e |eh )?(a )?(melhor )?(i ?a|ia|inteligencia) (pra |para )?(eu )?(ligar|usar|operar|devo ligar|devo usar)( agora| hoje| no momento| nesse momento)?$|^(qual|que) (e |eh )?(a )?melhor (i ?a|ia|inteligencia)( pra| para)?( agora| hoje| no momento| nesse momento)?$/
+
 async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexos: Anexos = {}): Promise<string | null> {
-  const q = normalizar(pergunta)
+  let q = normalizar(pergunta)
+  if (ehFamiliaGF(marca) && PERGUNTA_DA_RECOMENDADA.test(q)) {
+    const rec = await recomendacaoRapida()
+    // "liga a recomendada na demo": vira o nome da I.A. do cartão e segue como pedido de ligar
+    if (rec && VERBO_DE_LIGAR.test(q) && !PERGUNTA.test(q)) q = q.replace(/\b(a |o )?(i ?a |ia )?recomendad[ao]s?( agora| do momento)?\b/, ` ${rec.ia.curto.toLowerCase()} `).replace(/\s+/g, ' ').trim()
+    else if (q.length <= 140) return textoDaRecomendacao(rec)
+  }
   // "opera com a Raptor, entrada de 1, meta de 10 e stop de 20" (escrito ou falado): liga na hora, de qualquer tamanho
   const pedido = pedidoDeLigar(q, listarRobos(marca))
   // só quando é pedido de verdade ("quero saber como opera a Gulf" segue para a I.A. explicar)
@@ -818,6 +836,10 @@ export async function conversar(
   // 2) os dados da conta vão junto: a I.A. responde numa ida só
   const contexto = await dadosDaConta(dono, marca)
   if (anexos.contaAtual) contexto.texto += `\nA conta aberta na tela do cliente agora é ${anexos.contaAtual}: quando ele disser "minha conta" ou não disser qual, é ela.`
+  if (ehFamiliaGF(marca)) {
+    const rec = await recomendacaoRapida()
+    if (rec) contexto.texto += `\nI.A. recomendada agora (é o cartão da Início da plataforma; use SEMPRE esta, nunca escolha outra): ${rec.ia.nome}, análise das ${horaDeBrasilia(rec.de)}, válida até ${horaDeBrasilia(rec.ate)}; também alinhada: ${rec.segunda.nome}. Fale que o mercado "ficou alinhado" com a estratégia dela; nunca fale de chance maior, ticks ou porcentagens. "A recomendada" = ${rec.ia.nome}.`
+  }
   if (anexos.trocados) contexto.texto += '\nNa tela deste cliente os nomes das contas estão trocados (uso interno): chame a conta real de "demonstração" e a de demonstração de "real", e entenda o que ele disser do mesmo jeito.'
 
   // imagem e vídeo: só o Gemini enxerga aqui
