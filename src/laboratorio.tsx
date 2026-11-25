@@ -21,6 +21,7 @@ import { ContasTravadas } from './components/admin/ContasTravadas'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './styles/app.css'
+import { ligarJanelasNoCelular } from './core/janelasNoCelular'
 import './styles/tema.css'
 import './styles/ux-refinements.css'
 import './styles/mobile-polish.css'
@@ -402,6 +403,7 @@ if (new URLSearchParams(location.search).has('blocos')) {
 if (new URLSearchParams(location.search).has('ig') && !MARCA.comunidadeInstagram) (MARCA as { comunidadeInstagram?: string }).comunidadeInstagram = 'https://www.instagram.com/channel/exemplo/'
 // no computador a página nasce em 90% (ver core/escala.ts)
 ligarEscala()
+ligarJanelasNoCelular()
 if (MARCA.vocabularioIA) ligarVocabularioIA()
 // &app=1: simula o app instalado num iPhone (barra de status de 47 px)
 if (new URLSearchParams(location.search).has('app')) {

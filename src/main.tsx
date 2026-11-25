@@ -21,6 +21,7 @@ import './core/appNativo'
 import { ligarEscala } from './core/escala'
 import { ligarCorrecaoDoIphone } from './core/iphoneDesalinhado'
 import { ligarDirecaoDaRolagem } from './core/direcaoDaRolagem'
+import { ligarJanelasNoCelular } from './core/janelasNoCelular'
 import { ligarVocabularioIA } from './marca/vocabularioIA'
 import { JANELA, ligarJanelaSolta } from './core/janelaSolta'
 import { definirRecarregador, emOperacao, pedirAtualizacao } from './core/atualizacaoSegura'
@@ -104,6 +105,7 @@ ligarEscala()
 ligarCorrecaoDoIphone()
 // no celular, os botões flutuantes saem de lado enquanto a pessoa rola para baixo (ver o arquivo)
 ligarDirecaoDaRolagem()
+ligarJanelasNoCelular()
 if (MARCA.vocabularioIA) ligarVocabularioIA()
 
 // Quem abriu o site, e por qual caminho chegou. Fora do React de propósito:
