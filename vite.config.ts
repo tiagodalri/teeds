@@ -213,8 +213,7 @@ const VERIFICACAO_DERIV: Record<string, string[]> = {
     '5ebed82f7b63e2f2296ae5624ccce66d4b562fa99047176960b8da7835474e44', // GlobalFly Trade N
     '527ccbae0953ab8d835b0e74e86ba18d96fb9fbee9ca7cdc8595a81884cf8faf', // GlobalFly Trade D
   ],
-  // PENDENTE: o código da app da Legacy Pro na Deriv (Verify domains > HTML file).
-  legacypro: [],
+  legacypro: ['0a26fa1a1f70390288a10ce7c6582e54ac3c519f4ce85f7d7d82a5be30c8b84e'], // LegacyPro Trade
 }
 const verificacaoDeriv = () =>
   (VERIFICACAO_DERIV[MARCA.id] ?? []).map((c) => `<meta name="deriv-site-verification" content="${c}" />`).join('\n    ')

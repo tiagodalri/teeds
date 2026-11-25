@@ -577,8 +577,8 @@ MARCAS.legacypro = {
   prefixoRobo: 'Legacy Pro',
   familia: 'globalfly',
   motor: 'https://motor.legacyprotrade.com',
-  // PENDENTE: a app da Legacy Pro na Deriv (developers.deriv.com).
-  appId: '',
+  // App "LegacyPro Trade" na Deriv (criada em 25/11/2026).
+  appId: '353JqAIgSM9V2lHxXSIzx',
   redirectUri: 'https://legacyprotrade.com/',
   // PENDENTE: o link de afiliado da Legacy Pro na Deriv.
   afiliado: '',
