@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { ALTURA_DO_QUADRO, IAS, contraste, dominio, fotoDaIA, type Camada } from '../../core/teeds/camadas'
 import { LogotipoDaIA } from '../marca/LogotipoDaIA'
 import './camadas.css'
+import { GF_NOME } from '../../marca'
 
 /**
  * Desenha as camadas de um story dentro do quadro 9:16 (o mesmo desenho no estúdio, na tela
@@ -105,7 +106,7 @@ export function CamadasDoStory({ camadas, modo, votos, meuVoto, aoVotar, aoLink,
             break
           case 'selo':
             classe += ` s-${c.selo}`
-            corpo = c.selo === 'gf' ? <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="GlobalFly" draggable={false} />
+            corpo = c.selo === 'gf' ? <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt={GF_NOME} draggable={false} />
               : c.selo === 'aovivo' ? <><i className="cam-pulso" />Ao vivo</>
               : c.selo === 'novidade' ? 'Novidade'
               : c.selo === 'ia' ? <>✦ I.A. no ar</>

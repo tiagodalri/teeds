@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { listarProdutos } from '../core/teeds/clientes'
 import { linkDoCheckout } from '../core/teeds/checkout'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { MARCA, FAMILIA_GF } from '../marca'
+import { MARCA, FAMILIA_GF, GF_NOME, GF_SIGLA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
@@ -126,19 +126,19 @@ const PRODUTOS_GF: Produto[] = [
     id: 'gf-pack', categoria: 'Robôs', nome: 'Pack Gulf + Phenom',
     descricao: 'As duas I.A. exclusivas juntas: a Gulf nos dígitos altos e a Phenom nos dígitos baixos, uma espelho da outra. Levando as duas, você paga R$ 97 a menos.',
     precoDe: 'R$ 594', preco: 'R$ 497', desconto: 'Economize R$ 97', imagem: 'robos-globalfly/superior5.webp', selo: 'Mais vantajoso', simbolo: 'G+P', tom: 'ouro', periodo: 'por ano', destaque: true,
-    itens: ['GF Gulf e GF Phenom liberadas na sua conta', 'R$ 97 a menos do que comprar as duas separadas', 'Você escolhe valor de entrada, meta e limite de perda em cada uma'],
+    itens: [`${GF_SIGLA} Gulf e ${GF_SIGLA} Phenom liberadas na sua conta`, 'R$ 97 a menos do que comprar as duas separadas', 'Você escolhe valor de entrada, meta e limite de perda em cada uma'],
   },
   {
-    id: 'gf-gulf', categoria: 'Robôs', nome: 'GF Gulf',
+    id: 'gf-gulf', categoria: 'Robôs', nome: `${GF_SIGLA} Gulf`,
     descricao: 'Longo alcance: observa o mercado até ver a sequência de dígitos que teria perdido, entra mirando os dígitos altos e segue até fechar a sequência.',
     precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/superior5.webp', selo: 'I.A. exclusiva', simbolo: 'GU', tom: 'azul', periodo: 'por ano',
-    itens: ['Estratégia nos dígitos altos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
+    itens: ['Estratégia nos dígitos altos, com entrada depois da análise', `Liberada na sua conta ${GF_NOME}`, 'Você escolhe valor de entrada, meta e limite de perda'],
   },
   {
-    id: 'gf-phenom', categoria: 'Robôs', nome: 'GF Phenom',
+    id: 'gf-phenom', categoria: 'Robôs', nome: `${GF_SIGLA} Phenom`,
     descricao: 'Jato leve, pouso preciso: trabalha no extremo baixo do painel, espera a sequência que teria perdido, entra e segue até fechá-la. O espelho da Gulf.',
     precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/ag2.webp', selo: 'I.A. exclusiva', simbolo: 'PH', tom: 'azul', periodo: 'por ano',
-    itens: ['Estratégia nos dígitos baixos, com entrada depois da análise', 'Liberada na sua conta GlobalFly', 'Você escolhe valor de entrada, meta e limite de perda'],
+    itens: ['Estratégia nos dígitos baixos, com entrada depois da análise', `Liberada na sua conta ${GF_NOME}`, 'Você escolhe valor de entrada, meta e limite de perda'],
   },
 ]
 const GF = FAMILIA_GF

@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Brand } from './Brand'
 import { IconeSaida } from './DerivMarca'
-import { MARCA } from '../marca'
+import { MARCA, GF_NOME } from '../marca'
 import { afiliadoDaDeriv, comunidadeDaVitrine } from '../core/rotas'
 import { DERIV } from '../core/deriv/config'
 import { emAppInstalado } from '../core/deriv/auth'
@@ -84,7 +84,7 @@ export function PreAcesso({ sessao, nome, aoConferir, aoSair }: {
           {noAr ? (
             <div className="pre-noar">
               <b>A live está no ar agora</b>
-              <span>Ela passa dentro da GlobalFly. A liberação do acesso acontece durante a live.</span>
+              <span>Ela passa dentro da {GF_NOME}. A liberação do acesso acontece durante a live.</span>
             </div>
           ) : agora >= FIM_DA_LIVE ? (
             <div className="pre-noar"><b>A live terminou</b><span>A liberação acontece em instantes. Esta tela abre a plataforma sozinha.</span></div>
@@ -162,7 +162,7 @@ export function ChecklistDaLive({ sessao }: { sessao: SessaoTeeds }) {
           <b>{avisos === 'ligadas' ? 'Avisos ligados neste aparelho' : 'Ative os avisos no celular'}</b>
           <small>
             {avisos === 'ligadas' ? 'A gente te chama antes de a live começar.'
-              : avisos === 'instalar' ? 'No iPhone, os avisos só funcionam com o app instalado. Instale primeiro, no passo abaixo, e abra a GlobalFly pelo ícone.'
+              : avisos === 'instalar' ? `No iPhone, os avisos só funcionam com o app instalado. Instale primeiro, no passo abaixo, e abra a ${GF_NOME} pelo ícone.`
               : avisos === 'bloqueadas' ? 'Os avisos estão bloqueados neste aparelho. Libere nos ajustes do navegador e volte aqui.'
               : avisos === 'sem-suporte' ? 'Este navegador não recebe avisos. Entre pelo celular para ativar.'
               : 'A gente te chama antes de a live começar, mesmo com o app fechado.'}
@@ -179,17 +179,17 @@ export function ChecklistDaLive({ sessao }: { sessao: SessaoTeeds }) {
         <div>
           <b>{instalado ? 'App instalado' : 'Instale o app'}</b>
           <small>
-            {instalado ? 'A GlobalFly fica na sua tela inicial, a um toque.'
+            {instalado ? `A ${GF_NOME} fica na sua tela inicial, a um toque.`
               : como === 'abrir-no-navegador' ? 'Daqui não dá para instalar. Abra globalflytrade.com no Safari ou no Chrome e entre de novo.'
               : como === 'ios' ? 'No iPhone, a instalação é pelo Safari, em três toques.'
-              : como === 'botao' ? 'Um toque e a GlobalFly vai para a sua tela inicial.'
+              : como === 'botao' ? `Um toque e a ${GF_NOME} vai para a sua tela inicial.`
               : 'No celular, abra globalflytrade.com e instale o app pelo navegador.'}
           </small>
           {como === 'ios' && passosIos && (
             <ol className="pre-ios">
               <li>Toque em <b>Compartilhar</b> na barra do Safari. Se não aparecer, toque em <b>···</b> e depois em Compartilhar.</li>
               <li>Role a lista e toque em <b>Adicionar à Tela de Início</b>.</li>
-              <li>Toque em <b>Adicionar</b> e abra a GlobalFly pelo ícone.</li>
+              <li>Toque em <b>Adicionar</b> e abra a {GF_NOME} pelo ícone.</li>
             </ol>
           )}
         </div>

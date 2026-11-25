@@ -11,7 +11,7 @@ import { usarEstudioNoTreino } from '../../core/live/treino'
 import { enviarArquivoDaLive, ligarSincroniaDasTelas, type EstadoDaNuvem } from '../../core/live/estudio/nuvem'
 import { sessaoGuardada } from '../../core/teeds/conta'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { MARCA } from '../../marca'
+import { MARCA, GF_NOME } from '../../marca'
 import './painel-da-sala.css'
 
 /**
@@ -280,7 +280,7 @@ function EditorDaTela({ id, fechar, sessao }: { id: string; fechar: () => void; 
             </>}
 
             {tipo === 'camera' && (
-              <Texto rotulo="Legenda" valor={campos.legenda ?? ''} max={50} placeholder="Victor Cordeiro · GlobalFly" mudar={(v) => mudar({ legenda: v })} dica="Aparece embaixo, à esquerda. Deixe vazio para não mostrar." />
+              <Texto rotulo="Legenda" valor={campos.legenda ?? ''} max={50} placeholder={`Victor Cordeiro · ${GF_NOME}`} mudar={(v) => mudar({ legenda: v })} dica="Aparece embaixo, à esquerda. Deixe vazio para não mostrar." />
             )}
 
             {tipo === 'depoimento' && <>

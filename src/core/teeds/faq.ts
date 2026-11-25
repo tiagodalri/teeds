@@ -6,7 +6,7 @@
  * Tom: simples, direto, sem promessa. Nunca "aposta"; a I.A. não "prevê"
  * nem "garante": ela segue uma estratégia com regras definidas.
  */
-import { MARCA } from '../../marca'
+import { MARCA, GF_MEMBRO } from '../../marca'
 
 export interface Pergunta {
   id: string
@@ -221,7 +221,7 @@ export const PERGUNTAS: Pergunta[] = [
     termos: 'sala de treino live ao vivo transmissão streaming aula ao vivo',
     resposta: [
       'Quando a equipe abre uma sala, aparece um aviso vermelho pulsando no menu e na tela: é só tocar para entrar. Dá para assistir em tela cheia, em miniatura flutuante ou só no áudio enquanto opera.',
-      'A sala de treino faz parte do plano GF Member.',
+      `A sala de treino faz parte do plano ${GF_MEMBRO}.`,
     ],
   },
   {

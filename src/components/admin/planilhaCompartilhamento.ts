@@ -13,6 +13,7 @@
  * A biblioteca (exceljs) só é baixada quando alguém clica em Baixar planilha.
  */
 import type { Linha } from './CompartilhamentoDeReceita'
+import { GF_NOME, GF_NOME_COMPLETO } from '../../marca'
 
 export interface DadosDaPlanilha {
   simulado: boolean
@@ -63,7 +64,7 @@ export async function baixarPlanilhaDoCompartilhamento(d: DadosDaPlanilha): Prom
   const buf = await montarPlanilhaDoCompartilhamento(d, await logoEmBase64())
   const a = document.createElement('a')
   a.href = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }))
-  a.download = `GlobalFly - Compartilhamento de receita - ${d.mesNome}${d.simulado ? ' (simulação)' : ''}.xlsx`
+  a.download = `${GF_NOME} - Compartilhamento de receita - ${d.mesNome}${d.simulado ? ' (simulação)' : ''}.xlsx`
   document.body.appendChild(a); a.click(); a.remove()
   setTimeout(() => URL.revokeObjectURL(a.href), 4000)
 }
@@ -72,7 +73,7 @@ export async function baixarPlanilhaDoCompartilhamento(d: DadosDaPlanilha): Prom
 export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo: string | null = null): Promise<ArrayBuffer> {
   const { default: ExcelJS } = await import('exceljs')
   const wb = new ExcelJS.Workbook()
-  wb.creator = 'GlobalFly Trade'
+  wb.creator = `${GF_NOME_COMPLETO}`
   wb.created = new Date()
   const idLogo = logo ? wb.addImage({ base64: logo, extension: 'png' }) : null
   const plano = (l: Linha) => l.fatura?.subplano ?? l.subplano
@@ -321,7 +322,7 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     }
     tr.getCell(8).numFmt = '0'; tr.getCell(10).numFmt = USD; tr.getCell(12).numFmt = BRL; tr.getCell(14).numFmt = USD; tr.getCell(15).numFmt = BRL
     const pe = wc.getCell(rt + 2, 2)
-    pe.value = `Os totais acima são fórmulas: leem as linhas dos clientes e a cotação do Resumo. Gerada em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · GlobalFly Trade${d.simulado ? ' · simulação com nomes e números fictícios' : ''}.`
+    pe.value = `Os totais acima são fórmulas: leem as linhas dos clientes e a cotação do Resumo. Gerada em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} · ${GF_NOME_COMPLETO}${d.simulado ? ' · simulação com nomes e números fictícios' : ''}.`
     pe.font = { size: 9.5, italic: true, color: { argb: SUAVE } }
   }
 
@@ -460,7 +461,7 @@ export async function montarPlanilhaDoCompartilhamento(d: DadosDaPlanilha, logo:
     rE += 7
   }
   const pe = wr.getCell(rE, 2)
-  pe.value = `Gerada em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} pela plataforma GlobalFly Trade.${d.simulado ? ' Simulação: nomes e números fictícios.' : ' Uso interno da equipe.'}`
+  pe.value = `Gerada em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} pela plataforma ${GF_NOME_COMPLETO}.${d.simulado ? ' Simulação: nomes e números fictícios.' : ' Uso interno da equipe.'}`
   pe.font = { size: 9.5, italic: true, color: { argb: SUAVE } }
   wr.pageSetup = { orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }
   wc.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, paperSize: 9 }

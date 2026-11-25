@@ -34,6 +34,12 @@ export interface Marca {
   nome: string
   /** Como a marca aparece no meio de uma frase: "A Teeds opera pela...". */
   prosa: string
+  /** O nome curto nos textos ("abra a GlobalFly pelo ícone"). Sem ele, a prosa. */
+  nomeCurto?: string
+  /** A sigla (botões curtos, prefixo das I.A.): GF, LP. Sem ela, o nome curto. */
+  sigla?: string
+  /** O nome do plano de membro da família GF (GF Member, Legacy Pro Member). */
+  membro?: string
   /**
    * O que vai na frente do nome de cada robô.
    *
@@ -403,6 +409,9 @@ export const MARCAS: Record<string, Marca> = {
     id: 'globalfly',
     nome: 'GLOBALFLY',
     prosa: 'GlobalFly Trade',
+    nomeCurto: 'GlobalFly',
+    sigla: 'GF',
+    membro: 'GF Member',
     prefixoRobo: 'GlobalFly',
     familia: 'globalfly',
     motor: 'https://motor.globalflytrade.com',
@@ -574,6 +583,9 @@ MARCAS.legacypro = {
   id: 'legacypro',
   nome: 'LEGACY PRO',
   prosa: 'Legacy Pro',
+  nomeCurto: 'Legacy Pro',
+  sigla: 'LP',
+  membro: 'Legacy Pro Member',
   prefixoRobo: 'Legacy Pro',
   familia: 'globalfly',
   motor: 'https://motor.legacyprotrade.com',

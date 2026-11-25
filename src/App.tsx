@@ -67,7 +67,7 @@ import { formatPrice } from './core/chart/scales'
 import { atualizarLimites, buyFromProposal, cancelarContrato, cotarMultiplicador, ehMultiplicador, requestProposal, sellContract, type CotacaoMultiplicador } from './core/deriv/trading'
 import { BoletaMultiplicador, type PedidoMultiplicador } from './components/operar/BoletaMultiplicador'
 import { CartaoMultiplicador } from './components/operar/CartaoMultiplicador'
-import { LIVES_AO_VIVO, MARCA, FAMILIA_GF } from './marca'
+import { LIVES_AO_VIVO, MARCA, FAMILIA_GF, GF_MEMBRO } from './marca'
 import { IconeFechar } from './components/IconeFechar'
 import { RelogioTopo } from './components/RelogioTopo'
 import { ModoSimuladoTopo, abrirPainelSimulado } from './components/modoSimulado/ModoSimuladoTopo'
@@ -732,7 +732,7 @@ export default function App() {
   const estavaTrancado = useRef(false)
   useEffect(() => {
     if (estavaTrancado.current && !trancado && situacao === 'ativo') {
-      setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, GF Member.` })
+      setAviso({ tipo: 'ok', texto: `Acesso liberado. Bem-vindo à ${MARCA.prosa}, ${GF_MEMBRO}.` })
       eventoDoPixel('AcessoLiberado', undefined, true)
       // liberado com a live ainda no ar: a live continua aberta, agora por cima da plataforma
       if (live?.noAr && !LIVE_POR_FORA) setAssistindoLive(true)

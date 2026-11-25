@@ -19,18 +19,18 @@
  * aqui. Nada é gravado, nada vai para o banco, nada entra nos 10%.
  */
 import type { Filtros, RelatorioCompleto } from './relatorios'
-import { MARCA } from '../../marca'
+import { MARCA, GF_SIGLA } from '../../marca'
 import { escadaDoRobo } from '../deriv/escada'
 import { parametrosPadrao, type ParametrosDoRobo } from '../deriv/parametros'
 
 export interface IaDoSimulador { id: string; nome: string; origem: 'ia' | 'manual'; ativo: string; tipo: string }
 /** As I.A. da GlobalFly, com o código que acha o logotipo (NomeDoRobo). */
 export const IAS_DO_SIMULADOR: IaDoSimulador[] = [
-  { id: 'goreme', nome: 'GF Raptor', origem: 'ia', ativo: 'R_75', tipo: 'DIGITOVER' },
-  { id: 'falcon', nome: 'GF Falcon', origem: 'ia', ativo: 'R_100', tipo: 'DIGITUNDER' },
-  { id: 'legacy', nome: 'GF Legacy', origem: 'ia', ativo: '1HZ100V', tipo: 'DIGITOVER' },
-  { id: 'superior5', nome: 'GF Gulf', origem: 'ia', ativo: 'R_50', tipo: 'DIGITOVER' },
-  { id: 'ag2', nome: 'GF Phenom', origem: 'ia', ativo: '1HZ75V', tipo: 'DIGITUNDER' },
+  { id: 'goreme', nome: `${GF_SIGLA} Raptor`, origem: 'ia', ativo: 'R_75', tipo: 'DIGITOVER' },
+  { id: 'falcon', nome: `${GF_SIGLA} Falcon`, origem: 'ia', ativo: 'R_100', tipo: 'DIGITUNDER' },
+  { id: 'legacy', nome: `${GF_SIGLA} Legacy`, origem: 'ia', ativo: '1HZ100V', tipo: 'DIGITOVER' },
+  { id: 'superior5', nome: `${GF_SIGLA} Gulf`, origem: 'ia', ativo: 'R_50', tipo: 'DIGITOVER' },
+  { id: 'ag2', nome: `${GF_SIGLA} Phenom`, origem: 'ia', ativo: '1HZ75V', tipo: 'DIGITUNDER' },
   { id: 'manual', nome: 'Manual', origem: 'manual', ativo: 'R_100', tipo: 'CALL' },
 ]
 export const iaDoSimulador = (id: string) => IAS_DO_SIMULADOR.find((x) => x.id === id) ?? IAS_DO_SIMULADOR[0]

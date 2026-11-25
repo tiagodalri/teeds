@@ -390,6 +390,15 @@ export default defineConfig({
             writeFileSync(arquivo, readFileSync(arquivo, 'utf8')
               .replace(/<link rel="stylesheet" href="(?:\.\.?\/)estilo\.css" \/>/, () => `<style>${estilo}</style>`)
               .replace(/<script src="(?:\.\.?\/)captura\.js"><\/script>/, () => `<script>${comum}</script>`))
+            // 25/11/2026: na outra marca da família (Legacy Pro), o nome e o endereço dela.
+            if (MARCA.id !== 'globalfly') {
+              const host = new URL(MARCA.redirectUri).host
+              writeFileSync(arquivo, readFileSync(arquivo, 'utf8')
+                .replace(/GlobalFly Trade/g, MARCA.prosa)
+                .replace(/GlobalFly/g, MARCA.nomeCurto ?? MARCA.prosa)
+                .replace(/\bGF (?=(Raptor|Falcon|Legacy|Gulf|Phenom|Member)\b)/g, `${MARCA.sigla ?? 'GF'} `)
+                .replace(/globalflytrade\.com/g, host))
+            }
           }
           rmSync(join(destinoCaptura, 'estilo.css'), { force: true })
           rmSync(join(destinoCaptura, 'captura.js'), { force: true })

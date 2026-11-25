@@ -3,6 +3,7 @@ import { DERIV } from '../../core/deriv/config'
 import { precoLegivel, type Subplano } from '../../core/teeds/subplanos'
 import { comComprador, type CompradorDoCheckout } from '../../core/teeds/checkout'
 import './liberar-conta.css'
+import { GF_NOME, GF_MEMBRO } from '../../marca'
 
 /*
  * Conta aguardando liberação (GlobalFly, 16/11/2026, pedido do Tiago e do Victor).
@@ -58,7 +59,7 @@ export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprado
           </div>
           <div className="lbc-cabeca-texto">
             <span className="lbc-sobre"><i aria-hidden="true" />Conta aguardando liberação</span>
-            <h2 id="lbc-titulo">Libere a sua conta para usar a <em>GlobalFly</em></h2>
+            <h2 id="lbc-titulo">Libere a sua conta para usar a <em>{GF_NOME}</em></h2>
             <p>Escolha um dos dois caminhos. Assim que ele for concluído, a plataforma é liberada automaticamente.</p>
           </div>
         </header>
@@ -68,7 +69,7 @@ export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprado
           <article className="lbc-deposito">
             <span className="lbc-numero">Caminho 1</span>
             <h3>Deposite na sua conta real da Deriv</h3>
-            <p className="lbc-sub">Você continua no <b>GF Member Gold</b> e libera a plataforma com qualquer valor de saldo.</p>
+            <p className="lbc-sub">Você continua no <b>{GF_MEMBRO} Gold</b> e libera a plataforma com qualquer valor de saldo.</p>
 
             <div className="lbc-saldo">
               <div><small>Saldo na conta real</small><b>{saldo}</b></div>
@@ -121,7 +122,7 @@ export function JanelaLiberarConta({ planos, derivConectada, saldoReal, comprado
         </div>
 
         <footer className="lbc-rodape">
-          <span className="lbc-seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 7.9-7 9.5-4-1.6-7-5.1-7-9.5V6z" /></svg>O depósito é feito direto na Deriv. A GlobalFly não recebe nem movimenta o seu dinheiro.</span>
+          <span className="lbc-seguro"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-3 7.9-7 9.5-4-1.6-7-5.1-7-9.5V6z" /></svg>O depósito é feito direto na Deriv. A {GF_NOME} não recebe nem movimenta o seu dinheiro.</span>
           <button type="button" className="lbc-link" onClick={() => { aoRegistrar?.('suporte'); aoSuporte?.() }}>Falar com o suporte</button>
         </footer>
       </section>

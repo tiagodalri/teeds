@@ -14,6 +14,7 @@
  */
 import { SUPABASE } from './config'
 import { parceiroGuardado, vitrine } from './parceiro'
+import { GF_SIGLA, GF_MEMBRO } from '../../marca'
 
 export type IdDoPlano = 'gold' | 'black' | 'prestige'
 
@@ -37,11 +38,11 @@ export interface PlanoDoCadastro {
 }
 
 export const IAS_DA_GF: Array<[string, string]> = [
-  ['goreme', 'GF Raptor'], ['falcon', 'GF Falcon'], ['legacy', 'GF Legacy'], ['superior5', 'GF Gulf'], ['ag2', 'GF Phenom'],
+  ['goreme', `${GF_SIGLA} Raptor`], ['falcon', `${GF_SIGLA} Falcon`], ['legacy', `${GF_SIGLA} Legacy`], ['superior5', `${GF_SIGLA} Gulf`], ['ag2', `${GF_SIGLA} Phenom`],
 ]
 
 export const PLANOS_PADRAO: PlanoDoCadastro[] = [
-  { id: 'gold', nome: 'Gold', chamada: 'A entrada no GF Member. Sem custo de entrada: você só compartilha quando lucra.',
+  { id: 'gold', nome: 'Gold', chamada: `A entrada no ${GF_MEMBRO}. Sem custo de entrada: você só compartilha quando lucra.`,
     preco: 0, referencia: 997, compartilhamento: 0.10, ias: ['goreme', 'falcon', 'legacy'], simuladorHoras: 1,
     salaExtra: false, assessor: false, lab: false, checkout: null, checkoutPorParceiro: {} },
   { id: 'black', nome: 'Black', chamada: 'Todas as I.A., 12 horas de simulador por dia e a sala extra.',

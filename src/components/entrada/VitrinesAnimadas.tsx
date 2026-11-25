@@ -13,6 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { vitrine } from '../../core/teeds/parceiro'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { SESSOES } from '../../casca/globalfly/cadastro/comoFunciona'
+import { GF_NOME, GF_SIGLA } from '../../marca'
 
 const calma = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 const dinheiro = (v: number, sinal = false) => `${sinal ? (v < 0 ? '−' : '+') : ''}US$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -66,7 +67,7 @@ export function TelaAoVivo() {
       <div className="cpl-call-tela">
         <div className="cpl-call-app">
           <span className="cpl-call-app-ativo">Volatility 75 <b>39.074,82</b></span>
-          <span className="cpl-call-app-ia">GF Falcon · <b>+US$ 12,40</b></span>
+          <span className="cpl-call-app-ia">{GF_SIGLA} Falcon · <b>+US$ 12,40</b></span>
         </div>
         <Velas velas={velas} />
       </div>
@@ -244,7 +245,7 @@ export function CabineDaVitrine({ escolhida, aoTrocar }: { escolhida: number; ao
       </dl>
       <div className={`cpl-cab-v-aviso ${terminou ? 'cpl-ver' : ''}`} aria-hidden={!terminou}>
         <img src={`${b}pwa-globalfly/icon-180.png`} alt="" width="36" height="36" />
-        <span><small>GlobalFly · agora</small><b>✅ {s.n} · Meta atingida</b>{dinheiro(resultado, true)} em {s.ops.length} operações</span>
+        <span><small>{GF_NOME} · agora</small><b>✅ {s.n} · Meta atingida</b>{dinheiro(resultado, true)} em {s.ops.length} operações</span>
       </div>
     </div>
   )

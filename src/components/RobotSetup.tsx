@@ -14,7 +14,7 @@ import './robot-launch.css'
 import './plano-de-voo.css'
 import { nomeDoAtivo } from '../core/deriv/market'
 import { metaEStopDoPreparo, sincronizarParaOPreparo } from '../core/teeds/planoDoDia'
-import { MARCA, FAMILIA_GF } from '../marca'
+import { MARCA, FAMILIA_GF, PREFIXO_DA_IA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { NomeDoRobo } from './NomeDoRobo'
 import { Monograma, TEM_MONOGRAMA } from './marca/Monograma'
@@ -132,7 +132,7 @@ const ler = (t: string) => { const v = Number(t.trim().replace(/\s/g, '').replac
 const degrau = (v: number, entrada: boolean) => entrada ? (v < 2 ? 0.05 : v < 10 ? 0.5 : 1) : (v < 20 ? 1 : v < 100 ? 5 : 10)
 /** Para ler (cartão de embarque): com ponto de milhar. */
 const bonito = (v: number) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const nomeCurto = (nome: string) => nome.replace(/^(GF|GlobalFly|OMNI)\s+/i, '')
+const nomeCurto = (nome: string) => nome.replace(PREFIXO_DA_IA, '')
 
 /* ------------------------------------------------------------------
    Os mostradores do plano (21/10/2026, refeitos a pedido do Tiago: "texto

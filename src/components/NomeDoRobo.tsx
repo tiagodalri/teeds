@@ -1,8 +1,8 @@
-import { MARCA } from '../marca'
+import { MARCA, PREFIXO_DA_IA } from '../marca'
 import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
 
 /** O prefixo da marca no nome do robô: "GF" hoje, "GlobalFly" nas sessões antigas. */
-const PREFIXO = /^(GF|GlobalFly)\s+/i
+const PREFIXO = PREFIXO_DA_IA
 
 /**
  * O nome de um robô na tela (19/10/2026).

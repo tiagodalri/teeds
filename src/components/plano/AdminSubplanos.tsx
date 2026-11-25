@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { carregarMeuSubplano, cobrancaLegivel, compartilhamentoLegivel, listarSubplanos, salvarSubplano, simuladorLegivel, type Subplano } from '../../core/teeds/subplanos'
 import './admin-subplanos.css'
+import { GF_MEMBRO } from '../../marca'
 
 /**
  * Administração › Planos › Subplanos do GF Member (05/11/2026). O que cada
@@ -36,7 +37,7 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
   }
   return (
     <section className="admin-card full asp">
-      <header><div><span className="rot">GF Member</span><h3>Subplanos: o que cada um libera</h3></div><small>O plano de todos é o GF Member; o subplano decide I.A., simulador, compartilhamento e extras. Para mudar o de um cliente, abra a ficha dele em Clientes.</small></header>
+      <header><div><span className="rot">{GF_MEMBRO}</span><h3>Subplanos: o que cada um libera</h3></div><small>O plano de todos é o {GF_MEMBRO}; o subplano decide I.A., simulador, compartilhamento e extras. Para mudar o de um cliente, abra a ficha dele em Clientes.</small></header>
       {aviso && <p className="asp-aviso">{aviso}</p>}
       <div className="asp-lista">
         {lista.map((s) => (

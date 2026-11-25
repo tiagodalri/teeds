@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Monograma } from '../marca/Monograma'
 import { SERVIDOR } from '../../core/teeds/config'
 import './cena-login.css'
+import { MARCA } from '../../marca'
 
 /**
  * A cena da tela de entrada (21/10/2026, pedido do Victor: "todo branco está
@@ -54,7 +55,7 @@ export function CenaDoLogin({ variante }: { variante: VarianteDaCena }) {
       {variante === 'nuvens' && <i className="entrada-cena-eixo" aria-hidden="true" />}
 
       <div className="entrada-cena-texto">
-        <Monograma tamanho={58} rotulo="GlobalFly Trade" />
+        <Monograma tamanho={58} rotulo={MARCA.prosa} />
         <h2>Precisão para navegar mercados em movimento.</h2>
         <p>Tecnologia, método e visão global.</p>
       </div>

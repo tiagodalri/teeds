@@ -7,7 +7,7 @@ import { SERVIDOR, SUPABASE } from '../core/teeds/config'
 import './admin-pendentes.css'
 import { PLANOS_CLIENTE } from '../core/teeds/planos'
 import type { PlanoRegistro } from '../core/teeds/clientes'
-import { MARCAS } from '../marca'
+import { MARCAS, GF_MEMBRO } from '../marca'
 import { FIM_DA_LIVE } from '../core/teeds/lancamento'
 import { PRODUTOS_ANTERIORES } from '../core/teeds/leads'
 
@@ -399,7 +399,7 @@ export function AdminPendentes({ sessao, marca, versao, onAprovado, planos, parc
   const chipsDeParceiro:Chip[]=!mostraParceiros?[]:([['','Todos',lista.length] as Chip,...parceiros.map((o):Chip=>[o.codigo,o.nome.split(' ')[0],lista.filter(p=>p.parceiro===o.codigo).length]),['direto','Direto',lista.filter(p=>!p.parceiro).length] as Chip]).filter(([id,,q])=>id===''||q>0)
   return <section className="admin-card admin-pendentes">
     <header><div><span className="rot">Cadastros pelo formulário</span><h3>Aprovação de clientes <em className="pendente-marca">{NOME_DA_MARCA[marca] ?? marca}</em></h3><p>{naLive
-      ? 'Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. Todos viram GF Member, com acesso até 09/11/2027, quando um administrador apertar \u201cLiberar acesso geral\u201d, logo acima.'
+      ? `Até a live de 09/11 não precisa aprovar ninguém. Quem se inscreve já recebe a confirmação por e‑mail, entra com a senha que criou e vê a plataforma trancada, com a contagem. Todos viram ${GF_MEMBRO}, com acesso até 09/11/2027, quando um administrador apertar “Liberar acesso geral”, logo acima.`
       : 'Novos cadastros e recadastros aguardam sua aprovação. Cada marca tem a sua conta: quem já é cliente de outra plataforma ganha uma conta nova aqui, com senha própria.'}</p></div><button disabled={!!ocupado||carregando} onClick={()=>setRevisao(v=>v+1)}>Atualizar</button></header>
     {geral&&geral.total>0&&<div className="pdq-geral" aria-label="Visão geral de todas as abas">
       <p><b>{geral.total}</b> {geral.total===1?'pessoa inscrita':'pessoas inscritas'} no total</p>

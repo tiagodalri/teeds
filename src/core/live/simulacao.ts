@@ -17,7 +17,7 @@
  * acompanham o número de pessoas na sala, que sobe e desce.
  */
 import { useSyncExternalStore } from 'react'
-import { MARCA } from '../../marca'
+import { MARCA, PREFIXO_DA_IA } from '../../marca'
 import { mensagemDe, novaPessoa, respostaA, soEmoji, type Categoria, type Pessoa } from './chatSimulado'
 
 export type Oscilacao = 'baixa' | 'media' | 'alta'
@@ -74,7 +74,7 @@ export const simulacaoAgora = () => estado
 
 /* ------------------------------------------------------------- vocabulário */
 
-const robos = () => MARCA.robos.map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(/^(GF|GlobalFly)\s+/i, ''))
+const robos = () => MARCA.robos.map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(PREFIXO_DA_IA, ''))
 const sorteio = <T,>(lista: readonly T[]) => lista[Math.floor(Math.random() * lista.length)]
 const periodo = () => { const h = new Date().getHours(); return h < 12 ? 'bom dia' : h < 18 ? 'boa tarde' : 'boa noite' }
 

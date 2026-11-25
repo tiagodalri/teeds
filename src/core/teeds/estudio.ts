@@ -3,7 +3,7 @@
  * sem abrir o Gerenciador. Fala com a função meta-estudio (a mesma chave do painel) e guarda os
  * rascunhos e o histórico no banco (supabase/migracoes/20261103120000_estudio_de_anuncios.sql).
  */
-import { MARCA } from '../../marca'
+import { MARCA, GF_NOME } from '../../marca'
 import { SUPABASE } from './config'
 import type { SessaoTeeds } from './conta'
 
@@ -163,11 +163,11 @@ const palavra = (miolo: string) => {
 }
 /** Vermelho: a marca não usa (a função meta-estudio barra as mesmas). */
 const VERMELHO: Array<[RegExp, string]> = [
-  [palavra('apost\\p{L}*'), 'A GlobalFly não fala em aposta.'], // texto-ok: é a lista que barra essas palavras no anúncio
+  [palavra('apost\\p{L}*'), `A ${GF_NOME} não fala em aposta.`], // texto-ok: é a lista que barra essas palavras no anúncio
   [palavra('sorte'), 'Nada de sorte: é estratégia.'], // texto-ok: é a lista que barra essas palavras no anúncio
   [palavra('chut(?:e|ar|ando)'), 'Nada de chute: é estratégia.'], // texto-ok: é a lista que barra essas palavras no anúncio
   [palavra('jog(?:ar|o|ue|ando|ada)'), 'Evite "jogar": passa ideia de aposta.'], // texto-ok: é a lista que barra essas palavras no anúncio
-  [palavra('rob[ôo]s?'), 'Na GlobalFly a palavra é "I.A.".'],
+  [palavra('rob[ôo]s?'), `Na ${GF_NOME} a palavra é "I.A.".`],
   [palavra('(?:lucro|ganho|retorno|renda)s? garantid[oa]s?|garantia de (?:lucro|ganho|retorno)'), 'Promessa de lucro garantido: a Meta reprova e a marca não promete.'],
   [palavra('(?:I\\.?A\\.?|intelig[êe]ncia artificial)[^.!?\\n]{0,40}(?<!\\p{L})(?:aprende|prev[êe]|acerta|garante)'), 'A I.A. não aprende, prevê, acerta nem garante: ela opera uma estratégia.'],
 ]

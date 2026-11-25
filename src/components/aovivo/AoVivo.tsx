@@ -9,7 +9,7 @@ import { LinkDoTreino, SalaDeTreino } from './SalaDeTreino'
 import { AssistirTreino } from './AssistirTreino'
 import { MedidorDeVolume } from './MedidorDeVolume'
 import { SeletorDeFundo } from './SeletorDeFundo'
-import { LIVES_AO_VIVO, MARCA } from '../../marca'
+import { LIVES_AO_VIVO, MARCA, GF_MEMBRO } from '../../marca'
 import { abrirSuporte } from '../../core/teeds/suporte'
 
 const MARCA_PROSA = MARCA.prosa
@@ -958,9 +958,9 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
     <div className="ger av-pagina">
       <section className="av-destaque calmo">
         <span className="av-sobretitulo">Sala de treino</span>
-        <h2>A sala de treino faz parte do GF Member</h2>
+        <h2>A sala de treino faz parte do {GF_MEMBRO}</h2>
         <p>Quem é do plano assiste às transmissões da equipe e tira dúvidas no chat.</p>
-        {MARCA.suporte && <button className="av-botao-principal" onClick={() => abrirSuporte({ tema: 'plano', mensagem: 'Quero saber como entrar no GF Member.' })}>Quero ser GF Member</button>}
+        {MARCA.suporte && <button className="av-botao-principal" onClick={() => abrirSuporte({ tema: 'plano', mensagem: `Quero saber como entrar no ${GF_MEMBRO}.` })}>Quero ser {GF_MEMBRO}</button>}
       </section>
     </div>
   )
@@ -993,7 +993,7 @@ export function AoVivoPage({ sessao, admin }: { sessao: SessaoTeeds | null; admi
           <div className="tr-porta-texto">
             <span className="av-sobretitulo">Sala de treino</span>
             <h2 id="tr-porta-titulo">Ensaie a live com os membros assistindo</h2>
-            <p>Você usa sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Os alunos do GF Member entram pelo link e assistem como se fossem alunos; um membro não vê as mensagens dos outros. A imagem leva sempre o selo "GF Streaming".</p>
+            <p>Você usa sua tela, câmera e microfone de verdade diante de um público e de um chat simulados. Os alunos do {GF_MEMBRO} entram pelo link e assistem como se fossem alunos; um membro não vê as mensagens dos outros. A imagem leva sempre o selo "GF Streaming".</p>
             <ol className="av-passos">
               <li><i>1</i><span><b>Abra a sala de treino</b>Só administradores abrem; ela já vem com os ajustes à mostra.</span></li>
               <li><i>2</i><span><b>Mande o link aos membros</b>Eles entram com a conta deles e esperam o ensaio começar.</span></li>

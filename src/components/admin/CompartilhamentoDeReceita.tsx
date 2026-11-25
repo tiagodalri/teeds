@@ -7,6 +7,7 @@ import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
 import { PalcoDoCompartilhamento } from './PalcoDoCompartilhamento'
 import { desligarModoSimulado, ligarModoSimulado, useModoSimulado, usePodeSimular } from '../../core/teeds/modoSimulado'
 import { guardarAjusteSimulado, lerAjusteSimulado, painelSimulado } from '../../core/teeds/compartilhamentoSimulado'
+import { GF_NOME } from '../../marca'
 
 /**
  * Compartilhamento de receita (11/11/2026, Tiago: "quem é do plano Gold tem que pagar 10% do que lucrou
@@ -477,7 +478,7 @@ function JanelaDaFatura({ sessao, linha, painel, cotacao, podeMexer, situacao, o
     catch (e) { setErro((e as Error).message) } finally { setEnviando(null) }
   }
   const tel = (linha.telefone ?? '').replace(/\D/g, '')
-  const zap = tel.length >= 10 ? `https://wa.me/${tel.length <= 11 ? '55' : ''}${tel}?text=${encodeURIComponent(`Olá, ${(linha.nome ?? '').split(' ')[0]}! Sua fatura do compartilhamento de receita da GlobalFly de ${nomeDoMes(f?.mes ?? painel.mes).toLowerCase()} ficou em ${reais(brl)} (${pct(p)} do lucro de ${dolares(lucro)} no mês), com vencimento em ${dataCurta(venc)}.`)}` : null
+  const zap = tel.length >= 10 ? `https://wa.me/${tel.length <= 11 ? '55' : ''}${tel}?text=${encodeURIComponent(`Olá, ${(linha.nome ?? '').split(' ')[0]}! Sua fatura do compartilhamento de receita da ${GF_NOME} de ${nomeDoMes(f?.mes ?? painel.mes).toLowerCase()} ficou em ${reais(brl)} (${pct(p)} do lucro de ${dolares(lucro)} no mês), com vencimento em ${dataCurta(venc)}.`)}` : null
 
   return <div className="cdr-fundo" onClick={(e) => { if (e.target === e.currentTarget && !enviando) onFechar() }}>
     <div className="cdr-janela cdr-doc" role="dialog" aria-modal="true" aria-label="Fatura do compartilhamento de receita">

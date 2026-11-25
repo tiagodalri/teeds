@@ -8,7 +8,7 @@ import './aovivo.css'
 import { SeletorDeFundo } from './SeletorDeFundo'
 import { BlocosDoChat } from './BlocosDoChat'
 import { MedidorDeVolume } from './MedidorDeVolume'
-import { MARCA, FAMILIA_GF } from '../../marca'
+import { MARCA, FAMILIA_GF, GF_MEMBRO } from '../../marca'
 import { ehCelular } from '../../core/celular'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
@@ -142,11 +142,11 @@ export function LinkDoTreino({ compacto = false }: { compacto?: boolean }) {
     : escolhidos.length
       ? escolhidos.map((c) => ({ rotulo: `Link para os membros assistirem (${NOME_DO_PARCEIRO[c] ?? c.toUpperCase()})`, link: linkDoTreinoDoParceiro(c) }))
       : [{ rotulo: 'Link para os membros assistirem', link: linkDoTreino() }]
-  const textoDe = (link: string) => teste ? `Transmissão de teste da ${MARCA.prosa} (só quem tem este link vê): ${link}` : `Sala de treino da ${MARCA.prosa}: transmissão exclusiva do GF Member. Entre com a sua conta por aqui: ${link}`
+  const textoDe = (link: string) => teste ? `Transmissão de teste da ${MARCA.prosa} (só quem tem este link vê): ${link}` : `Sala de treino da ${MARCA.prosa}: transmissão exclusiva do ${GF_MEMBRO}. Entre com a sua conta por aqui: ${link}`
   return (
     <div className={`av-link-live ${compacto ? 'compacto' : ''}`}>
       {linhas.map((l) => <LinhaDoLink key={l.link} rotulo={l.rotulo} link={l.link} texto={textoDe(l.link)} />)}
-      <p className="tr-link-nota">{teste ? 'Só quem tem este link vê, com a própria conta (de outra pessoa: com a sua, a Central sai da sala). Ninguém é avisado. Vale 12 horas.' : 'Só quem é do GF Member (e os administradores) entra, com a própria conta. Eles assistem ao seu ensaio como alunos, com o selo "GF Streaming" sempre na imagem.'}</p>
+      <p className="tr-link-nota">{teste ? 'Só quem tem este link vê, com a própria conta (de outra pessoa: com a sua, a Central sai da sala). Ninguém é avisado. Vale 12 horas.' : `Só quem é do ${GF_MEMBRO} (e os administradores) entra, com a própria conta. Eles assistem ao seu ensaio como alunos, com o selo "GF Streaming" sempre na imagem.`}</p>
     </div>
   )
 }
@@ -445,7 +445,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     <section className="cv-card cv-na-sala" aria-label="Membros na sala">
       <h4>Na sala agora <small>{naSala.length} {naSala.length === 1 ? 'membro' : 'membros'}</small></h4>
       {naSala.length === 0
-        ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para quem é do GF Member.</span>
+        ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para quem é do {GF_MEMBRO}.</span>
         : <ul>{naSala.map(([n, desde]) => <li key={n}><span>{n}</span><b className="cv-num">{duracao(Date.now() - desde)}</b></li>)}</ul>}
       <LinkDoTreino compacto />
     </section>

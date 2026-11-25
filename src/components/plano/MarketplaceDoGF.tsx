@@ -6,6 +6,7 @@ import {
   abrirMeuPlano, carregarMeuSubplano, cobrancaLegivel, compartilhamentoLegivel, precoLegivel, simuladorLegivel, useMeuSubplano, type Subplano,
 } from '../../core/teeds/subplanos'
 import './marketplace-gf.css'
+import { GF_NOME, GF_MEMBRO } from '../../marca'
 
 /**
  * O Marketplace da GlobalFly (05/11/2026, Tiago: "precisamos criar lá no
@@ -39,7 +40,7 @@ export function MarketplaceDoGF({ sessao }: { sessao?: SessaoTeeds | null }) {
   const vitrine = acima.length ? acima : planos.filter((s) => s.id !== 'gold')
   const quero = (s: Subplano) => {
     if (s.checkoutUrl) { window.open(comComprador(s.checkoutUrl, sessao?.usuario), '_blank', 'noopener,noreferrer'); return }
-    abrirSuporte({ mensagem: `Quero passar para o subplano ${s.nome} do GF Member.` })
+    abrirSuporte({ mensagem: `Quero passar para o subplano ${s.nome} do ${GF_MEMBRO}.` })
   }
   // o exemplo do compartilhamento: um mês com US$ 1.000 de lucro na conta real
   const LUCRO = 1000
@@ -49,8 +50,8 @@ export function MarketplaceDoGF({ sessao }: { sessao?: SessaoTeeds | null }) {
     <main className="msp">
       <section className="msp-heroi">
         <div className="msp-heroi-txt">
-          <span className="msp-rot">GF Member · Marketplace</span>
-          <h1>Leve o seu GF Member para o <em>próximo nível.</em></h1>
+          <span className="msp-rot">{GF_MEMBRO} · Marketplace</span>
+          <h1>Leve o seu {GF_MEMBRO} para o <em>próximo nível.</em></h1>
           <p>Todas as I.A., mais horas de simulador e menos compartilhamento. No Prestige, nenhum compartilhamento, um assessor só seu e o GFT Lab.</p>
           <div className="msp-heroi-acoes">
             <button type="button" className="msp-btn ouro" onClick={() => abrirMeuPlano(vitrine[0]?.id)}>Comparar os subplanos</button>
@@ -58,13 +59,13 @@ export function MarketplaceDoGF({ sessao }: { sessao?: SessaoTeeds | null }) {
           </div>
         </div>
         <div className="msp-heroi-arte" aria-hidden="true">
-          {planos.map((s, i) => <span key={s.id} className={`msp-cartao-arte ${s.id}`} style={{ ['--i' as string]: i }}><em className="msp-mono" aria-hidden /><b>{s.nome}</b><small>GF Member</small><i /></span>)}
+          {planos.map((s, i) => <span key={s.id} className={`msp-cartao-arte ${s.id}`} style={{ ['--i' as string]: i }}><em className="msp-mono" aria-hidden /><b>{s.nome}</b><small>{GF_MEMBRO}</small><i /></span>)}
         </div>
       </section>
 
       {meu && dados?.admin !== true && (
         <section className="msp-meu">
-          <div><span className="msp-rot">Seu subplano agora</span><h2>GF Member <b className={`msp-chip ${meu.id}`}>{meu.nome}</b></h2><p>{meu.chamada}</p></div>
+          <div><span className="msp-rot">Seu subplano agora</span><h2>{GF_MEMBRO} <b className={`msp-chip ${meu.id}`}>{meu.nome}</b></h2><p>{meu.chamada}</p></div>
           <ul>{beneficios(meu).slice(0, 4).map((b) => <li key={b}>{b}</li>)}</ul>
         </section>
       )}
@@ -115,8 +116,8 @@ export function MarketplaceDoGF({ sessao }: { sessao?: SessaoTeeds | null }) {
 
       <section className="msp-faq">
         <h2>Dúvidas comuns</h2>
-        <details><summary>Eu continuo sendo GF Member?</summary><p>Sim. O GF Member é o plano de todos. O subplano (Gold, Black ou Prestige) só define o que vem junto: I.A., horas de simulador, compartilhamento e os extras.</p></details>
-        <details><summary>Quando o novo subplano é liberado?</summary><p>Assim que o pagamento é confirmado, na mesma conta da GlobalFly. Use no pagamento o mesmo e-mail da sua conta.</p></details>
+        <details><summary>Eu continuo sendo {GF_MEMBRO}?</summary><p>Sim. O {GF_MEMBRO} é o plano de todos. O subplano (Gold, Black ou Prestige) só define o que vem junto: I.A., horas de simulador, compartilhamento e os extras.</p></details>
+        <details><summary>Quando o novo subplano é liberado?</summary><p>Assim que o pagamento é confirmado, na mesma conta da {GF_NOME}. Use no pagamento o mesmo e-mail da sua conta.</p></details>
         <details><summary>Como funciona o compartilhamento de receita?</summary><p>É uma porcentagem do lucro do mês na conta real, operando pela plataforma, apurada no início do mês seguinte. Mês sem lucro, nada a pagar. Você acompanha tudo na aba Relatórios.</p></details>
         <details><summary>E o que muda no simulador?</summary><p>O simulador é a conta de treino. Cada subplano tem um tempo por dia; no Prestige ele é ilimitado. Uma sessão que já começou termina normalmente.</p></details>
       </section>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MARCA } from '../../marca'
+import { MARCA, GF_MEMBRO } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { pararNoServidor, type SessaoViva } from '../../core/teeds/servidorRobos'
 import { carregarMeuSubplano, precoLegivel, subplanoAtual, useMeuSubplano, type MeuSubplano, type Subplano } from '../../core/teeds/subplanos'
@@ -190,7 +190,7 @@ export function JanelaSemTempo({ dados, atual, comprador, aoFechar }: { dados: M
             {acima.map((s) => (
               <article key={s.id} className={`lsim-plano ${s.id}`}>
                 <div className="lsim-plano-topo">
-                  <span className="lsim-nome"><svg viewBox="0 0 16 16" aria-hidden="true"><path d={ESTRELA} /></svg><b>GF Member {s.nome}</b></span>
+                  <span className="lsim-nome"><svg viewBox="0 0 16 16" aria-hidden="true"><path d={ESTRELA} /></svg><b>{GF_MEMBRO} {s.nome}</b></span>
                   <span className="lsim-tag">{s.simuladorHoras == null ? 'Sem limites' : 'Todas as I.A.'}</span>
                 </div>
                 <div className="lsim-preco">

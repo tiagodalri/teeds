@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { definirModoDoTreino, entrarNoTreino, esquecerTesteDoLink, modoForaDoTreino, sairDoTreino, simularTreino, testeDoLink, useTreino, type ModoDoTreino } from '../../core/live/treino'
-import { MARCA, FAMILIA_GF } from '../../marca'
+import { MARCA, FAMILIA_GF, GF_MEMBRO } from '../../marca'
 import { ICONE_PALCO, abrirPorCima, podeAbrirPorCima, useLargo, useTeatro } from './AoVivo'
 import PlayerDoTreino, { ChatDoTreino, PalcoDoTreino } from './PlayerDoTreino'
 import './aovivo.css'
@@ -56,7 +56,7 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
         ) : (
           <div className="tr-cabeca-texto">
             <span className="tr-cabeca-sobre">Sala de treino</span>
-            <h1>Transmissão exclusiva do <em>GF Member</em></h1>
+            <h1>Transmissão exclusiva do <em>{GF_MEMBRO}</em></h1>
             <p>{t.presente && primeiro ? <>Com <b>{primeiro}</b>. Você está entre os membros convidados.</> : 'Ainda não há transmissão agora. Quando a equipe abrir a sala, o menu Ao vivo ganha um ponto vermelho.'}</p>
           </div>
         )}

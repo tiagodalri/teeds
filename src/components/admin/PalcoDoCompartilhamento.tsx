@@ -4,6 +4,7 @@ import type { AjusteSimulado } from '../../core/teeds/compartilhamentoSimulado'
 import { useMenuAdminOculto } from '../../core/menuDeAdmin'
 import { AjusteDoPalcoSimulado } from './AjusteDoPalcoSimulado'
 import './palco-compartilhamento.css'
+import { GF_NOME } from '../../marca'
 
 /**
  * Palco do Compartilhamento de receita (16/11/2026, Tiago: "painel interativo pra eu mostrar o lucro dos
@@ -144,7 +145,7 @@ export function PalcoDoCompartilhamento({ painel, linhas, cotacao, nomeMes, rece
     <header className="cpo-topo">
       <div>
         <span className="cpo-rot"><i className={painel.fechado ? '' : 'vivo'} />{painel.fechado ? `${nomeMes} fechado` : `${nomeMes} · ao vivo`}</span>
-        <h2>O resultado dos clientes GlobalFly</h2>
+        <h2>O resultado dos clientes {GF_NOME}</h2>
       </div>
       <div className="cpo-controles">
         {planilha && <button type="button" className="cpo-planilha" onClick={planilha.baixar} disabled={!!planilha.estado?.endsWith('…')} title="Baixar a planilha Excel do mês">

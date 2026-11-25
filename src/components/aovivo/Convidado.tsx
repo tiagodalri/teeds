@@ -4,7 +4,7 @@ import { useLinkPublico } from '../../core/live/config'
 import { entrarComoConvidado, useSala } from '../../core/live/sala'
 import { Brand } from '../Brand'
 import { Contagem, Cronometro, SalaConectada, Som, quando } from './AoVivo'
-import { MARCA } from '../../marca'
+import { MARCA, GF_MEMBRO } from '../../marca'
 import './aovivo.css'
 
 /**
@@ -61,7 +61,7 @@ export function Convidado({ codigo, aoEntrarNaConta }: { codigo: string | null; 
           <section className="cv-cartao">
             <span className="av-sobretitulo">Sala de treino da {MARCA.prosa}</span>
             <h1>Entre na sua conta para assistir à transmissão</h1>
-            <p>A sala de treino é exclusiva do <b>GF Member</b>. Entre com a sua conta e a transmissão abre direto.</p>
+            <p>A sala de treino é exclusiva do <b>{GF_MEMBRO}</b>. Entre com a sua conta e a transmissão abre direto.</p>
             <button className="av-botao-principal" onClick={aoEntrarNaConta}>Entrar na conta</button>
           </section>
         </main>

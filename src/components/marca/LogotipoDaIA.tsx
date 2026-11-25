@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { MARCA } from '../../marca'
+import { MARCA, PREFIXO_DA_IA } from '../../marca'
 
 /**
  * Logotipo de cada I.A. da GlobalFly (27/10/2026, Tiago: "sobre os logos
@@ -42,7 +42,7 @@ const DESENHOS: Record<string, Desenho> = {
   },
 }
 
-const PREFIXO = /^(GF|GlobalFly)\s+/i
+const PREFIXO = PREFIXO_DA_IA
 const chave = (nome: string) => nome.replace(PREFIXO, '').trim().toLowerCase()
 
 /** O código de cada I.A. no banco e no servidor (o nome gravado pode variar). */

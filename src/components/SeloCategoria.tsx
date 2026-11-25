@@ -1,4 +1,5 @@
 import './selo-categoria.css'
+import { GF_MEMBRO } from '../marca'
 
 /**
  * O selo da categoria do cliente no topo (GlobalFly, 23/10/2026): Silver ou
@@ -13,8 +14,8 @@ const NOME: Record<Categoria, string> = { silver: 'Silver', gold: 'Gold', black:
 export function SeloCategoria({ categoria, aoAbrir }: { categoria: Categoria; aoAbrir?: () => void }) {
   const Tag = aoAbrir ? 'button' : 'span'
   return (
-    <Tag {...(aoAbrir ? { type: 'button' as const, onClick: aoAbrir } : { role: 'img' })} className={`selo-categoria ${categoria}`} title={aoAbrir ? `GF Member ${NOME[categoria]}: ver o seu plano` : `Categoria ${NOME[categoria]}`}
-      aria-label={aoAbrir ? `Seu plano: GF Member ${NOME[categoria]}. Abrir` : `Sua categoria: ${NOME[categoria]}`}>
+    <Tag {...(aoAbrir ? { type: 'button' as const, onClick: aoAbrir } : { role: 'img' })} className={`selo-categoria ${categoria}`} title={aoAbrir ? `${GF_MEMBRO} ${NOME[categoria]}: ver o seu plano` : `Categoria ${NOME[categoria]}`}
+      aria-label={aoAbrir ? `Seu plano: ${GF_MEMBRO} ${NOME[categoria]}. Abrir` : `Sua categoria: ${NOME[categoria]}`}>
       <svg viewBox="0 0 16 16" aria-hidden="true">
         <path d="M8 1.2l1.55 4.1 4.25.35-3.25 2.75 1.02 4.15L8 10.25 4.43 12.55l1.02-4.15L2.2 5.65l4.25-.35z" />
       </svg>

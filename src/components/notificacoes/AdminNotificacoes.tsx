@@ -14,6 +14,7 @@ import { SUPABASE } from '../../core/teeds/config'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import './painel-notificacoes.css'
 import { SeloDoParceiro } from '../parceiros/SeloDoParceiro'
+import { GF_MEMBRO, GF_NOME } from '../../marca'
 
 type Publico = 'todos' | 'aguardando' | 'membros' | 'ativos'
 type Contagem = Record<Publico | 'eu', { pessoas: number; aparelhos: number }>
@@ -22,7 +23,7 @@ interface Pessoa { pessoa: string | null; nome: string | null; email: string | n
 
 const PUBLICOS: Array<{ id: Publico; nome: string; quem: string }> = [
   { id: 'aguardando', nome: 'Aguardando live', quem: 'Inscritos que ainda esperam a live' },
-  { id: 'membros', nome: 'GF Member', quem: 'Quem já tem a plataforma liberada' },
+  { id: 'membros', nome: `${GF_MEMBRO}`, quem: 'Quem já tem a plataforma liberada' },
   { id: 'ativos', nome: 'Clientes ativos', quem: 'Todos com acesso liberado' },
   { id: 'todos', nome: 'Todos', quem: 'Toda a base com notificações ativadas' },
 ]
@@ -36,7 +37,7 @@ const DESTINOS: Array<{ id: string; nome: string }> = [
 const EMOJIS = ['🔴', '⏰', '✈️', '🔔', '✅', '🎁', '📚', '🚀', '💬', '🔥', '📈', '⚡']
 const MODELOS: Array<{ nome: string; titulo: string; corpo: string; destino: string }> = [
   { nome: 'Live no ar', titulo: '🔴 A live começou', corpo: 'Toque para assistir. A liberação do acesso acontece durante a live.', destino: 'inicio' },
-  { nome: 'Falta 1 hora', titulo: '⏰ Falta 1 hora para a live', corpo: 'Às 20h, dentro da GlobalFly. Abra o app e deixe tudo pronto.', destino: 'inicio' },
+  { nome: 'Falta 1 hora', titulo: '⏰ Falta 1 hora para a live', corpo: `Às 20h, dentro da ${GF_NOME}. Abra o app e deixe tudo pronto.`, destino: 'inicio' },
   { nome: 'Comunidade', titulo: '💬 Novidade na comunidade', corpo: 'Tem aviso novo no grupo do WhatsApp. Toque para ver.', destino: 'comunidade' },
   { nome: 'Aula nova', titulo: '📚 Aula nova liberada', corpo: 'Uma aula nova acabou de entrar na plataforma. Toque para assistir.', destino: 'aulas' },
 ]

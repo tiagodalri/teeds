@@ -70,7 +70,7 @@ const EVENTO: Record<string, string> = {
  */
 const ORIGEM: Record<string, string> = {
   externo: 'Fora da plataforma', 'sem-dono': 'Sem dono identificado',
-  teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly',
+  teeds: 'Teeds', omni: 'OMNI', globalfly: 'GlobalFly', legacypro: 'Legacy Pro',
 }
 const APP: Record<string, string> = {
   bot_deriv_com: 'bot da própria Deriv', deriv_com: 'site da Deriv', dtrader: 'DTrader da Deriv',

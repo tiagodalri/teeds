@@ -6,7 +6,7 @@
  * Os ids das fontes são fixos por tela e papel (`<tela>-<papel>`): editar um
  * texto não recarrega o vídeo de fundo nem corta o som dele.
  */
-import { MARCA, FAMILIA_GF } from '../../../marca'
+import { MARCA, FAMILIA_GF, GF_NOME } from '../../../marca'
 import {
   ALTURA, CANAL_PADRAO, LARGURA, novoId,
   type CamposDoModelo, type Cena, type ConfigDoEstudio, type EstiloDeTexto, type Fonte, type TipoDeModelo,
@@ -26,7 +26,7 @@ export interface InfoDoModelo {
   campos: CamposDoModelo
 }
 
-const FUNDO_GF: CamposDoModelo = GF ? { fundoUrl: `${BASE}estudio-globalfly/fundo.webp`, fundoTipo: 'imagem', fundoNome: 'Fundo da GlobalFly' } : {}
+const FUNDO_GF: CamposDoModelo = GF ? { fundoUrl: `${BASE}estudio-globalfly/fundo.webp`, fundoTipo: 'imagem', fundoNome: `Fundo da ${GF_NOME}` } : {}
 
 /** Os modelos, na ordem em que aparecem no painel. */
 export const MODELOS: InfoDoModelo[] = [
@@ -36,9 +36,9 @@ export const MODELOS: InfoDoModelo[] = [
   { tipo: 'intervalo', nome: 'Intervalo', dica: 'Pausa rápida', campos: { titulo: 'VOLTAMOS JÁ', subtitulo: 'FIQUE POR AQUI', mic: 'nao', ...FUNDO_GF } },
   { tipo: 'depoimento', nome: 'Depoimento', dica: 'Foto ou vídeo de um cliente', campos: { nome: '', cidade: '', frase: '', mic: 'sim' } },
   {
-    tipo: 'encerramento', nome: 'Encerramento', dica: GF ? 'Vídeo da GlobalFly' : 'Agradecimento final',
+    tipo: 'encerramento', nome: 'Encerramento', dica: GF ? `Vídeo da ${GF_NOME}` : 'Agradecimento final',
     campos: GF
-      ? { titulo: '', subtitulo: '', mic: 'nao', fundoUrl: `${BASE}estudio-globalfly/encerramento.mp4`, fundoTipo: 'video', fundoNome: 'Vídeo de encerramento da GlobalFly' }
+      ? { titulo: '', subtitulo: '', mic: 'nao', fundoUrl: `${BASE}estudio-globalfly/encerramento.mp4`, fundoTipo: 'video', fundoNome: `Vídeo de encerramento da ${GF_NOME}` }
       : { titulo: 'OBRIGADO POR ASSISTIR', subtitulo: 'ATÉ A PRÓXIMA LIVE', mic: 'nao' },
   },
   { tipo: 'arte', nome: 'Arte ou vídeo', dica: 'Sua imagem, vídeo ou animação na tela toda', campos: { mic: 'nao', repetir: 'sim' } },

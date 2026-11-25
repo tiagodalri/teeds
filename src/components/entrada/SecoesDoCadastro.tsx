@@ -17,6 +17,10 @@ import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 import { FAIXA, SESSOES, secoesComoFunciona, ligarComoFunciona } from '../../casca/globalfly/cadastro/comoFunciona'
 import { ApostilaFolheando, CabineDaVitrine, TelaAoVivo, TelaManual } from './VitrinesAnimadas'
 import { MODULOS } from '../../core/teeds/modulosAulas'
+import { GF_NOME, GF_SIGLA } from '../../marca'
+
+// As sessões da cabine vêm com os nomes da GF ("GF Falcon"); na Legacy Pro, "LP Falcon".
+SESSOES.forEach((s) => { s.n = s.n.replace(/^GF /, `${GF_SIGLA} `) })
 
 const brl = (n: number) => n.toLocaleString('pt-BR')
 const reais = (n: number) => `R$ ${n.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
@@ -45,7 +49,7 @@ export function MiniCartao({ id, grande }: { id: IdDoPlano; grande?: boolean }) 
 
 /* ------------------------------------------------------------------ muito além das I.A. */
 const AULAS_DA_VITRINE: Array<{ modulo: string; aulas: Array<[string, string]> }> = [
-  { modulo: 'Comece aqui', aulas: [['introducao', 'Introdução à GlobalFly'], ['visao-geral', 'Conhecendo a plataforma'], ['conta-deriv', 'Abertura de conta'], ['primeiro-deposito', 'Como depositar?'], ['saldo-demo-real', 'Conta demo e conta real'], ['deriv-confiavel', 'A Deriv é confiável?']] },
+  { modulo: 'Comece aqui', aulas: [['introducao', `Introdução à ${GF_NOME}`], ['visao-geral', 'Conhecendo a plataforma'], ['conta-deriv', 'Abertura de conta'], ['primeiro-deposito', 'Como depositar?'], ['saldo-demo-real', 'Conta demo e conta real'], ['deriv-confiavel', 'A Deriv é confiável?']] },
   { modulo: 'Estratégias de I.A. na prática', aulas: [['o-que-sao-as-ias', 'O que são as I.A. de operações'], ['robo-raptor', 'A estratégia Raptor'], ['robo-gulf', 'A estratégia Gulf'], ['robo-falcon', 'A estratégia Falcon'], ['robo-legacy', 'A estratégia Legacy'], ['robo-phenom', 'A estratégia Phenom'], ['operando-na-pratica', 'Operando na prática']] },
   { modulo: 'Gerenciamento e emocional', aulas: [['gerenciamento', 'O que é gerenciamento de risco'], ['gestao-na-pratica', 'Gestão na prática'], ['day-trade', 'Day trade'], ['erros-de-iniciante', 'Erros de iniciante'], ['consistencia', 'Consistência'], ['ganhar-e-perder', 'Saber ganhar e perder']] },
 ]
@@ -178,7 +182,7 @@ function CabineReal() {
       </div>
       <div className="cpl-revela"><CabineDaVitrine escolhida={i} aoTrocar={trocar} /></div>
       <p className="cpl-cabine-nota">Reprise da sessão de {SESSOES[i].dia}, gravada na plataforma, operação por operação.</p>
-      <div className="cpl-hangar" aria-label="As cinco I.A. da GlobalFly">
+      <div className="cpl-hangar" aria-label={`As cinco I.A. da ${GF_NOME}`}>
         {HANGAR.map((f) => {
           const j = SESSOES.findIndex((s) => s.f === f)
           return (
@@ -198,7 +202,8 @@ export function ComoFunciona({ aoQuerer }: { aoQuerer?: () => void }) {
   const caixa = useRef<HTMLDivElement>(null)
   const base = import.meta.env.BASE_URL
   const partes = useMemo(() => {
-    const h = secoesComoFunciona(base)
+    // O texto da casca fala da GlobalFly; na Legacy Pro, o nome e a sigla dela.
+    const h = secoesComoFunciona(base).replace(/GlobalFly/g, GF_NOME).replace(/\bGF (?=[A-Z])/g, `${GF_SIGLA} `)
     const iReal = h.indexOf('<section class="lp-real"'), iCab = h.indexOf('<section class="lp-cabine-sec">'), iLib = h.indexOf('<section class="lp-libera-sec">')
     return { oque: h.slice(0, iReal), real: h.slice(iReal, iCab), libera: h.slice(iLib) }
   }, [base])

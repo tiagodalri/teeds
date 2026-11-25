@@ -17,7 +17,7 @@
  * lê as cores das variáveis do CSS. Prefixo das classes: cpl-.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MARCA } from '../../marca'
+import { MARCA, GF_NOME, GF_SIGLA, GF_MEMBRO } from '../../marca'
 import { Brand } from '../Brand'
 import { DerivLogo, IconeSaida } from '../DerivMarca'
 import { afiliadoDaDeriv } from '../../core/rotas'
@@ -69,7 +69,7 @@ function itensDoPlano(p: PlanoDoCadastro): Item[] {
   const nomes = IAS_DA_GF.filter(([id]) => temIA(p, id)).map(([, n]) => n.replace('GF ', ''))
   const lista = nomes.length > 1 ? `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}` : nomes[0]
   const sim: Item[] = [
-    { sim: true, texto: todas ? <><b>Todas as {IAS_DA_GF.length} I.A.</b>, com GF Gulf e Phenom</> : <><b>{nomes.length} I.A.</b>: GF {lista}</> },
+    { sim: true, texto: todas ? <><b>Todas as {IAS_DA_GF.length} I.A.</b>, com {GF_SIGLA} Gulf e Phenom</> : <><b>{nomes.length} I.A.</b>: {GF_SIGLA} {lista}</> },
     { sim: true, texto: p.simuladorHoras == null ? <>Simulador <b>ilimitado</b></> : <>Simulador <b>{simuladorLegivel(p.simuladorHoras)}</b></> },
     { sim: true, texto: p.salaExtra ? <>Aulas, sala ao vivo e <b>sala extra por dia</b></> : <>Aulas e sala ao vivo</> },
     { sim: true, texto: p.compartilhamento > 0 ? <>Compartilhamento de <b>{porcentagem(p.compartilhamento)}</b> do lucro do mês</> : <><b>0% de compartilhamento</b>: o lucro é todo seu</> },
@@ -77,7 +77,7 @@ function itensDoPlano(p: PlanoDoCadastro): Item[] {
   if (p.assessor) sim.push({ sim: true, texto: <><b>Assessor</b> só seu no WhatsApp</> })
   if (p.lab) sim.push({ sim: true, texto: <><b>GFT Lab</b> (beta)</> })
   const nao: Item[] = []
-  if (!todas) nao.push({ sim: false, texto: 'GF Gulf e GF Phenom' })
+  if (!todas) nao.push({ sim: false, texto: `${GF_SIGLA} Gulf e ${GF_SIGLA} Phenom` })
   if (!p.salaExtra) nao.push({ sim: false, texto: 'Sala ao vivo extra' })
   if (!p.assessor) nao.push({ sim: false, texto: 'Assessor no WhatsApp' })
   if (!p.lab) nao.push({ sim: false, texto: 'GFT Lab (beta)' })
@@ -113,7 +113,7 @@ function Cartao({ p, titular, giro }: { p: PlanoDoCadastro; titular?: string; gi
         <div className="cpl-l1"><span className="cpl-mono" aria-hidden="true" /><span className="cpl-chip" aria-hidden="true" /></div>
         <div className="cpl-meio"><span>GF •••• {new Date().getFullYear()}</span><Icone nome="wave" /></div>
         <div className="cpl-l3">
-          <div><div className="cpl-nome-plano">{p.nome}</div><div className="cpl-sub">GF Member</div></div>
+          <div><div className="cpl-nome-plano">{p.nome}</div><div className="cpl-sub">{GF_MEMBRO}</div></div>
           <div className="cpl-titular"><small>Membro</small>{titular || 'Seu nome aqui'}</div>
         </div>
       </div>
@@ -470,7 +470,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                     onPointerMove={(e) => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--x', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--y', `${e.clientY - r.top}px`) }}
                     onClick={(e) => { if (!(e.target as HTMLElement).closest('button') && !noCelular()) selecionar(p.id) }}>
                     {p.id === 'black' && <span className="cpl-selo">Recomendado</span>}
-                    <div className="cpl-cab"><MiniCartao id={p.id} /><div><h2>{p.nome}</h2><small>GF Member</small></div></div>
+                    <div className="cpl-cab"><MiniCartao id={p.id} /><div><h2>{p.nome}</h2><small>{GF_MEMBRO}</small></div></div>
                     <p className="cpl-chamada">{p.chamada}</p>
                     <div className="cpl-preco">
                       {p.referencia ? <span className="cpl-de">De <s>R$ {brl(p.referencia)}</s> por</span> : <span className="cpl-de">&nbsp;</span>}
@@ -540,14 +540,14 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                   <details><summary>Posso começar no Gold e mudar depois?</summary><p>Pode. A mudança para o Black ou o Prestige é feita dentro da plataforma, em Meu plano, na mesma conta. O que você já fez continua lá.</p></details>
                   <details><summary>Quando o Black ou o Prestige é liberado?</summary><p>Assim que o pagamento é confirmado. No cartão costuma ser na hora; no Pix, em poucos minutos. Use no pagamento o mesmo e-mail do cadastro.</p></details>
                   <details><summary>Como funciona o compartilhamento de receita?</summary><p>É uma porcentagem do lucro do mês na conta real, operando pela plataforma, apurada no início do mês seguinte. Você acompanha tudo na aba Relatórios.</p></details>
-                  <details><summary>Preciso ter conta na corretora?</summary><p>Para operar com dinheiro real, sim: a GlobalFly opera numa corretora internacional, com o dinheiro sempre no seu nome. Dentro da plataforma, as aulas mostram como abrir a conta e fazer o primeiro depósito. Antes disso, você treina com US$ 10.000 virtuais no simulador.</p></details>
+                  <details><summary>Preciso ter conta na corretora?</summary><p>Para operar com dinheiro real, sim: a {GF_NOME} opera numa corretora internacional, com o dinheiro sempre no seu nome. Dentro da plataforma, as aulas mostram como abrir a conta e fazer o primeiro depósito. Antes disso, você treina com US$ 10.000 virtuais no simulador.</p></details>
                   <details><summary>Funciona no celular?</summary><p>Sim. Dentro da plataforma você instala o app e ativa os avisos: cada sessão que termina na meta ou no limite chega como notificação no seu celular.</p></details>
-                  <details><summary>Já tenho conta na GlobalFly. Preciso me cadastrar?</summary><p>Não precisa. Toque em Entrar, no topo, e use o seu e-mail e a sua senha. Para mudar de plano, é em Meu plano, dentro da plataforma.</p></details>
+                  <details><summary>Já tenho conta na {GF_NOME}. Preciso me cadastrar?</summary><p>Não precisa. Toque em Entrar, no topo, e use o seu e-mail e a sua senha. Para mudar de plano, é em Meu plano, dentro da plataforma.</p></details>
                 </div>
               </section>
 
               <section className="cpl-secao cpl-final" aria-labelledby="cpl-t-final">
-                <span className="cpl-olho">GF Member</span>
+                <span className="cpl-olho">{GF_MEMBRO}</span>
                 <h2 id="cpl-t-final">O seu lugar a bordo<br />está reservado.</h2>
                 <button type="button" className={`cpl-btn ${CLASSE_DO_BOTAO[sel] === 'cpl-btn-linha' ? 'cpl-btn-ouro' : CLASSE_DO_BOTAO[sel]}`} onClick={() => irParaDados(sel)}>{continuarCom(plano)} <span className="cpl-seta" aria-hidden="true">→</span></button>
               </section>
@@ -556,7 +556,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
 
           <div className={`cpl-barra-fixa ${verBarra ? 'cpl-ver' : ''}`} aria-hidden={!verBarra}>
             <MiniCartao id={sel} />
-            <div className="cpl-info"><b>GF Member {plano.nome}</b><span>{precoCurto(plano)}</span></div>
+            <div className="cpl-info"><b>{GF_MEMBRO} {plano.nome}</b><span>{precoCurto(plano)}</span></div>
             <button type="button" tabIndex={verBarra ? 0 : -1} className={`cpl-btn ${CLASSE_DO_BOTAO[sel] === 'cpl-btn-linha' ? 'cpl-btn-ouro' : CLASSE_DO_BOTAO[sel]}`} onClick={() => irParaDados(sel)}>Continuar <span className="cpl-seta" aria-hidden="true">→</span></button>
           </div>
         </main>
@@ -577,7 +577,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                 {planos.map((p) => <button key={p.id} type="button" aria-pressed={p.id === sel} onClick={() => { if (p.id !== sel) eventoDoPixel('CustomizeProduct', { content_name: `gf-${p.id}`, de: `gf-${sel}` }); setSel(p.id) }}>{p.nome}</button>)}
               </div>
               <div className="cpl-resumo">
-                <div className="cpl-linha"><b>GF Member {plano.nome}</b><span className="cpl-v">R$ {brl(plano.preco)}<small>{plano.preco ? '/ano' : 'aquisição zero'}</small></span></div>
+                <div className="cpl-linha"><b>{GF_MEMBRO} {plano.nome}</b><span className="cpl-v">R$ {brl(plano.preco)}<small>{plano.preco ? '/ano' : 'aquisição zero'}</small></span></div>
                 <ul className="cpl-inclui">{itensDoPlano(plano).filter((it) => it.sim).map((it, k) => <li key={k} className="cpl-s"><Icone nome="ok" /><span>{it.texto}</span></li>)}</ul>
               </div>
               <button type="button" className="cpl-voltar" onClick={voltarAosPlanos}>← Ver todos os planos</button>

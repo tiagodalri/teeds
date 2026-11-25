@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import type { PapelDoAdmin } from '../../core/teeds/parceiroEmFoco'
 import { useParceirosDaMarca } from '../../core/teeds/parceiroEmFoco'
-import { MARCA } from '../../marca'
+import { MARCA, GF_NOME } from '../../marca'
 import {
   ALTURA_DO_QUADRO, CORES, EMOJIS, FONTES, IAS, carregarFontesDosStories, contraste, fotoDaIA, nomeDeMencao, nova, proximaLive, proximaMoldura, proximoEstilo, proximoEstiloIA, rotuloDasCamadas,
   type Camada, type FonteDoTexto, type FundoDoTexto, type IdDaIA, type Selo, type Traco,
@@ -62,7 +62,7 @@ const TELAS: Array<{ id: BotaoTipo; nome: string }> = [
   { id: 'gerenciamento', nome: 'Gerenciamento' }, { id: 'marketplace', nome: 'Planos' },
 ]
 const SELOS: Array<{ id: Selo; nome: string }> = [
-  { id: 'gf', nome: 'GlobalFly' }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'novidade', nome: 'Novidade' }, { id: 'ia', nome: 'I.A. no ar' },
+  { id: 'gf', nome: GF_NOME }, { id: 'aovivo', nome: 'Ao vivo' }, { id: 'novidade', nome: 'Novidade' }, { id: 'ia', nome: 'I.A. no ar' },
   { id: 'gold', nome: 'Gold' }, { id: 'black', nome: 'Black' }, { id: 'prestige', nome: 'Prestige' },
 ]
 /** Quantos da galeria de uma vez. */
@@ -1106,7 +1106,7 @@ function Bandeja({ aoFechar, aoEscolher }: { aoFechar: () => void; aoEscolher: (
       {!termo && <div className="est-especiais">{especiais.map((s) => <button key={s.id} type="button" onClick={() => aoEscolher(s.id)}>{s.tag}</button>)}</div>}
       {(!termo || 'ia i.a. raptor falcon legacy gulf phenom avião aviao'.includes(termo) || IAS.some((x) => x.nome.toLowerCase().includes(termo))) && (
         <>
-          <span className="est-grupo">I.A. da GlobalFly</span>
+          <span className="est-grupo">I.A. da {GF_NOME}</span>
           <div className="est-ias">
             {IAS.filter((x) => !termo || x.nome.toLowerCase().includes(termo) || 'ia i.a. avião aviao'.includes(termo)).map((x) => (
               <button key={x.id} type="button" onClick={() => aoEscolher(`ia:${x.id}`)} aria-label={x.nome}>
@@ -1119,7 +1119,7 @@ function Bandeja({ aoFechar, aoEscolher }: { aoFechar: () => void; aoEscolher: (
       )}
       {(!termo || 'globalfly selo ao vivo novidade gold black prestige ia'.includes(termo)) && (
         <>
-          <span className="est-grupo">Selos da GlobalFly</span>
+          <span className="est-grupo">Selos da {GF_NOME}</span>
           <div className="est-selos">
             {SELOS.filter((s) => !termo || s.nome.toLowerCase().includes(termo) || 'selo'.includes(termo)).map((s) => (
               <button key={s.id} type="button" onClick={() => aoEscolher(`selo:${s.id}`)} aria-label={s.nome}>

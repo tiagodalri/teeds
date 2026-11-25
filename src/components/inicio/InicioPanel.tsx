@@ -8,7 +8,7 @@ import { LogotipoDaIA, temLogotipo } from '../marca/LogotipoDaIA'
 import { fotoDoCartaoAlto } from '../marca/fotoDoCartao'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { alternarValores, MASCARA, useValoresOcultos } from '../../core/privacidade'
-import { MARCA, FAMILIA_GF } from '../../marca'
+import { MARCA, FAMILIA_GF, PREFIXO_DA_IA } from '../../marca'
 import { DERIV } from '../../core/deriv/config'
 import { InstrumentoDoDia } from './InstrumentoDoDia'
 import './inicio.css'
@@ -142,7 +142,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
   const bloqueados = useRobosBloqueados()
   const frota = [...d.frota].sort((a, b) => Number(b.noAr) - Number(a.noAr))
   const subFrota = noAr.length === 0 ? 'Nenhuma I.A. no ar · escolha uma e dê o play'
-    : noAr.length === 1 ? `1 I.A. no ar · ${noAr[0].nome.replace(/^(GF|GlobalFly)\s+/i, '')} ${noAr[0].operando ? 'operando' : 'analisando o mercado'}`
+    : noAr.length === 1 ? `1 I.A. no ar · ${noAr[0].nome.replace(PREFIXO_DA_IA, '')} ${noAr[0].operando ? 'operando' : 'analisando o mercado'}`
     : `${noAr.length} I.A.s no ar`
 
   return (
@@ -251,7 +251,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
             </header>
             <div className="in-frota-trilho">
               {frota.map((r) => {
-                const curto = r.nome.replace(/^(GF|GlobalFly)\s+/i, '')
+                const curto = r.nome.replace(PREFIXO_DA_IA, '')
                 // I.A. vendida à parte que a pessoa ainda não tem: o cadeado leva ao Marketplace
                 const trancada = !r.noAr && bloqueados.has(r.id)
                 return (

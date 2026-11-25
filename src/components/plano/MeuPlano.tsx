@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MARCA } from '../../marca'
+import { MARCA, GF_SIGLA, GF_MEMBRO } from '../../marca'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { comComprador, type CompradorDoCheckout } from '../../core/teeds/checkout'
 import { cobrancaLegivel, compartilhamentoLegivel, precoLegivel, simuladorLegivel, type MeuSubplano, type Subplano } from '../../core/teeds/subplanos'
@@ -10,7 +10,7 @@ import './meu-plano.css'
  * simulador ela já usou hoje e a tabela dos três subplanos, com ✓ e ✗ e cada
  * I.A. pelo nome. A mesma tabela serve para mostrar na live.
  */
-const IAS: Array<[string, string]> = [['goreme', 'GF Raptor'], ['falcon', 'GF Falcon'], ['legacy', 'GF Legacy'], ['superior5', 'GF Gulf'], ['ag2', 'GF Phenom']]
+const IAS: Array<[string, string]> = [['goreme', `${GF_SIGLA} Raptor`], ['falcon', `${GF_SIGLA} Falcon`], ['legacy', `${GF_SIGLA} Legacy`], ['superior5', `${GF_SIGLA} Gulf`], ['ag2', `${GF_SIGLA} Phenom`]]
 const tem = (s: Subplano, ia: string) => s.ias == null || s.ias.includes(ia)
 
 export function MeuPlano({ dados, foco, aoFechar, comprador }: { dados: MeuSubplano; foco?: string | null; aoFechar: () => void; comprador?: CompradorDoCheckout | null }) {
@@ -47,7 +47,7 @@ export function MeuPlano({ dados, foco, aoFechar, comprador }: { dados: MeuSubpl
         <button type="button" className="mpl-fechar" onClick={aoFechar} aria-label="Fechar">×</button>
         <header className="mpl-topo">
           <span className="mpl-rot">Seu plano</span>
-          <h2 id="mpl-titulo">GF Member <em className={`mpl-selo ${meu.id}`}>{meu.nome}</em></h2>
+          <h2 id="mpl-titulo">{GF_MEMBRO} <em className={`mpl-selo ${meu.id}`}>{meu.nome}</em></h2>
           <p>{meu.chamada}{dados.admin ? ' Como administrador, você tem tudo liberado.' : ''}</p>
           {limite != null && !dados.admin && (
             <div className="mpl-uso" aria-label="Simulador hoje">

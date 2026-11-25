@@ -7,7 +7,7 @@ import {
 } from '../../core/teeds/perfil'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { Monograma } from '../marca/Monograma'
-import { MARCA } from '../../marca'
+import { MARCA, GF_MEMBRO } from '../../marca'
 import './meu-perfil.css'
 import { dataCurta } from '../../core/datas'
 import { dataEHora, historicoDeAceites, type HistoricoDeAceites } from '../../core/teeds/termos'
@@ -183,7 +183,7 @@ export function MeuPerfil({ sessao, contas = [], derivConectada = false, onConec
   // 08/11/2026 (revisão de design): na marca com subplanos (GF Member Gold/Black/Prestige) o
   // Perfil mostra o mesmo nome do selo do topo, não o nome técnico do plano ("Sem simulador").
   const sub = MARCA.seloCategoria ? subplanoAtual(meuSubplano) : null
-  const nomeDoPlano = sub ? `GF Member ${sub.nome}` : perfil.planoNome
+  const nomeDoPlano = sub ? `${GF_MEMBRO} ${sub.nome}` : perfil.planoNome
   const faltam = perfil.acessoExpira ? Math.ceil((Date.parse(perfil.acessoExpira) - Date.now()) / 86_400_000) : null
   const total = perfil.acessoInicio && perfil.acessoExpira ? Math.max(1, (Date.parse(perfil.acessoExpira) - Date.parse(perfil.acessoInicio)) / 86_400_000) : null
   const usado = total && faltam !== null ? Math.min(100, Math.max(0, ((total - Math.max(0, faltam)) / total) * 100)) : 0

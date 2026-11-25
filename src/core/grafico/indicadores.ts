@@ -13,11 +13,11 @@
  * pessoa pode mudar.
  */
 import { registerIndicator, type IndicatorTemplate, type KLineData } from 'klinecharts'
-import { MARCA } from '../../marca'
+import { MARCA, GF_SIGLA } from '../../marca'
 
 export type Categoria = 'sinal' | 'momentum' | 'tendencia' | 'volatilidade' | 'medias' | 'outros'
 export const CATEGORIAS: Array<{ id: Categoria; nome: string }> = [
-  { id: 'sinal', nome: 'Sinal GF' },
+  { id: 'sinal', nome: `Sinal ${GF_SIGLA}` },
   { id: 'momentum', nome: 'Momentum' },
   { id: 'tendencia', nome: 'Tendência' },
   { id: 'volatilidade', nome: 'Volatilidade' },
@@ -45,7 +45,7 @@ const P = (rotulo: string, padrao: number, min = 1, max = 500, passo = 1): Param
 
 export const CATALOGO: DefinicaoIndicador[] = [
   // ------------------------------------------------------------ o sinal da casa
-  { id: 'GF_SINAL', nome: 'Sinal GF', sigla: 'Sinal GF', categoria: 'sinal', painel: 'principal', descricao: 'Faixas de volatilidade com setas de Subir e Descer quando a vela fecha virando na faixa. A contagem na barra mostra quando a vela fecha.', parametros: [P('Período', 20, 5, 100), P('Desvios', 1.8, 1, 4, 0.1), P('Velas entre sinais', 3, 1, 20)] },
+  { id: 'GF_SINAL', nome: `Sinal ${GF_SIGLA}`, sigla: `Sinal ${GF_SIGLA}`, categoria: 'sinal', painel: 'principal', descricao: 'Faixas de volatilidade com setas de Subir e Descer quando a vela fecha virando na faixa. A contagem na barra mostra quando a vela fecha.', parametros: [P('Período', 20, 5, 100), P('Desvios', 1.8, 1, 4, 0.1), P('Velas entre sinais', 3, 1, 20)] },
   // ------------------------------------------------------------ momentum
   { id: 'MACD', nome: 'MACD', sigla: 'MACD', categoria: 'momentum', painel: 'proprio', descricao: 'Convergência e divergência de médias: linha MACD, linha de sinal e histograma.', parametros: [P('Média rápida', 12), P('Média lenta', 26), P('Sinal', 9)] },
   { id: 'RSI', nome: 'Índice de Força Relativa (RSI)', sigla: 'RSI', categoria: 'momentum', painel: 'proprio', descricao: 'Força dos movimentos de alta contra os de baixa, de 0 a 100 (método de Wilder).', parametros: [P('Período', 14, 2)], varios: true },
@@ -298,7 +298,7 @@ function desenharSinal(params: Parameters<NonNullable<IndicatorTemplate['draw']>
 
 const PERSONALIZADOS: IndicatorTemplate[] = [
   {
-    name: 'GF_SINAL', shortName: 'Sinal GF', series: 'price', calcParams: [20, 1.8, 3], precision: 2, shouldOhlc: true,
+    name: 'GF_SINAL', shortName: `Sinal ${GF_SIGLA}`, series: 'price', calcParams: [20, 1.8, 3], precision: 2, shouldOhlc: true,
     figures: linhas([['up', 'Superior: '], ['mid', 'Meio: '], ['dn', 'Inferior: ']]),
     styles: { lines: [{ color: '#FF3B47', size: 1.4 }, { color: 'rgba(147, 166, 189, .45)', size: 1 }, { color: '#22D66A', size: 1.4 }] },
     calc: (d, ind) => { const [n, k, m] = ind.calcParams as number[]; return calcularSinal(d, n, k, m) },

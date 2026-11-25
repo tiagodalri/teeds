@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import './grafico-tradingview.css'
+import { GF_NOME } from '../../marca'
 
 /**
  * O gráfico do TradingView no Manual (30/10/2026, vídeo do Victor: "integrar o
@@ -139,7 +140,7 @@ export function GraficoTradingView({ symbol, symbolName, granularity, mode, barr
       ) : (
         <div className="gtv-sem">
           <b>{symbolName || symbol} não está no TradingView.</b>
-          <span>Use o gráfico GlobalFly para este ativo, ou escolha outro ativo, como o 75 Index.</span>
+          <span>Use o gráfico {GF_NOME} para este ativo, ou escolha outro ativo, como o 75 Index.</span>
         </div>
       )}
     </div>

@@ -8,6 +8,7 @@
  * O desenho guarda os traços num quadro de 100 x 177,78 (a mesma proporção 9:16).
  */
 import type { BotaoTipo } from './stories'
+import { GF_SIGLA } from '../../marca'
 
 export type FonteDoTexto = 'classico' | 'forte' | 'elegante' | 'maquina' | 'neon'
 export type FundoDoTexto = 'nenhum' | 'cor' | 'claro'
@@ -18,9 +19,9 @@ export type IdDaIA = 'goreme' | 'falcon' | 'legacy' | 'superior5' | 'ag2'
 export type EstiloDaIA = 'cartao' | 'selo' | 'tag'
 export type Moldura = 'arredondada' | 'circulo' | 'polaroid' | 'sem'
 export const IAS: Array<{ id: IdDaIA; nome: string; chamada: string }> = [
-  { id: 'goreme', nome: 'GF Raptor', chamada: 'Rápida e direta' }, { id: 'falcon', nome: 'GF Falcon', chamada: 'A porta baixa' },
-  { id: 'legacy', nome: 'GF Legacy', chamada: 'A porta alta' }, { id: 'superior5', nome: 'GF Gulf', chamada: 'O analista dos altos' },
-  { id: 'ag2', nome: 'GF Phenom', chamada: 'O espelho' },
+  { id: 'goreme', nome: `${GF_SIGLA} Raptor`, chamada: 'Rápida e direta' }, { id: 'falcon', nome: `${GF_SIGLA} Falcon`, chamada: 'A porta baixa' },
+  { id: 'legacy', nome: `${GF_SIGLA} Legacy`, chamada: 'A porta alta' }, { id: 'superior5', nome: `${GF_SIGLA} Gulf`, chamada: 'O analista dos altos' },
+  { id: 'ag2', nome: `${GF_SIGLA} Phenom`, chamada: 'O espelho' },
 ]
 /** A foto do avião de cada I.A. (a mesma dos cartões da frota). */
 export const fotoDaIA = (id: IdDaIA) => `${import.meta.env.BASE_URL}robos-globalfly/${id}-pequena.webp`

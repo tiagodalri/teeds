@@ -270,7 +270,7 @@ export function ligarComoFunciona(raiz: HTMLElement, b: string): () => void {
   SESSOES.forEach((s, i) => {
     const bt = document.createElement('button')
     bt.type = 'button'; bt.setAttribute('role', 'tab'); bt.className = 'lp-cab-ia'
-    bt.innerHTML = '<img src="' + b + 'aulas-globalfly/robo-' + s.f + '-mobile.webp" alt="" width="64" height="96" loading="lazy" /><span>' + s.n.replace('GF ', '') + '</span><i><u></u></i>'
+    bt.innerHTML = '<img src="' + b + 'aulas-globalfly/robo-' + s.f + '-mobile.webp" alt="" width="64" height="96" loading="lazy" /><span>' + s.n.replace(/^\S+ /, '') + '</span><i><u></u></i>'
     bt.addEventListener('click', () => escolher(i, true))
     ias.appendChild(bt)
   })

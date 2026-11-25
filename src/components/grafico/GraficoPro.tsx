@@ -20,7 +20,7 @@ import { ControlesDeZoom } from './ControlesDeZoom'
 import { CartaoDaOperacao } from './CartaoDaOperacao'
 import { naPagina } from '../../core/escala'
 import { textoBR } from '../../core/chart/scales'
-import { MARCA } from '../../marca'
+import { MARCA, GF_SIGLA } from '../../marca'
 
 interface Props {
   candles: Candle[]
@@ -739,7 +739,7 @@ export function GraficoPro({ candles, mode, pipSize, symbol, symbolName, granula
           ))}
         </div>
         {sinal && granularity > 0 && (
-          <span className="gp-sinal" title="O Sinal GF só sai no fechamento da vela, quando ela vira na faixa.">
+          <span className="gp-sinal" title={`O Sinal ${GF_SIGLA} só sai no fechamento da vela, quando ela vira na faixa.`}>
             <i aria-hidden="true" />Próxima leitura <b>{relogio}</b>
           </span>
         )}
