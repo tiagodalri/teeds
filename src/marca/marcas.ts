@@ -580,8 +580,8 @@ MARCAS.legacypro = {
   // App "LegacyPro Trade" na Deriv (criada em 25/11/2026).
   appId: '353JqAIgSM9V2lHxXSIzx',
   redirectUri: 'https://legacyprotrade.com/',
-  // PENDENTE: o link de afiliado da Legacy Pro na Deriv.
-  afiliado: '',
+  // Provisório (25/11/2026, Tiago): o mesmo afiliado da Teeds até a Legacy Pro ter o seu.
+  afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
   // PENDENTE: nomes definitivos das I.A. Provisório: os mesmos voos da GF com LP na frente.
   nomesDosRobos: {
     goreme: 'LP Raptor',
