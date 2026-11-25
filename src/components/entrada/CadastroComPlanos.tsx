@@ -111,7 +111,7 @@ function Cartao({ p, titular, giro }: { p: PlanoDoCadastro; titular?: string; gi
     <div className="cpl-flutua">
       <div className={`cpl-face cpl-${p.id}`} key={giro}>
         <div className="cpl-l1"><span className="cpl-mono" aria-hidden="true" /><span className="cpl-chip" aria-hidden="true" /></div>
-        <div className="cpl-meio"><span>GF •••• {new Date().getFullYear()}</span><Icone nome="wave" /></div>
+        <div className="cpl-meio"><span>{GF_SIGLA} •••• {new Date().getFullYear()}</span><Icone nome="wave" /></div>
         <div className="cpl-l3">
           <div><div className="cpl-nome-plano">{p.nome}</div><div className="cpl-sub">{GF_MEMBRO}</div></div>
           <div className="cpl-titular"><small>Membro</small>{titular || 'Seu nome aqui'}</div>
