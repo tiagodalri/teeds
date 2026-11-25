@@ -365,3 +365,6 @@ html:has(body.sl) { overflow-x: hidden; }
 .sl-protagonista img { position: relative; z-index: 1; }
 .sl-heroi { overflow: visible; overflow-x: clip; }
 @media (min-width: 981px) { .sl-protagonista { top: -70px; } }
+.sl-fim h2 { max-width: 20ch; margin-top: 6px; }
+.sl-fim p { margin: 6px 0 0; }
+.sl-fim .sl-cta { margin-top: 20px; }

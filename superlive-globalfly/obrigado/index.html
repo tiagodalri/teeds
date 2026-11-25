@@ -36,7 +36,7 @@
     <main class="centro">
       <section class="cartao obrigado">
         <div class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
-        <h1 data-titulo>Seu lugar no sofá está reservado!</h1>
+        <h1 data-titulo>Seu lugar está garantido!</h1>
         <!-- 25/11/2026: o ingresso da Super Live (domingo 29/11, 20h) com a agenda -->
         <div class="sl-ingresso-obrigado">
           <div class="sl-io-topo"><span>Ingresso · Super Live</span><span>Dom 29/11 · 20h</span></div>
@@ -112,7 +112,7 @@
     (function () {
       var dados = GF.ler()
       // textContent: o nome nunca entra como HTML
-      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', seu lugar no sofá está reservado!'
+      if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', seu lugar está garantido!'
       GF.pixel('ViewContent', { content_name: 'superlive-obrigado' })
       // o plano escolhido no cadastro (Gold): o nome aparece na chamada
       var PLANOS = { gold: 'Gold', black: 'Black', prestige: 'Prestige' }
