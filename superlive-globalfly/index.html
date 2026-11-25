@@ -15,8 +15,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" href="./img/casa-celular.webp" media="(max-width: 720px)" />
-  <link rel="preload" as="image" href="./img/casa.webp" media="(min-width: 721px)" />
   <link rel="stylesheet" href="../estilo.css" />
   <link rel="stylesheet" href="./superlive.css" />
 </head>
@@ -36,14 +34,22 @@
 
   <section class="sl-heroi" aria-labelledby="titulo">
     <picture class="sl-heroi-foto">
-      <source media="(max-width: 720px)" srcset="./img/casa-celular.webp" />
-      <img src="./img/casa.webp" alt="Victor Cordeiro na área da churrasqueira da casa dele, num domingo à noite" width="2400" height="1340" />
+      <source media="(max-width: 720px)" srcset="./img/casa-celular.webp" data-heroi-celular />
+      <img src="./img/casa.webp" alt="Victor Cordeiro na área da churrasqueira da casa dele, num domingo à noite" width="2400" height="1340" data-heroi />
     </picture>
+    <script>
+      // o /n abre direto com a foto do Naor (sem piscar a do Victor antes)
+      if (/^\/n\//.test(location.pathname)) {
+        document.documentElement.classList.add('sl-n')
+        document.querySelector('[data-heroi-celular]').srcset = './img/naor-casa-celular.webp'
+        document.querySelector('[data-heroi]').src = './img/naor-casa.webp'
+      }
+    </script>
     <div class="sl-heroi-miolo">
       <span class="sl-selo"><i aria-hidden="true"></i> Ao vivo · Domingo 29/11 · 20h</span>
       <h1 id="titulo"><span class="sl-super">Super</span> <span class="sl-live">Live</span></h1>
       <p class="sl-frase">O seu novo programa de domingo.</p>
-      <p class="sl-texto">Domingo à noite, todo mundo em casa, no sofá. Desta vez, o seu compromisso é com a gente: <b>Victor Cordeiro e Naor Bezerra ao vivo</b>, direto de casa, para você aprender, <b>sem ter que comprar curso</b>, a ganhar no mercado dolarizado aproveitando a alta do dólar.</p>
+      <p class="sl-texto">Domingo à noite, todo mundo em casa, no sofá. Desta vez, o seu compromisso é com a gente: <b data-dupla>Victor Cordeiro e Naor Bezerra ao vivo</b>, direto de casa, para você aprender, <b>sem ter que comprar curso</b>, a ganhar no mercado dolarizado aproveitando a alta do dólar.</p>
       <div class="sl-relogio" data-relogio aria-label="Tempo até a Super Live">
         <div><b data-d>0</b><span>dias</span></div>
         <div><b data-h>00</b><span>horas</span></div>
@@ -69,7 +75,7 @@
         <div class="sl-tela" aria-hidden="true">
           <span class="sl-tela-ao-vivo"><i></i> Domingo · 20h</span>
           <b>Super Live</b>
-          <span class="sl-tela-quem">Victor &amp; Naor</span>
+          <span class="sl-tela-quem" data-dupla-curta>Victor &amp; Naor</span>
           <span class="sl-tela-falta" data-falta-tv>Entra no ar em breve</span>
         </div>
       </div>
@@ -94,14 +100,14 @@
 
     <section class="sl-casa" aria-labelledby="titulo-casa">
       <figure class="sl-casa-foto">
-        <img src="./img/victor-casa.webp" alt="Victor Cordeiro em casa, pronto para entrar ao vivo" width="760" height="1350" loading="lazy" />
+        <img src="./img/victor-casa.webp" alt="Victor Cordeiro em casa, pronto para entrar ao vivo" width="760" height="1350" loading="lazy" data-foto-casa />
       </figure>
       <div class="sl-casa-texto">
         <span class="sl-rotulo">Quem apresenta</span>
-        <h2 id="titulo-casa">Victor e Naor, ao vivo, de casa para a sua casa</h2>
-        <div class="sl-dupla">
-          <div class="sl-pessoa"><img src="./img/victor.webp" alt="" width="400" height="400" loading="lazy" /><div><b>Victor Cordeiro</b><span>Direto da casa dele</span></div></div>
-          <div class="sl-pessoa"><img src="./img/naor.webp" alt="" width="400" height="400" loading="lazy" /><div><b>Naor Bezerra</b><span>Junto na live</span></div></div>
+        <h2 id="titulo-casa" data-titulo-casa>Victor e Naor, ao vivo, de casa para a sua casa</h2>
+        <div class="sl-dupla" data-rostos>
+          <div class="sl-pessoa" data-pessoa="v"><img src="./img/victor.webp" alt="" width="400" height="400" loading="lazy" /><div><b>Victor Cordeiro</b><span>Direto da casa dele</span></div></div>
+          <div class="sl-pessoa" data-pessoa="n"><img src="./img/naor.webp" alt="" width="400" height="400" loading="lazy" /><div><b>Naor Bezerra</b><span data-naor-papel>Junto na live</span></div></div>
         </div>
         <ul class="sl-lista">
           <li><b>Domingo, 29 de novembro</b>, às 20h de Brasília.</li>
@@ -153,6 +159,19 @@
   <script src="../captura.js"></script>
   <script>
     (function () {
+      // 25/11/2026 (Tiago: "o Naor também vai precisar, com a identidade dele"): no /n a página abre
+      // com o Naor em casa e o nome dele na frente; no /v e no direto, com o Victor
+      if (GF.parceiro() === 'n') {
+        document.querySelector('[data-heroi]').alt = 'Naor Bezerra em casa, num domingo à noite, pronto para entrar ao vivo'
+        document.querySelector('[data-dupla]').textContent = 'Naor Bezerra e Victor Cordeiro ao vivo'
+        document.querySelector('[data-dupla-curta]').textContent = 'Naor & Victor'
+        document.querySelector('[data-foto-casa]').src = './img/naor-retrato.webp'
+        document.querySelector('[data-foto-casa]').alt = 'Naor Bezerra em casa, pronto para entrar ao vivo'
+        document.querySelector('[data-titulo-casa]').textContent = 'Naor e Victor, ao vivo, de casa para a sua casa'
+        document.querySelector('[data-naor-papel]').textContent = 'Ao vivo com você'
+        var rostos = document.querySelector('[data-rostos]'); rostos.insertBefore(rostos.querySelector('[data-pessoa="n"]'), rostos.firstChild)
+        Array.prototype.forEach.call(document.querySelectorAll('.sl-faixa span'), function (s) { if (s.textContent === 'Victor Cordeiro & Naor Bezerra') s.textContent = 'Naor Bezerra & Victor Cordeiro' })
+      }
       GF.pixel()
       GF.pixel('ViewContent', { content_name: 'superlive' })
       // Domingo, 29/11/2026, 20h de Brasília (23h UTC)

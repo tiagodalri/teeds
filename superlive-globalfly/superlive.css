@@ -129,3 +129,4 @@
   .sl-io-topo, .sl-ingresso-topo { font-size: 15px; letter-spacing: .05em; white-space: nowrap; }
   .sl-heroi-miolo { padding-top: 48svh; }
 }
+@media (max-width: 720px) { .sl-n .sl-heroi-foto img { object-position: 50% 0%; } }
