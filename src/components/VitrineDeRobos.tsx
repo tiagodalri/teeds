@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { IDENTIDADES, type Identidade } from '../core/deriv/branding'
 import { descrever, digitosQueGanham, parametrosPadrao, type ParametrosDoRobo } from '../core/deriv/parametros'
 import { recarregarCatalogo, useCatalogoCompleto, useCatalogoFalhou, useRobosDisponiveis } from '../core/teeds/catalogoRobos'
-import { MARCA } from '../marca'
+import { MARCA, familiaDa } from '../marca'
 import { pedirModeloDaVitrine } from './RobotSetup'
 import './vitrine-robos.css'
 import { LogotipoDaIA, temLogotipo } from './marca/LogotipoDaIA'
@@ -88,7 +88,7 @@ function planoDeVoo(id: string, p: ParametrosDoRobo): Etapa[] {
   }
   const ponta = ganham[0] === 0 ? 'a parte baixa' : ganham[ganham.length - 1] === 9 ? 'a parte alta' : 'o meio'
   return [
-    { titulo: 'Decola na hora', texto: <>Sem esperar sinal: entra direto e ocupa <b>{ponta} do painel</b>, de {faixa(ganham)}.</> },
+    { titulo: MARCA.linhaDasIas ? 'Entra na hora' : 'Decola na hora', texto: <>Sem esperar sinal: entra direto e ocupa <b>{ponta} do painel</b>, de {faixa(ganham)}.</> },
     { titulo: 'Decide em 1 tick', texto: <>Cada operação se resolve <b>no dígito seguinte</b>; {fora.length === 1 ? `só o ${fora[0]} fica contra` : `os dígitos de ${faixa(fora)} ficam contra`}.</> },
     recalcula,
   ]
@@ -98,7 +98,7 @@ function planoDeVoo(id: string, p: ParametrosDoRobo): Etapa[] {
 function RotaResumida({ id, parametros, aoAbrir }: { id: string; parametros: ParametrosDoRobo; aoAbrir: () => void }) {
   return (
     <div className="vr-plano">
-      <span className="vr-pratica-rot"><i className="vr-ao-vivo" aria-hidden="true" />Plano de voo da I.A.</span>
+      <span className="vr-pratica-rot"><i className="vr-ao-vivo" aria-hidden="true" />{MARCA.linhaDasIas ? 'Como a I.A. opera' : 'Plano de voo da I.A.'}</span>
       <ol className="vr-rota">
         {planoDeVoo(id, parametros).map((e, k) => <li key={k}>{e.titulo}</li>)}
       </ol>
@@ -198,7 +198,7 @@ function ModalDoRobo({ i, nome, base, parametros, aoFechar, aoIniciar, trancada 
             <div className="vr-modal-digitos" aria-label={`Ganha com ${faixa(ganham)}`}>
               {Array.from({ length: 10 }, (_, d) => <span key={d} className={ganham.includes(d) ? 'ganha' : ''}>{d}</span>)}
             </div>
-            <h5>Plano de voo</h5>
+            <h5>{MARCA.linhaDasIas ? 'Como opera' : 'Plano de voo'}</h5>
             <ol className="vr-modal-plano">
               {planoDeVoo(i.id, parametros).map((e, k) => <li key={k}><b>{e.titulo}</b><span>{e.texto}</span></li>)}
             </ol>
@@ -244,7 +244,8 @@ export function VitrineDeRobos({ onConfigurar, aoPrecisarDaDeriv }: {
     if (aoPrecisarDaDeriv) { aoPrecisarDaDeriv(); return }
     onConfigurar()
   }
-  const base = `${import.meta.env.BASE_URL}robos-${MARCA.id}/`
+  // a pasta é a da família (robos-globalfly): na Legacy Pro, as fotos dela entram por cima com o mesmo nome
+  const base = `${import.meta.env.BASE_URL}robos-${familiaDa(MARCA.id)}/`
   const doModal = robos.find((i) => i.id === aberto)
 
   return (

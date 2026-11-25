@@ -246,7 +246,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
           {/* sem I.A. para mostrar (a lista ainda não chegou), o título não fica sozinho sobre um vazio */}
           {frota.length > 0 && <section className="in-frota" aria-labelledby="in-frota-titulo">
             <header className="in-cabeca">
-              <h2 id="in-frota-titulo">Sua frota</h2>
+              <h2 id="in-frota-titulo">{MARCA.linhaDasIas ? 'Suas I.A.' : 'Sua frota'}</h2>
               <span className="in-cabeca-sub">{subFrota}</span>
             </header>
             <div className="in-frota-trilho">
@@ -269,7 +269,7 @@ export function InicioPanel({ d, aoIr, aoConectar, aoSalvarPlano, aoPrepararRobo
                       : <span className="in-jato-play" aria-hidden="true"><Icone d={ICONE.play} /></span>}
                     <span className="in-jato-texto">
                       {!TEM_MONOGRAMA && <small>{MARCA.nome}</small>}
-                      <b>{TEM_MONOGRAMA && temLogotipo(r.nome) ? <LogotipoDaIA nome={r.nome} fio sobreFoto /> : curto}</b>
+                      <b>{TEM_MONOGRAMA && temLogotipo(r.nome, r.id) ? <LogotipoDaIA nome={r.nome} id={r.id} fio sobreFoto /> : curto}</b>
                       {/* só o nome (23/10/2026, Tiago): a frase de cada I.A. saiu do cartão; no ar, fica o resultado */}
                       {r.noAr && <em className={ocultos ? '' : r.resultado >= 0 ? 'sobe' : 'cai'}>{ocultos ? MASCARA : `${sinal(r.resultado)}${numero(r.resultado)}`}{r.analise && !r.operando ? ` · ${r.analise.n}/${r.analise.alvo}` : ''}</em>}
                     </span>

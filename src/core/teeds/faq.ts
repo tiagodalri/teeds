@@ -169,7 +169,7 @@ export const PERGUNTAS: Pergunta[] = [
     id: 'qual-ia', categoria: 'ia', pergunta: 'Qual I.A. devo escolher?',
     termos: 'melhor robô qual escolher raptor falcon legacy gulf phenom',
     resposta: [
-      'Cada estratégia tem um jeito de operar. Abra "Ver detalhes da I.A." no cartão dela para ver o plano de voo e um exemplo na prática. As Aulas têm um vídeo para cada uma.',
+      `Cada estratégia tem um jeito de operar. Abra "Ver detalhes da I.A." no cartão dela para ver ${MARCA.linhaDasIas ? 'como ela opera' : 'o plano de voo'} e um exemplo na prática. As Aulas têm um vídeo para cada uma.`,
       'A dica: teste na demo, compare com calma e só depois leve para a real.',
     ],
     ir: { tela: 'robos', rotulo: 'Ver as I.A.s' },

@@ -1,0 +1,15 @@
+/* A linha de I.A. com símbolo próprio (Dealer, Legacy Pro). Ver LogotipoDealer.tsx. */
+.logo-linha { --ld-haste: #2B2D31; --ld-apagado: #D6D8DC; display: inline-flex; align-items: center; gap: .42em; max-width: 100%; line-height: 1; vertical-align: -.12em; white-space: nowrap; }
+:root[data-tema='escuro'] .logo-linha, .logo-linha.sobre-foto { --ld-haste: #D9DCE0; --ld-apagado: #2E3035; }
+.logo-linha > svg.ld-simbolo { flex: none !important; height: 1.3em !important; width: auto !important; max-width: none !important; margin: 0 !important; overflow: visible; }
+.logo-linha .ld-nome { display: inline-flex; align-items: baseline; gap: .34em; font-size: inherit !important; }
+.logo-linha .ld-nome b, .logo-linha .ld-nome i { font-size: 1em !important; line-height: 1 !important; }
+.logo-linha .ld-nome b { font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: currentColor; }
+.logo-linha .ld-nome i { font-style: normal; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ld-tinta); }
+:root[data-tema='escuro'] .logo-linha .ld-nome i, .logo-linha.sobre-foto .ld-nome i { color: var(--ld-brilho); }
+.logo-linha.com-fio .logo-ia-fio { background: var(--ld-cor); }
+.emblema-linha > svg.ld-simbolo { width: 66% !important; height: auto !important; overflow: visible; }
+/* nos cartões com foto, o nome inteiro ("DEALER FRACTION") cabe na largura do cartão */
+.in-jato-texto .logo-linha, .plv-jato-texto .logo-linha, .plv-capa-texto .logo-linha, .vr-foto-nome .logo-linha { font-size: min(1em, 6.4cqi) !important; }
+.logo-linha.com-fio { gap: .5em; }
+.in-jato-texto .logo-linha { font-size: min(1em, 8.6cqi) !important; }

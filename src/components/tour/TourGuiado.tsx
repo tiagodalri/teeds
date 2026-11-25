@@ -125,7 +125,7 @@ export function passosDoTour({ nome, treino }: { nome: string; treino: boolean }
     {
       id: 'pronto', icone: ICONE.pronto,
       titulo: 'Tudo pronto!',
-      texto: `Próximos passos: complete o seu perfil, conecte a sua Deriv e assista à primeira aula. Boas-vindas a bordo da ${MARCA.prosa}!`,
+      texto: `Próximos passos: complete o seu perfil, conecte a sua Deriv e assista à primeira aula. ${MARCA.linhaDasIas ? 'Boas-vindas à' : 'Boas-vindas a bordo da'} ${MARCA.prosa}!`,
     },
   ]
 }

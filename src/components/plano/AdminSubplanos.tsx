@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { carregarMeuSubplano, cobrancaLegivel, compartilhamentoLegivel, listarSubplanos, salvarSubplano, simuladorLegivel, type Subplano } from '../../core/teeds/subplanos'
 import './admin-subplanos.css'
-import { GF_MEMBRO, GF_LAB } from '../../marca'
+import { GF_MEMBRO, GF_LAB, nomeCurtoDaIA } from '../../marca'
 
 /**
  * Administração › Planos › Subplanos do GF Member (05/11/2026). O que cada
@@ -12,7 +12,7 @@ import { GF_MEMBRO, GF_LAB } from '../../marca'
  */
 /** Parceiros de divulgação que podem ter checkout próprio (08/11/2026: o Naor vende na Cakto dele). */
 const PARCEIROS_CHECKOUT: Array<[string, string]> = [['n', 'Naor (/n)'], ['v', 'Victor (/v)']]
-const IAS: Array<[string, string]> = [['goreme', 'Raptor'], ['falcon', 'Falcon'], ['legacy', 'Legacy'], ['superior5', 'Gulf'], ['ag2', 'Phenom']]
+const IAS: Array<[string, string]> = [['goreme', nomeCurtoDaIA('goreme')], ['falcon', nomeCurtoDaIA('falcon')], ['legacy', nomeCurtoDaIA('legacy')], ['superior5', nomeCurtoDaIA('superior5')], ['ag2', nomeCurtoDaIA('ag2')]]
 
 export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: string }) {
   const [lista, setLista] = useState<Subplano[] | null>(null)

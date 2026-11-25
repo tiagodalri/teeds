@@ -14,7 +14,7 @@
  */
 import { SUPABASE } from './config'
 import { parceiroGuardado, vitrine } from './parceiro'
-import { MARCA, GF_SIGLA, GF_MEMBRO, GF_LAB } from '../../marca'
+import { MARCA, GF_SIGLA, GF_MEMBRO, GF_LAB, nomeDaIA } from '../../marca'
 
 export type IdDoPlano = 'gold' | 'black' | 'prestige'
 
@@ -38,7 +38,7 @@ export interface PlanoDoCadastro {
 }
 
 export const IAS_DA_GF: Array<[string, string]> = [
-  ['goreme', `${GF_SIGLA} Raptor`], ['falcon', `${GF_SIGLA} Falcon`], ['legacy', `${GF_SIGLA} Legacy`], ['superior5', `${GF_SIGLA} Gulf`], ['ag2', `${GF_SIGLA} Phenom`],
+  ['goreme', nomeDaIA('goreme')], ['falcon', nomeDaIA('falcon')], ['legacy', nomeDaIA('legacy')], ['superior5', nomeDaIA('superior5')], ['ag2', nomeDaIA('ag2')],
 ]
 
 export const PLANOS_PADRAO: PlanoDoCadastro[] = [

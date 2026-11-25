@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MARCA } from '../../marca'
 import { MASCARA } from '../../core/privacidade'
 import { simboloMoeda } from '../../core/dinheiro'
 
@@ -146,4 +147,6 @@ export function InstrumentoDoDia({ plano, resultado, moeda, ocultos, ultimoPasso
 }
 
 /** O mesmo desenho de entrada/Aviao.tsx, como caminho solto para entrar dentro do SVG do arco. */
-const CAMINHO_AVIAO = 'M62 20C61.6 18.4 58.5 17.6 54 17.6H38L25 3.5h-4l8 14.3-16 .4-5.5-6.2H5l2 6.6-3 .6v1.6l3 .6-2 6.6h2.5l5.5-6.2 16 .4-8 14.3h4l13-14.1h16c4.5 0 7.6-.8 8-2.4Z'
+const CAMINHO_DO_AVIAO = 'M62 20C61.6 18.4 58.5 17.6 54 17.6H38L25 3.5h-4l8 14.3-16 .4-5.5-6.2H5l2 6.6-3 .6v1.6l3 .6-2 6.6h2.5l5.5-6.2 16 .4-8 14.3h4l13-14.1h16c4.5 0 7.6-.8 8-2.4Z'
+/** Na Legacy Pro (linha Dealer) o marcador é um losango, o corte diagonal da marca; na GF, o avião. */
+const CAMINHO_AVIAO = MARCA.linhaDasIas ? 'M32 6 L46 20 L32 34 L18 20 Z' : CAMINHO_DO_AVIAO

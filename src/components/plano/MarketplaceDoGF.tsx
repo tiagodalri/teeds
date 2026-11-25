@@ -6,7 +6,7 @@ import {
   abrirMeuPlano, carregarMeuSubplano, cobrancaLegivel, compartilhamentoLegivel, precoLegivel, simuladorLegivel, useMeuSubplano, type Subplano,
 } from '../../core/teeds/subplanos'
 import './marketplace-gf.css'
-import { GF_NOME, GF_MEMBRO, GF_LAB } from '../../marca'
+import { GF_NOME, GF_MEMBRO, GF_LAB, nomeCurtoDaIA } from '../../marca'
 
 /**
  * O Marketplace da GlobalFly (05/11/2026, Tiago: "precisamos criar lá no
@@ -16,12 +16,12 @@ import { GF_NOME, GF_MEMBRO, GF_LAB } from '../../marca'
  * e a Phenom avulsas saíram: agora fazem parte do Black e do Prestige.
  * Os números vêm da tabela subplanos (editável em Admin › Planos).
  */
-const NOMES_DAS_IAS: Record<string, string> = { goreme: 'Raptor', falcon: 'Falcon', legacy: 'Legacy', superior5: 'Gulf', ag2: 'Phenom' }
+const NOMES_DAS_IAS: Record<string, string> = Object.fromEntries(['goreme', 'falcon', 'legacy', 'superior5', 'ag2'].map((id) => [id, nomeCurtoDaIA(id)]))
 const TODAS = ['goreme', 'falcon', 'legacy', 'superior5', 'ag2']
 
 function beneficios(s: Subplano): string[] {
   const l: string[] = []
-  l.push(s.ias == null ? 'As 5 I.A.: Raptor, Falcon, Legacy, Gulf e Phenom' : `${s.ias.length} I.A.: ${s.ias.map((i) => NOMES_DAS_IAS[i] ?? i).join(', ')}`)
+  l.push(s.ias == null ? `As 5 I.A.: ${['goreme', 'falcon', 'legacy', 'superior5'].map(nomeCurtoDaIA).join(', ')} e ${nomeCurtoDaIA('ag2')}` : `${s.ias.length} I.A.: ${s.ias.map((i) => NOMES_DAS_IAS[i] ?? i).join(', ')}`)
   l.push(s.compartilhamento > 0 ? `Compartilhamento de ${compartilhamentoLegivel(s.compartilhamento).replace(' do lucro', '')} do lucro do mês` : 'Sem compartilhamento de receita: o lucro é todo seu')
   l.push(s.simuladorHoras == null ? 'Simulador ilimitado' : `Simulador ${simuladorLegivel(s.simuladorHoras)}`)
   if (s.salaExtra) l.push('Sala ao vivo extra todos os dias')

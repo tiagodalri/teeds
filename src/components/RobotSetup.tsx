@@ -122,7 +122,10 @@ const TEM_FOTOS = FAMILIA_GF
   Teeds e OMNI usam o mesmo preparo com palavras e cores delas (29/10/2026).
 */
 const GF = FAMILIA_GF
-const T = GF
+// 25/11/2026: na Legacy Pro (linha Dealer) o preparo fala de estratégia, não de voo.
+const T = GF && MARCA.linhaDasIas
+  ? { escolha: 'Escolha a I.A.', escolhaTitulo: 'Escolha a sua I.A.', plano: 'Estratégia', decolar: 'Ativar', topo: 'Estratégia', antes: 'Antes de ativar', revisar: 'Revisar e ativar', indisponivel: 'Esta I.A. está indisponível agora. Escolha outra.' }
+  : GF
   ? { escolha: 'Escolha a I.A.', escolhaTitulo: 'Escolha a sua I.A.', plano: 'Plano de voo', decolar: 'Decolar', topo: 'Plano de voo', antes: 'Antes de decolar', revisar: 'Revisar e decolar', indisponivel: 'Esta I.A. está indisponível agora. Escolha outra.' }
   : { escolha: 'Escolha o robô', escolhaTitulo: 'Escolha o seu robô', plano: 'Valores', decolar: 'Revisão', topo: 'Configurar robô', antes: 'Antes de iniciar', revisar: 'Revisar', indisponivel: 'Este robô está indisponível agora. Escolha outro.' }
 /** Nos campos, sem ponto de milhar ("1500,00"): é o formato que a validação do preparo aceita. */

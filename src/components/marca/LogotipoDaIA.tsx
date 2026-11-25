@@ -1,5 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { MARCA, PREFIXO_DA_IA } from '../../marca'
+import { LogotipoDaLinha, iaDaLinha } from './LogotipoDealer'
 
 /**
  * Logotipo de cada I.A. da GlobalFly (27/10/2026, Tiago: "sobre os logos
@@ -52,7 +53,7 @@ const titulo = (k: string) => `GF ${k[0].toUpperCase()}${k.slice(1)}`
 
 /** A I.A. tem logotipo desenhado? Só na GlobalFly e só com o "GF" no nome
  *  (as do Laboratório, por exemplo, seguem em texto). */
-export const temLogotipo = (nome: string, id?: string | null) => !!MARCA.monogramaNosRobos && !!desenhoDe(nome, id)
+export const temLogotipo = (nome: string, id?: string | null) => MARCA.linhaDasIas ? !!iaDaLinha(nome, id) : !!MARCA.monogramaNosRobos && !!desenhoDe(nome, id)
 
 /**
  * `fio`: o fio dourado entre o GF e o nome, para os lugares de destaque
@@ -62,7 +63,10 @@ export const temLogotipo = (nome: string, id?: string | null) => !!MARCA.monogra
  */
 export function LogotipoDaIA({ nome, id, fio = false, sobreFoto = false, soNome = false, className = '' }: { nome: string; id?: string | null; fio?: boolean; sobreFoto?: boolean; soNome?: boolean; className?: string }) {
   const uid = useId().replace(/:/g, '')
-  const k = MARCA.monogramaNosRobos ? desenhoDe(nome, id) : null
+  // marca com linha própria (Dealer, Legacy Pro): o símbolo dela, nunca o desenho da GF
+  const daLinha = MARCA.linhaDasIas ? iaDaLinha(nome, id) : null
+  const k = MARCA.monogramaNosRobos && !MARCA.linhaDasIas ? desenhoDe(nome, id) : null
+  if (daLinha) return <LogotipoDaLinha ia={daLinha} fio={fio} sobreFoto={sobreFoto} soNome={soNome} className={className} />
   const d = k ? DESENHOS[k] : undefined
   if (!k || !d) return <>{nome}</>
   const larguraDaCaixa = d.largura + 18

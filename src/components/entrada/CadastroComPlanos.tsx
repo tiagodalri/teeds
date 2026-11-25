@@ -17,7 +17,7 @@
  * lê as cores das variáveis do CSS. Prefixo das classes: cpl-.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MARCA, GF_NOME, GF_SIGLA, GF_MEMBRO, GF_LAB } from '../../marca'
+import { MARCA, GF_NOME, GF_SIGLA, GF_MEMBRO, GF_LAB, nomeDaIA, nomeCurtoDaIA } from '../../marca'
 import { Brand } from '../Brand'
 import { DerivLogo, IconeSaida } from '../DerivMarca'
 import { afiliadoDaDeriv } from '../../core/rotas'
@@ -69,7 +69,7 @@ function itensDoPlano(p: PlanoDoCadastro): Item[] {
   const nomes = IAS_DA_GF.filter(([id]) => temIA(p, id)).map(([, n]) => n.replace('GF ', ''))
   const lista = nomes.length > 1 ? `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}` : nomes[0]
   const sim: Item[] = [
-    { sim: true, texto: todas ? <><b>Todas as {IAS_DA_GF.length} I.A.</b>, com {GF_SIGLA} Gulf e Phenom</> : <><b>{nomes.length} I.A.</b>: {GF_SIGLA} {lista}</> },
+    { sim: true, texto: todas ? <><b>Todas as {IAS_DA_GF.length} I.A.</b>, com {nomeDaIA('superior5')} e {nomeCurtoDaIA('ag2')}</> : <><b>{nomes.length} I.A.</b>: {GF_SIGLA} {lista}</> },
     { sim: true, texto: p.simuladorHoras == null ? <>Simulador <b>ilimitado</b></> : <>Simulador <b>{simuladorLegivel(p.simuladorHoras)}</b></> },
     { sim: true, texto: p.salaExtra ? <>Aulas, sala ao vivo e <b>sala extra por dia</b></> : <>Aulas e sala ao vivo</> },
     { sim: true, texto: p.compartilhamento > 0 ? <>Compartilhamento de <b>{porcentagem(p.compartilhamento)}</b> do lucro do mês</> : <><b>0% de compartilhamento</b>: o lucro é todo seu</> },
@@ -77,7 +77,7 @@ function itensDoPlano(p: PlanoDoCadastro): Item[] {
   if (p.assessor) sim.push({ sim: true, texto: <><b>Assessor</b> só seu no WhatsApp</> })
   if (p.lab) sim.push({ sim: true, texto: <><b>{GF_LAB}</b> (beta)</> })
   const nao: Item[] = []
-  if (!todas) nao.push({ sim: false, texto: `${GF_SIGLA} Gulf e ${GF_SIGLA} Phenom` })
+  if (!todas) nao.push({ sim: false, texto: `${nomeDaIA('superior5')} e ${nomeDaIA('ag2')}` })
   if (!p.salaExtra) nao.push({ sim: false, texto: 'Sala ao vivo extra' })
   if (!p.assessor) nao.push({ sim: false, texto: 'Assessor no WhatsApp' })
   if (!p.lab) nao.push({ sim: false, texto: `${GF_LAB} (beta)` })
@@ -422,7 +422,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                   <li><i>2</i><span>Cadastro</span></li>
                   <li><i>3</i><span>Pagamento</span></li>
                 </ol>
-                <h1><span className="cpl-l"><span>Escolha como</span></span><span className="cpl-l"><span>você quer <em>voar.</em></span></span></h1>
+                <h1><span className="cpl-l"><span>Escolha como</span></span><span className="cpl-l"><span>você quer <em>{MARCA.linhaDasIas ? 'operar.' : 'voar.'}</em></span></span></h1>
                 <p>I.A. que operam por você, operação manual, <b>salas ao vivo todos os dias</b> e um <b>curso completo com apostila</b>. Tudo isso em todos os planos; o que muda é quais I.A., quantas horas de simulador e quanto do lucro fica com você.</p>
                 {abas('cpl-abas-pc')}
                 <div className="cpl-confianca cpl-confianca-pc">
@@ -548,7 +548,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
 
               <section className="cpl-secao cpl-final" aria-labelledby="cpl-t-final">
                 <span className="cpl-olho">{GF_MEMBRO}</span>
-                <h2 id="cpl-t-final">O seu lugar a bordo<br />está reservado.</h2>
+                <h2 id="cpl-t-final">{MARCA.linhaDasIas ? 'O seu lugar' : 'O seu lugar a bordo'}<br />está reservado.</h2>
                 <button type="button" className={`cpl-btn ${CLASSE_DO_BOTAO[sel] === 'cpl-btn-linha' ? 'cpl-btn-ouro' : CLASSE_DO_BOTAO[sel]}`} onClick={() => irParaDados(sel)}>{continuarCom(plano)} <span className="cpl-seta" aria-hidden="true">→</span></button>
               </section>
             </div>

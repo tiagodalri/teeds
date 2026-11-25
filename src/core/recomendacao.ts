@@ -1,5 +1,5 @@
 import { casasDecimais } from './deriv/types'
-import { GF_SIGLA } from '../marca'
+import { GF_SIGLA, nomeDaIA, nomeCurtoDaIA } from '../marca'
 
 /**
  * A conta da "I.A. recomendada agora" (cartão da Início da GF), num lugar só: a tela e o
@@ -11,11 +11,11 @@ import { GF_SIGLA } from '../marca'
  * porcentagens ao cliente, e falar do que já aconteceu ("ficou alinhado"), nunca de chance maior.
  */
 export const IAS_DA_RECOMENDACAO = [
-  { id: 'goreme', nome: `${GF_SIGLA} Raptor`, curto: 'Raptor', ganha: (d: number) => d < 9, p: 0.9 },
-  { id: 'falcon', nome: `${GF_SIGLA} Falcon`, curto: 'Falcon', ganha: (d: number) => d < 6, p: 0.6 },
-  { id: 'legacy', nome: `${GF_SIGLA} Legacy`, curto: 'Legacy', ganha: (d: number) => d > 3, p: 0.6 },
-  { id: 'superior5', nome: `${GF_SIGLA} Gulf`, curto: 'Gulf', ganha: (d: number) => d > 6, p: 0.3 },
-  { id: 'ag2', nome: `${GF_SIGLA} Phenom`, curto: 'Phenom', ganha: (d: number) => d < 3, p: 0.3 },
+  { id: 'goreme', nome: nomeDaIA('goreme'), curto: nomeCurtoDaIA('goreme'), ganha: (d: number) => d < 9, p: 0.9 },
+  { id: 'falcon', nome: nomeDaIA('falcon'), curto: nomeCurtoDaIA('falcon'), ganha: (d: number) => d < 6, p: 0.6 },
+  { id: 'legacy', nome: nomeDaIA('legacy'), curto: nomeCurtoDaIA('legacy'), ganha: (d: number) => d > 3, p: 0.6 },
+  { id: 'superior5', nome: nomeDaIA('superior5'), curto: nomeCurtoDaIA('superior5'), ganha: (d: number) => d > 6, p: 0.3 },
+  { id: 'ag2', nome: nomeDaIA('ag2'), curto: nomeCurtoDaIA('ag2'), ganha: (d: number) => d < 3, p: 0.3 },
 ] as const
 export type IADaRecomendacao = (typeof IAS_DA_RECOMENDACAO)[number]
 

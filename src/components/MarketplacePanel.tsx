@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { listarProdutos } from '../core/teeds/clientes'
 import { linkDoCheckout } from '../core/teeds/checkout'
 import type { SessaoTeeds } from '../core/teeds/conta'
-import { MARCA, FAMILIA_GF, GF_NOME, GF_SIGLA } from '../marca'
+import { MARCA, FAMILIA_GF, GF_NOME, GF_SIGLA, nomeDaIA, nomeCurtoDaIA } from '../marca'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 import { irParaTela, useRobosBloqueados } from '../core/teeds/robosLiberados'
@@ -121,23 +121,25 @@ const PRODUTOS: Produto[] = [
   duas I.A. exclusivas, uma a uma ou no pack com desconto. Raptor, Falcon e
   Legacy são de todos; a base da antiga Stark já tem as cinco.
 */
+/** Os textos de aviação são da GlobalFly (as I.A. dela têm nome de avião). */
+const AVIOES = MARCA.id === 'globalfly'
 const PRODUTOS_GF: Produto[] = [
   {
-    id: 'gf-pack', categoria: 'Robôs', nome: 'Pack Gulf + Phenom',
-    descricao: 'As duas I.A. exclusivas juntas: a Gulf nos dígitos altos e a Phenom nos dígitos baixos, uma espelho da outra. Levando as duas, você paga R$ 97 a menos.',
-    precoDe: 'R$ 594', preco: 'R$ 497', desconto: 'Economize R$ 97', imagem: 'robos-globalfly/superior5.webp', selo: 'Mais vantajoso', simbolo: 'G+P', tom: 'ouro', periodo: 'por ano', destaque: true,
-    itens: [`${GF_SIGLA} Gulf e ${GF_SIGLA} Phenom liberadas na sua conta`, 'R$ 97 a menos do que comprar as duas separadas', 'Você escolhe valor de entrada, meta e limite de perda em cada uma'],
+    id: 'gf-pack', categoria: 'Robôs', nome: `Pack ${nomeCurtoDaIA('superior5')} + ${nomeCurtoDaIA('ag2')}`,
+    descricao: `As duas I.A. exclusivas juntas: a ${nomeCurtoDaIA('superior5')} nos dígitos altos e a ${nomeCurtoDaIA('ag2')} nos dígitos baixos, uma espelho da outra. Levando as duas, você paga R$ 97 a menos.`,
+    precoDe: 'R$ 594', preco: 'R$ 497', desconto: 'Economize R$ 97', imagem: 'robos-globalfly/superior5.webp', selo: 'Mais vantajoso', simbolo: `${nomeCurtoDaIA('superior5')[0]}+${nomeCurtoDaIA('ag2')[0]}`, tom: 'ouro', periodo: 'por ano', destaque: true,
+    itens: [`${nomeDaIA('superior5')} e ${nomeDaIA('ag2')} liberadas na sua conta`, 'R$ 97 a menos do que comprar as duas separadas', 'Você escolhe valor de entrada, meta e limite de perda em cada uma'],
   },
   {
-    id: 'gf-gulf', categoria: 'Robôs', nome: `${GF_SIGLA} Gulf`,
-    descricao: 'Longo alcance: observa o mercado até ver a sequência de dígitos que teria perdido, entra mirando os dígitos altos e segue até fechar a sequência.',
-    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/superior5.webp', selo: 'I.A. exclusiva', simbolo: 'GU', tom: 'azul', periodo: 'por ano',
+    id: 'gf-gulf', categoria: 'Robôs', nome: nomeDaIA('superior5'),
+    descricao: (AVIOES ? 'Longo alcance: o' : 'O') + 'bserva o mercado até ver a sequência de dígitos que teria perdido, entra mirando os dígitos altos e segue até fechar a sequência.',
+    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/superior5.webp', selo: 'I.A. exclusiva', simbolo: nomeCurtoDaIA('superior5').slice(0, 2).toUpperCase(), tom: 'azul', periodo: 'por ano',
     itens: ['Estratégia nos dígitos altos, com entrada depois da análise', `Liberada na sua conta ${GF_NOME}`, 'Você escolhe valor de entrada, meta e limite de perda'],
   },
   {
-    id: 'gf-phenom', categoria: 'Robôs', nome: `${GF_SIGLA} Phenom`,
-    descricao: 'Jato leve, pouso preciso: trabalha no extremo baixo do painel, espera a sequência que teria perdido, entra e segue até fechá-la. O espelho da Gulf.',
-    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/ag2.webp', selo: 'I.A. exclusiva', simbolo: 'PH', tom: 'azul', periodo: 'por ano',
+    id: 'gf-phenom', categoria: 'Robôs', nome: nomeDaIA('ag2'),
+    descricao: `${AVIOES ? 'Jato leve, pouso preciso: t' : 'T'}rabalha no extremo baixo do painel, espera a sequência que teria perdido, entra e segue até fechá-la. O espelho da ${nomeCurtoDaIA('superior5')}.`,
+    precoDe: '', preco: 'R$ 297', desconto: 'I.A. exclusiva', imagem: 'robos-globalfly/ag2.webp', selo: 'I.A. exclusiva', simbolo: nomeCurtoDaIA('ag2').slice(0, 2).toUpperCase(), tom: 'azul', periodo: 'por ano',
     itens: ['Estratégia nos dígitos baixos, com entrada depois da análise', `Liberada na sua conta ${GF_NOME}`, 'Você escolhe valor de entrada, meta e limite de perda'],
   },
 ]
@@ -240,7 +242,7 @@ function MarketplaceComum({ sessao }: { sessao?: SessaoTeeds | null }) {
         <div className="market-hero-conteudo">
           <span className="market-eyebrow">{MARCA.prosa} Marketplace</span>
           <h1>{GF ? <>Desbloqueie as I.A. <em>exclusivas.</em></> : <>O próximo nível da sua <em>operação.</em></>}</h1>
-          <p>{GF ? 'A Gulf e a Phenom, uma a uma ou as duas juntas com desconto. Liberadas na sua conta, ao lado das I.A. que você já usa.' : 'Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.'}</p>
+          <p>{GF ? `A ${nomeCurtoDaIA('superior5')} e a ${nomeCurtoDaIA('ag2')}, uma a uma ou as duas juntas com desconto. Liberadas na sua conta, ao lado das I.A. que você já usa.` : 'Robôs premium, acompanhamento especializado e ferramentas criadas para evoluir cada etapa da sua jornada.'}</p>
           <div className="market-hero-acoes">
             <button onClick={() => destaque && abrir(destaque)}>{GF ? 'Conhecer o Pack' : 'Conhecer o Simulador'}</button>
             <span><i /> {GF ? 'Pack com R$ 97 de desconto' : 'Único produto disponível agora'}</span>

@@ -17,10 +17,14 @@ import { eventoDoPixel } from '../../core/teeds/pixelDoParceiro'
 import { FAIXA, SESSOES, secoesComoFunciona, ligarComoFunciona } from '../../casca/globalfly/cadastro/comoFunciona'
 import { ApostilaFolheando, CabineDaVitrine, TelaAoVivo, TelaManual } from './VitrinesAnimadas'
 import { MODULOS } from '../../core/teeds/modulosAulas'
-import { GF_NOME, GF_SIGLA } from '../../marca'
+import { GF_NOME, nomeDaIA, nomeCurtoDaIA } from '../../marca'
 
-// As sessões da cabine vêm com os nomes da GF ("GF Falcon"); na Legacy Pro, "LP Falcon".
-SESSOES.forEach((s) => { s.n = s.n.replace(/^GF /, `${GF_SIGLA} `) })
+// Os nomes das I.A. no texto da casca são os da GF ("GF Falcon"); aqui saem os desta marca.
+const ID_DO_AVIAO: Record<string, string> = { Raptor: 'goreme', Falcon: 'falcon', Legacy: 'legacy', Gulf: 'superior5', Phenom: 'ag2' }
+const comNomesDaMarca = (t: string) => t
+  .replace(/\bGF (Raptor|Falcon|Legacy|Gulf|Phenom)\b/g, (_, a: string) => nomeDaIA(ID_DO_AVIAO[a]))
+  .replace('Phenom, Gulf, Raptor, Falcon e Legacy', `${['ag2', 'superior5', 'goreme', 'falcon'].map(nomeCurtoDaIA).join(', ')} e ${nomeCurtoDaIA('legacy')}`)
+SESSOES.forEach((s) => { s.n = comNomesDaMarca(s.n) })
 
 const brl = (n: number) => n.toLocaleString('pt-BR')
 const reais = (n: number) => `R$ ${n.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
@@ -203,7 +207,7 @@ export function ComoFunciona({ aoQuerer }: { aoQuerer?: () => void }) {
   const base = import.meta.env.BASE_URL
   const partes = useMemo(() => {
     // O texto da casca fala da GlobalFly; na Legacy Pro, o nome e a sigla dela.
-    const h = secoesComoFunciona(base).replace(/GlobalFly/g, GF_NOME).replace(/\bGF (?=[A-Z])/g, `${GF_SIGLA} `)
+    const h = comNomesDaMarca(secoesComoFunciona(base).replace(/GlobalFly/g, GF_NOME))
     const iReal = h.indexOf('<section class="lp-real"'), iCab = h.indexOf('<section class="lp-cabine-sec">'), iLib = h.indexOf('<section class="lp-libera-sec">')
     return { oque: h.slice(0, iReal), real: h.slice(iReal, iCab), libera: h.slice(iLib) }
   }, [base])

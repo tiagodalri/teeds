@@ -109,6 +109,12 @@ export interface Marca {
    */
   desenhoDosRobos?: Record<string, { cor?: string; corSuave?: string; emblema?: string }>
   /**
+   * Linha de I.A. com símbolo próprio (25/11/2026: Dealer, na Legacy Pro). O logotipo
+   * de cada I.A. vira o símbolo da linha com os dígitos dela acesos, no material dela
+   * (components/marca/LogotipoDealer.tsx). Sem isto vale o logotipo da GF.
+   */
+  linhaDasIas?: { nome: string; ias: Record<string, { variante: string; digitos: number[]; material: string; cor: string; brilho: string; tinta: string }> }
+  /**
    * App instalável com cara de nativo: atalhos no ícone, botão "Instalar o
    * app", voltar do Android entre as telas, aviso de sem conexão e
    * acabamento de tela cheia. Ligado só onde a marca pediu (GlobalFly).
@@ -598,15 +604,46 @@ MARCAS.legacypro = {
   redirectUri: 'https://legacyprotrade.com/',
   // Provisório (25/11/2026, Tiago): o mesmo afiliado da Teeds até a Legacy Pro ter o seu.
   afiliado: 'https://t.deriv.link?t=W7L5WVEEQGHY',
-  // PENDENTE: nomes definitivos das I.A. Provisório: os mesmos voos da GF com LP na frente.
+  // 25/11/2026 (Tiago): a linha Dealer. Cada nome casa com a lógica da I.A.:
+  // Speed cobre 0 a 8 e opera muito (o Raptor); Under ganha embaixo, 0 a 5 (o Falcon);
+  // Over ganha em cima, 4 a 9 (o Legacy); Fraction só a fração de baixo, 0 a 2,
+  // esperando a janela (o Phenom); Gold só o topo, 7 a 9, esperando a janela (o Gulf).
   nomesDosRobos: {
-    goreme: 'LP Raptor',
-    superior5: 'LP Gulf',
-    falcon: 'LP Falcon',
-    ag2: 'LP Phenom',
-    legacy: 'LP Legacy',
-    thepalm: 'LP Falcon (anterior)',
-    firstblock: 'LP H160',
+    goreme: 'Dealer Speed',
+    falcon: 'Dealer Under',
+    legacy: 'Dealer Over',
+    ag2: 'Dealer Fraction',
+    superior5: 'Dealer Gold',
+    thepalm: 'Dealer Under (anterior)',
+    firstblock: 'Dealer Classic',
+  },
+  // Cada I.A. é um material da casa; o arco do D acende os dígitos com que ela ganha.
+  linhaDasIas: {
+    nome: 'Dealer',
+    ias: {
+      goreme: { variante: 'Speed', digitos: [0, 1, 2, 3, 4, 5, 6, 7, 8], material: 'Titânio', cor: '#8FB3D9', brilho: '#DCE8F4', tinta: '#4D7395' },
+      falcon: { variante: 'Under', digitos: [0, 1, 2, 3, 4, 5], material: 'Cobre', cor: '#C8794A', brilho: '#EDB892', tinta: '#A0582C' },
+      legacy: { variante: 'Over', digitos: [4, 5, 6, 7, 8, 9], material: 'Platina', cor: '#B9BEC6', brilho: '#F6F7F9', tinta: '#5E646D' },
+      ag2: { variante: 'Fraction', digitos: [0, 1, 2], material: 'Rubi', cor: '#B3263E', brilho: '#E8768A', tinta: '#A11E36' },
+      superior5: { variante: 'Gold', digitos: [7, 8, 9], material: 'Ouro', cor: '#C9A24A', brilho: '#EED9A3', tinta: '#94742A' },
+    },
+  },
+  vitrineDosRobos: {
+    goreme: { aeronave: 'Titânio · dígitos 0 a 8',
+      gancho: 'Leve, rápida e quase sem pontos cegos.',
+      historia: 'O titânio é o metal da velocidade: leve, resistente e frio sob pressão. A Dealer Speed acende quase todo o painel, do 0 ao 8, e entra em ritmo alto, operação atrás de operação. Quando uma entrada não vem, ela troca de lado para recuperar e volta à rota em seguida.' },
+    falcon: { aeronave: 'Cobre · dígitos 0 a 5',
+      gancho: 'A base do painel, firme e direta.',
+      historia: 'O cobre é o metal da base: conduz, sustenta e não se deixa abalar. A Dealer Under trabalha na metade de baixo do painel, nos dígitos de 0 a 5, e entra direto em cada operação. Se uma entrada não vem, a seguinte já sai calculada para recuperar a anterior e fechar no lucro.' },
+    legacy: { aeronave: 'Platina · dígitos 4 a 9',
+      gancho: 'A metade alta do painel, com constância.',
+      historia: 'A platina é o metal que não perde o brilho: raro, estável e feito para durar. A Dealer Over trabalha na metade de cima do painel, nos dígitos de 4 a 9, e entra direto em cada operação, recuperando no passo seguinte quando uma entrada não vem. É o espelho da Under, do outro lado do painel.' },
+    ag2: { aeronave: 'Rubi · dígitos 0 a 2',
+      gancho: 'Só a fração mais rara, no momento exato.',
+      historia: 'O rubi vale pelo que é raro: uma fração pequena, lapidada com precisão. A Dealer Fraction trabalha no extremo baixo do painel, só nos dígitos 0, 1 e 2: observa o mercado, espera a sequência que teria perdido e só então entra, seguindo até fechá-la. É o espelho da Gold.' },
+    superior5: { aeronave: 'Ouro · dígitos 7 a 9',
+      gancho: 'O topo do painel, só com a janela certa.',
+      historia: 'O ouro fica no topo e não se apressa. A Dealer Gold trabalha só nos dígitos mais altos, 7, 8 e 9: observa o mercado até ver a sequência que teria perdido, entra na janela certa e segue até fechar a sequência. É o espelho da Fraction, no alto do painel.' },
   },
   // A comunidade, a apostila e os canais são da Legacy Pro: começam vazios.
   comunidade: undefined,
@@ -624,8 +661,15 @@ MARCAS.legacypro = {
   // Chumbo organiza, ouro indica seleção (manual da Legacy Pro, pág. 33).
   cor: { claro: '#17181B', escuro: '#C9A24A' },
   lema: { titulo: 'Construído para permanecer.', apoio: 'Tecnologia, método e gestão de risco.' },
-  desenhoDosRobos: Object.fromEntries(Object.entries(MARCAS.globalfly.desenhoDosRobos ?? {})
-    .map(([id, d]) => [id, { ...d, cor: '#7B8089', corSuave: '#E9EAEC' }])),
+  desenhoDosRobos: {
+    ...Object.fromEntries(Object.entries(MARCAS.globalfly.desenhoDosRobos ?? {})
+      .map(([id, d]) => [id, { ...d, cor: '#7B8089', corSuave: '#E9EAEC' }])),
+    goreme: { cor: '#4D7395', corSuave: '#E6EEF6' },
+    falcon: { cor: '#A0582C', corSuave: '#F5E7DD' },
+    legacy: { cor: '#5E646D', corSuave: '#ECEEF1' },
+    ag2: { cor: '#A11E36', corSuave: '#F6E2E6' },
+    superior5: { cor: '#94742A', corSuave: '#F3EBD6' },
+  },
   email: {
     ...MARCAS.globalfly.email,
     faixa: '#08080A',

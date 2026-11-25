@@ -38,4 +38,10 @@ export const GF_SIGLA = FAMILIA_GF ? (MARCA.sigla ?? GF_NOME) : 'GF'
 export const GF_MEMBRO = FAMILIA_GF ? (MARCA.membro ?? `${GF_SIGLA} Member`) : 'GF Member'
 /** O laboratório de estratégias: GFT Lab na GlobalFly, LP Lab na Legacy Pro. */
 export const GF_LAB = FAMILIA_GF && MARCA.id !== 'globalfly' ? `${GF_SIGLA} Lab` : 'GFT Lab'
-export const PREFIXO_DA_IA = /^(GF|LP|GlobalFly|Legacy Pro|OMNI)\s+/i
+export const PREFIXO_DA_IA = /^(GF|LP|GlobalFly|Legacy Pro|OMNI|Dealer)\s+/i
+/** As cinco I.A. da família GF, pelo id do robô, com o nome da GF quando a marca não tem o seu. */
+const IAS_DA_FAMILIA: Record<string, string> = { goreme: 'GF Raptor', falcon: 'GF Falcon', legacy: 'GF Legacy', superior5: 'GF Gulf', ag2: 'GF Phenom' }
+/** O nome da I.A. nesta marca ("GF Raptor" na GlobalFly, "Dealer Speed" na Legacy Pro). */
+export const nomeDaIA = (id: string): string => (FAMILIA_GF ? MARCA.nomesDosRobos?.[id] : undefined) ?? IAS_DA_FAMILIA[id] ?? id
+/** Sem a marca na frente ("Raptor", "Speed"). */
+export const nomeCurtoDaIA = (id: string): string => nomeDaIA(id).replace(PREFIXO_DA_IA, '')

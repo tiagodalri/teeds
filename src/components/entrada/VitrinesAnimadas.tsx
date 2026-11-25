@@ -13,7 +13,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { vitrine } from '../../core/teeds/parceiro'
 import { NomeDoRobo } from '../NomeDoRobo'
 import { SESSOES } from '../../casca/globalfly/cadastro/comoFunciona'
-import { GF_NOME, GF_SIGLA } from '../../marca'
+import { GF_NOME, GF_SIGLA, nomeDaIA, nomeCurtoDaIA } from '../../marca'
 
 const calma = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 const dinheiro = (v: number, sinal = false) => `${sinal ? (v < 0 ? '−' : '+') : ''}US$ ${Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -42,7 +42,7 @@ const TURMA = ['Carlos M.', 'Juliana R.', 'Pedro S.', 'Fernanda L.', 'Rafael T.'
 function comentariosDo(parceiro: string): string[] {
   const apelido = parceiro === 'n' ? 'Naor' : 'Vitão'
   return [
-    'Bati a meta aqui 🎯', `Top, ${apelido}! 🔥`, 'Entrei junto na Falcon', 'Agora entendi o gerenciamento',
+    'Bati a meta aqui 🎯', `Top, ${apelido}! 🔥`, `Entrei junto na ${nomeCurtoDaIA('falcon')}`, 'Agora entendi o gerenciamento',
     `${apelido} explicando é outro nível`, 'Primeira semana e já tô pegando o jeito', 'Fechei o dia no verde ✅', 'Que aula! 👏',
   ]
 }
@@ -67,7 +67,7 @@ export function TelaAoVivo() {
       <div className="cpl-call-tela">
         <div className="cpl-call-app">
           <span className="cpl-call-app-ativo">Volatility 75 <b>39.074,82</b></span>
-          <span className="cpl-call-app-ia">{GF_SIGLA} Falcon · <b>+US$ 12,40</b></span>
+          <span className="cpl-call-app-ia">{nomeDaIA('falcon')} · <b>+US$ 12,40</b></span>
         </div>
         <Velas velas={velas} />
       </div>

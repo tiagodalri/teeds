@@ -6,6 +6,7 @@ import { Aviao } from './Aviao'
 import { RotaCarregando } from './Carregando'
 import './decolagem.css'
 import { naPagina } from '../../core/escala'
+import { MARCA } from '../../marca'
 
 /**
  * A decolagem (21/10/2026): o voo do login até o início. Três tempos:
@@ -116,7 +117,7 @@ function EmVoo({ voo }: { voo: Voo }) {
       </div>
       <div className="dg-chegada">
         <Monograma tamanho={84} className="dg-monograma" />
-        <b>{primeiroNome ? `Boas-vindas a bordo, ${primeiroNome}` : 'Boas-vindas a bordo'}</b>
+        <b>{MARCA.linhaDasIas ? (primeiroNome ? `Boas-vindas, ${primeiroNome}` : 'Boas-vindas') : primeiroNome ? `Boas-vindas a bordo, ${primeiroNome}` : 'Boas-vindas a bordo'}</b>
         <RotaCarregando />
         <span className="dg-legenda">Preparando sua cabine</span>
       </div>
