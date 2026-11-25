@@ -251,6 +251,26 @@ export const enderecoDe = (marca: Marca, parceiro?: string | null) => {
   return new URL(c ? `/${c}/inicio` : '/', marca.redirectUri).href
 }
 
+/**
+ * O botão do e-mail entra logado (25/11/2026, Tiago: "o botão mágico leva pra url normal, não
+ * autentica nada"). O servidor pede à Supabase um link de acesso (magiclink) da conta da marca
+ * e monta o endereço no formato que o app já valida sozinho: `?confirmar=<código>&tipo=magiclink`
+ * (conta.ts, confirmarPeloLink). Vale 1 hora e uma vez; vencido, o app avisa e a pessoa entra
+ * com os dados de entrada que o e-mail também traz. Se a Supabase falhar, o botão volta a ser
+ * o endereço de sempre: o e-mail não deixa de sair por causa disso.
+ */
+export async function linkDeAcesso(marca: Marca, email: string, parceiro?: string | null): Promise<string> {
+  const destino = enderecoDe(marca, parceiro)
+  try {
+    const d = await banco('/auth/v1/admin/generate_link', 'POST', { type: 'magiclink', email: emailDaConta(email, marca.id) })
+    const codigo = d?.hashed_token ?? d?.properties?.hashed_token
+    if (!codigo) return destino
+    const u = new URL(destino)
+    u.searchParams.set('confirmar', codigo); u.searchParams.set('tipo', 'magiclink')
+    return u.href
+  } catch { return destino }
+}
+
 function emailDeInscricaoNaLive(marca: Marca, email: string, senhaProvisoria: string | undefined, senhaPropria: boolean, parceiro?: string | null) {
   const comunidade = comunidadeDe(marca, parceiro)
   const acesso=senhaPropria
@@ -270,7 +290,7 @@ function emailDeInscricaoNaLive(marca: Marca, email: string, senhaProvisoria: st
   })
 }
 
-export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string, senhaPropria = false, parceiro?: string | null) {
+export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string, senhaPropria = false, parceiro?: string | null, link?: string) {
   if (noLancamento(marca)) return emailDeInscricaoNaLive(marca,email,senhaProvisoria,senhaPropria,parceiro)
   const acesso=senhaPropria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você criou no cadastro.\n\nVocê já pode entrar para acompanhar a análise. Se não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
@@ -284,7 +304,7 @@ export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: s
     fazer. O próximo passo dela é esperar o e-mail da aprovação.
   */
   const podeEntrar=senhaPropria||!!senhaProvisoria
-  return montarEmail(marca,'confirmar',enderecoDe(marca,parceiro),{
+  return montarEmail(marca,'confirmar',link??enderecoDe(marca,parceiro),{
     assunto:`Cadastro recebido · ${marca.prosa}`,
     titulo:'Cadastro recebido',
     espia:`Seu cadastro na ${marca.prosa} foi recebido e está em análise.`,
@@ -294,7 +314,7 @@ export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: s
   })
 }
 
-export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean, senhaPropria = false, parceiro?: string | null, liberadoNaLive?: boolean) {
+export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: boolean, senhaPropria = false, parceiro?: string | null, liberadoNaLive?: boolean, link?: string) {
   // liberado na live de lançamento: o e-mail fala da live, não de "cadastro aprovado". Desde 09/11/2026
   // quem decide é o próprio cadastro (GF Member aprovado no dia da live), não o relógio do envio: antes,
   // qualquer aprovação da semana dizia "GF Member até 09/11/2027", e o botão antes das 20h mandava o genérico.
@@ -304,7 +324,7 @@ export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: b
     : aindaProvisoria
     ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${SENHA_PROVISORIA}\n\nNo primeiro acesso após a aprovação, você deverá criar sua própria senha antes de usar a plataforma. Se você já tinha conta, esta senha substitui a anterior. Seu histórico foi preservado.`
     : `Sua conta e seu histórico foram preservados. Entre com o e-mail ${email} e a sua senha atual. Se não lembrar, toque em “Esqueci a senha” na tela de entrada e você recebe um link para definir uma nova senha.`
-  if (daLive) return montarEmail(marca,'convite',enderecoDe(marca,parceiro),{
+  if (daLive) return montarEmail(marca,'convite',link??enderecoDe(marca,parceiro),{
     assunto:`Seu acesso está liberado · bem-vindo à ${marca.prosa}`,
     titulo:'Seu acesso está liberado',
     espia:'A live de lançamento aconteceu. A plataforma é sua, até 09/11/2027.',
@@ -312,7 +332,7 @@ export function emailDeAprovacao(marca: Marca, email: string, aindaProvisoria: b
     botao:'Entrar na GlobalFly',
     aviso:'Guarde seus dados de acesso com segurança. Não compartilhe sua senha com ninguém.',
   })
-  return montarEmail(marca,'convite',enderecoDe(marca,parceiro),{
+  return montarEmail(marca,'convite',link??enderecoDe(marca,parceiro),{
     assunto:`Cadastro aprovado · seu acesso à ${marca.prosa} está liberado`,
     titulo:'Cadastro aprovado',
     espia:`Seu acesso à ${marca.prosa} foi liberado.`,
@@ -366,7 +386,8 @@ export async function enviarCadastros() {
 
         const senhaPropria=usuario.app_metadata?.senha_propria===true
         const senhaConhecida=!senhaPropria && (criadaAgora || (usuario.app_metadata?.cadastro_lead===p.id && usuario.user_metadata?.trocar_senha===true))
-        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria,p.parceiro)
+        const podeEntrar=senhaPropria||senhaConhecida
+        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria,p.parceiro,podeEntrar?await linkDeAcesso(marca,p.email,p.parceiro):undefined)
         await despachar(marca,p.email,email,`cadastro-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.pendente`,'PATCH',{email_cadastro_em:new Date().toISOString()})
       } catch { console.warn('[cadastro] E-mail de boas-vindas pendente; será tentado novamente.') }
@@ -393,7 +414,7 @@ export async function enviarAprovacoes() {
           && u.app_metadata?.senha_aprovacao_versao===VERSAO_SENHA
         const decidido=p.decidido_em?Date.parse(p.decidido_em):0
         const liberadoNaLive=p.marca==='globalfly'&&p.plano_id==='treino'&&decidido>=INICIO_DA_LIVE-6*36e5&&decidido<INICIO_DA_LIVE+7*864e5
-        const email=emailDeAprovacao(marca,p.email,aindaProvisoria,u.app_metadata?.senha_propria===true,p.parceiro,liberadoNaLive)
+        const email=emailDeAprovacao(marca,p.email,aindaProvisoria,u.app_metadata?.senha_propria===true,p.parceiro,liberadoNaLive,await linkDeAcesso(marca,p.email,p.parceiro))
         await despachar(marca,p.email,email,`aprovacao-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.aprovado`,'PATCH',{email_enviado_em:new Date().toISOString()})
       } catch { console.warn('[aprovação] E-mail pendente; será tentado novamente.') }
