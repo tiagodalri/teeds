@@ -12,17 +12,43 @@
   var ICONE_GF = '/pwa-globalfly/icon-180.png'
   var PASSOS = [
     { cena: 'zap', hora: '20:00', espera: 500 },
-    { de: 'eu', tipo: 'audio', seg: 7, transcricao: 'Liga a GF Falcon na demo, com 1 dólar de entrada, meta de 10 e limite de 20.', espera: 700 },
-    { de: 'gf', digita: 1500, html: '🟢 <b>GF Falcon ligada</b><br>Conta demo<br><br>Entrada: <b>US$ 1,00</b><br>Meta: <b>US$ 10,00</b><br>Limite de perda: <b>US$ 20,00</b><br><br><i>Te aviso aqui quando terminar.</i>', espera: 2200 },
-    { cena: 'bloqueio', hora: '20:18', espera: 1300 },
-    { notif: { app: 'GlobalFly', titulo: '✅ GF Falcon · Meta atingida', txt: 'Resultado da sessão: +US$ 10,12', verde: true }, espera: 1100 },
-    { notif: { app: 'WhatsApp · Assessor GF', titulo: 'Assessor GF', txt: '✅ GF Falcon bateu a meta. Resultado: +US$ 10,12', zap: true }, espera: 2600 },
-    { cena: 'zap', hora: '20:18', espera: 500 },
-    { tipo: 'tempo', txt: '18 minutos depois', espera: 300 },
-    { de: 'gf', html: '✅ <b>GF Falcon bateu a meta</b><br>Conta demo<br><br>Resultado: <b class="sl-verde">+US$ 10,12</b><br>Operações: 23 (17 ganhos · 6 perdas)<br>Duração: 18 min', espera: 1700 },
+    { de: 'eu', tipo: 'audio', seg: 8, transcricao: 'Liga a GF Falcon na conta real, com 5 dólares de entrada, meta de 45 e limite de 50.', espera: 700 },
+    { de: 'gf', digita: 1500, html: '🟢 <b>GF Falcon ligada</b><br><b>Conta real</b><br><br>Entrada: <b>US$ 5,00</b><br>Meta: <b>US$ 45,00</b><br>Limite de perda: <b>US$ 50,00</b><br><br><i>Te aviso aqui quando terminar.</i>', espera: 2200 },
+    { cena: 'bloqueio', hora: '20:26', espera: 1300 },
+    { notif: { app: 'GlobalFly', titulo: '✅ GF Falcon · Meta atingida', txt: 'Resultado da sessão: +US$ 45,36', verde: true }, espera: 1100 },
+    { notif: { app: 'WhatsApp · Assessor GF', titulo: 'Assessor GF', txt: '✅ GF Falcon bateu a meta. Resultado: +US$ 45,36', zap: true }, espera: 2600 },
+    { cena: 'zap', hora: '20:26', espera: 500 },
+    { tipo: 'tempo', txt: '26 minutos depois', espera: 300 },
+    { de: 'gf', html: '✅ <b>GF Falcon bateu a meta</b><br><b>Conta real</b><br><br>Resultado: <b class="sl-verde">+US$ 45,36</b><br>Operações: 31 (22 ganhos · 9 perdas)<br>Duração: 26 min', espera: 1500 },
+    // o conversor da plataforma: o resultado em reais pela cotação do momento (pula se a cotação não chegou)
+    { conversor: 45.36, espera: 4200 },
     { de: 'eu', html: 'Boa! Qual I.A. você recomenda agora?', espera: 900 },
     { de: 'gf', digita: 1300, html: 'Agora a recomendada é a <b>GF Phenom</b>. Quer que eu ligue? É só me dizer a conta, a entrada, a meta e o limite.', espera: 0 },
   ]
+  // a cotação do dólar comercial, das mesmas fontes do conversor da plataforma (src/components/ferramentas/cambio.ts)
+  var cotacao = 0
+  function ler(url, de) { return fetch(url, { cache: 'no-store' }).then(function (r) { return r.json() }).then(de) }
+  ler('https://economia.awesomeapi.com.br/json/last/USD-BRL', function (d) { return +d.USDBRL.bid })
+    .catch(function () { return ler('https://open.er-api.com/v6/latest/USD', function (d) { return +d.rates.BRL }) })
+    .then(function (v) { if (v > 1 && v < 20) cotacao = v }).catch(function () {})
+  var conv = raiz.querySelector('[data-ip-conv]')
+  var reais = function (v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+  function converter(usd, aoFim) {
+    if (!conv || !cotacao) return aoFim()
+    var alvo = usd * cotacao, saida = conv.querySelector('[data-conv-brl]'), t0 = performance.now()
+    conv.querySelector('[data-conv-usd]').textContent = reais(usd)
+    conv.querySelector('[data-conv-taxa]').textContent = '1 US$ = R$ ' + reais(cotacao)
+    saida.textContent = '0,00'; raiz.dataset.conv = '1'
+    depois(function () {
+      t0 = performance.now()
+      ;(function quadro(t) {
+        var u = Math.min(1, (t - t0) / 1300), e = 1 - Math.pow(1 - u, 3)
+        saida.textContent = reais(alvo * e)
+        if (u < 1) requestAnimationFrame(quadro); else conv.classList.add('sl-conv-pronto')
+      })(t0)
+    }, 650)
+    aoFim()
+  }
   // os tiques do WhatsApp, com o desenho de lá: 1 cinza = enviada, 2 cinza = entregue, 2 azuis = lida
   var TIQUE1 = '<svg class="sl-tq1" viewBox="0 0 12 11" aria-hidden="true"><path fill="currentColor" d="M11.155.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178L4.28 8.365 1.875 6.093a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.19-.374l-.337-.273Z"/></svg>'
   var TIQUE2 = '<svg class="sl-tq2" viewBox="0 0 16 11" aria-hidden="true"><path fill="currentColor" d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.405-2.272a.463.463 0 0 0-.336-.146.47.47 0 0 0-.343.146l-.311.31a.445.445 0 0 0-.14.337c0 .136.047.25.14.343l2.996 2.996a.724.724 0 0 0 .501.203.697.697 0 0 0 .546-.266l6.646-8.417a.497.497 0 0 0 .108-.299.441.441 0 0 0-.19-.374L11.07.653Zm-2.45 7.674a15.31 15.31 0 0 1-.546-.355.43.43 0 0 0-.317-.12.46.46 0 0 0-.362.158l-.292.33a.482.482 0 0 0 .013.666l1.079 1.073c.135.135.3.203.495.203a.699.699 0 0 0 .552-.267l6.62-8.391a.446.446 0 0 0 .109-.298.487.487 0 0 0-.178-.38l-.355-.273a.487.487 0 0 0-.673.076L8.62 8.327Z"/></svg>'
@@ -31,7 +57,7 @@
   function tique(b, estado) { var t = b && b.querySelector('.sl-tique'); if (t) { t.dataset.tique = estado; t.setAttribute('aria-label', NOMES[estado]) } }
   var timers = [], rodada = 0, jaRodou = false, ultimaMinha = null
   function depois(f, ms) { timers.push(setTimeout(f, ms)) }
-  function limpar() { timers.forEach(clearTimeout); timers = []; conversa.innerHTML = ''; notifs.innerHTML = ''; status.textContent = 'online'; raiz.dataset.cena = 'zap' }
+  function limpar() { timers.forEach(clearTimeout); timers = []; conversa.innerHTML = ''; notifs.innerHTML = ''; status.textContent = 'online'; raiz.dataset.cena = 'zap'; delete raiz.dataset.conv; if (conv) conv.classList.remove('sl-conv-pronto') }
   function descer() { conversa.scrollTop = conversa.scrollHeight }
   var horaAgora = '20:00'
   function bolha(p) {
@@ -83,6 +109,10 @@
         if (reduzir && p.cena === 'bloqueio') return seguir()
         raiz.dataset.cena = p.cena; horaAgora = p.hora; horaEl.textContent = p.hora; relogio.textContent = p.hora; seguir()
       } else if (p.notif) { if (!reduzir) notificar(p.notif); seguir() }
+      else if (p.conversor) {
+        if (reduzir || !cotacao) return depois(proximo, 0)
+        converter(p.conversor, function () { depois(function () { if (minha === rodada) { delete raiz.dataset.conv; conv.classList.remove('sl-conv-pronto') } }, p.espera - 500); seguir() })
+      }
       else if (p.tipo === 'audio') {
         var b = bolha(p)
         b.querySelector('.sl-zap-play').addEventListener('click', function () { tocarAudio(b, p.seg) })

@@ -429,3 +429,27 @@ html:has(body.sl) { overflow-x: hidden; }
 @keyframes sl-tique { from { transform: scale(.7); opacity: .4 } }
 .sl-zap-eu time { color: rgba(233, 237, 239, .6); }
 .sl-zap-ouvido .sl-zap-onda i.sl-ouvida { background: #53BDEB; }
+
+/* o conversor da plataforma, subindo por cima da conversa (dólar → real pela cotação do momento) */
+.sl-ip-conv { position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; padding: 10px 16px 30px; border-radius: 24px 24px 0 0; color: #F3F0E9;
+  background: linear-gradient(180deg, #13324F 0%, #0A2038 100%); box-shadow: 0 -20px 50px rgba(0, 0, 0, .65), inset 0 1px 0 rgba(242, 178, 92, .45);
+  transform: translateY(105%); transition: transform .55s cubic-bezier(.16, 1, .3, 1); font-family: Arimo, -apple-system, sans-serif; }
+.sl-iphone[data-conv] .sl-ip-conv { transform: none; }
+.sl-iphone[data-conv] .sl-ip-zap { filter: brightness(.45); }
+.sl-conv-pega { display: block; width: 38px; height: 4px; margin: 0 auto 10px; border-radius: 4px; background: rgba(255, 255, 255, .3); }
+.sl-conv-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sl-conv-topo img { width: 26px; height: 26px; border-radius: 7px; }
+.sl-conv-topo b { font-size: 15px; } .sl-conv-topo span { font-size: 12px; color: #9CB1C7; }
+.sl-conv-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 11px 13px; border-radius: 13px; background: rgba(2, 10, 22, .55); border: 1px solid rgba(156, 177, 199, .22); }
+.sl-conv-linha span { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9CB1C7; }
+.sl-conv-linha b { font: 700 20px/1 ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+.sl-conv-linha em { font-style: normal; }
+.sl-conv-seta { display: grid; place-items: center; height: 26px; color: #F2B25C; }
+.sl-conv-seta svg { width: 18px; height: 18px; }
+.sl-conv-reais { border-color: rgba(95, 196, 140, .5); background: rgba(95, 196, 140, .1); transition: box-shadow .4s; }
+.sl-conv-reais b { color: #7CF2A8; font-size: 24px; }
+.sl-conv-pronto .sl-conv-reais { box-shadow: 0 0 0 4px rgba(95, 196, 140, .16), 0 0 34px -6px rgba(95, 196, 140, .7); }
+.sl-ip-conv p { margin: 10px 0 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; color: #9CB1C7 !important; }
+.sl-ip-conv p i { width: 6px; height: 6px; border-radius: 50%; background: #5FC48C; animation: sl-piscar 1.4s infinite; }
+@keyframes sl-piscar { 50% { opacity: .25 } }
+.sl-conv-linha b { white-space: nowrap; }
