@@ -188,7 +188,7 @@ export async function fichaCompleta(userId: string, numero: string): Promise<Fic
     lives: { plataforma: nasLives.length, plataformaTotal: transm.length, minutos: minutosLive, externasOnline: externas.length, externasTotal: livesHist.length, ultima: ultimaLive },
     acessos: {
       total: n(f.total_acessos), diasAtivos: dias.length, horas: Math.round(n(f.tempo_total_segundos) / 360) / 10, dispositivo,
-      ultimos7: dias.filter((d) => String(d.dia) >= ult7).length,
+      ultimos7: Math.min(7, dias.filter((d) => String(d.dia) > ult7).length),
     },
     compras: comprasL,
     produtos: produtosL,
