@@ -334,3 +334,34 @@ html:has(body.sl) { overflow-x: hidden; }
 .sl-ip-reflexo { background: linear-gradient(112deg, transparent 0%, transparent calc(var(--brilho) - 18%), rgba(255, 255, 255, .07) calc(var(--brilho) - 4%), rgba(255, 255, 255, .02) calc(var(--brilho) + 6%), transparent calc(var(--brilho) + 22%), transparent 100%); }
 .sl-iphone .sl-fone-topo { padding: 4px 12px 10px 8px; }
 .sl-ip-voltar { width: 24px; height: 24px; }
+
+/* ------------------------------------------------ topo como pôster (25/11): a foto é o fundo da cena, grande, fundida com a página */
+.sl-heroi { overflow: clip; }
+.sl-cartaz { display: block; min-height: clamp(520px, 46vw, 660px); padding-top: clamp(40px, 6vw, 90px); }
+.sl-cartaz-texto { position: relative; z-index: 2; max-width: 62%; padding-bottom: 0; }
+.sl-titulo { font-size: clamp(110px, 15vw, 230px); line-height: .8; }
+.sl-protagonista { position: absolute; z-index: 0; right: -6%; top: -120px; width: min(880px, 66%); margin: 0; pointer-events: none; }
+.sl-protagonista::before { inset: 4% 6% 30%; background: radial-gradient(closest-side, rgba(242, 178, 92, .34), rgba(242, 178, 92, .08) 60%, transparent 78%); }
+.sl-protagonista img { width: 100%; height: auto; aspect-ratio: 1; mix-blend-mode: lighten; -webkit-mask-image: none; mask-image: none; }
+/* um fio de luz dourada no contorno, como contraluz de estúdio */
+.sl-protagonista::after { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 50% at 62% 30%, rgba(242, 178, 92, .16), transparent 70%); mix-blend-mode: soft-light; pointer-events: none; }
+.sl-heroi-miolo { position: relative; z-index: 2; }
+@media (max-width: 980px) {
+  .sl-cartaz { min-height: 0; padding-top: 0; display: grid; }
+  .sl-cartaz-texto { max-width: none; margin-top: -40%; text-align: center; }
+  .sl-protagonista { position: relative; order: -1; right: auto; top: auto; width: min(620px, 118%); justify-self: center; margin: -40px -9% 0; }
+  .sl-titulo { font-size: clamp(96px, 22vw, 170px); }
+}
+@media (max-width: 720px) {
+  .sl-protagonista { width: 124%; margin: -30px -12% 0; }
+  .sl-cartaz-texto { margin-top: -44%; }
+  .sl-titulo { font-size: 23vw; }
+}
+/* a fusão é por transparência real (máscara elíptica na figura inteira), não por mistura de cor */
+.sl-protagonista { -webkit-mask-image: radial-gradient(ellipse 47% 50% at 52% 47%, #000 52%, transparent 100%); mask-image: radial-gradient(ellipse 47% 50% at 52% 47%, #000 52%, transparent 100%); }
+.sl-protagonista img { mix-blend-mode: normal; }
+.sl-protagonista::after { display: none; }
+.sl-protagonista::before { z-index: 0; inset: 6% 12% 34%; background: radial-gradient(closest-side, rgba(242, 178, 92, .22), transparent 75%); }
+.sl-protagonista img { position: relative; z-index: 1; }
+.sl-heroi { overflow: visible; overflow-x: clip; }
+@media (min-width: 981px) { .sl-protagonista { top: -70px; } }
