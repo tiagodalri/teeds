@@ -13,26 +13,20 @@
 
 /* ------------------------------------------------ herói: cartaz (título atrás deles) + texto e ingresso */
 .sl-heroi { position: relative; }
-.sl-cartaz { position: relative; width: min(1240px, 100%); margin: 0 auto; padding: clamp(10px, 2vw, 24px) clamp(16px, 4vw, 48px) 0; display: grid; justify-items: center; text-align: center; isolation: isolate; }
-.sl-cartaz::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 18%; width: min(1100px, 130vw); aspect-ratio: 1.6; transform: translateX(-50%);
-  background: radial-gradient(closest-side, rgba(242, 178, 92, .34), rgba(183, 141, 57, .12) 55%, transparent 75%); pointer-events: none; }
+.sl-cartaz { position: relative; width: min(1240px, 100%); margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: end; gap: clamp(16px, 3vw, 40px); isolation: isolate; }
+.sl-cartaz-texto { padding-bottom: clamp(28px, 5vw, 72px); }
 .sl-selo { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 11px; border-radius: 999px; border: 1px solid rgba(242, 178, 92, .5); background: rgba(242, 178, 92, .1); font-size: 13.5px; font-weight: 700; letter-spacing: .02em; }
 .sl-selo i { width: 9px; height: 9px; border-radius: 50%; background: var(--ao-vivo); animation: sl-pulso 1.8s infinite; }
 @keyframes sl-pulso { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 66, .6) } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 66, 0) } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 66, 0) } }
-.sl-titulo { position: relative; z-index: 0; margin: 14px 0 0; display: flex; gap: .18em; justify-content: center; font: 400 clamp(96px, 19vw, 270px)/.8 "Bebas Neue", Arimo, sans-serif; letter-spacing: .01em; text-transform: uppercase; }
+.sl-titulo { margin: 18px 0 0; font: 400 clamp(90px, 12.5vw, 190px)/.82 "Bebas Neue", Arimo, sans-serif; letter-spacing: .01em; text-transform: uppercase; }
 .sl-super { color: var(--marfim); }
 .sl-live { background: linear-gradient(180deg, #FFE1A6 0%, var(--quente) 45%, var(--ouro) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-/* os dois, recortados, na frente do título */
-.sl-duo { position: relative; z-index: 1; width: min(980px, 100%); overflow: hidden; border-radius: 0 0 4px 4px; margin-top: calc(clamp(96px, 19vw, 270px) * -.3); display: flex; justify-content: center; align-items: flex-end; }
-.sl-p { width: auto; height: clamp(300px, 34vw, 470px); object-fit: contain; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, .55)); }
-.sl-p-v { margin-right: -6%; z-index: 2; }
-.sl-p-n { margin-left: -6%; z-index: 1; height: clamp(290px, 32vw, 450px); }
-.sl-n .sl-p-v { order: 2; margin-right: 0; margin-left: -6%; z-index: 1; height: clamp(290px, 32vw, 450px); }
-.sl-n .sl-p-n { order: 1; margin-left: 0; margin-right: -6%; z-index: 2; height: clamp(300px, 34vw, 470px); }
-.sl-duo::after { content: ""; position: absolute; z-index: 3; left: -10%; right: -10%; bottom: -2px; height: 34%; background: linear-gradient(0deg, var(--azul) 8%, rgba(5, 21, 40, 0)); pointer-events: none; }
-.sl-nomes { position: relative; z-index: 4; margin-top: -54px; display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-radius: 999px; border: 1px solid rgba(242, 178, 92, .45); background: rgba(5, 21, 40, .72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-.sl-nomes b { font-size: clamp(14px, 1.5vw, 17px); white-space: nowrap; }
-.sl-nomes i { font-style: normal; color: var(--quente); font: 400 22px/1 "Bebas Neue", Arimo, sans-serif; }
+.sl-estrela { margin: 14px 0 0; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.sl-estrela span { font: 400 clamp(22px, 2.4vw, 32px)/1 "Bebas Neue", Arimo, sans-serif; letter-spacing: .06em; color: var(--aco); }
+.sl-estrela b { font: 400 clamp(44px, 5.6vw, 84px)/.95 "Bebas Neue", Arimo, sans-serif; letter-spacing: .02em; color: var(--marfim); }
+.sl-convidado { margin: 18px 0 0; display: inline-flex; align-items: center; gap: 12px; padding: 6px 18px 6px 6px; border-radius: 999px; border: 1px solid var(--linha); background: rgba(10, 32, 56, .6); font-size: 14.5px; color: var(--aco); }
+.sl-convidado img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--quente); }
+.sl-convidado b { color: var(--marfim); }
 
 .sl-heroi-miolo { width: min(1240px, 100%); margin: 0 auto; padding: clamp(28px, 4vw, 48px) clamp(20px, 4vw, 48px) clamp(48px, 7vw, 88px);
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 470px); gap: clamp(28px, 5vw, 72px); align-items: center; scroll-margin-top: 12px; }
@@ -116,12 +110,6 @@
 /* quem apresenta: os dois retratos reais */
 .sl-casa { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(28px, 5vw, 72px); align-items: center; }
 .sl-dupla { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.sl-pessoa { position: relative; margin: 0; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 5; box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .9), 0 0 0 1px rgba(242, 178, 92, .2); }
-.sl-pessoa img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
-.sl-pessoa::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(2, 7, 15, .85) 0%, transparent 42%); }
-.sl-pessoa figcaption { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 14px; display: grid; gap: 2px; }
-.sl-pessoa b { font-size: 17px; color: #fff; }
-.sl-pessoa span { font-size: 13px; color: var(--quente); }
 .sl-lista { list-style: none; margin: 24px 0 0; padding: 0; display: grid; gap: 12px; }
 .sl-lista li { position: relative; padding-left: 30px; color: rgba(243, 240, 233, .86); line-height: 1.5; }
 .sl-lista li::before { content: ""; position: absolute; left: 0; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: rgba(242, 178, 92, .16) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F2B25C' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 12px no-repeat; }
@@ -137,6 +125,10 @@
 .sl-barra.sl-barra-on { transform: none; }
 
 @media (max-width: 980px) {
+  .sl-cartaz { grid-template-columns: minmax(0, 1fr); }
+  .sl-protagonista { order: -1; width: min(460px, 92%); margin-top: -8px; }
+  .sl-cartaz-texto { margin-top: -26%; position: relative; z-index: 2; text-align: center; padding-bottom: 8px; }
+  .sl-estrela { justify-content: center; }
   .sl-heroi-miolo { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
   .sl-blocos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sl-tv, .sl-casa { grid-template-columns: minmax(0, 1fr); }
@@ -146,13 +138,10 @@
   .sl-topo img { width: 140px; }
   .sl-topo-cta { display: none; }
   .sl-heroi-miolo { padding-top: 22px; gap: 22px; }
-  .sl-titulo { font-size: 26vw; }
-  .sl-duo { margin-top: -8vw; }
-  .sl-p { height: 66vw; max-width: 58%; object-position: bottom; } .sl-p-n, .sl-n .sl-p-v { height: 63vw; } .sl-n .sl-p-n { height: 66vw; }
-  .sl-p-v { margin-right: -8%; } .sl-p-n { margin-left: -8%; }
-  .sl-n .sl-p-v { margin-left: -8%; margin-right: 0; } .sl-n .sl-p-n { margin-right: -8%; margin-left: 0; }
-  .sl-nomes { margin-top: -30px; padding: 8px 14px; gap: 8px; }
-  .sl-nomes b { font-size: 13.5px; }
+  .sl-titulo { font-size: 22vw; margin-top: 12px; }
+  .sl-estrela b { font-size: 13vw; }
+  .sl-cartaz-texto { margin-top: -34%; }
+  .sl-protagonista { width: 100%; }
   .sl-ingresso-corpo { padding: 22px 18px 18px; }
   .sl-ingresso-topo { padding: 14px 18px; font-size: 16px; }
   .sl-relogio div { min-width: 0; flex: 1; }
@@ -184,4 +173,30 @@ html:has(body.sl) { overflow-x: hidden; }
   .sl-relogio { order: 2; margin-top: 0; }
   .sl-ingresso { order: 3; }
   .sl-heroi .sl-texto { order: 4; margin-top: 4px; text-align: center; }
+}
+
+/* (recolocadas 25/11: um filtro de limpeza tinha apagado estas) */
+.sl-pessoa { position: relative; margin: 0; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 5; box-shadow: 0 30px 70px -30px rgba(0, 0, 0, .9), 0 0 0 1px rgba(242, 178, 92, .2); }
+.sl-pessoa img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.sl-pessoa::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(2, 7, 15, .85) 0%, transparent 42%); }
+.sl-pessoa figcaption { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 14px; display: grid; gap: 2px; }
+.sl-pessoa b { font-size: 17px; color: #fff; }
+.sl-pessoa span { font-size: 13px; color: var(--quente); }
+.sl-protagonista { position: relative; margin: 0; align-self: end; justify-self: center; width: min(560px, 100%); }
+.sl-protagonista::before { content: ""; position: absolute; z-index: -1; inset: 8% -18% 0; background: radial-gradient(closest-side, rgba(242, 178, 92, .30), transparent 72%); }
+.sl-protagonista img { display: block; width: 100%; height: auto; aspect-ratio: 1120 / 1390;
+  -webkit-mask-image: radial-gradient(75% 70% at 50% 42%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(75% 70% at 50% 42%, #000 58%, transparent 100%); }
+@media (max-width: 980px) {
+  .sl-protagonista { order: -1; width: min(460px, 92%); margin-top: -8px; }
+}
+@media (max-width: 720px) {
+  .sl-protagonista { width: 100%; }
+}
+@media (max-width: 720px) {
+  .sl-protagonista { width: 86%; }
+  .sl-protagonista img { -webkit-mask-image: radial-gradient(62% 60% at 50% 40%, #000 55%, transparent 100%); mask-image: radial-gradient(62% 60% at 50% 40%, #000 55%, transparent 100%); }
+  .sl-cartaz-texto { margin-top: -30%; }
+  .sl-convidado { font-size: 13px; white-space: nowrap; padding-right: 14px; }
+  .sl-convidado img { width: 32px; height: 32px; }
 }
