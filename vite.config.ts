@@ -458,6 +458,25 @@ export default defineConfig({
           rmSync(join(destinoCaptura, 'landing.css'), { force: true })
           rmSync(join(destinoCaptura, 'landing.js'), { force: true })
         }
+        // Super Live (25/11/2026, Victor e Naor, domingo 29/11 às 20h): página de captura em /superlive/
+        // (e /n/superlive/, /v/superlive/ logo abaixo). Usa o estilo e o captura.js da captação da GF,
+        // embutidos como nas páginas do /cadastro.
+        const destinoSuperLive = join(SAIDA, 'superlive')
+        rmSync(destinoSuperLive, { recursive: true, force: true })
+        if (MARCA.id === 'globalfly' && existsSync(join(RAIZ, 'superlive-globalfly'))) {
+          cpSync(join(RAIZ, 'superlive-globalfly'), destinoSuperLive, { recursive: true })
+          const base = readFileSync(join(RAIZ, 'captura-globalfly', 'estilo.css'), 'utf8')
+          const proprio = readFileSync(join(destinoSuperLive, 'superlive.css'), 'utf8')
+          const comum = readFileSync(join(RAIZ, 'captura-globalfly', 'captura.js'), 'utf8')
+          for (const pagina of ['index.html', 'obrigado/index.html']) {
+            const arquivo = join(destinoSuperLive, pagina)
+            writeFileSync(arquivo, readFileSync(arquivo, 'utf8')
+              .replace(/<link rel="stylesheet" href="(?:\.\.\/)+estilo\.css" \/>/, () => `<style>${base}</style>`)
+              .replace(/<link rel="stylesheet" href="(?:\.\.?\/)superlive\.css" \/>/, () => `<style>${proprio}</style>`)
+              .replace(/<script src="(?:\.\.\/)+captura\.js"><\/script>/, () => `<script>${comum}</script>`))
+          }
+          rmSync(join(destinoSuperLive, 'superlive.css'), { force: true })
+        }
         for (const outra of Object.values(MARCAS)) {
           if (outra.id === MARCA.id) continue
           // As peças da família ficam (a Legacy Pro usa as da GlobalFly enquanto não tem as suas).
@@ -506,6 +525,8 @@ export default defineConfig({
           // A landing do lançamento também mora no endereço do parceiro (/n/cadastro/): o /n fica
           // na barra do começo ao fim (Tiago, 27/10/2026). A página lê o parceiro do próprio caminho.
           if (existsSync(join(SAIDA, 'cadastro'))) cpSync(join(SAIDA, 'cadastro'), join(pasta, 'cadastro'), { recursive: true })
+          // a Super Live também no endereço do parceiro (/v/superlive/): o pixel e a comunidade são os dele
+          if (existsSync(destinoSuperLive)) cpSync(destinoSuperLive, join(pasta, 'superlive'), { recursive: true })
           // 16/11/2026 (Tiago): /n/trafego e /v/trafego são a página de venda do tráfego pago. Abre o mesmo
           // cadastro com planos, marcada como 'trafego' (entradaInicial.ts: paginaDeVenda), para ganhar a VSL
           // e ser medida à parte; a /n/cadastro continua como está.

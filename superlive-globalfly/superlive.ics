@@ -1,0 +1,20 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//GlobalFly Trade//Super Live//PT-BR
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:superlive-20261129@globalflytrade.com
+DTSTAMP:20261125T190000Z
+DTSTART:20261129T230000Z
+DTEND:20261130T010000Z
+SUMMARY:Super Live · Victor e Naor
+DESCRIPTION:Super Live da GlobalFly com Victor Cordeiro e Naor Bezerra. O link para entrar chega no seu WhatsApp e no e-mail.
+URL:https://globalflytrade.com/superlive/
+BEGIN:VALARM
+TRIGGER:-PT30M
+ACTION:DISPLAY
+DESCRIPTION:A Super Live começa em 30 minutos
+END:VALARM
+END:VEVENT
+END:VCALENDAR
