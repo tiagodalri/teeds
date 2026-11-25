@@ -1,7 +1,7 @@
 /* Lançamentos: a lista inteira com busca, filtros, totais do que está filtrado e exportação para planilha. */
 import { useMemo, useState } from 'react'
 import {
-  ROTULO_TIPO, dataCurta, diaDe, parceiroDoProjeto, diasEntre, ehEntrada, hoje, nomeDoMes, paraCsv, reais, situacaoDe,
+  ROTULO_TIPO, dataCurta, diaDe, fonteDe, fontesPagadoras, parceiroDoProjeto, diasEntre, ehEntrada, hoje, nomeDoMes, paraCsv, reais, situacaoDe,
   type DadosFin, type Lancamento, type Periodo,
 } from '../../core/teeds/financeiro'
 import { Icone } from '../Icone'
@@ -21,9 +21,10 @@ type FSituacao = 'todas' | 'pago' | 'aberto' | 'vencido'
 
 const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, filtroInicial, podeEditar, aoAbrir, aoPagar, aoNovo }: {
-  /** vê só alguns projetos: sem o filtro de sócios e de conta */
+export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, filtroInicial, podeEditar, aoAbrir, aoPagar, aoNovo, nomeDoCaixa = 'Caixa da plataforma' }: {
+  /** vê só alguns projetos: sem o filtro de sócios, de conta e de quem pagou */
   restrito?: boolean
+  nomeDoCaixa?: string
   dados: DadosFin; periodo: Periodo; rotuloPeriodo: string; filtroInicial: FiltroInicial; podeEditar: boolean
   aoAbrir: (l: Lancamento) => void
   aoPagar: (l: Lancamento) => void
@@ -35,6 +36,8 @@ export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, f
   const [situacao, setSituacao] = useState<FSituacao>(filtroInicial === 'vencidos' ? 'vencido' : emAberto ? 'aberto' : 'todas')
   const [categoria, setCategoria] = useState(filtroInicial && typeof filtroInicial === 'object' ? filtroInicial.categoria : '')
   const [conta, setConta] = useState('')
+  // quem pagou a despesa (25/11/2026, Tiago: "filtrar tudo que o Victor pagou, que o Tiago pagou, que o Naor pagou, com a soma")
+  const [pagador, setPagador] = useState('')
   // "Em aberto" e "Vencidos" olham todos os pendentes, não só os do período (a conta vencida em outubro ainda está para pagar)
   const [todoPeriodo, setTodoPeriodo] = useState(emAberto)
   const hojeDia = hoje()
@@ -43,9 +46,11 @@ export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, f
   const con = useMemo(() => new Map(dados.contas.map((c) => [c.id, c])), [dados.contas])
   const soc = useMemo(() => new Map(dados.socios.map((c) => [c.id, c])), [dados.socios])
   const pro = useMemo(() => new Map(dados.projetos.map((c) => [c.id, c])), [dados.projetos])
+  const fontes = useMemo(() => fontesPagadoras(dados, nomeDoCaixa), [dados, nomeDoCaixa])
   const parceiroNome = (codigo: string | null) => dados.projetos.find((p) => p.parceiro === codigo)?.responsavel ?? 'Parceiro'
 
-  const lista = useMemo(() => {
+  // todos os filtros menos o de quem pagou: é a base da faixa "Quem pagou as despesas"
+  const semPagador = useMemo(() => {
     const q = semAcento(busca.trim())
     return dados.lancamentos.filter((l) => {
       const dia = diaDe(l)
@@ -61,6 +66,21 @@ export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, f
       return true
     }).sort((a, b) => diaDe(b).localeCompare(diaDe(a)) || b.criado_em.localeCompare(a.criado_em))
   }, [dados.lancamentos, busca, tipo, situacao, categoria, conta, periodo, todoPeriodo, hojeDia, cat, soc, pro])
+  const lista = useMemo(() => pagador ? semPagador.filter((l) => l.tipo === 'despesa' && fonteDe(l) === pagador) : semPagador, [semPagador, pagador])
+
+  // quanto cada um pagou das despesas que estão na tela (inclui o pago do bolso, que não passa pelo caixa)
+  const porPagador = useMemo(() => {
+    const m = new Map<string, { total: number; n: number }>()
+    for (const l of semPagador) {
+      if (l.tipo !== 'despesa') continue
+      const f = fonteDe(l), g = m.get(f) ?? { total: 0, n: 0 }
+      g.total += l.valor; g.n++; m.set(f, g)
+    }
+    return fontes.map((f) => ({ ...f, ...(m.get(f.id) ?? { total: 0, n: 0 }) })).filter((f) => f.n > 0 || f.id === pagador)
+  }, [semPagador, fontes, pagador])
+  const totalDespesas = porPagador.reduce((s, f) => s + f.total, 0)
+  const fontePagadora = pagador ? fontes.find((f) => f.id === pagador) : null
+  const somaLista = useMemo(() => lista.reduce((s, l) => { if (ehEntrada(l.tipo)) s.entra += l.valor; else s.sai += l.valor; return s }, { entra: 0, sai: 0 }), [lista])
 
   const totais = useMemo(() => {
     let entra = 0, sai = 0
@@ -76,8 +96,8 @@ export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, f
     return [...m.entries()]
   }, [lista])
 
-  const filtrando = !!busca.trim() || tipo !== 'todos' || situacao !== 'todas' || !!categoria || !!conta
-  const limpar = () => { setBusca(''); setTipo('todos'); setSituacao('todas'); setCategoria(''); setConta(''); setTodoPeriodo(false) }
+  const filtrando = !!busca.trim() || tipo !== 'todos' || situacao !== 'todas' || !!categoria || !!conta || !!pagador
+  const limpar = () => { setBusca(''); setTipo('todos'); setSituacao('todas'); setCategoria(''); setConta(''); setPagador(''); setTodoPeriodo(false) }
   const exportar = () => {
     const blob = new Blob([paraCsv(lista, dados)], { type: 'text/csv;charset=utf-8' })
     const a = document.createElement('a')
@@ -116,17 +136,40 @@ export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, f
         <select value={conta} onChange={(e) => setConta(e.target.value)}>
           <option value="">Todas</option>{dados.contas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
         </select></label>}
+      {!restrito && <label className="fin-select fin-select-largo"><span>Quem pagou</span>
+        <select value={pagador} onChange={(e) => setPagador(e.target.value)}>
+          <option value="">Todos</option>
+          {fontes.map((f) => <option key={f.id} value={f.id}>{f.nome}</option>)}
+        </select></label>}
       {filtrando && <button type="button" className="fin-link" onClick={limpar}>Limpar filtros</button>}
     </div>
 
     <div className="fin-totais">
+      {fontePagadora ? <span className="fin-totais-pagou"><small>Pago por {fontePagadora.nome}</small><b className="fin-sai">{reais(somaLista.sai)}</b></span> : <>
       <span><small>Entradas</small><b className="fin-entra">{reais(totais.entra)}</b></span>
       <span><small>Saídas</small><b className="fin-sai">{reais(totais.sai)}</b></span>
-      <span><small>Saldo</small><b className={totais.entra - totais.sai < 0 ? 'fin-sai' : ''}>{reais(totais.entra - totais.sai)}</b></span>
+      <span><small>Saldo</small><b className={totais.entra - totais.sai < 0 ? 'fin-sai' : ''}>{reais(totais.entra - totais.sai)}</b></span></>}
       <span className="fin-totais-n"><small>{todoPeriodo && situacao !== 'todas' && situacao !== 'pago' ? 'Todos os pendentes' : rotuloPeriodo}</small><b>{lista.length.toLocaleString('pt-BR')} {lista.length === 1 ? 'lançamento' : 'lançamentos'}</b></span>
       {(situacao === 'aberto' || situacao === 'vencido') && <label className="fin-check"><input type="checkbox" checked={todoPeriodo} onChange={(e) => setTodoPeriodo(e.target.checked)} /><span>Incluir os de outros períodos</span></label>}
       <button type="button" className="fin-btn pequeno" onClick={exportar} disabled={!lista.length}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>Planilha</button>
     </div>
+
+    {!restrito && porPagador.length > 0 && <div className="fin-pagadores" role="group" aria-label="Quem pagou as despesas">
+      <span className="fin-pagadores-rot">Quem pagou as despesas</span>
+      <div className="fin-pagadores-lista">
+        <button type="button" className={`fin-pagador${pagador ? '' : ' on'}`} aria-pressed={!pagador} onClick={() => setPagador('')}>
+          <span className="fin-pagador-nome">Todos</span>
+          <b>{reais(totalDespesas)}</b>
+          <small>{porPagador.reduce((s, f) => s + f.n, 0)} despesas</small>
+        </button>
+        {porPagador.map((f) => <button key={f.id} type="button" className={`fin-pagador${pagador === f.id ? ' on' : ''}`} aria-pressed={pagador === f.id}
+          style={{ ['--fin-cor' as string]: f.cor }} onClick={() => setPagador(pagador === f.id ? '' : f.id)}>
+          <span className="fin-pagador-nome"><i className="fin-ponto" />{f.nome}</span>
+          <b>{reais(f.total)}</b>
+          <small>{f.n} {f.n === 1 ? 'despesa' : 'despesas'}{totalDespesas > 0 ? ` · ${Math.round((f.total / totalDespesas) * 100)}%` : ''}</small>
+        </button>)}
+      </div>
+    </div>}
 
     {lista.length ? <div className="fin-tabela" role="table" aria-label="Lançamentos">
       <div className="fin-tabela-cab" role="row"><span role="columnheader">Data</span><span role="columnheader">Descrição</span><span role="columnheader">Categoria</span><span role="columnheader">Conta</span><span role="columnheader">Situação</span><span role="columnheader">Valor</span><span role="columnheader"><span className="fin-esconder">Ações</span></span></div>
@@ -162,6 +205,10 @@ export function Lancamentos({ restrito = false, dados, periodo, rotuloPeriodo, f
           })}
         </div>
       })}
+      <div className="fin-tabela-rodape" role="row">
+        <span><b>{fontePagadora ? `Total pago por ${fontePagadora.nome}` : 'Total da lista'}</b><small>{lista.length.toLocaleString('pt-BR')} {lista.length === 1 ? 'lançamento' : 'lançamentos'}</small></span>
+        <span className="fin-tabela-rodape-valores">{somaLista.entra ? <b className="fin-entra">+{reais(somaLista.entra)}</b> : null}{somaLista.sai ? <b className="fin-sai">−{reais(somaLista.sai)}</b> : null}</span>
+      </div>
     </div> : <Vazio titulo={filtrando ? 'Nada com esses filtros' : 'Nenhum lançamento no período'}
       texto={filtrando ? 'Mude os filtros ou o período no topo.' : 'Mude o período no topo ou lance algo novo.'}
       acoes={filtrando ? <button className="fin-btn" onClick={limpar}>Limpar filtros</button> : podeEditar ? <button className="fin-btn primario" onClick={aoNovo}><Icone nome="mais" />Novo lançamento</button> : undefined} />}

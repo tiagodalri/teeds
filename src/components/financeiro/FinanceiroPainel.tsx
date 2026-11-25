@@ -189,7 +189,7 @@ export function FinanceiroPainel({ api, pedido = 0, nomeDaPlataforma }: {
     {!dados ? <div className="fin-carregando">{erro ? '' : 'Carregando os lançamentos…'}</div> : <>
       {aba === 'resumo' && <Resumo api={api} restrito={restrito} aoMudar={depoisDeMudar} aoTrancar={() => void trancar('O financeiro foi bloqueado. Digite sua senha de novo.')} dados={visao!} todos={dados} projeto={projeto} aoProjeto={setProjeto} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar}
         aoNovo={(t) => setEditor({ l: null, rascunho: { tipo: t, projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoIr={irPara} />}
-      {aba === 'lancamentos' && <Lancamentos key={chaveLista} restrito={restrito} dados={visao!} periodo={periodo} rotuloPeriodo={rotuloPeriodo} filtroInicial={filtroInicial} podeEditar={podeEditar}
+      {aba === 'lancamentos' && <Lancamentos key={chaveLista} restrito={restrito} nomeDoCaixa={`Caixa da ${nomeDaPlataforma.replace(/ Trade$/, '')}`} dados={visao!} periodo={periodo} rotuloPeriodo={rotuloPeriodo} filtroInicial={filtroInicial} podeEditar={podeEditar}
         aoAbrir={(l) => setEditor({ l })} aoPagar={(l) => void pagar(l)} aoNovo={() => setEditor({ l: null, rascunho: { projeto_id: projeto && projeto !== 'geral' ? projeto : null } })} />}
       {aba === 'divisao' && <Divisao api={api} restrito={restrito} aoMudar={depoisDeMudar} dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} podeEditar={podeEditar} souDono={souDono}
         aoNovo={(r) => setEditor({ l: null, rascunho: r })} aoAbrir={(l) => setEditor({ l })} aoIr={() => setAba('cadastros')} />}

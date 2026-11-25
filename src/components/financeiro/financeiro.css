@@ -211,6 +211,28 @@ button.fin-kpi:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(
 .fin-totais b { font-size: 15px; font-weight: 800; }
 .fin-totais .fin-btn { margin-left: auto; }
 .fin-totais-n b { font-size: 13px; font-weight: 700; }
+.fin-totais-pagou b { font-size: 17px; }
+
+/* quem pagou as despesas (25/11/2026): um cartão por fonte pagadora, com a soma; clicar filtra */
+.fin-pagadores { display: grid; gap: 10px; padding: 14px 20px 16px; border-bottom: 1px solid var(--border); }
+.fin-pagadores-rot { color: var(--muted); font-size: 11px; font-weight: 750; letter-spacing: .02em; }
+.fin-pagadores-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 8px; }
+.fin-pagador { position: relative; display: grid; gap: 3px; min-width: 0; padding: 11px 14px 12px; border: 1px solid var(--border); border-radius: var(--fin-raio-ctl); color: var(--text); background: var(--fin-cartao); text-align: left; cursor: pointer; transition: border-color .15s, box-shadow .15s, background .15s; }
+.fin-pagador:hover { border-color: color-mix(in srgb, var(--fin-cor, var(--muted)) 55%, var(--border)); }
+.fin-pagador:focus-visible { outline: 2px solid var(--fin-destaque); outline-offset: 2px; }
+.fin-pagador.on { border-color: var(--fin-destaque); background: var(--fin-destaque-suave); box-shadow: inset 0 0 0 1px var(--fin-destaque); }
+.fin-pagador-nome { display: flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.fin-pagador-nome .fin-ponto { width: 8px; height: 8px; border-radius: 50%; }
+.fin-pagador.on .fin-pagador-nome { color: var(--text); }
+.fin-pagador b { font-size: 16px; font-weight: 800; letter-spacing: -.01em; }
+.fin-pagador small { color: var(--muted); font-size: 11px; font-weight: 600; }
+
+/* a soma da lista, no fim da tabela */
+.fin-tabela-rodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-top: 2px solid var(--border); background: color-mix(in srgb, var(--fin-campo) 60%, var(--fin-cartao)); }
+.fin-tabela-rodape > span:first-child { display: grid; gap: 2px; }
+.fin-tabela-rodape > span:first-child b { font-size: 13px; font-weight: 800; }
+.fin-tabela-rodape > span:first-child small { color: var(--muted); font-size: 11.5px; }
+.fin-tabela-rodape-valores { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px 18px; font-size: 15px; font-weight: 800; }
 .fin-check { display: inline-flex; align-items: center; gap: 8px; color: var(--text); font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .fin-check input { appearance: none; -webkit-appearance: none; flex-shrink: 0; width: 18px !important; height: 18px !important; min-height: 0 !important; margin: 0; border: 1.5px solid color-mix(in srgb, var(--muted) 55%, var(--border)); border-radius: 5px; background: var(--fin-cartao); cursor: pointer; display: grid; place-items: center; }
 .fin-check input:checked { border-color: var(--primary); background: var(--primary); }
@@ -627,10 +649,17 @@ button.fin-kpi:hover { border-color: color-mix(in srgb, var(--primary) 55%, var(
   .fin-filtros .fin-seg button { height: 36px; padding: 0 4px; }
   .fin-select { flex: 1 1 calc(50% - 5px); height: 44px; min-width: 0; }
   .fin-select select { flex: 1; min-width: 0; max-width: none; font-size: 14px; }
+  .fin-select-largo { flex-basis: 100%; }
   .fin-totais { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 14px 16px; }
   .fin-totais b { font-size: 13.5px; }
   .fin-totais-n, .fin-totais .fin-check { grid-column: 1 / -1; }
   .fin-totais .fin-btn { grid-column: 1 / -1; margin-left: 0; }
+  .fin-totais-pagou { grid-column: 1 / -1; }
+  .fin-pagadores { padding: 12px 16px 14px; }
+  .fin-pagadores-lista { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fin-pagador { padding: 10px 12px 11px; }
+  .fin-pagador b { font-size: 14.5px; }
+  .fin-tabela-rodape { padding: 14px 16px; }
   .fin-tabela-cab { display: none; }
   .fin-tabela-mes-cab { padding: 10px 16px; }
   .fin-linha { grid-template-columns: 44px minmax(0, 1fr) auto; grid-template-areas: 'dia desc valor' 'dia cat cat' 'dia sit acoes'; gap: 8px 12px; padding: 14px 16px; }
