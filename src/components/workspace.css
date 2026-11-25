@@ -328,3 +328,21 @@
 @media (max-width: 900px) { .workspace-sidebar .workspace-link.so-celular { display: flex; } }
 .workspace-ferr-icone { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; }
 .workspace-ferr-icone svg { width: 19px; height: 19px; }
+
+/* 25/11/2026 (prints do Tiago no app instalado no iPhone: o topo "socado" na hora e na bateria e o título
+   cortado em "Meu p…"; aprovado na prévia). No celular em pé, como em app nativo:
+   - mais 4 px de respiro abaixo da hora, numa linha de 56 px (o botão do menu fica no meio dela);
+   - no topo só o saldo, o selo do plano e o avatar: o tema e o "Simular" do admin vão para o menu do
+     avatar (UserMenu, itens .so-em-pe). A bolinha do modo simulado ligado continua no topo;
+   - o título da tela aparece inteiro, ou some quando não cabe (core/tituloDoTopo.ts), nunca cortado. */
+@media (max-width: 599px) {
+  .workspace-app { --topo-h: calc(60px + var(--sat)); }
+  .workspace-app .topbar { padding-top: calc(var(--sat) + 4px); align-items: center; }
+  .workspace-app .workspace-mobile-toggle { top: calc(var(--sat) + 10px); }
+  .workspace-app .topbar-right > .tema-btn:not(.tela-cheia-btn),
+  .workspace-app .topbar-right > .msim-ligar { display: none; }
+  .workspace-app .topbar .topbar-right { gap: 8px; }
+  .workspace-app .workspace-heading strong { font-size: 17px; font-weight: 700; text-overflow: clip; }
+  .workspace-app .workspace-heading.titulo-nao-cabe strong { visibility: hidden; }
+}
+@media (max-width: 389px) { .workspace-app .topbar .topbar-right { gap: 5px; } }

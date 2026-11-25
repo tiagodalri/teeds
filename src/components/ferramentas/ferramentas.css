@@ -247,3 +247,6 @@
   .cnv-inverter, .cnv-moeda .moeda-3d { transition: none; }
   .cnv-ponto, .cnv-ao-vivo i, .cnv-atualizar .gira { animation: none; }
 }
+/* tema e "Simular" no menu do avatar: só no celular em pé, onde saem do topo (workspace.css, 25/11/2026) */
+.menu-acao.so-em-pe { display: none; }
+@media (max-width: 599px) { .menu-acao.so-em-pe { display: flex; } }

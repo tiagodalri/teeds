@@ -4,6 +4,7 @@ import { MARCA, FAMILIA_GF } from '../marca'
 import { alternarSom, useSomLigado } from '../core/som'
 import { alternarMenuAdmin, useMenuAdminOculto } from '../core/menuDeAdmin'
 import { abrirFerramenta, IconeCifrao, IconeCalculadora } from './ferramentas/Ferramentas'
+import { ligarModoSimulado, useModoSimulado, usePodeSimular } from '../core/teeds/modoSimulado'
 
 interface Props {
   usuario: Usuario
@@ -14,6 +15,9 @@ interface Props {
   /** Administrador: ganha o olhinho que esconde os itens de admin do menu lateral. */
   admin?: boolean
   /** Abre os termos de uso e as políticas (marcas com termos). */
+  /** Celular em pé (25/11/2026): o botão do tema sai do topo e vira item deste menu. */
+  tema?: 'claro' | 'escuro'
+  aoAlternarTema?: () => void
 }
 
 /** Iniciais do nome — duas no máximo, que é o que cabe num círculo pequeno. */
@@ -25,7 +29,7 @@ function iniciais(nome: string, email: string): string {
 }
 
 /** A conta da Teeds — a da plataforma, não a da corretora. */
-export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Props) {
+export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false, tema, aoAlternarTema }: Props) {
   const [aberto, setAberto] = useState(false)
   const caixa = useRef<HTMLDivElement>(null)
 
@@ -46,6 +50,8 @@ export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Pro
   const primeiro = (usuario.nome || usuario.email).split(' ')[0]
   const som = useSomLigado()
   const adminOculto = useMenuAdminOculto()
+  const podeSimular = usePodeSimular()
+  const simulando = useModoSimulado()
 
   return (
     <div className="conta" ref={caixa} data-tour="usuario">
@@ -91,6 +97,34 @@ export function UserMenu({ usuario, onSair, onPerfil, foto, admin = false }: Pro
               <IconeCalculadora />Calculadora
             </button>
           </>}
+
+          {/* celular em pé (25/11/2026, Tiago: o topo cortava o título e ficava socado): o tema e o
+              "Simular" do admin saem do topo e ficam aqui, como o conversor e a calculadora */}
+          {aoAlternarTema && (
+            <button className="menu-acao so-em-pe" role="menuitem" onClick={() => { setAberto(false); aoAlternarTema() }}>
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+                fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                {tema === 'claro'
+                  ? <path d="M13.5 8.9A5.6 5.6 0 1 1 7.1 2.5a4.4 4.4 0 0 0 6.4 6.4z" />
+                  : <><circle cx="8" cy="8" r="2.6" /><path d="M8 1.5v1.3M8 13.2v1.3M1.5 8h1.3M13.2 8h1.3M3.4 3.4l.9.9M11.7 11.7l.9.9M3.4 12.6l.9-.9M11.7 4.3l.9-.9" /></>}
+              </svg>
+              {tema === 'claro' ? 'Modo escuro' : 'Modo claro'}
+            </button>
+          )}
+          {podeSimular && !simulando && !adminOculto && (
+            <button className="menu-acao so-em-pe" role="menuitem" onClick={() => {
+              setAberto(false)
+              ligarModoSimulado()
+              // abre o painel do modo simulado (saldo, conta real/demo e sair), como o botão do topo
+              window.setTimeout(() => window.dispatchEvent(new CustomEvent('modo-simulado:abrir')), 0)
+            }}>
+              <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"
+                fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2h4M6.7 2v3.7L3.2 12a1.3 1.3 0 0 0 1.2 2h7.2a1.3 1.3 0 0 0 1.2-2L9.3 5.7V2" /><path d="M5 9.4h6" />
+              </svg>
+              Simular
+            </button>
+          )}
 
           {/* os sons das operações (play, ganho e loss): liga e desliga neste aparelho */}
           <button className="menu-acao" role="menuitemcheckbox" aria-checked={som} onClick={alternarSom}>

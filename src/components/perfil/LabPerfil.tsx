@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useTituloInteiro } from '../../core/tituloDoTopo'
 import { WorkspaceNav } from '../WorkspaceNav'
 import { UserMenu } from '../UserMenu'
 import { MeuPerfil } from './MeuPerfil'
@@ -24,6 +25,9 @@ const EXEMPLO_NOVO = {
 
 let instalado = false
 export default function LabPerfil() {
+  const caixaDoTitulo = useRef<HTMLDivElement>(null)
+  useTituloInteiro(caixaDoTitulo, 'perfil')
+  const [temaLab, setTemaLab] = useState<'claro' | 'escuro'>(() => (new URLSearchParams(location.search).get('tema') === 'escuro' ? 'escuro' : 'claro'))
   const q = new URLSearchParams(location.search)
   const ficha = q.get('caso') === 'completo' ? EXEMPLO_COMPLETO : EXEMPLO_NOVO
   useEffect(() => { const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -49,10 +53,10 @@ export default function LabPerfil() {
     <div className="app workspace-app">
       <WorkspaceNav page="perfil" admin={false} mostrarInicio onNavigate={nada} />
       <header className="topbar">
-        <div className="workspace-heading"><strong>Meu perfil</strong><span>Seus dados, seu plano e sua segurança</span></div>
+        <div className="workspace-heading" ref={caixaDoTitulo}><strong>Meu perfil</strong><span>Seus dados, seu plano e sua segurança</span></div>
         <div className="topbar-right">
           <div className="status status-open"><i /> Conectado</div>
-          <UserMenu usuario={sessao.usuario} onSair={nada} onPerfil={nada} />
+          <UserMenu usuario={sessao.usuario} onSair={nada} onPerfil={nada} tema={temaLab} aoAlternarTema={() => { const t = temaLab === 'claro' ? 'escuro' : 'claro'; document.documentElement.dataset.tema = t; setTemaLab(t) }} />
         </div>
       </header>
       <MeuPerfil sessao={sessao} contas={q.get('caso') === 'completo' ? [{ accountId: 'VRTC9001234', balance: 9241.79, currency: 'USD', group: 'row', status: 'active', type: 'demo' }, { accountId: 'CR5512345', balance: 312.4, currency: 'USD', group: 'row', status: 'active', type: 'real' }] : []}

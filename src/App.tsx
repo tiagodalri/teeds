@@ -1,3 +1,4 @@
+import { useTituloInteiro } from './core/tituloDoTopo'
 import { marcarEmUso } from './core/atualizacaoSegura'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react'
 import { assinarTransmissao, transmissaoNoAr } from './core/teeds/transmissao'
@@ -1647,6 +1648,8 @@ export default function App() {
   // GlobalFly (19/11/2026, Tiago: "só administradores"): o Assistente é da equipe, sem código; os outros
   // não o veem (o servidor também recusa). Teeds e OMNI seguem com o código de acesso.
   const assistenteAberto = FAMILIA_GF ? admin === true : assistenteLiberado
+  const caixaDoTitulo = useRef<HTMLDivElement>(null)
+  useTituloInteiro(caixaDoTitulo, tela)
   function abrirAssistente() {
     if (assistenteAberto) { setTela('assistente'); return }
     if (FAMILIA_GF) return
@@ -1670,7 +1673,7 @@ export default function App() {
       <header className="topbar">
         {JANELA ? (
           <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span className="js-subtitulo">Janela solta · arraste para onde quiser</span></div>
-        ) : <div className="workspace-heading"><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de operação manual' : tela === 'multiplicadores' ? 'Sem prazo: fecha quando quiser, e a perda para na entrada' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : tela === 'aulas' ? 'O treinamento completo da plataforma' : tela === 'marketplace' ? 'Estratégias e pacotes para a sua conta' : tela === 'gerenciamento' ? 'Simule entradas, limites e objetivos' : 'Seu espaço de trabalho'}</span></div>}
+        ) : <div className="workspace-heading" ref={caixaDoTitulo}><strong>{PAGE_NAMES[tela]}</strong><span>{tela === 'inicio' ? 'Sua mesa de operações' : tela === 'operar' ? 'Seu terminal de operação manual' : tela === 'multiplicadores' ? 'Sem prazo: fecha quando quiser, e a perda para na entrada' : tela === 'robos' ? 'Estratégias e acompanhamento' : tela === 'gestao' ? 'Controle da plataforma' : tela === 'relatorios' ? 'O seu resultado, com os números da corretora' : tela === 'insights' ? 'Inteligência da plataforma' : tela === 'laboratorio' ? 'Monte, entenda e teste um robô sem escrever código' : tela === 'divulgacao' ? 'Seus links para divulgar a plataforma' : tela === 'monitoramento' ? 'Cabines dos clientes, ao vivo e somente leitura' : tela === 'aovivo' ? (LIVES_AO_VIVO ? 'Transmissões com a equipe, em tempo real' : 'Sala de treino da equipe, em tempo real') : tela === 'noticias' ? 'Cotações e as principais notícias do mercado' : tela === 'perfil' ? 'Seus dados, seu plano e sua segurança' : tela === 'ajuda' ? 'Respostas rápidas e o suporte da equipe' : tela === 'aulas' ? 'O treinamento completo da plataforma' : tela === 'marketplace' ? 'Estratégias e pacotes para a sua conta' : tela === 'gerenciamento' ? 'Simule entradas, limites e objetivos' : 'Seu espaço de trabalho'}</span></div>}
 
         {/* 06/11/2026: relatório simulado para as aulas, só administradores da marca; fica visível mesmo com o olhinho (09/11, Tiago) */}
         {!JANELA && tela === 'relatorios' && MARCA.relatorios && admin === true && (
@@ -1771,7 +1774,8 @@ export default function App() {
 
           {teeds.usuario && !JANELA && (
             <UserMenu usuario={teeds.usuario} onSair={sairDeTudo} foto={fotoPerfil} admin={admin === true}
-              onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))} />
+              onPerfil={() => (MARCA.inicio ? setTela('perfil') : setVerPerfil(true))}
+              tema={tema} aoAlternarTema={JANELA ? undefined : alternarTema} />
           )}
         </div>
       </header>
