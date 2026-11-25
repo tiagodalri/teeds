@@ -11,39 +11,68 @@
 .sl-topo-cta { padding: 10px 18px; border-radius: 999px; border: 1px solid rgba(243, 240, 233, .3); color: var(--marfim); font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .sl-topo-cta:hover { border-color: var(--ouro-claro); }
 
-/* ------------------------------------------------ herói: a "tela" do programa e o texto */
+/* ------------------------------------------------ herói: cartaz (título atrás deles) + texto e ingresso */
 .sl-heroi { position: relative; }
-.sl-heroi-miolo { width: min(1240px, 100%); margin: 0 auto; padding: clamp(28px, 5vw, 64px) clamp(20px, 4vw, 48px) clamp(48px, 7vw, 88px);
-  display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: clamp(28px, 5vw, 72px); align-items: center; }
-.sl-heroi-texto { order: 1; }
-.sl-tvzao { order: 2; position: relative; margin: 0; border-radius: 22px; overflow: hidden; aspect-ratio: 16 / 9; background: #02070F;
-  box-shadow: 0 50px 110px -40px rgba(0, 0, 0, .95), 0 0 0 1px rgba(242, 178, 92, .28), 0 0 80px -20px rgba(242, 178, 92, .35); }
-.sl-tvzao img { width: 100%; height: 100%; object-fit: cover; }
-.sl-tvzao::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg, rgba(2, 7, 15, .78) 0%, transparent 34%), linear-gradient(180deg, rgba(2, 7, 15, .35) 0%, transparent 22%); }
-.sl-bug { position: absolute; z-index: 2; top: 16px; left: 16px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px 6px 9px; border-radius: 8px; background: var(--ao-vivo); color: #fff; font: 400 17px/1 "Bebas Neue", Arimo, sans-serif; letter-spacing: .08em; }
-.sl-bug i { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: sl-piscar 1.4s infinite; }
-@keyframes sl-piscar { 50% { opacity: .25 } }
-.sl-placa { position: absolute; z-index: 2; top: 16px; right: 16px; padding: 6px 12px; border-radius: 8px; background: rgba(2, 7, 15, .6); border: 1px solid rgba(242, 178, 92, .5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: var(--quente); font: 400 17px/1 "Bebas Neue", Arimo, sans-serif; letter-spacing: .08em; }
-.sl-tvzao figcaption { position: absolute; z-index: 2; left: 18px; bottom: 16px; display: grid; gap: 2px; padding-left: 12px; border-left: 3px solid var(--quente); }
-.sl-tvzao figcaption b { font-size: clamp(16px, 1.6vw, 20px); color: #fff; }
-.sl-tvzao figcaption span { font-size: 13px; color: rgba(243, 240, 233, .78); }
-
+.sl-cartaz { position: relative; width: min(1240px, 100%); margin: 0 auto; padding: clamp(10px, 2vw, 24px) clamp(16px, 4vw, 48px) 0; display: grid; justify-items: center; text-align: center; isolation: isolate; }
+.sl-cartaz::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 18%; width: min(1100px, 130vw); aspect-ratio: 1.6; transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(242, 178, 92, .34), rgba(183, 141, 57, .12) 55%, transparent 75%); pointer-events: none; }
 .sl-selo { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 11px; border-radius: 999px; border: 1px solid rgba(242, 178, 92, .5); background: rgba(242, 178, 92, .1); font-size: 13.5px; font-weight: 700; letter-spacing: .02em; }
 .sl-selo i { width: 9px; height: 9px; border-radius: 50%; background: var(--ao-vivo); animation: sl-pulso 1.8s infinite; }
 @keyframes sl-pulso { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 66, .6) } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 66, 0) } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 66, 0) } }
-.sl-heroi h1 { margin: 16px 0 0; font: 400 clamp(74px, 10vw, 150px)/.86 "Bebas Neue", Arimo, sans-serif; letter-spacing: .01em; text-transform: uppercase; }
+.sl-titulo { position: relative; z-index: 0; margin: 14px 0 0; display: flex; gap: .18em; justify-content: center; font: 400 clamp(96px, 19vw, 270px)/.8 "Bebas Neue", Arimo, sans-serif; letter-spacing: .01em; text-transform: uppercase; }
 .sl-super { color: var(--marfim); }
-.sl-live { background: linear-gradient(180deg, #FFE1A6 0%, var(--quente) 45%, var(--ouro) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 6px 26px rgba(242, 178, 92, .3)); }
-.sl-frase { margin: 12px 0 0; font-size: clamp(21px, 2.3vw, 28px); font-weight: 700; line-height: 1.2; color: var(--quente); }
-.sl-texto { margin: 12px 0 0; font-size: clamp(16px, 1.4vw, 17.5px); line-height: 1.6; color: rgba(243, 240, 233, .86); }
+.sl-live { background: linear-gradient(180deg, #FFE1A6 0%, var(--quente) 45%, var(--ouro) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* os dois, recortados, na frente do título */
+.sl-duo { position: relative; z-index: 1; width: min(980px, 100%); overflow: hidden; border-radius: 0 0 4px 4px; margin-top: calc(clamp(96px, 19vw, 270px) * -.3); display: flex; justify-content: center; align-items: flex-end; }
+.sl-p { width: auto; height: clamp(300px, 34vw, 470px); object-fit: contain; filter: drop-shadow(0 30px 40px rgba(0, 0, 0, .55)); }
+.sl-p-v { margin-right: -6%; z-index: 2; }
+.sl-p-n { margin-left: -6%; z-index: 1; height: clamp(290px, 32vw, 450px); }
+.sl-n .sl-p-v { order: 2; margin-right: 0; margin-left: -6%; z-index: 1; height: clamp(290px, 32vw, 450px); }
+.sl-n .sl-p-n { order: 1; margin-left: 0; margin-right: -6%; z-index: 2; height: clamp(300px, 34vw, 470px); }
+.sl-duo::after { content: ""; position: absolute; z-index: 3; left: -10%; right: -10%; bottom: -2px; height: 34%; background: linear-gradient(0deg, var(--azul) 8%, rgba(5, 21, 40, 0)); pointer-events: none; }
+.sl-nomes { position: relative; z-index: 4; margin-top: -54px; display: flex; align-items: center; gap: 14px; padding: 10px 20px; border-radius: 999px; border: 1px solid rgba(242, 178, 92, .45); background: rgba(5, 21, 40, .72); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.sl-nomes b { font-size: clamp(14px, 1.5vw, 17px); white-space: nowrap; }
+.sl-nomes i { font-style: normal; color: var(--quente); font: 400 22px/1 "Bebas Neue", Arimo, sans-serif; }
+
+.sl-heroi-miolo { width: min(1240px, 100%); margin: 0 auto; padding: clamp(28px, 4vw, 48px) clamp(20px, 4vw, 48px) clamp(48px, 7vw, 88px);
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 470px); gap: clamp(28px, 5vw, 72px); align-items: center; scroll-margin-top: 12px; }
+.sl-frase { margin: 0; font-size: clamp(24px, 2.6vw, 34px); font-weight: 700; line-height: 1.15; color: var(--quente); }
+.sl-texto { margin: 14px 0 0; font-size: clamp(16px, 1.4vw, 18px); line-height: 1.6; color: rgba(243, 240, 233, .86); }
 .sl-texto b { color: var(--marfim); }
 .sl-relogio { display: flex; gap: 10px; margin-top: 24px; }
-.sl-relogio div { min-width: 72px; padding: 10px 8px 8px; border-radius: 14px; border: 1px solid var(--linha); background: rgba(10, 32, 56, .6); text-align: center; }
-.sl-relogio b { display: block; font: 400 36px/1 "Bebas Neue", Arimo, sans-serif; font-variant-numeric: tabular-nums; color: var(--marfim); }
+.sl-relogio div { min-width: 76px; padding: 12px 8px 9px; border-radius: 14px; border: 1px solid var(--linha); background: rgba(10, 32, 56, .6); text-align: center; }
+.sl-relogio b { display: block; font: 400 38px/1 "Bebas Neue", Arimo, sans-serif; font-variant-numeric: tabular-nums; color: var(--marfim); }
 .sl-relogio span { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--aco); }
 .sl-relogio.sl-no-ar div { border-color: rgba(255, 77, 66, .6); }
 .sl-cta { margin-top: 24px; width: auto; display: inline-flex; padding-left: 28px; padding-right: 28px; }
-.sl-gratis { margin: 12px 0 0; color: var(--aco); font-size: 13.5px; }
+
+/* o ingresso */
+.sl-ingresso { position: relative; border-radius: 22px; background: linear-gradient(180deg, #13324F 0%, #0B2340 100%); border: 1px solid rgba(242, 178, 92, .35); box-shadow: 0 40px 90px -36px rgba(0, 0, 0, .95), 0 0 70px -30px rgba(242, 178, 92, .45); }
+.sl-ingresso-topo { position: relative; display: flex; justify-content: space-between; gap: 12px; padding: 16px 24px; border-radius: 22px 22px 0 0; background: linear-gradient(90deg, #F2C77A, var(--quente) 50%, #C9963F); color: #1A1206; font: 400 19px/1 "Bebas Neue", Arimo, sans-serif; letter-spacing: .08em; }
+/* o picote do ingresso */
+.sl-ingresso-corpo { padding: 26px 24px 22px; }
+.sl-ingresso h2 { margin: 0; font-size: clamp(25px, 2.4vw, 30px); letter-spacing: -.01em; }
+.sl-ingresso .sub { margin: 6px 0 20px; color: var(--aco); font-size: 15px; line-height: 1.5; }
+.sl-campo { display: grid; gap: 7px; margin-bottom: 14px; font-size: 14px; font-weight: 700; color: var(--marfim); }
+.sl-entrada { position: relative; display: block; }
+.sl-entrada svg { position: absolute; left: 15px; top: 50%; width: 20px; height: 20px; transform: translateY(-50%); color: var(--aco); pointer-events: none; transition: color .2s; }
+.sl-entrada input { width: 100%; height: 56px; padding: 0 16px 0 46px; border-radius: 14px; border: 1px solid rgba(156, 177, 199, .28); background: rgba(2, 10, 22, .55); color: var(--marfim); font-size: 16px; font-weight: 400; transition: border-color .2s, box-shadow .2s, background .2s; -webkit-appearance: none; appearance: none; }
+.sl-entrada input::placeholder { color: rgba(156, 177, 199, .55); }
+.sl-entrada input:focus { outline: none; border-color: var(--quente); background: rgba(2, 10, 22, .75); box-shadow: 0 0 0 4px rgba(242, 178, 92, .18); }
+.sl-entrada:focus-within svg { color: var(--quente); }
+.sl-entrada input[aria-invalid="true"] { border-color: var(--erro); }
+.sl-campo small { color: var(--erro); font-weight: 400; font-size: 13px; }
+.sl-campo small:empty { display: none; }
+.sl-enviar { width: 100%; min-height: 60px; margin-top: 6px; border-radius: 14px; font-size: 17px; justify-content: center; position: relative; overflow: hidden; }
+.sl-enviar::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .45), transparent); transform: skewX(-20deg); animation: sl-reflexo 4s ease-in-out infinite; }
+@keyframes sl-reflexo { 0%, 60% { left: -60% } 100% { left: 130% } }
+.sl-garantias { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; color: var(--aco); font-size: 13px; }
+.sl-garantias li { display: inline-flex; align-items: center; gap: 6px; }
+.sl-garantias li::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: rgba(242, 178, 92, .18) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F2B25C' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 9px no-repeat; }
+.sl-ingresso .aviso { text-align: center; }
+
+.sl-fim { display: grid; justify-items: center; gap: 6px; text-align: center; padding-bottom: 24px; }
+.sl-fim h2 { max-width: 22ch; }
 
 /* ------------------------------------------------ faixa */
 .sl-faixa { overflow: hidden; border-block: 1px solid rgba(242, 178, 92, .3); background: linear-gradient(90deg, rgba(183, 141, 57, .16), rgba(242, 178, 92, .08)); }
@@ -98,11 +127,6 @@
 .sl-lista li::before { content: ""; position: absolute; left: 0; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: rgba(242, 178, 92, .16) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23F2B25C' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / 12px no-repeat; }
 .sl-lista b { color: var(--marfim); }
 
-.sl-cadastro { display: grid; justify-items: center; padding-bottom: 24px; scroll-margin-top: 24px; }
-.sl-ingresso { width: min(520px, 100%); position: relative; overflow: hidden; padding-top: 0; }
-.sl-ingresso-topo { display: flex; justify-content: space-between; gap: 12px; margin: 0 -30px 22px; padding: 14px 30px; border-bottom: 1px dashed rgba(242, 178, 92, .45); background: linear-gradient(90deg, rgba(242, 178, 92, .16), rgba(183, 141, 57, .06)); font: 400 18px/1 "Bebas Neue", Arimo, sans-serif; letter-spacing: .08em; color: var(--quente); }
-.sl-ingresso h2 { margin: 0; font-size: clamp(24px, 3vw, 30px); }
-.sl-ingresso .sub { margin: 8px 0 22px; color: var(--aco); }
 
 .sl-rodape { width: min(1240px, 100%); margin: 0 auto; padding: 32px clamp(20px, 4vw, 48px) max(110px, calc(env(safe-area-inset-bottom) + 96px)); }
 
@@ -113,8 +137,7 @@
 .sl-barra.sl-barra-on { transform: none; }
 
 @media (max-width: 980px) {
-  .sl-heroi-miolo { grid-template-columns: minmax(0, 1fr); }
-  .sl-tvzao { order: 0; }
+  .sl-heroi-miolo { grid-template-columns: minmax(0, 1fr); max-width: 620px; }
   .sl-blocos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sl-tv, .sl-casa { grid-template-columns: minmax(0, 1fr); }
   .sl-tv .sl-grade { order: 2; }
@@ -122,11 +145,16 @@
 @media (max-width: 720px) {
   .sl-topo img { width: 140px; }
   .sl-topo-cta { display: none; }
-  .sl-heroi-miolo { padding-top: 18px; gap: 26px; }
-  .sl-tvzao { border-radius: 16px; margin: 0 -4px; }
-  .sl-bug, .sl-placa { top: 10px; font-size: 14px; padding: 5px 8px; }
-  .sl-bug { left: 10px; } .sl-placa { right: 10px; }
-  .sl-tvzao figcaption { left: 12px; bottom: 10px; }
+  .sl-heroi-miolo { padding-top: 22px; gap: 22px; }
+  .sl-titulo { font-size: 26vw; }
+  .sl-duo { margin-top: -8vw; }
+  .sl-p { height: 66vw; max-width: 58%; object-position: bottom; } .sl-p-n, .sl-n .sl-p-v { height: 63vw; } .sl-n .sl-p-n { height: 66vw; }
+  .sl-p-v { margin-right: -8%; } .sl-p-n { margin-left: -8%; }
+  .sl-n .sl-p-v { margin-left: -8%; margin-right: 0; } .sl-n .sl-p-n { margin-right: -8%; margin-left: 0; }
+  .sl-nomes { margin-top: -30px; padding: 8px 14px; gap: 8px; }
+  .sl-nomes b { font-size: 13.5px; }
+  .sl-ingresso-corpo { padding: 22px 18px 18px; }
+  .sl-ingresso-topo { padding: 14px 18px; font-size: 16px; }
   .sl-relogio div { min-width: 0; flex: 1; }
   .sl-cta { width: 100%; justify-content: center; }
   .sl-blocos { grid-template-columns: minmax(0, 1fr); }
@@ -135,9 +163,8 @@
 }
 @media (max-width: 520px) {
   .sl-io-topo, .sl-ingresso-topo { font-size: 15px; letter-spacing: .05em; white-space: nowrap; }
-  .sl-ingresso-topo { margin: 0 -18px 20px; padding: 12px 18px; }
 }
-@media (prefers-reduced-motion: reduce) { .sl-faixa-trilho, .sl-selo i, .sl-bug i { animation: none; } .sl-barra { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .sl-faixa-trilho, .sl-selo i, .sl-enviar::after { animation: none; } .sl-barra { transition: none; } }
 
 /* ------------------------------------------------ obrigado */
 .sl-obrigado .topo img { width: 170px; }
@@ -146,3 +173,15 @@
 .sl-ingresso-obrigado p { margin: 14px 18px 0; font-size: 15px; line-height: 1.55; color: rgba(243, 240, 233, .88); }
 .sl-io-botoes { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 18px 18px; }
 .sl-io-botoes .botao { width: auto; flex: 1 1 200px; margin: 0; text-align: center; justify-content: center; }
+
+html:has(body.sl) { overflow-x: hidden; }
+.sl-enviar .sl-curto { display: none; }
+@media (max-width: 420px) { .sl-enviar .sl-longo { display: none; } .sl-enviar .sl-curto { display: inline; } }
+@media (max-width: 720px) {
+  .sl-heroi-miolo { display: flex; flex-direction: column; align-items: stretch; }
+  .sl-heroi-texto { display: contents; }
+  .sl-frase { order: 1; text-align: center; }
+  .sl-relogio { order: 2; margin-top: 0; }
+  .sl-ingresso { order: 3; }
+  .sl-heroi .sl-texto { order: 4; margin-top: 4px; text-align: center; }
+}

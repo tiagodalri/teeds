@@ -33,16 +33,24 @@
   </header>
 
   <section class="sl-heroi" aria-labelledby="titulo">
-    <div class="sl-heroi-miolo">
-      <figure class="sl-tvzao">
-        <img src="./img/victor-tela.webp" alt="Victor Cordeiro" width="1600" height="900" data-tela fetchpriority="high" />
-        <span class="sl-bug"><i aria-hidden="true"></i> Ao vivo</span>
-        <span class="sl-placa">Domingo · 20h</span>
-        <figcaption data-legenda-tela><b>Victor Cordeiro</b><span>&amp; Naor Bezerra</span></figcaption>
-      </figure>
+    <div class="sl-cartaz">
+      <span class="sl-selo"><i aria-hidden="true"></i> Ao vivo · Domingo 29/11 · 20h</span>
+      <h1 id="titulo" class="sl-titulo"><span class="sl-super">Super</span><span class="sl-live">Live</span></h1>
+      <div class="sl-duo" data-duo>
+        <img class="sl-p sl-p-v" src="./img/victor-recorte.webp" alt="Victor Cordeiro" width="1198" height="1300" fetchpriority="high" />
+        <img class="sl-p sl-p-n" src="./img/naor-recorte.webp" alt="Naor Bezerra" width="1641" height="1300" />
+      </div>
+      <div class="sl-nomes" data-nomes><span><b>Victor Cordeiro</b></span><i aria-hidden="true">&amp;</i><span><b>Naor Bezerra</b></span></div>
+    </div>
+    <script>
+      // o /n abre com o Naor na frente (sem piscar a outra ordem antes)
+      if (/^\/n\//.test(location.pathname)) {
+        document.documentElement.classList.add('sl-n')
+        document.querySelector('[data-nomes]').innerHTML = '<span><b>Naor Bezerra</b></span><i aria-hidden="true">&amp;</i><span><b>Victor Cordeiro</b></span>'
+      }
+    </script>
+    <div class="sl-heroi-miolo" id="cadastro">
       <div class="sl-heroi-texto">
-        <span class="sl-selo"><i aria-hidden="true"></i> Ao vivo · Domingo 29/11 · 20h</span>
-        <h1 id="titulo"><span class="sl-super">Super</span> <span class="sl-live">Live</span></h1>
         <p class="sl-frase">O seu novo programa de domingo.</p>
         <p class="sl-texto">Domingo à noite, todo mundo em casa, no sofá. Desta vez, o seu compromisso é com a gente: <b data-dupla>Victor Cordeiro e Naor Bezerra ao vivo</b>, direto de casa, para você aprender, <b>sem ter que comprar curso</b>, a ganhar no mercado dolarizado aproveitando a alta do dólar.</p>
         <div class="sl-relogio" data-relogio aria-label="Tempo até a Super Live">
@@ -51,19 +59,32 @@
           <div><b data-m>00</b><span>min</span></div>
           <div><b data-s>00</b><span>seg</span></div>
         </div>
-        <a class="botao sl-cta" href="#cadastro" data-ir-ao-form>Garantir meu lugar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <p class="sl-gratis">Grátis · Nome, e-mail e WhatsApp</p>
       </div>
+      <form class="sl-ingresso" id="form" novalidate>
+          <div class="sl-ingresso-topo" aria-hidden="true"><span>Ingresso · Super Live</span><span>Dom 29/11 · 20h</span></div>
+          <div class="sl-ingresso-corpo">
+            <h2 id="titulo-form">Garanta o seu lugar</h2>
+            <p class="sub">Grátis. Leva menos de 1 minuto, e a sua conta na GlobalFly já fica&nbsp;liberada.</p>
+            <label class="sl-campo"><span>Nome completo</span>
+              <span class="sl-entrada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><input id="nome" name="nome" autocomplete="name" autocapitalize="words" maxlength="120" placeholder="Nome e sobrenome" required enterkeyhint="next" /></span>
+              <small data-erro="nome"></small>
+            </label>
+            <label class="sl-campo"><span>Seu melhor e-mail</span>
+              <span class="sl-entrada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M4 7l8 6 8-6"/></svg><input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="180" placeholder="voce@email.com" required enterkeyhint="next" /></span>
+              <small data-erro="email"></small>
+            </label>
+            <label class="sl-campo"><span>WhatsApp com DDD</span>
+              <span class="sl-entrada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 15.5v3a2 2 0 0 1-2.2 2A17 17 0 0 1 3.5 6.2 2 2 0 0 1 5.5 4h3a1.5 1.5 0 0 1 1.5 1.2l.6 2.8a1.5 1.5 0 0 1-.4 1.4l-1.4 1.4a13 13 0 0 0 5.4 5.4l1.4-1.4a1.5 1.5 0 0 1 1.4-.4l2.8.6a1.5 1.5 0 0 1 1.2 1.5z"/></svg><input id="telefone" name="telefone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="16" placeholder="(11) 91234-5678" required enterkeyhint="send" /></span>
+              <small data-erro="telefone"></small>
+            </label>
+            <input class="armadilha" id="empresa" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <button class="botao sl-enviar" type="submit"><span class="sl-longo">Quero meu lugar na Super Live</span><span class="sl-curto">Garantir meu lugar</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            <p class="mensagem" role="status" aria-live="polite"></p>
+            <ul class="sl-garantias"><li>100% gratuito</li><li>Lembrete no WhatsApp</li><li>Dados protegidos</li></ul>
+            <p class="aviso">Ao continuar, você concorda com os <a href="/termos/#termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/termos/#politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>
+          </div>
+        </form>
     </div>
-    <script>
-      // o /n abre direto com o Naor na tela (sem piscar o Victor antes)
-      if (/^\/n\//.test(location.pathname)) {
-        document.documentElement.classList.add('sl-n')
-        document.querySelector('[data-tela]').src = './img/naor-tela.webp'
-        document.querySelector('[data-tela]').alt = 'Naor Bezerra'
-        document.querySelector('[data-legenda-tela]').innerHTML = '<b>Naor Bezerra</b><span>&amp; Victor Cordeiro</span>'
-      }
-    </script>
   </section>
 
   <div class="sl-faixa" aria-hidden="true">
@@ -122,31 +143,9 @@
       </div>
     </section>
 
-    <section class="sl-cadastro" id="cadastro" aria-labelledby="titulo-form">
-      <form class="cartao sl-ingresso" id="form" novalidate>
-        <div class="sl-ingresso-topo" aria-hidden="true">
-          <span>Ingresso · Super Live</span><span>Dom 29/11 · 20h</span>
-        </div>
-        <h2 id="titulo-form">Garanta o seu lugar no sofá</h2>
-        <p class="sub">Leva menos de 1 minuto. Sua conta na GlobalFly é criada agora e já fica&nbsp;liberada.</p>
-        <label class="campo">Nome completo
-          <input id="nome" name="nome" autocomplete="name" autocapitalize="words" maxlength="120" placeholder="Nome e sobrenome" required />
-          <small data-erro="nome"></small>
-        </label>
-        <label class="campo">Seu melhor e-mail
-          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="180" placeholder="voce@email.com" required />
-          <small data-erro="email"></small>
-        </label>
-        <label class="campo">WhatsApp com DDD
-          <input id="telefone" name="telefone" type="tel" inputmode="tel" autocomplete="tel-national" maxlength="16" placeholder="(11) 91234-5678" required />
-          <small data-erro="telefone"></small>
-        </label>
-        <input class="armadilha" id="empresa" name="empresa" tabindex="-1" autocomplete="off" aria-hidden="true" />
-        <button class="botao" type="submit">Reservar meu lugar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-        <p class="mensagem" role="status" aria-live="polite"></p>
-        <p class="aviso">Ao continuar, você concorda com os <a href="/termos/#termos-de-uso" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="/termos/#politica-de-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>.</p>
-        <div class="seguro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Seus dados ficam protegidos e não são compartilhados.</div>
-      </form>
+    <section class="sl-fim" aria-label="Garanta seu lugar">
+      <h2>Domingo, 20h. O seu lugar no sofá está esperando.</h2>
+      <a class="botao sl-cta" href="#cadastro" data-ir-ao-form>Quero meu lugar na Super Live <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </section>
   </main>
 
