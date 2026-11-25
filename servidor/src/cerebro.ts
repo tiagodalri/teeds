@@ -150,7 +150,7 @@ export async function historicoDeSessoes(q: Quem, args: any) {
   return {
     periodo: p.rotulo,
     sessoes: l.map((s) => ({
-      ia: s.robo_nome, conta: `${nomeDaConta(s.demo, q.trocados)} ${s.conta_id}`, inicio: quandoBrt(s.criada_em), fim: quandoBrt(s.encerrada_em),
+      ia: s.robo_nome, conta: nomeDaConta(s.demo, q.trocados), inicio: quandoBrt(s.criada_em), fim: quandoBrt(s.encerrada_em),
       situacao: s.situacao === 'rodando' ? 'operando agora' : s.situacao === 'erro' ? 'parou com erro' : 'encerrada',
       entrada: num(s.entrada_inicial), meta: num(s.take_profit), limite_de_perda: num(s.stop_loss),
       operacoes: num(s.operacoes), ganhas: num(s.ganhas), perdidas: num(s.perdidas), resultado: r2(num(s.resultado)), moeda: s.moeda,
@@ -173,8 +173,8 @@ export async function minhasOperacoes(q: Quem, args: any) {
     origem === 'ia' ? [] : rest<any[]>(`/operacoes_manuais?${base}&comprada_em=gte.${iso(p.de)}&comprada_em=lt.${iso(p.ate)}&select=conta_id,demo,ativo,tipo_contrato,moeda,entrada,resultado,situacao,comprada_em&order=comprada_em.desc&limit=${lim}`),
   ])
   const todas = [
-    ...ia.map((o) => ({ quando_ms: new Date(o.executada_em).getTime(), quando: quandoBrt(o.executada_em), origem: `I.A. ${o.robo_nome}`, conta: `${nomeDaConta(o.demo, q.trocados)} ${o.conta_id}`, ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: r2(num(o.resultado)), moeda: o.moeda })),
-    ...manual.map((o) => ({ quando_ms: new Date(o.comprada_em).getTime(), quando: quandoBrt(o.comprada_em), origem: 'manual', conta: `${nomeDaConta(o.demo, q.trocados)} ${o.conta_id}`, ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: o.situacao === 'aberta' ? null : r2(num(o.resultado)), situacao: o.situacao === 'aberta' ? 'aberta' : undefined, moeda: o.moeda })),
+    ...ia.map((o) => ({ quando_ms: new Date(o.executada_em).getTime(), quando: quandoBrt(o.executada_em), origem: `I.A. ${o.robo_nome}`, conta: nomeDaConta(o.demo, q.trocados), ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: r2(num(o.resultado)), moeda: o.moeda })),
+    ...manual.map((o) => ({ quando_ms: new Date(o.comprada_em).getTime(), quando: quandoBrt(o.comprada_em), origem: 'manual', conta: nomeDaConta(o.demo, q.trocados), ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: o.situacao === 'aberta' ? null : r2(num(o.resultado)), situacao: o.situacao === 'aberta' ? 'aberta' : undefined, moeda: o.moeda })),
   ].sort((a, b) => b.quando_ms - a.quando_ms).slice(0, lim).map(({ quando_ms: _q, ...o }) => o)
   return { periodo: p.rotulo, operacoes: todas, observacao: todas.length ? undefined : `Nenhuma operação ${p.rotulo}.` }
 }
@@ -194,7 +194,7 @@ export async function depositosESaques(q: Quem, args: any) {
     liquido: r2(soma(dep) - soma(saq)),
     moeda: l[0]?.moeda ?? 'USD',
     conta: nomeDaConta(false, q.trocados),
-    ultimos: l.slice(0, limiteDe(args?.limite, 10, 30)).map((x) => ({ quando: quandoBrt(x.ocorrida_em), tipo: x.tipo === 'deposit' ? 'depósito' : 'saque', valor: r2(Math.abs(num(x.valor))), conta: x.conta_id })),
+    ultimos: l.slice(0, limiteDe(args?.limite, 10, 30)).map((x) => ({ quando: quandoBrt(x.ocorrida_em), tipo: x.tipo === 'deposit' ? 'depósito' : 'saque', valor: r2(Math.abs(num(x.valor))) })),
     observacao: 'Vem do extrato da Deriv (atualiza a cada ~10 minutos). Transferência da Carteira (Wallet) para a conta Options conta como depósito; dinheiro parado na Wallet não aparece.' +
       (l.length ? '' : ` Nenhum depósito ou saque ${p.rotulo}.`),
   }
@@ -223,7 +223,7 @@ export async function meuCadastro(q: Quem) {
       sala_extra: !!sub.sala_extra, assessor_no_whatsapp: !!sub.assessor, laboratorio: !!sub.lab,
     } : { id: f.plano_id },
     acesso: f.status_acesso, acesso_valido_ate: f.acesso_expira_em ? ROTULO_DIA(new Date(f.acesso_expira_em).getTime()) : 'sem data de término',
-    contas_deriv: contas.map((c) => ({ conta: c.conta_id, tipo: nomeDaConta(c.tipo !== 'real', q.trocados), moeda: c.moeda, saldo_guardado: r2(num(c.saldo)), lido_em: quandoBrt(c.vista_em) })),
+    contas_deriv: contas.map((c) => ({ tipo: nomeDaConta(c.tipo !== 'real', q.trocados), moeda: c.moeda, saldo_guardado: r2(num(c.saldo)), lido_em: quandoBrt(c.vista_em) })),
     whatsapp_do_assessor: assessor[0]?.confirmado_em ? 'confirmado' : 'não confirmado',
     aulas: { assistidas: aulas.length, concluidas: aulas.filter((a) => a.concluida).length, ultima: quandoBrt(aulas.map((a) => a.ultima_vez).sort().pop()) },
     faturas_do_compartilhamento: faturas.map((x) => ({ numero: x.numero, mes: x.mes, lucro_usd: num(x.lucro_usd), percentual: num(x.percentual), valor_usd: num(x.valor_usd), valor_brl: num(x.valor_brl), vencimento: x.vencimento, situacao: x.situacao, paga_em: quandoBrt(x.paga_em), link_pagamento: x.link_pagamento ?? undefined })),

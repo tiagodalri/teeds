@@ -343,7 +343,9 @@ async function atender(numero: string, corpo: any): Promise<void> {
     }).catch(() => null)
   }
   // 25/11/2026 (Tiago: "melhorar o padrão dessas mensagens"): ligou = sempre o mesmo modelo, com os números da proposta
-  const resposta = r.proposta?.sessaoId ? mensagemDoInicio(r.proposta, trocados) : (r.texto || 'Me embolei aqui. Pode repetir de outro jeito?')
+  // "sem stop": a plataforma não liga sem limite de perda (limites.ts); diz qual foi usado em vez de calar
+  const pediuSemStop = /\bsem (o )?(stop|limite|loss)\b/i.test(`${texto} ${r.transcricao ?? ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
+  const resposta = r.proposta?.sessaoId ? mensagemDoInicio(r.proposta, trocados) + (pediuSemStop ? `\n\nSem limite de perda a plataforma não liga: usei US$ ${r.proposta.stopLoss.toFixed(2).replace('.', ',')}, pelo seu saldo. Para outro valor, é só pedir.` : '') : (r.texto || 'Me embolei aqui. Pode repetir de outro jeito?')
   await enviar(numero, resposta, dono.user_id, 1)
   if (r.proposta?.sessaoId) vigiar(r.proposta.sessaoId, numero, dono.user_id, trocados)
 }
@@ -387,7 +389,8 @@ function vigiar(sessaoId: string, numero: string, userId: string, trocados = fal
  * uma linha em branco e os números um por linha. Sem "•", sem frase quebrada. */
 const din = (v: number, moeda: string) => `${moeda === 'USD' ? 'US$' : moeda} ${v.toFixed(2).replace('.', ',')}`
 /** Com os rótulos trocados (ADMs), o nome é o da tela: a virtual aparece como real. */
-const nomeDaConta = (demo: boolean, contaId: string, trocados = false) => `${demo !== trocados ? 'Conta demo' : '*Conta real*'}${contaId ? ` · ${contaId}` : ''}`
+// 25/11/2026 (Tiago): sem o código da conta (DOT, ROT…), só "Conta real" ou "Conta demo"
+const nomeDaConta = (demo: boolean, _contaId: string, trocados = false) => (demo !== trocados ? 'Conta demo' : '*Conta real*')
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
 
 export function mensagemDoInicio(p: { roboNome: string; contaId: string; demo: boolean; moeda: string; entrada: number; takeProfit: number; stopLoss: number }, trocados = false): string {

@@ -92,6 +92,8 @@ Sem conta dita, traga real e demonstração separadas. Diga sempre de qual perí
 Privacidade (regra dura): só existe a conta de quem fala. Se pedirem dados de outro cliente, de outra pessoa, da equipe ou da
 plataforma (markup, comissão, quantos clientes, quanto a empresa ganha, dados de parceiros), recuse em uma linha.
 Nunca fale de markup ou comissão.
+Nunca escreva o código ou número da conta (DOT…, ROT…, CR…, VRTC…): diga só "conta real" ou "conta demo".
+O código serve apenas para você passar em propor_sessao.
 
 Nunca:
 - prometa resultado, ganho ou probabilidade de sucesso;
@@ -378,7 +380,8 @@ async function executar(
         const ok = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : undefined)
         lembrarPedidoSemConta(dono.id, { robo: roboId, nome: ficha.nome, entrada: ok(args.entrada), meta: ok(args.take_profit), stop: ok(args.stop_loss) })
         const d = disponiveis.find((c) => c.type === 'demo')!; const rl = disponiveis.find((c) => c.type !== 'demo')!
-        return { recusado: true, motivo: `Falta saber a conta. Pergunte ao cliente se liga na conta ${rotuloDaConta(true, dono.trocados)} (${d.accountId}) ou na ${rotuloDaConta(false, dono.trocados)} (${rl.accountId}); não ligue antes de ele responder.` }
+        void d; void rl
+        return { recusado: true, motivo: 'Falta saber a conta. Pergunte ao cliente se liga na conta demo ou na real (sem citar o código da conta); não ligue antes de ele responder.' }
       }
       const conta = args.conta
         ? disponiveis.find((c) => c.accountId === String(args.conta))
@@ -761,7 +764,7 @@ async function perguntaDaConta(dono: Dono, pedido: PedidoDeLigar, marca: string)
   const demo = contas.find((c) => c.tipo !== 'real'); const real = contas.find((c) => c.tipo === 'real')
   if (!demo || !real) return null
   lembrarPedidoSemConta(dono.id, pedido)
-  return `Em qual conta eu ligo a **${pedido.nome}**?\n\nDemo · ${demo.conta} (${dinheiro(demo.saldo, demo.moeda)})\nReal · ${real.conta} (${dinheiro(real.saldo, real.moeda)})\n\nResponda "demo" ou "real".`
+  return `Em qual conta eu ligo a **${pedido.nome}**?\n\nDemo · saldo ${dinheiro(demo.saldo, demo.moeda)}\nReal · saldo ${dinheiro(real.saldo, real.moeda)}\n\nResponda "demo" ou "real".`
 }
 
 async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexos: Anexos = {}): Promise<string | null> {
@@ -793,7 +796,7 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
   if (new RegExp(`^(quais (sao )?(as )?minhas contas|minhas contas|(qual|quanto) (e |eh )?(o )?meu saldo|meu saldo|saldo|quanto (eu )?tenho( de saldo)?|quais contas eu tenho)$`).test(q)) {
     const r = await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string; moeda: string; saldo: number }>; observacao?: string }
     if (!r.contas.length) return r.observacao ?? 'Nenhuma conta da Deriv está ligada a este login.'
-    return `Suas contas na Deriv:\n${r.contas.map((c) => `• ${c.tipo === 'real' ? 'Real' : 'Demonstração'} ${c.conta}: ${dinheiro(c.saldo, c.moeda)}`).join('\n')}` // tipo já vem com o nome da tela
+    return `Suas contas na Deriv:\n${r.contas.map((c) => `• ${c.tipo === 'real' ? 'Conta real' : 'Conta demo'}: ${dinheiro(c.saldo, c.moeda)}`).join('\n')}` // tipo já vem com o nome da tela; sem o código (25/11)
   }
 
   if (new RegExp(`^(como (estao|esta|vao|vai) (as |os )?(minhas |meus )?${IA}( agora| hoje)?|(as |os )?(minhas |meus )?${IA} (agora|operando|ligad[ao]s?)|o que (esta|ta) operando( agora)?|tem (alguma |algum )?${IA} (ligad[ao]|operando)( agora)?)$`).test(q)) {
