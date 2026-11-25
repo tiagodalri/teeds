@@ -1505,6 +1505,10 @@ export default function App() {
   // registrar na central nem no pixel, e o Garantir minha vaga entra na plataforma.
   const [quizLogado, setQuizLogado] = useState(() => (paginaDeVenda === 'trafego' ? paginaComQuiz() : null))
   useEffect(() => { if (!abrindo) liberarPouso() }, [abrindo])
+  // 25/11/2026: todo gancho fica ANTES dos retornos abaixo (abrindo, quiz, senha…). Um gancho depois deles
+  // muda a contagem quando o login termina de carregar e o React derruba a tela inteira (tela branca logado).
+  const caixaDoTitulo = useRef<HTMLDivElement>(null)
+  useTituloInteiro(caixaDoTitulo, tela)
   if (abrindo) {
     if (MARCA.decolagem) return <Carregando />
     return <Abrindo />
@@ -1648,8 +1652,6 @@ export default function App() {
   // GlobalFly (19/11/2026, Tiago: "só administradores"): o Assistente é da equipe, sem código; os outros
   // não o veem (o servidor também recusa). Teeds e OMNI seguem com o código de acesso.
   const assistenteAberto = FAMILIA_GF ? admin === true : assistenteLiberado
-  const caixaDoTitulo = useRef<HTMLDivElement>(null)
-  useTituloInteiro(caixaDoTitulo, tela)
   function abrirAssistente() {
     if (assistenteAberto) { setTela('assistente'); return }
     if (FAMILIA_GF) return
