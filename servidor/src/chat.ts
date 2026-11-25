@@ -9,6 +9,7 @@ import { PADRAO, conferir, sugerir, type Limites } from './limites'
 import { marcaPorId } from '../../src/marca/marcas'
 import { ehFamiliaGF } from '../../src/marca/marcas'
 import { horaDeBrasilia, recomendacaoAgora, type Recomendacao } from './recomendacao'
+import { PERIODOS, ajudaDaPlataforma, depositosESaques, falarComAEquipe, historicoDeSessoes, meuCadastro, meusResultados, minhasOperacoes } from './cerebro'
 
 /**
  * O chat da Teeds.
@@ -61,8 +62,21 @@ const MEMORIA = 6
 const instrucoes = (marca: string) => `Você é o assistente da ${marcaPorId(marca).prosa}, plataforma de operações na corretora Deriv.
 O cliente fala com você dentro da plataforma, em português do Brasil.
 
-Responda em duas ou três linhas, direto, sem jargão e sem empolgação de vendedor.
+Responda curto e direto, sem jargão e sem empolgação de vendedor: duas ou três linhas numa conversa;
+quando houver números ou vários itens, uma lista curta (até umas 12 linhas), com o período e a conta.
 Quando o cliente perde dinheiro, informe: não comemore nem console.
+
+O que você enxerga (só do cliente que está falando, nunca de outra pessoa):
+- resultados por período (meus_resultados), sessões de I.A. (historico_de_sessoes), operações uma a uma (minhas_operacoes),
+  depósitos e saques (depositos_e_saques), cadastro, plano, contas, aulas e faturas do compartilhamento (meu_cadastro);
+- dúvidas de uso da plataforma: chame ajuda_da_plataforma e responda só com o que ela trouxer;
+- o cliente pediu para falar com uma pessoa, reclamar, ou a dúvida não se resolve: falar_com_a_equipe com o pedido dele em uma frase.
+Períodos: "esse mês" = mes; "semana" = 7_dias; "ontem", "hoje"; datas soltas viram de/ate (AAAA-MM-DD). Sem período dito, use mes.
+Sem conta dita, traga real e demonstração separadas. Diga sempre de qual período e conta é o número.
+
+Privacidade (regra dura): só existe a conta de quem fala. Se pedirem dados de outro cliente, de outra pessoa, da equipe ou da
+plataforma (markup, comissão, quantos clientes, quanto a empresa ganha, dados de parceiros), recuse em uma linha.
+Nunca fale de markup ou comissão.
 
 Nunca:
 - prometa resultado, ganho ou probabilidade de sucesso;
@@ -147,6 +161,75 @@ const FERRAMENTAS: Anthropic.Tool[] = [
       required: ['robo'], additionalProperties: false,
     },
   },
+  {
+    name: 'meus_resultados',
+    description: 'Quanto o cliente ganhou ou perdeu num período (I.A. e manual, separados por conta real e demonstração), com o melhor e o pior dia e o resultado por I.A.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        periodo: { type: 'string', enum: PERIODOS, description: 'hoje, ontem, 7_dias, mes (mês atual), mes_passado, 30_dias, 90_dias, ano ou tudo. Padrão: mes.' },
+        de: { type: 'string', description: 'Data inicial AAAA-MM-DD (opcional; vence o período).' },
+        ate: { type: 'string', description: 'Data final AAAA-MM-DD (opcional).' },
+        conta: { type: 'string', enum: ['real', 'demo', 'todas'] },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'historico_de_sessoes',
+    description: 'As sessões de I.A. do cliente no período, mais novas primeiro: I.A., conta, início, fim, entrada, meta, limite, operações e resultado.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        periodo: { type: 'string', enum: PERIODOS }, de: { type: 'string' }, ate: { type: 'string' },
+        conta: { type: 'string', enum: ['real', 'demo', 'todas'] }, limite: { type: 'number', description: 'Quantas (padrão 10, máx. 30).' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'minhas_operacoes',
+    description: 'As operações do cliente uma a uma (I.A. e manual), mais novas primeiro.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        periodo: { type: 'string', enum: PERIODOS }, de: { type: 'string' }, ate: { type: 'string' },
+        conta: { type: 'string', enum: ['real', 'demo', 'todas'] },
+        origem: { type: 'string', enum: ['ia', 'manual', 'todas'] },
+        resultado: { type: 'string', enum: ['ganhas', 'perdidas', 'todas'] },
+        limite: { type: 'number', description: 'Quantas (padrão 10, máx. 30).' },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'depositos_e_saques',
+    description: 'Depósitos e saques da conta real do cliente na Deriv no período: totais, líquido e os últimos.',
+    input_schema: {
+      type: 'object',
+      properties: { periodo: { type: 'string', enum: PERIODOS }, de: { type: 'string' }, ate: { type: 'string' }, limite: { type: 'number' } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'meu_cadastro',
+    description: 'Cadastro do cliente: nome, e-mail, telefone, plano (o que libera e o % do compartilhamento), validade, contas Deriv, WhatsApp confirmado, aulas e faturas do compartilhamento.',
+    input_schema: { type: 'object', properties: {}, additionalProperties: false },
+  },
+  {
+    name: 'ajuda_da_plataforma',
+    description: 'Como usar a plataforma: depositar, sacar, conectar a Deriv, ligar I.A., planos, compartilhamento, conta travada, simulador, aulas, senha, suporte.',
+    input_schema: { type: 'object', properties: { assunto: { type: 'string' } }, additionalProperties: false },
+  },
+  {
+    name: 'falar_com_a_equipe',
+    description: 'Manda o pedido do cliente para a equipe de suporte (abre um atendimento em nome dele). Só quando ele pedir para falar com alguém ou a dúvida não se resolver.',
+    input_schema: {
+      type: 'object',
+      properties: { mensagem: { type: 'string', description: 'O pedido do cliente, com os detalhes que ele deu.' } },
+      required: ['mensagem'], additionalProperties: false,
+    },
+  },
 ]
 
 /** A proposta que a tela desenha. Números daqui, nunca do texto da IA. */
@@ -179,6 +262,8 @@ export interface Dono {
    * que não diz a conta não escolhe sozinho: pergunta "demo ou real?" e liga com a resposta.
    */
   perguntarConta?: boolean
+  /** De onde fala (vai no atendimento aberto com a equipe). */
+  canal?: 'assistente' | 'assessor-whatsapp'
 }
 
 /** As contas Deriv que são deste cliente E que a autorização enxerga. */
@@ -258,6 +343,15 @@ async function executar(
       parar(s.id)
       return { ...resumir(s), observacao: 'Pedido de parada enviado. Uma operação já aberta ainda vai liquidar.' }
     }
+
+    // 25/11/2026, o "cérebro": tudo preso a dono.id e à marca (cerebro.ts); nada vem dos argumentos além de período e filtros
+    case 'meus_resultados': return meusResultados({ userId: dono.id, marca }, args)
+    case 'historico_de_sessoes': return historicoDeSessoes({ userId: dono.id, marca }, args)
+    case 'minhas_operacoes': return minhasOperacoes({ userId: dono.id, marca }, args)
+    case 'depositos_e_saques': return depositosESaques({ userId: dono.id, marca }, args)
+    case 'meu_cadastro': return meuCadastro({ userId: dono.id, marca })
+    case 'ajuda_da_plataforma': return ajudaDaPlataforma(marca)
+    case 'falar_com_a_equipe': return falarComAEquipe({ userId: dono.id, marca }, args, dono.canal ?? 'assistente')
 
     case 'propor_sessao': {
       const roboId = String(args.robo ?? '')
@@ -554,7 +648,8 @@ async function conversarPeloGemini(
     gasto.idas += 1; gasto.entrada += u.entrada; gasto.saida += u.saida
     const pedidos = partes.filter((p) => p.functionCall)
     if (!pedidos.length) {
-      const texto = partes.filter((p) => p.text && !p.thought).map((p) => p.text).join('\n').trim()
+      // 25/11/2026: o Gemini corta a resposta em pedaços no meio da palavra ("Ligue" + "i a GF Raptor"); juntar sem nada no meio
+      const texto = partes.filter((p) => p.text && !p.thought).map((p) => p.text).join('').trim()
       anotar()
       return { texto: texto || 'Não consegui responder agora. Pergunta de outro jeito?', proposta, uso, motor: 'gemini' }
     }
@@ -609,6 +704,34 @@ export function textoDaRecomendacao(r: Recomendacao | null): string {
 }
 export const PERGUNTA_DA_RECOMENDADA = /\brecomendad[ao]s?\b|^(qual|que) (e |eh )?(a )?(melhor )?(i ?a|ia|inteligencia) (pra |para )?(eu )?(ligar|usar|operar|devo ligar|devo usar)( agora| hoje| no momento| nesse momento)?$|^(qual|que) (e |eh )?(a )?melhor (i ?a|ia|inteligencia)( pra| para)?( agora| hoje| no momento| nesse momento)?$/
 
+export const PERGUNTA_DE_RESULTADO = /^(e )?(quanto|qual( foi| e| eh)? (o )?(meu )?(resultado|lucro|saldo do dia)|como (foi|ta|esta|estou|to)( (o )?meu)?( resultado)?)( que)? ?(eu )?(ja )?(lucrei|ganhei|perdi|fiz|faturei|to|estou|tenho|foi|ta|esta|de lucro|de resultado)?( de lucro| de resultado| no total)?( (hoje|ontem|essa semana|nessa semana|esta semana|na semana|essa mes|esse mes|este mes|nesse mes|neste mes|no mes|mes passado|no mes passado|esse ano|este ano|no ano|nos ultimos 7 dias|nos ultimos 30 dias))$/
+/** "qto", "qnto", "mess", "msm": o jeito que se digita no WhatsApp. */
+export const corrigirDigitacao = (q: string) => q.replace(/\bq(n)?to\b/g, 'quanto').replace(/\bqnt\b/g, 'quanto').replace(/\bmes+\b/g, 'mes').replace(/\bvc\b/g, 'voce').replace(/\bhj\b/g, 'hoje').replace(/\bja+\b/g, 'ja')
+export function periodoDaFrase(q: string): string {
+  if (/\bhoje\b/.test(q)) return 'hoje'
+  if (/\bontem\b/.test(q)) return 'ontem'
+  if (/semana|7 dias/.test(q)) return '7_dias'
+  if (/mes passado/.test(q)) return 'mes_passado'
+  if (/30 dias/.test(q)) return '30_dias'
+  if (/\bano\b/.test(q)) return 'ano'
+  return 'mes'
+}
+/** O resumo de meus_resultados em texto (o mesmo modelo no WhatsApp e na tela). */
+export function textoDosResultados(r: Awaited<ReturnType<typeof meusResultados>>, trocados = false): string {
+  if (!r.contas.length) return `Você não tem operações ${r.periodo} pela plataforma.`
+  const linhas = [`📊 **Seus resultados ${r.periodo}**`]
+  for (const c of r.contas as any[]) {
+    const nome = (c.conta === 'real') !== trocados ? 'Conta real' : 'Conta demonstração'
+    linhas.push('', `**${nome}: ${comSinal(c.resultado_total, c.moeda)}**`)
+    if (c.ia) linhas.push(`I.A.: ${comSinal(c.ia.resultado, c.moeda)} em ${c.ia.sessoes} ${c.ia.sessoes === 1 ? 'sessão' : 'sessões'} (${c.ia.operacoes} ${c.ia.operacoes === 1 ? 'operação' : 'operações'}: ${c.ia.ganhas} ${c.ia.ganhas === 1 ? 'ganho' : 'ganhos'} · ${c.ia.perdidas} ${c.ia.perdidas === 1 ? 'perda' : 'perdas'})` +
+      (c.ia.por_ia.length > 1 ? `\n${c.ia.por_ia.slice(0, 5).map((x: any) => `${x.nome} ${comSinal(x.resultado, c.moeda)}`).join(' · ')}` : ''))
+    if (c.manual) linhas.push(`Manual: ${comSinal(c.manual.resultado, c.moeda)} em ${c.manual.operacoes} ${c.manual.operacoes === 1 ? 'operação' : 'operações'}`)
+    if (c.dias_com_operacao > 1 && c.melhor_dia && c.pior_dia) linhas.push(`Melhor dia ${c.melhor_dia.dia} (${comSinal(c.melhor_dia.resultado, c.moeda)}) · pior ${c.pior_dia.dia} (${comSinal(c.pior_dia.resultado, c.moeda)})`)
+  }
+  linhas.push('', 'Conta só o que foi operado pela plataforma.')
+  return linhas.join('\n')
+}
+
 /** O pedido de ligar que esperava a pessoa dizer a conta (10 min; some ao mudar de assunto). */
 const pedidosSemConta = new Map<string, { pedido: PedidoDeLigar; ate: number }>()
 function lembrarPedidoSemConta(id: string, pedido: PedidoDeLigar) { pedidosSemConta.set(id, { pedido, ate: Date.now() + 10 * 60_000 }) }
@@ -644,6 +767,10 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
   if (pedido && dono.pediuParaLigar) return cartaoDoPedido(dono, pedido, marca, anexos)
   if (q.length > 90) return null
   const gf = ehFamiliaGF(marca)
+
+  // "quanto eu já lucrei esse mês?" (25/11/2026): a conta do banco, sem I.A. no meio
+  const qr = corrigirDigitacao(q)
+  if (PERGUNTA_DE_RESULTADO.test(qr)) return textoDosResultados(await meusResultados({ userId: dono.id, marca }, { periodo: periodoDaFrase(qr) }), !!anexos.trocados)
   const IA = gf ? '(i ?a|ias?|inteligencias?)' : '(robos?|i ?a|ias?)'
 
   if (new RegExp(`^(quais (sao )?(as )?minhas contas|minhas contas|(qual|quanto) (e |eh )?(o )?meu saldo|meu saldo|saldo|quanto (eu )?tenho( de saldo)?|quais contas eu tenho)$`).test(q)) {

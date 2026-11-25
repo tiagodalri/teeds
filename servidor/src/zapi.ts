@@ -330,7 +330,7 @@ async function atender(numero: string, corpo: any): Promise<void> {
   const vitrine = vitrineDoPedido(MARCA_DO_ASSESSOR, parceiro ?? '')
   const app = await appDaVitrine(MARCA_DO_ASSESSOR, vitrine)
   const t0 = Date.now()
-  const r = await conversar({ id: dono.user_id, somenteDemo: somenteDemoDoUsuario(login), vitrine, app, perguntarConta: true }, historico, texto, MARCA_DO_ASSESSOR, anexos)
+  const r = await conversar({ id: dono.user_id, somenteDemo: somenteDemoDoUsuario(login), vitrine, app, perguntarConta: true, canal: 'assessor-whatsapp' }, historico, texto, MARCA_DO_ASSESSOR, anexos)
   console.log(`[assessor] respondeu …${numero.slice(-4)} em ${Date.now() - t0} ms${r.proposta?.sessaoId ? ` · ligou ${r.proposta.roboNome}` : ''}`)
   // o que a pessoa falou no áudio fica no histórico (sem isso, "me enganei, era na demo" chegava sem os valores)
   if (anexos.audio && r.transcricao && idWpp) {
