@@ -316,6 +316,27 @@ export default defineConfig({
   plugins: [
     cascaPorMarca(),
     paletaDaMarca(PALETAS[MARCA.id] ?? PALETAS[FAMILIA], TRADUCAO),
+    {
+      // No servidor de desenvolvimento, as peças próprias da marca (sobrepor-<marca>/ e os
+      // ícones dela no lugar dos da família) entram por cima como no site montado (25/11/2026).
+      name: 'teeds:sobrepor-no-dev',
+      apply: 'serve' as const,
+      configureServer(servidor: { middlewares: { use: (f: (req: { url?: string }, res: { setHeader: (a: string, b: string) => void; end: (c: Buffer) => void }, next: () => void) => void) => void } }) {
+        if (MARCA.id === FAMILIA) return
+        const TIPOS: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', ico: 'image/x-icon', json: 'application/json' }
+        servidor.middlewares.use((req, res, next) => {
+          const caminho = decodeURIComponent((req.url ?? '').split('?')[0])
+          if (caminho.includes('..')) return next()
+          const candidatos = [join(RAIZ, `sobrepor-${MARCA.id}`, caminho)]
+          if (caminho.startsWith(`/pwa-${FAMILIA}/`)) candidatos.push(join(RAIZ, 'public', `pwa-${MARCA.id}`, caminho.slice(`/pwa-${FAMILIA}/`.length)))
+          const achado = candidatos.find((f) => existsSync(f) && statSync(f).isFile())
+          if (!achado) return next()
+          res.setHeader('Content-Type', TIPOS[achado.split('.').pop() ?? ''] ?? 'application/octet-stream')
+          res.setHeader('Cache-Control', 'no-store')
+          res.end(readFileSync(achado))
+        })
+      },
+    },
     react(),
     {
       // O nome e o emblema entram no index.html na hora do build. O titulo da
@@ -526,6 +547,8 @@ export default defineConfig({
         if (MARCA.id !== FAMILIA) {
           const sobrepor = join(RAIZ, `sobrepor-${MARCA.id}`)
           if (existsSync(sobrepor)) cpSync(sobrepor, SAIDA, { recursive: true })
+          // a apostila da família é da outra marca: só fica se a ficha desta apontar para ela
+          if (!MARCA.apostila) rmSync(join(SAIDA, `${FAMILIA}-apostila.pdf`), { force: true })
           const pwaDaMarca = join(RAIZ, 'public', `pwa-${MARCA.id}`)
           if (existsSync(pwaDaMarca)) {
             // as telas da loja e as de abertura da família mostram a outra marca: saem
@@ -557,7 +580,7 @@ export default defineConfig({
         const telas = existsSync(join(pasta, 'telas')) ? readdirSync(join(pasta, 'telas')).filter((f) => f.endsWith('.png')).sort() : []
         const manifesto = !MARCA.appNativo ? base : {
           ...base,
-          description: `${MARCA.prosa}: robôs de operação, gestão de risco e acompanhamento ao vivo, na sua própria conta da corretora.`,
+          description: `${MARCA.prosa}: ${FAMILIA === 'globalfly' ? 'I.A. de operação' : 'robôs de operação'}, gestão de risco e acompanhamento ao vivo, na sua própria conta da corretora.`,
           start_url: '/?origem=app',
           launch_handler: { client_mode: ['navigate-existing', 'auto'] },
           prefer_related_applications: false,
@@ -569,7 +592,8 @@ export default defineConfig({
             { src: `${pwaDir}/icon-monocromatico-512.png`, sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
           ],
           shortcuts: [
-            { name: 'Robôs', short_name: 'Robôs', description: 'Ligar e acompanhar os robôs', url: '/?tela=robos', icons: [{ src: `${pwaDir}/atalhos/robos.png`, sizes: '192x192', type: 'image/png' }] },
+            // na família da GlobalFly não existe a palavra "robô": é I.A. (26/10/2026)
+            { name: FAMILIA === 'globalfly' ? 'I.A.' : 'Robôs', short_name: FAMILIA === 'globalfly' ? 'I.A.' : 'Robôs', description: FAMILIA === 'globalfly' ? 'Ligar e acompanhar as I.A.' : 'Ligar e acompanhar os robôs', url: '/?tela=robos', icons: [{ src: `${pwaDir}/atalhos/robos.png`, sizes: '192x192', type: 'image/png' }] },
             { name: 'Operar', short_name: 'Operar', description: 'Operação manual', url: '/?tela=operar', icons: [{ src: `${pwaDir}/atalhos/operar.png`, sizes: '192x192', type: 'image/png' }] },
             { name: 'Aulas', short_name: 'Aulas', description: 'O treinamento da plataforma', url: '/?tela=aulas', icons: [{ src: `${pwaDir}/atalhos/aulas.png`, sizes: '192x192', type: 'image/png' }] },
           ],
