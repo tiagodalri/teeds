@@ -111,16 +111,32 @@ function ConviteInstalar() {
   )
 }
 
-/** O aviso de sem conexão, como nos apps do banco: discreto, no topo. */
+/**
+ * O aviso de sem conexão, como nos apps do banco: discreto, no topo.
+ * 25/11/2026 (Tiago: "tá com esse recado mas minha net tá normal"): o navegador às vezes diz "offline"
+ * sem estar (troca de Wi-Fi, VPN, Mac acordando) e não avisa quando volta. Agora o aviso só aparece
+ * depois de uma conferência de verdade (um pedido pequeno ao site falhar) e some sozinho assim que um
+ * pedido passa, conferindo de novo a cada 5 s enquanto estiver sem rede.
+ */
 function AvisoSemConexao() {
-  const [online, setOnline] = useState(() => navigator.onLine)
+  const [semRede, setSemRede] = useState(false)
   useEffect(() => {
-    const on = () => setOnline(true), off = () => setOnline(false)
-    window.addEventListener('online', on)
-    window.addEventListener('offline', off)
-    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+    let vivo = true, espera: number | undefined
+    const passa = () => fetch(`${import.meta.env.BASE_URL}?vivo=${Date.now()}`, { method: 'HEAD', cache: 'no-store' }).then(() => true, () => false)
+    const conferir = async () => {
+      window.clearTimeout(espera)
+      const ok = await passa()
+      if (!vivo) return
+      setSemRede(!ok)
+      if (!ok) espera = window.setTimeout(() => void conferir(), 5000)
+    }
+    const mudou = () => void conferir()
+    if (!navigator.onLine) void conferir()
+    window.addEventListener('online', mudou)
+    window.addEventListener('offline', mudou)
+    return () => { vivo = false; window.clearTimeout(espera); window.removeEventListener('online', mudou); window.removeEventListener('offline', mudou) }
   }, [])
-  if (online) return null
+  if (!semRede) return null
   return <div className="app-offline" role="status">Sem conexão com a internet. A tela volta a atualizar sozinha quando a conexão voltar.</div>
 }
 
