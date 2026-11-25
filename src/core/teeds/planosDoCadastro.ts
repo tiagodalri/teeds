@@ -14,7 +14,7 @@
  */
 import { SUPABASE } from './config'
 import { parceiroGuardado, vitrine } from './parceiro'
-import { GF_SIGLA, GF_MEMBRO, GF_LAB } from '../../marca'
+import { MARCA, GF_SIGLA, GF_MEMBRO, GF_LAB } from '../../marca'
 
 export type IdDoPlano = 'gold' | 'black' | 'prestige'
 
@@ -60,6 +60,10 @@ const CHAMADA_DO_CADASTRO: Partial<Record<IdDoPlano, string>> = { gold: PLANOS_P
 
 /** Lê os subplanos do banco; sem resposta, devolve os valores padrão. */
 export async function carregarPlanosDoCadastro(): Promise<PlanoDoCadastro[]> {
+  // 25/11/2026: a outra marca da família (Legacy Pro) ainda não tem subplanos nem Cakto
+  // próprios. Os do banco e os checkouts são da GlobalFly: lá, nada de pagamento (a
+  // conta é criada e a pessoa vê o obrigado), até a marca ter os seus.
+  if (MARCA.id !== 'globalfly') return PLANOS_PADRAO.map((p) => ({ ...p, checkout: null, checkoutPorParceiro: {} }))
   try {
     const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/gf_subplanos_publicos`, {
       method: 'POST',
@@ -86,6 +90,7 @@ export async function carregarPlanosDoCadastro(): Promise<PlanoDoCadastro[]> {
 
 /** O checkout do plano para a pessoa desta aba (o do parceiro dela, quando ele tem um). */
 export function checkoutDoPlano(p: PlanoDoCadastro): string | null {
+  if (MARCA.id !== 'globalfly') return null // os checkouts são da GlobalFly
   const parceiro = parceiroGuardado() ?? vitrine()
   return (parceiro && p.checkoutPorParceiro[parceiro]) || p.checkout
 }
