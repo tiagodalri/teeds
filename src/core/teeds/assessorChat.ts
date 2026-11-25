@@ -176,6 +176,16 @@ export function assessorDeExemplo(euId = 'eu'): WhatsAppApi {
         fotoWhatsapp: `https://i.pravatar.cc/240?u=${id}`, talvez: [],
         ficha: {
           pessoa: { userId: 'u-' + id, nome: c?.nome ?? 'Cliente', email: 'cliente@exemplo.com', telefone: '(11) 98765-4321', cidade: 'Joinville', uf: 'SC', nascimento: '1991-04-12', fotoPlataforma: null, parceiro: 'v', parceiroNome: 'Victor Cordeiro', criadoEm: iso(41), vistoEm: iso(0.001), online: true, status: 'ativo', validade: null, subplano: 'black', whatsappConfirmadoEm: iso(2) },
+          movimentos: [
+            { quando: iso(1.2), tipo: 'saque', valor: 320, saldoDepois: 1284.6, conta: 'ROT90001234' },
+            { quando: iso(6), tipo: 'deposito', valor: 500, saldoDepois: 1604.6, conta: 'ROT90001234' },
+            { quando: iso(19), tipo: 'deposito', valor: 700, saldoDepois: 1180.2, conta: 'ROT90001234' },
+            { quando: iso(38), tipo: 'deposito', valor: 300, saldoDepois: 300, conta: 'ROT90001234' },
+          ],
+          compartilhamento: { equipe: false, plano: 'black', percentual: 0.05, cotacao: 5.34, emAberto: 0, meses: [
+            { mes: new Date().toISOString().slice(0, 8) + '01', fechado: false, resultado: 104.6, operacoes: 212, valorUsd: 5.23, valorBrl: 27.93, planoNoMes: 'black', percentualNoMes: 0.05, fatura: null },
+            { mes: new Date(hoje - 31 * dia).toISOString().slice(0, 8) + '01', fechado: true, resultado: 52.3, operacoes: 140, valorUsd: 5.23, valorBrl: 28.1, planoNoMes: 'gold', percentualNoMes: 0.1, fatura: { numero: 12, situacao: 'paga', valorBrl: 28.1, valorUsd: 5.23, vencimento: new Date().toISOString().slice(0, 8) + '01', pagaEm: iso(20) } },
+          ] },
           dinheiro: { saldoReal: 1284.6, saldoDemo: 9820, contaReal: 'ROT90001234', contaDemo: 'DOT90005678', saldoLidoEm: iso(0.003), depositos: 1500, saques: 320, qtdDepositos: 3, qtdSaques: 1, ultimoDeposito: iso(6), markupReal: 84.32, markupMes: 31.1 },
           resultado: {
             real: { total: 104.6, ia: 122.4, manual: -17.8, operacoes: 1840, ganhas: 1210, perdidas: 630, sessoes: 46 },

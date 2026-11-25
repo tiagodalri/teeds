@@ -24,6 +24,14 @@ export interface FichaCompleta {
   compras: Array<{ quando: string; produto: string; valor: number | null; origem: string; situacao: string }>
   produtos: Array<{ nome: string; desde: string | null; ate: string | null; ativo: boolean; origem: string | null }>
   faturas: Array<{ mes: string; valor: number; situacao: string }>
+  /** 25/11/2026 (podem faltar num servidor antigo) */
+  movimentos?: Array<{ quando: string; tipo: 'deposito' | 'saque'; valor: number; saldoDepois: number | null; conta: string | null }>
+  compartilhamento?: {
+    equipe: boolean; plano: string; percentual: number; cotacao: number | null
+    meses: Array<{ mes: string; fechado: boolean; resultado: number; operacoes: number; valorUsd: number; valorBrl: number | null; planoNoMes: string; percentualNoMes: number
+      fatura: { numero: number | null; situacao: string; valorBrl: number | null; valorUsd: number | null; vencimento: string | null; pagaEm: string | null } | null }>
+    emAberto: number
+  }
   suporte: { conversas: number; abertas: number; ultima: string | null }
   assessor: { mensagens: number; desde: string | null; iasLigadas: number }
   linhaDoTempo: Array<{ quando: string; tipo: string; texto: string }>

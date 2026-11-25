@@ -53,6 +53,15 @@ export interface FichaCompleta {
   compras: Array<{ quando: string; produto: string; valor: number | null; origem: string; situacao: string }>
   produtos: Array<{ nome: string; desde: string | null; ate: string | null; ativo: boolean; origem: string | null }>
   faturas: Array<{ mes: string; valor: number; situacao: string }>
+  /** 25/11/2026: cada depósito e saque da conta real (mais novo primeiro). */
+  movimentos: Array<{ quando: string; tipo: 'deposito' | 'saque'; valor: number; saldoDepois: number | null; conta: string | null }>
+  /** 25/11/2026: compartilhamento de receita (Gold 10%, Black 5%, Prestige 0% do lucro do mês na conta real; cada mês zera). */
+  compartilhamento: {
+    equipe: boolean; plano: string; percentual: number; cotacao: number | null
+    meses: Array<{ mes: string; fechado: boolean; resultado: number; operacoes: number; valorUsd: number; valorBrl: number | null; planoNoMes: string; percentualNoMes: number
+      fatura: { numero: number | null; situacao: string; valorBrl: number | null; valorUsd: number | null; vencimento: string | null; pagaEm: string | null } | null }>
+    emAberto: number
+  }
   suporte: { conversas: number; abertas: number; ultima: string | null }
   assessor: { mensagens: number; desde: string | null; iasLigadas: number }
   linhaDoTempo: Array<{ quando: string; tipo: string; texto: string }>
@@ -73,7 +82,7 @@ export async function fichaCompleta(userId: string, numero: string): Promise<Fic
     paginas<any>(`/sessoes_robos?${base}&select=robo_nome,demo,resultado,operacoes,ganhas,perdidas,criada_em,origem&order=criada_em.asc`),
     paginas<any>(`/operacoes_manuais?${base}&situacao=neq.aberta&select=demo,resultado,markup,comprada_em&order=comprada_em.asc`),
     paginas<any>(`/operacoes_robos?${base}&demo=eq.false&select=markup,executada_em`, 30_000),
-    paginas<any>(`/movimentacoes_deriv?${base}&demo=eq.false&tipo=in.(deposit,withdrawal)&select=tipo,valor,ocorrida_em&order=ocorrida_em.desc`),
+    paginas<any>(`/movimentacoes_deriv?${base}&demo=eq.false&tipo=in.(deposit,withdrawal)&select=tipo,valor,ocorrida_em,saldo_depois,conta_id&order=ocorrida_em.desc`),
     rest<any[]>(`/aulas_progresso?${base}&select=aula_id,concluida,segundos,ultima_vez`).catch(() => []),
     rest<any[]>(`/aulas_grade?marca=eq.${MARCA}&select=publicada&limit=1`).catch(() => []),
     rest<any[]>(`/transmissoes?marca=eq.${MARCA}&teste=not.is.true&encerrada_em=not.is.null&select=iniciada_em,presencas&order=iniciada_em.desc&limit=200`).catch(() => []),
@@ -83,12 +92,13 @@ export async function fichaCompleta(userId: string, numero: string): Promise<Fic
     rest<any[]>(`/compras_cakto?marca=eq.${MARCA}&user_id=eq.${u}&select=pedido,evento,produto,valor,acao,recebido_em&order=recebido_em.desc&limit=50`).catch(() => []),
     rest<any[]>(`/cliente_produtos?${base}&select=produto_id,concedido_em,expira_em,origem,ativo&order=concedido_em.desc`).catch(() => []),
     rest<any[]>(`/produtos?select=id,nome`).catch(() => []),
-    rest<any[]>(`/compartilhamento_faturas?${base}&select=mes,valor_brl,valor_usd,situacao&order=mes.desc&limit=12`).catch(() => []),
+    rest<any[]>(`/compartilhamento_faturas?${base}&select=numero,mes,valor_brl,valor_usd,situacao,vencimento,paga_em,subplano,percentual,lucro_usd&order=mes.desc&limit=12`).catch(() => []),
     rest<any[]>(`/suporte_conversas?${base}&select=status,criada_em,atualizada_em&order=criada_em.desc&limit=100`).catch(() => []),
     rest<any[]>(`/assessor_whatsapp_mensagens?marca=eq.${MARCA}&numero=eq.${numero}&select=papel,texto,criado_em&order=criado_em.asc&limit=2000`).catch(() => []),
   ])
   const f = fichas[0]
   if (!f) return null
+  const compartilhamento = await compartilhamentoDe(userId, String(f.categoria ?? 'gold'), faturas).catch(() => null)
   const parceiroNome = f.parceiro ? await rest<any[]>(`/parceiros?marca=eq.${MARCA}&codigo=eq.${encodeURIComponent(f.parceiro)}&select=nome&limit=1`).then((l) => l[0]?.nome ?? null).catch(() => null) : null
 
   // ---- dinheiro
@@ -193,10 +203,60 @@ export async function fichaCompleta(userId: string, numero: string): Promise<Fic
     compras: comprasL,
     produtos: produtosL,
     faturas: faturas.map((x) => ({ mes: x.mes, valor: n(x.valor_brl ?? x.valor_usd), situacao: x.situacao })),
+    movimentos: movs.slice(0, 300).map((m) => ({ quando: m.ocorrida_em, tipo: m.tipo === 'deposit' ? 'deposito' as const : 'saque' as const, valor: r2(Math.abs(n(m.valor))), saldoDepois: m.saldo_depois === null || m.saldo_depois === undefined ? null : r2(n(m.saldo_depois)), conta: m.conta_id ?? null })),
+    compartilhamento: compartilhamento ?? { equipe: false, plano: String(f.categoria ?? 'gold'), percentual: 0.1, cotacao: null, meses: [], emAberto: 0 },
     suporte: { conversas: suporte.length, abertas: suporte.filter((s) => s.status !== 'resolvida').length, ultima: suporte[0]?.atualizada_em ?? null },
     assessor: { mensagens: msgsCli.length, desde: msgs[0]?.criado_em ?? null, iasLigadas: sessoes.filter((s) => s.origem === 'chat').length },
     linhaDoTempo: t.slice(0, 14),
   }
+}
+
+// ---- compartilhamento de receita: a MESMA conta da tela Admin › Compartilhamento (teeds_compartilhamento_base)
+let cotacaoGuardada: { valor: number; em: number } | null = null
+async function cotacaoDoDolar(): Promise<number | null> {
+  if (cotacaoGuardada && Date.now() - cotacaoGuardada.em < 30 * 60_000) return cotacaoGuardada.valor
+  // AwesomeAPI (a mesma da tela do compartilhamento); se ela recusar (limite por IP), ExchangeRate-API
+  const fontes: Array<[string, (j: any) => number]> = [
+    ['https://economia.awesomeapi.com.br/json/last/USD-BRL', (j) => Number(j?.USDBRL?.bid)],
+    ['https://open.er-api.com/v6/latest/USD', (j) => Number(j?.rates?.BRL)],
+  ]
+  for (const [url, ler] of fontes) {
+    try {
+      const r = await fetch(url, { signal: AbortSignal.timeout(4000) })
+      const v = ler(await r.json())
+      if (v > 1 && v < 20) { cotacaoGuardada = { valor: v, em: Date.now() }; return v }
+    } catch { /* tenta a próxima */ }
+  }
+  return cotacaoGuardada?.valor ?? null
+}
+const mesBrt = (deslocamento: number) => { const b = new Date(Date.now() - OFFSET); return new Date(Date.UTC(b.getUTCFullYear(), b.getUTCMonth() + deslocamento, 1)).toISOString().slice(0, 10) }
+async function compartilhamentoDe(userId: string, categoria: string, faturas: any[]): Promise<FichaCompleta['compartilhamento']> {
+  const [adm, subs, cot] = await Promise.all([
+    rest<any[]>(`/administradores?user_id=eq.${encodeURIComponent(userId)}&select=user_id&limit=1`).catch(() => []),
+    rest<any[]>(`/subplanos?marca=eq.${MARCA}&select=id,compartilhamento`).catch(() => []),
+    cotacaoDoDolar(),
+  ])
+  const pct = new Map(subs.map((x) => [String(x.id), n(x.compartilhamento)]))
+  const plano = categoria in { black: 1, prestige: 1 } ? categoria : 'gold'
+  const percentual = pct.get(plano) ?? 0.1
+  const meses: FichaCompleta['compartilhamento']['meses'] = []
+  const desls = [0, -1, -2]
+  const linhas = await Promise.all(desls.map((d) => rest<any[]>(`/rpc/teeds_compartilhamento_base?user_id=eq.${encodeURIComponent(userId)}`, { method: 'POST', body: JSON.stringify({ p_marca: MARCA, p_mes: mesBrt(d), p_parceiro: null }) }).then((l) => l[0]).catch(() => undefined)))
+  for (const [i, desl] of desls.entries()) {
+    const mes = mesBrt(desl)
+    const linha = linhas[i]
+    const fat = faturas.find((x) => String(x.mes).slice(0, 10) === mes && x.situacao !== 'cancelada')
+    const valorUsd = r2(n(linha?.valor_usd))
+    if (!linha && !fat && desl !== 0) continue
+    meses.push({
+      mes, fechado: desl < 0, resultado: r2(n(linha?.resultado)), operacoes: n(linha?.operacoes), valorUsd,
+      valorBrl: fat?.valor_brl != null ? r2(n(fat.valor_brl)) : cot ? r2(valorUsd * cot) : null,
+      planoNoMes: String(linha?.subplano ?? fat?.subplano ?? plano), percentualNoMes: linha ? n(linha.percentual) : fat ? n(fat.percentual) : percentual,
+      fatura: fat ? { numero: fat.numero ?? null, situacao: String(fat.situacao), valorBrl: fat.valor_brl == null ? null : n(fat.valor_brl), valorUsd: fat.valor_usd == null ? null : n(fat.valor_usd), vencimento: fat.vencimento ?? null, pagaEm: fat.paga_em ?? null } : null,
+    })
+  }
+  const emAberto = r2(faturas.filter((x) => x.situacao !== 'cancelada' && !x.paga_em && x.situacao !== 'paga').reduce((t, x) => t + n(x.valor_brl), 0))
+  return { equipe: adm.length > 0, plano, percentual, cotacao: cot, meses, emAberto }
 }
 
 /** Número não confirmado: quem do cadastro tem este telefone (sugestão para a equipe, nunca vira login). */

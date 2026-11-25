@@ -52,6 +52,8 @@ const ICONE: Record<string, string> = {
   chave: 'M14 10a4 4 0 1 0-3.5 4l1.5 1.5h2v2h2v2h3v-3l-5.5-5.5A4 4 0 0 0 14 10z',
   conta: 'M3 7h18v12H3zM3 11h18M7 15h4',
   copiar: 'M9 9h10v10H9zM5 15V5h10',
+  certo: 'M5 12.5l4.5 4.5L19 7.5',
+  dinheiro: 'M12 3v18M16 7.5c0-1.9-1.8-3-4-3s-4 1.1-4 3 1.8 2.7 4 3 4 1.4 4 3.5-1.8 3-4 3-4-1.1-4-3',
 }
 const Icone = ({ d }: { d: string }) => <svg viewBox="0 0 24 24" aria-hidden><path d={d} /></svg>
 
@@ -154,6 +156,10 @@ export function FichaDoCliente({ api, contato, onAbrirCliente }: { api: WhatsApp
       <div className="fc-kpi"><span>Depósitos</span><b>{usd(din.depositos)}</b><small>{din.qtdDepositos}× · saques {usd(din.saques)} · líquido {usd(liquido, true)}</small></div>
     </section>
 
+    {f.compartilhamento && <Compartilhamento c={f.compartilhamento} />}
+
+    {(f.movimentos?.length ?? 0) > 0 && <Movimentos lista={f.movimentos!} depositos={din.depositos} saques={din.saques} qtdDep={din.qtdDepositos} qtdSaq={din.qtdSaques} />}
+
     <section className="fc-bloco">
       <header className="fc-cab"><span className="fc-rot">Últimos 30 dias</span>
         <div className="fc-alterna" role="tablist">{(['real', 'demo'] as const).map((c) => <button key={c} role="tab" aria-selected={conta === c} className={conta === c ? 'on' : ''} onClick={() => setConta(c)}>{c === 'real' ? 'Real' : 'Demo'}</button>)}</div>
@@ -238,7 +244,6 @@ export function FichaDoCliente({ api, contato, onAbrirCliente }: { api: WhatsApp
           {f.compras.map((c, i) => <li key={`c${i}`}><Icone d={ICONE.compra} /><span><b>{c.produto}</b><small>{c.origem} · {data(c.quando)}{c.situacao ? ` · ${c.situacao}` : ''}</small></span><em>{brl(c.valor)}</em></li>)}
           {f.produtos.map((p, i) => <li key={`p${i}`} className={p.ativo ? '' : 'inativo'}><Icone d={ICONE.compra} /><span><b>{p.nome}</b><small>{p.ativo ? 'ativo' : 'encerrado'} · desde {data(p.desde)}{p.ate ? ` até ${data(p.ate)}` : ''}{p.origem ? ` · ${p.origem}` : ''}</small></span></li>)}
         </ul>}
-      {f.faturas.length > 0 && <ul className="fc-compras">{f.faturas.map((x) => <li key={x.mes}><Icone d={ICONE.deposito} /><span><b>Compartilhamento {x.mes}</b><small>{x.situacao}</small></span><em>{brl(x.valor)}</em></li>)}</ul>}
     </section>
 
     <section className="fc-bloco">
@@ -276,4 +281,75 @@ function LinhaDoCadastro({ icone, rotulo, valor, extra, selo, copiar }: { icone:
       {copiado ? <svg viewBox="0 0 24 24" aria-hidden><path d="M5 12l5 5 9-10" /></svg> : <Icone d={ICONE.copiar} />}
     </button>}
   </li>
+}
+
+const MES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+const nomeDoMes = (iso: string) => { const [a, m] = iso.slice(0, 7).split('-').map(Number); return `${MES[m - 1].replace(/^./, (x) => x.toUpperCase())}${a !== new Date().getFullYear() ? ` de ${a}` : ''}` }
+const pctTexto = (p: number) => `${Math.round(p * 100)}%`
+
+/** 25/11/2026 (Tiago): se a pessoa tem que pagar o compartilhamento e quanto. A mesma conta da tela Admin › Compartilhamento. */
+function Compartilhamento({ c }: { c: NonNullable<FichaDoContato['ficha']>['compartilhamento'] & object }) {
+  const atual = c.meses.find((m) => !m.fechado)
+  const fechados = c.meses.filter((m) => m.fechado)
+  const plano = PLANO[c.plano] ?? c.plano
+  let tom: 'ok' | 'alerta' | 'neutro' = 'ok', titulo = '', detalhe = ''
+  if (c.equipe) { tom = 'neutro'; titulo = 'Equipe: não paga'; detalhe = 'Administradores ficam fora do compartilhamento.' }
+  else if (c.percentual <= 0) { titulo = `${plano}: não paga`; detalhe = 'O plano Prestige não tem compartilhamento de receita.' }
+  else if (atual && atual.valorUsd > 0) { tom = 'alerta'; titulo = `Paga ${usd(atual.valorUsd)}${atual.valorBrl ? ` · ${brl(atual.valorBrl)}` : ''}`; detalhe = `${pctTexto(atual.percentualNoMes)} do lucro de ${usd(atual.resultado)} em ${nomeDoMes(atual.mes).toLowerCase()} (mês em andamento, pode mudar)` }
+  else if (atual) { titulo = 'Não paga este mês'; detalhe = atual.operacoes ? `Resultado do mês na real: ${usd(atual.resultado, true)}. Sem lucro, sem cobrança.` : 'Sem operações na conta real este mês.' }
+  const situacao = (m: (typeof c.meses)[number]): { texto: string; tom: 'ok' | 'alerta' | 'neutro' | 'perigo' } => {
+    const f = m.fatura
+    if (f?.pagaEm || f?.situacao === 'paga') return { texto: 'Paga', tom: 'ok' }
+    if (f) { const venc = f.vencimento ? new Date(`${f.vencimento}T23:59:59-03:00`) : null; return venc && venc.getTime() < Date.now() ? { texto: `Vencida ${data(f.vencimento)}`, tom: 'perigo' } : { texto: `A pagar${f.vencimento ? ` · vence ${data(f.vencimento)}` : ''}`, tom: 'alerta' } }
+    if (m.valorUsd > 0) return { texto: 'Fatura não gerada', tom: 'alerta' }
+    return { texto: 'Sem cobrança', tom: 'neutro' }
+  }
+  return <section className={`fc-bloco fc-cdr ${tom}`}>
+    <header className="fc-cab"><span className="fc-rot">Compartilhamento de receita</span><em className="fc-pilula neutro">{plano} · {c.equipe ? '—' : pctTexto(c.percentual)}</em></header>
+    <div className="fc-cdr-destaque">
+      <span className="fc-metrica-icone"><Icone d={tom === 'alerta' ? ICONE.dinheiro : ICONE.certo} /></span>
+      <div><b>{titulo}</b><small>{detalhe}</small></div>
+    </div>
+    {c.emAberto > 0 && <p className="fc-cdr-aberto">Em aberto de meses anteriores: <b>{brl(c.emAberto)}</b></p>}
+    {fechados.length > 0 && <ul className="fc-cdr-meses">{fechados.map((m) => { const st = situacao(m); return <li key={m.mes}>
+      <span><b>{nomeDoMes(m.mes)}</b><small>{m.operacoes ? `${usd(m.resultado, true)} no mês · ${pctTexto(m.percentualNoMes)}` : 'Sem operações na real'}</small></span>
+      <span className="fc-cdr-valor">{m.valorUsd > 0 ? <><b>{m.fatura?.valorBrl ? brl(m.fatura.valorBrl) : usd(m.valorUsd)}</b>{m.fatura?.valorBrl ? <small>{usd(m.fatura.valorUsd ?? m.valorUsd)}</small> : null}</> : <b className="zero">—</b>}<em className={`fc-pilula ${st.tom}`}>{st.texto}</em></span>
+    </li> })}</ul>}
+    <p className="fc-nota">Lucro do mês na conta real (I.A. e manual). Cada mês zera: prejuízo não passa para o seguinte.{c.cotacao ? ` Dólar a ${brl(c.cotacao)}.` : ''}</p>
+  </section>
+}
+
+/** 25/11/2026 (Tiago): o histórico de depósitos e saques da conta real, mês a mês. */
+function Movimentos({ lista, depositos, saques, qtdDep, qtdSaq }: { lista: NonNullable<NonNullable<FichaDoContato['ficha']>['movimentos']>; depositos: number; saques: number; qtdDep: number; qtdSaq: number }) {
+  const [filtro, setFiltro] = useState<'tudo' | 'deposito' | 'saque'>('tudo')
+  const [todos, setTodos] = useState(false)
+  const filtrada = filtro === 'tudo' ? lista : lista.filter((m) => m.tipo === filtro)
+  const visiveis = todos ? filtrada : filtrada.slice(0, 8)
+  const meses: Array<{ mes: string; itens: typeof lista; liquido: number }> = []
+  for (const m of visiveis) {
+    const chave = new Date(new Date(m.quando).getTime() - 3 * 3600_000).toISOString().slice(0, 7)
+    if (meses[meses.length - 1]?.mes !== chave) meses.push({ mes: chave, itens: [], liquido: 0 })
+    const g = meses[meses.length - 1]; g.itens.push(m)
+  }
+  for (const g of meses) { const doMes = lista.filter((m) => new Date(new Date(m.quando).getTime() - 3 * 3600_000).toISOString().slice(0, 7) === g.mes); g.liquido = doMes.reduce((t, m) => t + (m.tipo === 'deposito' ? m.valor : -m.valor), 0) }
+  const liquido = depositos - saques
+  return <section className="fc-bloco">
+    <span className="fc-rot">Depósitos e saques</span>
+    <div className="fc-mov-resumo">
+      <div className="dep"><small>Depositou</small><b>{usd(depositos)}</b><i>{qtdDep}×</i></div>
+      <div className="saq"><small>Sacou</small><b>{usd(saques)}</b><i>{qtdSaq}×</i></div>
+      <div className="liq"><small>Líquido (depósitos − saques)</small><b className={tom(liquido)}>{usd(liquido, true)}</b></div>
+    </div>
+    <div className="fc-alterna largo" role="tablist">{([['tudo', 'Tudo'], ['deposito', 'Depósitos'], ['saque', 'Saques']] as const).map(([id, rot]) => <button key={id} role="tab" aria-selected={filtro === id} className={filtro === id ? 'on' : ''} onClick={() => { setFiltro(id); setTodos(false) }}>{rot}</button>)}</div>
+    {meses.map((g) => <div key={g.mes} className="fc-mov-mes">
+      <header><span>{nomeDoMes(g.mes)}</span><em className={tom(g.liquido)}>{usd(g.liquido, true)}</em></header>
+      <ul>{g.itens.map((m, i) => <li key={`${m.quando}-${i}`} className={m.tipo}>
+        <span className="fc-mov-icone"><Icone d={m.tipo === 'deposito' ? ICONE.deposito : ICONE.saque} /></span>
+        <span className="fc-mov-texto"><b>{m.tipo === 'deposito' ? 'Depósito' : 'Saque'}</b><small>{dataHora(m.quando)}{m.conta ? ` · ${m.conta}` : ''}</small></span>
+        <span className="fc-mov-valor"><b>{m.tipo === 'deposito' ? '+' : '−'}{usd(m.valor)}</b>{m.saldoDepois !== null && <small>saldo {usd(m.saldoDepois)}</small>}</span>
+      </li>)}</ul>
+    </div>)}
+    {!filtrada.length && <p className="fc-vazio">{filtro === 'saque' ? 'Nenhum saque.' : 'Nenhum depósito.'}</p>}
+    {filtrada.length > 8 && <button className="fc-link" onClick={() => setTodos((v) => !v)}>{todos ? 'Mostrar menos' : `Ver todos (${filtrada.length})`}</button>}
+  </section>
 }

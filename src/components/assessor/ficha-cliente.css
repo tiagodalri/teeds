@@ -196,3 +196,53 @@
 .fc .fc-plano { border: 1px solid transparent; }
 .fc .fc-selo.online::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #25D366; box-shadow: 0 0 0 3px rgba(37, 211, 102, .2); }
 .fc .fc-pilula, .fc .fc-tempo time, .fc .fc-cad-valor i { display: inline-flex; align-items: center; height: 20px; padding-top: 0; padding-bottom: 0; line-height: 1; box-sizing: border-box; }
+
+/* ---------------- 25/11/2026: compartilhamento de receita */
+.fc-cdr { --c: var(--fc-verde); }
+.fc-cdr.alerta { --c: #E0A23A; } .fc-cdr.neutro { --c: var(--wz-sub); }
+.fc-cdr-destaque { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border-radius: 14px;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 14%, transparent), transparent 75%), var(--wz-busca, #F0F2F5); border: 1px solid color-mix(in srgb, var(--c) 28%, var(--fc-linha)); }
+.fc-cdr-destaque .fc-metrica-icone { --c: inherit; width: 40px; height: 40px; margin: 0; color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); }
+.fc-cdr .fc-cdr-destaque .fc-metrica-icone { color: var(--c); }
+.fc-cdr-destaque b { display: block; font-size: 16px; font-weight: 800; letter-spacing: -.01em; color: var(--c); font-variant-numeric: tabular-nums; }
+.fc-cdr.neutro .fc-cdr-destaque b { color: var(--wz-texto); }
+.fc-cdr-destaque small { display: block; margin-top: 2px; color: var(--wz-sub); font-size: 11.5px; line-height: 1.4; }
+.fc-cdr-aberto { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 12.5px; color: #E0A23A; background: color-mix(in srgb, #E0A23A 12%, transparent); }
+.fc-cdr-meses { list-style: none; margin: 0; padding: 0; display: grid; }
+.fc-cdr-meses li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--fc-linha); }
+.fc-cdr-meses li > span:first-child { display: grid; gap: 1px; min-width: 0; }
+.fc-cdr-meses b { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fc-cdr-meses small { color: var(--wz-sub); font-size: 11px; }
+.fc-cdr-valor { display: grid; justify-items: end; gap: 3px; flex: none; text-align: right; }
+.fc-cdr-valor b.zero { color: var(--wz-sub); }
+.fc .fc-pilula.neutro { color: var(--wz-sub); background: var(--wz-busca, #F0F2F5); }
+.fc .fc-pilula.perigo { color: var(--fc-vermelho); background: color-mix(in srgb, var(--fc-vermelho) 14%, transparent); }
+
+/* ---------------- 25/11/2026: depósitos e saques */
+.fc-mov-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.fc-mov-resumo > div { display: grid; gap: 1px; min-width: 0; padding: 10px; border-radius: 12px; background: var(--wz-busca, #F0F2F5); position: relative; }
+.fc-mov-resumo small { color: var(--wz-sub); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.fc-mov-resumo b { font-size: 13.5px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-mov-resumo i { position: absolute; top: 9px; right: 9px; font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--wz-sub); }
+.fc-mov-resumo .dep b { color: var(--fc-verde); } .fc-mov-resumo .saq b { color: #E0884A; }
+.fc-alterna.largo { display: flex; }
+.fc-alterna.largo button { flex: 1; padding: 6px 10px; }
+.fc-mov-mes { display: grid; gap: 2px; }
+.fc-mov-mes > header { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 2px 4px; color: var(--wz-sub); font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.fc-mov-mes > header em { font-style: normal; font-size: 11.5px; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.fc-mov-mes ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.fc-mov-mes li { --c: var(--fc-verde); display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 6px; margin: 0 -6px; border-radius: 10px; }
+.fc-mov-mes li.saque { --c: #E0884A; }
+.fc-mov-mes li:hover { background: var(--wz-busca, #F0F2F5); }
+.fc-mov-icone { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 15%, transparent); }
+.fc .fc-mov-icone svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fc-mov-texto { display: grid; gap: 1px; min-width: 0; }
+.fc-mov-texto b { font-size: 13px; font-weight: 700; }
+.fc-mov-texto small { color: var(--wz-sub); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.fc-mov-valor { display: grid; justify-items: end; gap: 1px; }
+.fc-mov-valor b { font-size: 13.5px; font-weight: 800; color: var(--c); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fc-mov-valor small { color: var(--wz-sub); font-size: 10.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.fc-mov-resumo { grid-template-columns: 1fr 1fr; }
+.fc-mov-resumo > div.liq { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; }
+.fc-mov-resumo b { font-size: 14.5px; }
