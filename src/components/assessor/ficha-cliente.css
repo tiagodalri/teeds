@@ -98,16 +98,6 @@
 .fc-compras small { color: var(--wz-sub); font-size: 11.5px; }
 .fc-compras em { font-style: normal; font-weight: 800; font-size: 12.5px; }
 
-.fc-tempo { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; position: relative; }
-.fc-tempo li { position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; padding-bottom: 12px; }
-.fc-tempo li:not(:last-child)::before { content: ''; position: absolute; left: 13.5px; top: 28px; bottom: 0; border-left: 1px dashed var(--fc-linha); }
-.fc-tempo-icone { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--wz-busca, #F0F2F5); color: var(--wz-sub); }
-.fc-tempo li.compra .fc-tempo-icone, .fc-tempo li.deposito .fc-tempo-icone { background: color-mix(in srgb, var(--fc-ouro) 16%, transparent); color: var(--fc-ouro); }
-.fc-tempo li.operacao .fc-tempo-icone, .fc-tempo li.whatsapp .fc-tempo-icone { background: color-mix(in srgb, var(--fc-verde) 14%, transparent); color: var(--fc-verde); }
-.fc-tempo li.live .fc-tempo-icone { background: color-mix(in srgb, #7C6CF2 16%, transparent); color: #7C6CF2; }
-.fc-tempo b { display: block; font-size: 12.5px; font-weight: 600; line-height: 1.35; }
-.fc-tempo small { color: var(--wz-sub); font-size: 11px; }
-
 .fc-sem-dono p { margin: 0; color: var(--wz-sub); line-height: 1.5; }
 .fc-talvez { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .fc-talvez li { display: grid; padding: 8px 10px; border-radius: 10px; background: var(--wz-busca, #F0F2F5); }
@@ -126,3 +116,76 @@
 .wz-assessor .wz-mesa.com-dados { grid-template-columns: minmax(270px, 24%) minmax(0, 1fr) minmax(360px, 30%); }
 @media (max-width: 1320px) { .wz-assessor .wz-mesa.com-dados { grid-template-columns: minmax(270px, 32%) minmax(0, 1fr); } .wz-assessor .wz-mesa.com-dados .wz-dados { width: min(400px, 94%); } }
 .wz-assessor .wz-dados-rolagem.com-ficha { padding: 0; }
+
+/* ---------------- 25/11/2026 (Tiago: "texto branco sem layout, me incomoda"): cartões com ícone e número em destaque */
+.fc { --fc-roxo: #8B7CF6; --fc-azul: #4FA3F7; --fc-sub2: color-mix(in srgb, var(--wz-sub) 80%, transparent); }
+.fc-bloco { gap: 12px; }
+
+/* pares do desempenho (no lugar do <dl>, que a lateral da central estilizava) */
+.fc-pares { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.fc-pares > div { display: grid; gap: 1px; min-width: 0; }
+.fc-pares > div.largo { grid-column: 1 / -1; }
+.fc-pares span { color: var(--wz-sub); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.fc-pares b { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* métricas do engajamento */
+.fc-metricas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fc-metrica { --c: var(--fc-ouro); position: relative; display: grid; align-content: start; gap: 2px; min-width: 0; padding: 12px; border-radius: 14px; overflow: hidden;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 11%, transparent), transparent 70%), var(--wz-busca, #F0F2F5); border: 1px solid color-mix(in srgb, var(--c) 18%, var(--fc-linha)); }
+.fc-metrica.largo { grid-column: 1 / -1; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: start; }
+.fc-metrica.aula { --c: var(--fc-ouro); } .fc-metrica.live { --c: var(--fc-roxo); } .fc-metrica.acesso { --c: var(--fc-azul); }
+.fc-metrica.assessor { --c: var(--fc-verde); } .fc-metrica.suporte { --c: #E0884A; }
+.fc-metrica-icone { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 6px; color: var(--c, var(--fc-ouro)); background: color-mix(in srgb, var(--c, var(--fc-ouro)) 16%, transparent); }
+.fc-metrica.largo .fc-metrica-icone { width: 36px; height: 36px; margin: 0; }
+.fc .fc-metrica-icone svg, .fc .fc-cad-icone svg, .fc .fc-cad-copiar svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fc-metrica-corpo { display: grid; gap: 3px; min-width: 0; }
+.fc-metrica-rot { color: var(--wz-sub); font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.fc-metrica > b, .fc-metrica-corpo > b { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--wz-texto); }
+.fc-metrica b small { font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--wz-sub); }
+.fc-metrica > small, .fc-metrica-corpo > small { color: var(--wz-sub); font-size: 11.5px; line-height: 1.4; }
+.fc-metrica .fc-ultima { margin-top: 4px; padding-top: 7px; border-top: 1px dashed var(--fc-linha); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fc-metrica .fc-ultima strong { color: var(--wz-texto); font-weight: 700; }
+.fc-progresso { display: block; height: 6px; margin: 4px 0 2px; border-radius: 999px; background: color-mix(in srgb, var(--fc-linha) 80%, transparent); overflow: hidden; }
+.fc-progresso em { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--c) 60%, transparent), var(--c)); transition: width .8s cubic-bezier(.2, .8, .2, 1); }
+
+/* compras vazias */
+.fc-vazio-card { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px; border-radius: 14px; background: var(--wz-busca, #F0F2F5); border: 1px dashed var(--fc-linha); }
+.fc-vazio-card .fc-metrica-icone { width: 36px; height: 36px; margin: 0; }
+.fc-vazio-card b { display: block; font-size: 13px; font-weight: 700; }
+.fc-vazio-card small { color: var(--wz-sub); font-size: 11.5px; line-height: 1.4; }
+
+/* linha do tempo */
+.fc-tempo { list-style: none; margin: 0; padding: 0; display: grid; position: relative; }
+.fc-tempo li { --c: var(--wz-sub); position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 0 0 14px; }
+.fc-tempo li:last-child { padding-bottom: 0; }
+.fc-tempo li:not(:last-child)::before { content: ''; position: absolute; left: 14.5px; top: 32px; bottom: 2px; width: 1px; background: linear-gradient(180deg, color-mix(in srgb, var(--c) 45%, var(--fc-linha)), var(--fc-linha)); }
+.fc-tempo li.compra, .fc-tempo li.deposito { --c: var(--fc-ouro); } .fc-tempo li.saque { --c: #E0884A; }
+.fc-tempo li.operacao, .fc-tempo li.whatsapp { --c: var(--fc-verde); } .fc-tempo li.live { --c: var(--fc-roxo); }
+.fc-tempo li.aula { --c: var(--fc-ouro); } .fc-tempo li.acesso { --c: var(--fc-azul); }
+.fc-tempo-icone { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: var(--c); background: color-mix(in srgb, var(--c) 15%, var(--fc-cartao)); box-shadow: 0 0 0 3px var(--fc-cartao), inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent); }
+.fc-tempo-texto { display: grid; gap: 2px; min-width: 0; padding-top: 1px; }
+.fc-tempo-texto b { font-size: 12.5px; font-weight: 700; line-height: 1.35; color: var(--wz-texto); }
+.fc-tempo-texto small { color: var(--wz-sub); font-size: 11px; font-variant-numeric: tabular-nums; }
+.fc-tempo time { margin-top: 2px; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; white-space: nowrap; color: var(--wz-sub); background: var(--wz-busca, #F0F2F5); }
+.fc-tempo li:first-child time { color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+
+/* cadastro */
+.fc-cadastro { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.fc-cadastro li { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 6px; margin: 0 -6px; border-radius: 10px; }
+.fc-cadastro li:hover { background: var(--wz-busca, #F0F2F5); }
+.fc-cad-icone { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--wz-sub); background: var(--wz-busca, #F0F2F5); }
+.fc-cadastro li:hover .fc-cad-icone { background: var(--fc-cartao); }
+.fc-cad-corpo { display: grid; gap: 1px; min-width: 0; }
+.fc-cad-corpo > small { color: var(--wz-sub); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.fc-cad-valor { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.fc-cad-valor b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-variant-numeric: tabular-nums; }
+.fc-cad-valor i { flex: none; font-style: normal; font-size: 11.5px; font-weight: 700; color: var(--wz-sub); padding: 1px 7px; border-radius: 999px; background: var(--wz-busca, #F0F2F5); }
+.fc-pilula { flex: none; font-style: normal; font-size: 11px; font-weight: 800; padding: 2px 9px; border-radius: 999px; }
+.fc-pilula.ok { color: var(--fc-verde); background: color-mix(in srgb, var(--fc-verde) 14%, transparent); }
+.fc-pilula.alerta { color: #E0A23A; background: color-mix(in srgb, #E0A23A 15%, transparent); }
+.fc-cad-valor .fc-pilula + b { color: var(--wz-sub); font-weight: 500; font-size: 12px; }
+.fc-cad-copiar { width: 30px; height: 30px; border-radius: 9px; border: 0; display: grid; place-items: center; background: transparent; color: var(--wz-sub); cursor: pointer; opacity: 0; transition: opacity .15s, background .15s, color .15s; }
+.fc-cadastro li:hover .fc-cad-copiar, .fc-cad-copiar:focus-visible, .fc-cad-copiar.ok { opacity: 1; }
+.fc-cad-copiar:hover { background: var(--fc-cartao); color: var(--wz-texto); }
+.fc-cad-copiar.ok { color: var(--fc-verde); }
+@media (hover: none) { .fc-cad-copiar { opacity: 1; } }
