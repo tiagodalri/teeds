@@ -44,10 +44,11 @@ export function SimboloDaLinha({ ia, className = '' }: { ia: IaDaLinha; classNam
     <svg className={`ld-simbolo ${className}`} viewBox="2 2 92 96" aria-hidden="true">
       <defs>
         <linearGradient id={`g${uid}`} x1="0" y1="1" x2="0" y2="0"><stop offset="0" stopColor={ia.cor} /><stop offset="1" stopColor={ia.brilho} /></linearGradient>
+        <linearGradient id={`h${uid}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" style={{ stopColor: 'var(--ld-haste-a)' }} /><stop offset="1" style={{ stopColor: 'var(--ld-haste)' }} /></linearGradient>
         <filter id={`b${uid}`} x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.2" /></filter>
       </defs>
       {/* estilo em linha: as regras de ícone das telas (svg path { stroke… }) não alcançam */}
-      <path d={HASTE} style={{ fill: 'var(--ld-haste)', stroke: 'none' }} />
+      <path d={HASTE} style={{ fill: `url(#h${uid})`, stroke: 'none' }} />
       {SEGMENTOS.map((d, i) => !acesos.has(i) && <path key={i} d={d} style={{ fill: 'var(--ld-apagado)', stroke: 'none' }} />)}
       <g filter={`url(#b${uid})`} opacity=".5">{SEGMENTOS.map((d, i) => acesos.has(i) && <path key={i} d={d} style={{ fill: ia.cor, stroke: 'none' }} />)}</g>
       {SEGMENTOS.map((d, i) => acesos.has(i) && <path key={`a${i}`} d={d} style={{ fill: `url(#g${uid})`, stroke: 'none' }} />)}

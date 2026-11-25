@@ -1,6 +1,6 @@
 /* A linha de I.A. com símbolo próprio (Dealer, Legacy Pro). Ver LogotipoDealer.tsx. */
-.logo-linha { --ld-haste: #2B2D31; --ld-apagado: #D6D8DC; display: inline-flex; align-items: center; gap: .42em; max-width: 100%; line-height: 1; vertical-align: -.12em; white-space: nowrap; }
-:root[data-tema='escuro'] .logo-linha, .logo-linha.sobre-foto { --ld-haste: #D9DCE0; --ld-apagado: #2E3035; }
+.logo-linha { --ld-haste: #1E1F23; --ld-haste-a: #4A4D54; --ld-apagado: #D6D8DC; display: inline-flex; align-items: center; gap: .42em; max-width: 100%; line-height: 1; vertical-align: -.12em; white-space: nowrap; }
+:root[data-tema='escuro'] .logo-linha, .logo-linha.sobre-foto { --ld-haste: #8E939B; --ld-haste-a: #F4F5F7; --ld-apagado: #2E3035; }
 .logo-linha > svg.ld-simbolo { flex: none !important; height: 1.3em !important; width: auto !important; max-width: none !important; margin: 0 !important; overflow: visible; }
 .logo-linha .ld-nome { display: inline-flex; align-items: baseline; gap: .34em; font-size: inherit !important; }
 .logo-linha .ld-nome b, .logo-linha .ld-nome i { font-size: 1em !important; line-height: 1 !important; }
@@ -9,7 +9,34 @@
 :root[data-tema='escuro'] .logo-linha .ld-nome i, .logo-linha.sobre-foto .ld-nome i { color: var(--ld-brilho); }
 .logo-linha.com-fio .logo-ia-fio { background: var(--ld-cor); }
 .emblema-linha > svg.ld-simbolo { width: 66% !important; height: auto !important; overflow: visible; }
-/* nos cartões com foto, o nome inteiro ("DEALER FRACTION") cabe na largura do cartão */
-.in-jato-texto .logo-linha, .plv-jato-texto .logo-linha, .plv-capa-texto .logo-linha, .vr-foto-nome .logo-linha { font-size: min(1em, 6.4cqi) !important; }
 .logo-linha.com-fio { gap: .5em; }
-.in-jato-texto .logo-linha { font-size: min(1em, 8.6cqi) !important; }
+
+/* ---------------------------------------------------------------------------
+   Cartões com foto (frota do início, vitrine, preparo), 25/11/2026: o nome em dois
+   andares, "DEALER" pequeno em cima e a variante grande embaixo, ao lado do
+   símbolo. Numa linha só ("DEALER FRACTION") ele cortava nos cartões estreitos.
+--------------------------------------------------------------------------- */
+:is(.in-jato-texto, .plv-jato-texto, .plv-capa-texto, .vr-foto-nome, .rc-nome) .logo-linha {
+  font-size: min(1.5em, 13cqi) !important; gap: .34em; align-items: center; max-width: 100%;
+}
+:is(.in-jato-texto, .plv-jato-texto, .plv-capa-texto, .vr-foto-nome, .rc-nome) .logo-linha > svg.ld-simbolo { height: 1.62em !important; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, .55)); }
+:is(.in-jato-texto, .plv-jato-texto, .plv-capa-texto, .vr-foto-nome, .rc-nome) .logo-linha .logo-ia-fio { display: none; }
+:is(.in-jato-texto, .plv-jato-texto, .plv-capa-texto, .vr-foto-nome, .rc-nome) .logo-linha .ld-nome { flex-direction: column; align-items: flex-start; gap: .2em; min-width: 0; }
+:is(.in-jato-texto, .plv-jato-texto, .plv-capa-texto, .vr-foto-nome, .rc-nome) .logo-linha .ld-nome b { font-size: .5em !important; font-weight: 600; letter-spacing: .32em; color: rgba(243, 239, 230, .78); }
+:is(.in-jato-texto, .plv-jato-texto, .plv-capa-texto, .vr-foto-nome, .rc-nome) .logo-linha .ld-nome i { font-size: 1em !important; font-weight: 600; letter-spacing: .06em; color: var(--ld-brilho) !important; text-shadow: 0 2px 10px rgba(0, 0, 0, .5); white-space: nowrap; }
+
+/* Legacy Pro: sem o monograma no canto do cartão (o símbolo Dealer já é a marca) e a
+   recomendada com um contorno fino de ouro, sem o brilho interno que parecia relevo. */
+:root[data-marca='legacypro'] .in-jato-mono { display: none !important; }
+:root[data-marca='legacypro'] .in-jato.recomendada::before { border: 1.5px solid #C9A24A; box-shadow: none; }
+:root[data-marca='legacypro'] .in-jato.no-ar::before { border-width: 1.5px; }
+:root[data-marca='legacypro'] .in-jato::after { background: linear-gradient(180deg, rgba(8, 8, 10, 0) 38%, rgba(8, 8, 10, .82) 100%); }
+:root[data-marca='legacypro'] .in-jato:hover { transform: translateY(-2px); }
+
+/* o cartão grande da I.A. recomendada: o nome em dois andares, na altura do título */
+.rc-nome .logo-linha { font-size: 1em !important; }
+.rc-nome .logo-linha .ld-nome b { font-size: .34em !important; }
+.rc-nome .logo-linha > svg.ld-simbolo { height: 1.5em !important; }
+/* "Para você" (continue a aula): a capa entra pela faixa do logotipo e da régua, não pelo meio */
+:root[data-marca='legacypro'] .in-aula img { object-position: center 30%; }
+:root[data-marca='legacypro'][data-tema='escuro'] .in-aula { background: #0E0F12; border-color: #26272C; }

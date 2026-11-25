@@ -16,7 +16,7 @@ export function Emblema({ id, tamanho = 40 }: { id: Identidade; tamanho?: number
   // linha própria da marca (Dealer): o símbolo com os dígitos da I.A. acesos
   const daLinha = iaDaLinha(id.nome, id.id)
   if (daLinha) return (
-    <span className="emblema emblema-linha" style={{ width: tamanho, height: tamanho, background: '#0E0F12', borderRadius: tamanho * 0.275, display: 'inline-grid', placeItems: 'center', ['--ld-haste' as string]: '#D9DCE0', ['--ld-apagado' as string]: '#2E3035' }} aria-hidden="true">
+    <span className="emblema emblema-linha" style={{ width: tamanho, height: tamanho, background: '#0E0F12', borderRadius: tamanho * 0.275, display: 'inline-grid', placeItems: 'center', ['--ld-haste' as string]: '#8E939B', ['--ld-haste-a' as string]: '#F4F5F7', ['--ld-apagado' as string]: '#2E3035' }} aria-hidden="true">
       <SimboloDaLinha ia={daLinha} className="emblema-linha-svg" />
     </span>
   )
