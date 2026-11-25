@@ -17,6 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&family=Bebas+Neue&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../estilo.css" />
   <link rel="stylesheet" href="./superlive.css" />
+  <link rel="stylesheet" href="./cabine.css" />
 </head>
 <body class="sl">
   <!--
@@ -100,6 +101,72 @@
   </div>
 
   <main class="sl-corpo">
+    <section class="sl-ias" aria-labelledby="titulo-ias">
+      <div class="sl-ias-texto">
+        <span class="sl-rotulo">As I.A. operando</span>
+        <h2 id="titulo-ias">É isso que você vai ver na live: uma I.A. operando em dólar, sozinha.</h2>
+        <p>Você escolhe a I.A., a entrada, a meta e o limite de perda. Ela entra, sai, recupera e para sozinha quando bate a meta ou o limite.</p>
+        <p class="sl-toque">Toque em uma I.A. para ver a sessão dela, operação por operação.</p>
+      </div>
+      <div class="lp-cabine" data-cabine>
+        <div class="lp-cab-ias" role="tablist" aria-label="Escolha a I.A." data-cab-ias></div>
+        <div class="lp-cab-tela">
+          <div class="lp-cab-topo">
+            <img data-cab-capa src="/aulas-globalfly/robo-falcon-mobile.webp" alt="" width="640" height="960" loading="lazy" />
+            <div class="lp-cab-quem">
+              <b data-cab-nome>GF Falcon</b>
+              <span class="lp-cab-status" data-cab-status><i aria-hidden="true"></i><em data-cab-fase>Operando</em></span>
+            </div>
+            <div class="lp-cab-res"><span>Resultado</span><b data-cab-res>+US$ 0,00</b></div>
+          </div>
+          <div class="lp-cab-meta">
+            <span>Meta <b data-cab-meta>US$ 60</b></span>
+            <div class="lp-cab-trilho"><i data-cab-barra></i></div>
+            <span class="lp-cab-pct" data-cab-pct>0%</span>
+          </div>
+          <div class="lp-cab-grafico">
+            <canvas data-cab-grafico width="900" height="300" aria-hidden="true"></canvas>
+            <span class="lp-cab-ativo"><i aria-hidden="true"></i>Volatility 75 <b data-cab-preco>—</b></span>
+          </div>
+          <dl class="lp-cab-nums">
+            <div><dt>Operações</dt><dd data-cab-n>0</dd></div>
+            <div><dt>Positivas</dt><dd class="pos" data-cab-pos>0</dd></div>
+            <div><dt>Entrada</dt><dd data-cab-ent>—</dd></div>
+          </dl>
+          <ol class="lp-cab-ops" data-cab-ops aria-live="off"></ol>
+          <div class="lp-cab-alerta" data-cab-alerta hidden>
+            <img src="/pwa-globalfly/icon-180.png" alt="" width="36" height="36" />
+            <div><span>GlobalFly · agora</span><b data-cab-alerta-titulo>✅ GF Falcon · Meta atingida</b><em data-cab-alerta-txt></em></div>
+          </div>
+        </div>
+        <p class="lp-cab-nota" data-cab-nota>Reprise de sessões gravadas na plataforma, operação por operação.</p>
+      </div>
+      <p class="sl-ias-aviso">Reprise de sessões reais que terminaram na meta. Nem toda sessão termina assim: operar envolve risco de perda.</p>
+    </section>
+
+    <section class="sl-assessor" aria-labelledby="titulo-assessor">
+      <div class="sl-fone" data-zap aria-label="Demonstração de uma conversa com o Assessor GF no WhatsApp">
+        <div class="sl-fone-topo">
+          <img src="/pwa-globalfly/icon-180.png" alt="" width="36" height="36" />
+          <div><b>Assessor GF</b><span data-zap-status>online</span></div>
+        </div>
+        <div class="sl-fone-conversa" data-zap-conversa aria-live="off"></div>
+        <div class="sl-fone-barra" aria-hidden="true"><span>Mensagem</span><i><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12z"/></svg></i></div>
+      </div>
+      <div class="sl-assessor-texto">
+        <span class="sl-rotulo">O Assessor GF</span>
+        <h2 id="titulo-assessor">Manda um áudio no WhatsApp e a sua I.A. começa a operar.</h2>
+        <p>O Assessor GF entende o seu áudio, liga a I.A. que você pediu com a entrada, a meta e o limite de perda, e te avisa no WhatsApp quando a sessão termina.</p>
+        <ul class="sl-lista">
+          <li><b>Por áudio ou texto</b>, do jeito que você fala.</li>
+          <li><b>Liga e desliga a I.A.</b> sem abrir a plataforma.</li>
+          <li><b>Avisa o resultado</b> assim que a sessão acaba.</li>
+        </ul>
+        <button type="button" class="sl-zap-de-novo" data-zap-de-novo>Ver a conversa de novo</button>
+        <p class="sl-ias-aviso">Demonstração ilustrativa da conversa. O Assessor está em liberação para os membros.</p>
+      </div>
+    </section>
+
     <section class="sl-tv" aria-labelledby="titulo-tv">
       <div class="sl-grade" role="img" aria-label="Programação de domingo, 29 de novembro: às 20h, Super Live ao vivo">
         <div class="sl-grade-topo"><b>Domingo</b><span>29 de novembro</span></div>
@@ -273,5 +340,7 @@
       })
     })()
   </script>
+  <script src="./cabine.js" defer></script>
+  <script src="./assessor.js" defer></script>
 </body>
 </html>
