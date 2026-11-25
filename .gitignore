@@ -15,6 +15,7 @@ docs-omni/
 docs-globalfly/
 docs-legacypro/
 .globalfly-publicacao/
+.legacypro-publicacao/
 
 # gerado por 'npm run emails' — previa dos e-mails, nao e fonte
 previa-emails/

@@ -24,7 +24,10 @@ begin
     'robos_parametros_versoes','sessoes_robos_ao_vivo'
   ] loop
     execute format('alter table public.%I drop constraint if exists %I', t, t || '_marca_check');
-    execute format('alter table public.%I add constraint %I check (marca in (''teeds'',''omni'',''globalfly'',''legacypro''))', t, t || '_marca_check');
+    -- not valid: entra na hora, sem varrer a tabela (eventos_robos_ao_vivo tem milhões de
+    -- linhas). As linhas antigas já cumpriam a regra anterior, mais restrita; a conferência
+    -- delas fica para a migração seguinte (validate), que não bloqueia gravações.
+    execute format('alter table public.%I add constraint %I check (marca in (''teeds'',''omni'',''globalfly'',''legacypro'')) not valid', t, t || '_marca_check');
   end loop;
 end $$;
 
