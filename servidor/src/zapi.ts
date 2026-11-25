@@ -4,6 +4,7 @@ import { conversar, type Anexos, type Turno } from './chat'
 import { ver } from './sessoes'
 import { loginDoUsuario, papelDoAdmin, restDoBanco as rest, somenteDemoDoUsuario } from './supabase'
 import { appDaVitrine, vitrineDoPedido } from './apps-parceiros'
+import { rotulosTrocados } from '../../src/core/deriv/accountAccess'
 
 /*
   Assessor GF no WhatsApp pela Z-API (19/11/2026, Tiago).
@@ -308,7 +309,10 @@ async function atender(numero: string, corpo: any): Promise<void> {
   }
 
   // 3) o que veio junto
-  const anexos: Anexos = {}
+  // 25/11/2026 (Tiago): nos ADMs com os rótulos trocados, o WhatsApp fala e liga pelo nome da plataforma
+  // ("liga na real" = a conta que aparece como Real na tela dele, que por trás é a demo)
+  const trocados = rotulosTrocados(login.email, MARCA_DO_ASSESSOR)
+  const anexos: Anexos = trocados ? { trocados: true } : {}
   if (corpo.video) return enviar(numero, 'Por aqui eu ainda não consigo assistir vídeo. Me manda uma foto da tela ou um áudio que eu te ajudo.', dono.user_id)
   if (corpo.audio?.audioUrl) {
     const a = await baixar(String(corpo.audio.audioUrl), 1_300_000)
@@ -330,7 +334,7 @@ async function atender(numero: string, corpo: any): Promise<void> {
   const vitrine = vitrineDoPedido(MARCA_DO_ASSESSOR, parceiro ?? '')
   const app = await appDaVitrine(MARCA_DO_ASSESSOR, vitrine)
   const t0 = Date.now()
-  const r = await conversar({ id: dono.user_id, somenteDemo: somenteDemoDoUsuario(login), vitrine, app, perguntarConta: true, canal: 'assessor-whatsapp' }, historico, texto, MARCA_DO_ASSESSOR, anexos)
+  const r = await conversar({ id: dono.user_id, somenteDemo: somenteDemoDoUsuario(login), vitrine, app, perguntarConta: true, canal: 'assessor-whatsapp', trocados }, historico, texto, MARCA_DO_ASSESSOR, anexos)
   console.log(`[assessor] respondeu …${numero.slice(-4)} em ${Date.now() - t0} ms${r.proposta?.sessaoId ? ` · ligou ${r.proposta.roboNome}` : ''}`)
   // o que a pessoa falou no áudio fica no histórico (sem isso, "me enganei, era na demo" chegava sem os valores)
   if (anexos.audio && r.transcricao && idWpp) {
@@ -339,9 +343,9 @@ async function atender(numero: string, corpo: any): Promise<void> {
     }).catch(() => null)
   }
   // 25/11/2026 (Tiago: "melhorar o padrão dessas mensagens"): ligou = sempre o mesmo modelo, com os números da proposta
-  const resposta = r.proposta?.sessaoId ? mensagemDoInicio(r.proposta) : (r.texto || 'Me embolei aqui. Pode repetir de outro jeito?')
+  const resposta = r.proposta?.sessaoId ? mensagemDoInicio(r.proposta, trocados) : (r.texto || 'Me embolei aqui. Pode repetir de outro jeito?')
   await enviar(numero, resposta, dono.user_id, 1)
-  if (r.proposta?.sessaoId) vigiar(r.proposta.sessaoId, numero, dono.user_id)
+  if (r.proposta?.sessaoId) vigiar(r.proposta.sessaoId, numero, dono.user_id, trocados)
 }
 
 async function baixar(url: string, teto: number): Promise<{ mime: string; dados: string } | null> {
@@ -364,7 +368,7 @@ async function marcarLida(numero: string, messageId: unknown): Promise<void> {
 /* ------------------------------------------------------------------ o fim da sessão vira mensagem */
 
 const vigiadas = new Set<string>()
-function vigiar(sessaoId: string, numero: string, userId: string): void {
+function vigiar(sessaoId: string, numero: string, userId: string, trocados = false): void {
   if (vigiadas.has(sessaoId)) return
   vigiadas.add(sessaoId)
   const ate = Date.now() + 12 * 3600_000
@@ -374,7 +378,7 @@ function vigiar(sessaoId: string, numero: string, userId: string): void {
     if (!s || Date.now() > ate) { clearInterval(t); vigiadas.delete(sessaoId); return }
     if (s.estado?.rodando || s.terminouEm === null) return
     clearInterval(t); vigiadas.delete(sessaoId)
-    void enviar(numero, mensagemDoFim(s), userId, 1)
+    void enviar(numero, mensagemDoFim(s, trocados), userId, 1)
   }, 10_000)
   t.unref?.()
 }
@@ -382,11 +386,12 @@ function vigiar(sessaoId: string, numero: string, userId: string): void {
 /* Modelo das mensagens (25/11/2026): título em negrito com o emoji do momento, a conta logo abaixo,
  * uma linha em branco e os números um por linha. Sem "•", sem frase quebrada. */
 const din = (v: number, moeda: string) => `${moeda === 'USD' ? 'US$' : moeda} ${v.toFixed(2).replace('.', ',')}`
-const nomeDaConta = (demo: boolean, contaId: string) => `${demo ? 'Conta demo' : '*Conta real*'}${contaId ? ` · ${contaId}` : ''}`
+/** Com os rótulos trocados (ADMs), o nome é o da tela: a virtual aparece como real. */
+const nomeDaConta = (demo: boolean, contaId: string, trocados = false) => `${demo !== trocados ? 'Conta demo' : '*Conta real*'}${contaId ? ` · ${contaId}` : ''}`
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
 
-export function mensagemDoInicio(p: { roboNome: string; contaId: string; demo: boolean; moeda: string; entrada: number; takeProfit: number; stopLoss: number }): string {
-  return `🟢 *${p.roboNome} ligada*\n${nomeDaConta(p.demo, p.contaId)}\n\n` +
+export function mensagemDoInicio(p: { roboNome: string; contaId: string; demo: boolean; moeda: string; entrada: number; takeProfit: number; stopLoss: number }, trocados = false): string {
+  return `🟢 *${p.roboNome} ligada*\n${nomeDaConta(p.demo, p.contaId, trocados)}\n\n` +
     `Entrada: *${din(p.entrada, p.moeda)}*\nMeta: *${din(p.takeProfit, p.moeda)}*\nLimite de perda: *${din(p.stopLoss, p.moeda)}*\n\n` +
     '_Te aviso aqui quando terminar._'
 }
@@ -411,10 +416,10 @@ const duracao = (ms: number) => {
   return `${Math.floor(min / 60)} h${min % 60 ? ` ${min % 60} min` : ''}`
 }
 
-export function mensagemDoFim(s: { roboNome: string; contaId?: string; moeda: string; demo: boolean; comecouEm?: number; terminouEm?: number | null; estado: { resultado: number; operacoes: number; vitorias: number; derrotas: number; motivoParada: string | null } }): string {
+export function mensagemDoFim(s: { roboNome: string; contaId?: string; moeda: string; demo: boolean; comecouEm?: number; terminouEm?: number | null; estado: { resultado: number; operacoes: number; vitorias: number; derrotas: number; motivoParada: string | null } }, trocados = false): string {
   const e = s.estado
   const motivo = (e.motivoParada ?? '').trim()
-  const conta = nomeDaConta(s.demo, s.contaId ?? '')
+  const conta = nomeDaConta(s.demo, s.contaId ?? '', trocados)
   const como = /meta/i.test(motivo) ? { emoji: '✅', txt: 'bateu a meta' }
     : /limite de perda|stop/i.test(motivo) ? { emoji: '🛡️', txt: 'parou no limite de perda' }
     : /você pediu|desligad/i.test(motivo) ? { emoji: '⏹️', txt: 'foi desligada' }
@@ -423,7 +428,7 @@ export function mensagemDoFim(s: { roboNome: string; contaId?: string; moeda: st
   // parou sem operar nada por um problema: diz o porquê em vez de "terminou, US$ 0,00"
   if (!como && e.operacoes === 0) {
     return `⚠️ *${s.roboNome} não operou*\n${conta}\n\nMotivo: ${motivoLegivel(motivo)}.` +
-      (/saldo insuficiente/.test(motivoLegivel(motivo)) ? `\n\n_${s.demo ? 'Recarregue a conta demo na plataforma' : 'Deposite na conta real ou me peça para ligar na demo'}._` : '')
+      (/saldo insuficiente/.test(motivoLegivel(motivo)) ? `\n\n_${s.demo ? 'Recarregue essa conta na plataforma' : 'Deposite nessa conta ou me peça para ligar na outra'}._` : '')
   }
   const sinal = e.resultado > 0 ? '+' : e.resultado < 0 ? '−' : ''
   const titulo = como ? `${como.emoji} *${s.roboNome} ${como.txt}*` : `ℹ️ *${s.roboNome} parou*`

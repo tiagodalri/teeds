@@ -64,11 +64,13 @@ const r2 = (v: number) => Math.round(v * 100) / 100
 const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 const limiteDe = (v: unknown, padrao: number, teto: number) => Math.max(1, Math.min(teto, Math.floor(num(v) || padrao)))
 const qualConta = (v: unknown): QualConta => (v === 'real' || v === 'demo' ? v : 'todas')
+/** A conta que a pessoa disse (nome da tela) vira a conta de verdade para filtrar. */
+const contaDeVerdade = (c: QualConta, trocados?: boolean): QualConta => (trocados && c !== 'todas' ? (c === 'real' ? 'demo' : 'real') : c)
 const filtroConta = (c: QualConta) => (c === 'real' ? '&demo=eq.false' : c === 'demo' ? '&demo=eq.true' : '')
 const iso = (ms: number) => new Date(ms).toISOString()
 /** O e-mail como a pessoa conhece (sem a etiqueta interna "+marca-globalfly"). */
 const emailDeVerdade = (e: string) => e.replace(/\+marca-[a-z0-9-]+@/i, '@')
-const nomeDaConta = (demo: boolean) => (demo ? 'demonstração' : 'real')
+const nomeDaConta = (demo: boolean, trocados?: boolean) => (demo !== !!trocados ? 'demonstração' : 'real')
 
 /** Lê tudo de uma consulta em páginas de 1000 (o PostgREST corta em 1000), até `teto`. */
 async function todasAsLinhas<T>(caminho: string, teto = 20_000): Promise<T[]> {
@@ -83,12 +85,13 @@ async function todasAsLinhas<T>(caminho: string, teto = 20_000): Promise<T[]> {
 
 /* ------------------------------------------------------------------ as ferramentas */
 
-interface Quem { userId: string; marca: string }
+/** Quem fala. `trocados`: os nomes real/demonstração estão trocados na tela dele (ADMs da GF): tudo sai com o nome da tela. */
+interface Quem { userId: string; marca: string; trocados?: boolean }
 
 /** Lucro/prejuízo do período: I.A. (pelas sessões) e manual, separados por conta real e demonstração. */
 export async function meusResultados(q: Quem, args: any) {
   const p = intervalo(args?.periodo, args?.de, args?.ate)
-  const conta = qualConta(args?.conta)
+  const conta = contaDeVerdade(qualConta(args?.conta), q.trocados)
   const base = `user_id=eq.${encodeURIComponent(q.userId)}&marca=eq.${encodeURIComponent(q.marca)}${filtroConta(conta)}`
   const [sessoes, manuais] = await Promise.all([
     todasAsLinhas<{ robo_nome: string; demo: boolean; moeda: string; resultado: number; operacoes: number; ganhas: number; perdidas: number; criada_em: string; situacao: string }>(
@@ -112,7 +115,7 @@ export async function meusResultados(q: Quem, args: any) {
     const totalIa = s.reduce((t, x) => t + num(x.resultado), 0)
     const totalManual = m.reduce((t, x) => t + num(x.resultado), 0)
     return {
-      conta: nomeDaConta(demo),
+      conta: nomeDaConta(demo, q.trocados),
       moeda: s[0]?.moeda ?? m[0]?.moeda ?? 'USD',
       resultado_total: r2(totalIa + totalManual),
       ia: s.length ? {
@@ -129,7 +132,7 @@ export async function meusResultados(q: Quem, args: any) {
       melhor_dia: ordem[0] ?? null, pior_dia: ordem.length > 1 ? ordem[ordem.length - 1] : null,
     }
   }
-  const contas = (conta === 'demo' ? [true] : conta === 'real' ? [false] : [false, true]).map(resumo).filter(Boolean)
+  const contas = (conta === 'demo' ? [true] : conta === 'real' ? [false] : q.trocados ? [true, false] : [false, true]).map(resumo).filter(Boolean)
   return {
     periodo: p.rotulo,
     contas,
@@ -140,14 +143,14 @@ export async function meusResultados(q: Quem, args: any) {
 /** As sessões de I.A. do período, mais novas primeiro. */
 export async function historicoDeSessoes(q: Quem, args: any) {
   const p = intervalo(args?.periodo ?? '7_dias', args?.de, args?.ate)
-  const conta = qualConta(args?.conta)
+  const conta = contaDeVerdade(qualConta(args?.conta), q.trocados)
   const lim = limiteDe(args?.limite, 10, 30)
   const l = await rest<any[]>(`/sessoes_robos?user_id=eq.${encodeURIComponent(q.userId)}&marca=eq.${encodeURIComponent(q.marca)}${filtroConta(conta)}` +
     `&criada_em=gte.${iso(p.de)}&criada_em=lt.${iso(p.ate)}&select=robo_nome,conta_id,demo,moeda,entrada_inicial,stop_loss,take_profit,situacao,operacoes,ganhas,perdidas,resultado,motivo_da_parada,criada_em,encerrada_em&order=criada_em.desc&limit=${lim}`)
   return {
     periodo: p.rotulo,
     sessoes: l.map((s) => ({
-      ia: s.robo_nome, conta: `${nomeDaConta(s.demo)} ${s.conta_id}`, inicio: quandoBrt(s.criada_em), fim: quandoBrt(s.encerrada_em),
+      ia: s.robo_nome, conta: `${nomeDaConta(s.demo, q.trocados)} ${s.conta_id}`, inicio: quandoBrt(s.criada_em), fim: quandoBrt(s.encerrada_em),
       situacao: s.situacao === 'rodando' ? 'operando agora' : s.situacao === 'erro' ? 'parou com erro' : 'encerrada',
       entrada: num(s.entrada_inicial), meta: num(s.take_profit), limite_de_perda: num(s.stop_loss),
       operacoes: num(s.operacoes), ganhas: num(s.ganhas), perdidas: num(s.perdidas), resultado: r2(num(s.resultado)), moeda: s.moeda,
@@ -160,7 +163,7 @@ export async function historicoDeSessoes(q: Quem, args: any) {
 /** As operações uma a uma (I.A. e/ou manual), mais novas primeiro. */
 export async function minhasOperacoes(q: Quem, args: any) {
   const p = intervalo(args?.periodo ?? 'hoje', args?.de, args?.ate)
-  const conta = qualConta(args?.conta)
+  const conta = contaDeVerdade(qualConta(args?.conta), q.trocados)
   const lim = limiteDe(args?.limite, 10, 30)
   const origem = args?.origem === 'ia' || args?.origem === 'manual' ? args.origem : 'todas'
   const so = args?.resultado === 'ganhas' ? '&resultado=gt.0' : args?.resultado === 'perdidas' ? '&resultado=lt.0' : ''
@@ -170,8 +173,8 @@ export async function minhasOperacoes(q: Quem, args: any) {
     origem === 'ia' ? [] : rest<any[]>(`/operacoes_manuais?${base}&comprada_em=gte.${iso(p.de)}&comprada_em=lt.${iso(p.ate)}&select=conta_id,demo,ativo,tipo_contrato,moeda,entrada,resultado,situacao,comprada_em&order=comprada_em.desc&limit=${lim}`),
   ])
   const todas = [
-    ...ia.map((o) => ({ quando_ms: new Date(o.executada_em).getTime(), quando: quandoBrt(o.executada_em), origem: `I.A. ${o.robo_nome}`, conta: `${nomeDaConta(o.demo)} ${o.conta_id}`, ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: r2(num(o.resultado)), moeda: o.moeda })),
-    ...manual.map((o) => ({ quando_ms: new Date(o.comprada_em).getTime(), quando: quandoBrt(o.comprada_em), origem: 'manual', conta: `${nomeDaConta(o.demo)} ${o.conta_id}`, ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: o.situacao === 'aberta' ? null : r2(num(o.resultado)), situacao: o.situacao === 'aberta' ? 'aberta' : undefined, moeda: o.moeda })),
+    ...ia.map((o) => ({ quando_ms: new Date(o.executada_em).getTime(), quando: quandoBrt(o.executada_em), origem: `I.A. ${o.robo_nome}`, conta: `${nomeDaConta(o.demo, q.trocados)} ${o.conta_id}`, ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: r2(num(o.resultado)), moeda: o.moeda })),
+    ...manual.map((o) => ({ quando_ms: new Date(o.comprada_em).getTime(), quando: quandoBrt(o.comprada_em), origem: 'manual', conta: `${nomeDaConta(o.demo, q.trocados)} ${o.conta_id}`, ativo: o.ativo, tipo: o.tipo_contrato, entrada: num(o.entrada), resultado: o.situacao === 'aberta' ? null : r2(num(o.resultado)), situacao: o.situacao === 'aberta' ? 'aberta' : undefined, moeda: o.moeda })),
   ].sort((a, b) => b.quando_ms - a.quando_ms).slice(0, lim).map(({ quando_ms: _q, ...o }) => o)
   return { periodo: p.rotulo, operacoes: todas, observacao: todas.length ? undefined : `Nenhuma operação ${p.rotulo}.` }
 }
@@ -190,8 +193,9 @@ export async function depositosESaques(q: Quem, args: any) {
     saques: { total: soma(saq), quantidade: saq.length },
     liquido: r2(soma(dep) - soma(saq)),
     moeda: l[0]?.moeda ?? 'USD',
+    conta: nomeDaConta(false, q.trocados),
     ultimos: l.slice(0, limiteDe(args?.limite, 10, 30)).map((x) => ({ quando: quandoBrt(x.ocorrida_em), tipo: x.tipo === 'deposit' ? 'depósito' : 'saque', valor: r2(Math.abs(num(x.valor))), conta: x.conta_id })),
-    observacao: 'Vem do extrato da conta real na Deriv (atualiza a cada ~10 minutos). Transferência da Carteira (Wallet) para a conta Options conta como depósito; dinheiro parado na Wallet não aparece.' +
+    observacao: 'Vem do extrato da Deriv (atualiza a cada ~10 minutos). Transferência da Carteira (Wallet) para a conta Options conta como depósito; dinheiro parado na Wallet não aparece.' +
       (l.length ? '' : ` Nenhum depósito ou saque ${p.rotulo}.`),
   }
 }
@@ -219,7 +223,7 @@ export async function meuCadastro(q: Quem) {
       sala_extra: !!sub.sala_extra, assessor_no_whatsapp: !!sub.assessor, laboratorio: !!sub.lab,
     } : { id: f.plano_id },
     acesso: f.status_acesso, acesso_valido_ate: f.acesso_expira_em ? ROTULO_DIA(new Date(f.acesso_expira_em).getTime()) : 'sem data de término',
-    contas_deriv: contas.map((c) => ({ conta: c.conta_id, tipo: c.tipo === 'real' ? 'real' : 'demonstração', moeda: c.moeda, saldo_guardado: r2(num(c.saldo)), lido_em: quandoBrt(c.vista_em) })),
+    contas_deriv: contas.map((c) => ({ conta: c.conta_id, tipo: nomeDaConta(c.tipo !== 'real', q.trocados), moeda: c.moeda, saldo_guardado: r2(num(c.saldo)), lido_em: quandoBrt(c.vista_em) })),
     whatsapp_do_assessor: assessor[0]?.confirmado_em ? 'confirmado' : 'não confirmado',
     aulas: { assistidas: aulas.length, concluidas: aulas.filter((a) => a.concluida).length, ultima: quandoBrt(aulas.map((a) => a.ultima_vez).sort().pop()) },
     faturas_do_compartilhamento: faturas.map((x) => ({ numero: x.numero, mes: x.mes, lucro_usd: num(x.lucro_usd), percentual: num(x.percentual), valor_usd: num(x.valor_usd), valor_brl: num(x.valor_brl), vencimento: x.vencimento, situacao: x.situacao, paga_em: quandoBrt(x.paga_em), link_pagamento: x.link_pagamento ?? undefined })),
@@ -227,7 +231,7 @@ export async function meuCadastro(q: Quem) {
   }
 }
 
-/** Abre um atendimento com a equipe, em nome da própria pessoa (aparece em Suporte, no painel da equipe). */
+/** Abre um atendimento com a equipe, em nome da própria pessoa. 25/11/2026: FORA DO AR (Tiago: "manter o chat do suporte isolado do WhatsApp por enquanto"); pronto para voltar à lista de ferramentas. */
 export async function falarComAEquipe(q: Quem, args: any, origem: string) {
   const texto = String(args?.mensagem ?? '').trim().slice(0, 2000)
   if (texto.length < 5) return { recusado: true, motivo: 'Peça ao cliente para contar, numa frase, o que precisa.' }
@@ -270,12 +274,12 @@ AULAS: menu Aulas. O progresso fica salvo.
 WHATSAPP DO ASSESSOR: o número confirmado em Meu perfil é o login aqui no WhatsApp. Trocou o telefone, confirma de novo.
 SENHA E E-MAIL: Meu perfil › E-mail de acesso / Senha. Esqueceu a senha: "Esqueci minha senha" na entrada.
 NOTIFICAÇÕES E FACE ID: Meu perfil, nos botões de ativar.
-SUPORTE: Ajuda › Suporte na plataforma, ou peça aqui para falar com a equipe.
+SUPORTE: Ajuda › Suporte, dentro da plataforma (a equipe responde por lá).
 `.trim()
 
 export function ajudaDaPlataforma(marca: string) {
   return {
     ajuda: AJUDA_GF.replace(/GlobalFly/g, marca === 'globalfly' ? 'GlobalFly' : 'plataforma'),
-    observacao: 'Responda só com o que está aqui. Se a dúvida não estiver coberta, diga que vai passar para a equipe e use falar_com_a_equipe se o cliente quiser.',
+    observacao: 'Regras da plataforma: não acrescente prazo, preço ou recurso que não esteja aqui. Dúvida de conta, dinheiro ou acesso que não se resolve: Ajuda › Suporte, na plataforma.',
   }
 }

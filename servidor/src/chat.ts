@@ -9,7 +9,7 @@ import { PADRAO, conferir, sugerir, type Limites } from './limites'
 import { marcaPorId } from '../../src/marca/marcas'
 import { ehFamiliaGF } from '../../src/marca/marcas'
 import { horaDeBrasilia, recomendacaoAgora, type Recomendacao } from './recomendacao'
-import { PERIODOS, ajudaDaPlataforma, depositosESaques, falarComAEquipe, historicoDeSessoes, meuCadastro, meusResultados, minhasOperacoes } from './cerebro'
+import { PERIODOS, ajudaDaPlataforma, depositosESaques, historicoDeSessoes, meuCadastro, meusResultados, minhasOperacoes } from './cerebro'
 
 /**
  * O chat da Teeds.
@@ -69,8 +69,19 @@ Quando o cliente perde dinheiro, informe: não comemore nem console.
 O que você enxerga (só do cliente que está falando, nunca de outra pessoa):
 - resultados por período (meus_resultados), sessões de I.A. (historico_de_sessoes), operações uma a uma (minhas_operacoes),
   depósitos e saques (depositos_e_saques), cadastro, plano, contas, aulas e faturas do compartilhamento (meu_cadastro);
-- dúvidas de uso da plataforma: chame ajuda_da_plataforma e responda só com o que ela trouxer;
-- o cliente pediu para falar com uma pessoa, reclamar, ou a dúvida não se resolve: falar_com_a_equipe com o pedido dele em uma frase.
+- dúvidas de uso da plataforma: chame ajuda_da_plataforma.
+
+Dúvidas: responda de verdade, com calma e de forma simples. Primeiro o que ajuda_da_plataforma trouxer; dúvida geral
+(como funciona um contrato de dígitos, o que é o Volatility 75, meta e limite de perda, demo x real, entrada) você explica
+de forma neutra e educativa. Para não comprometer a empresa:
+- nunca prometa ganho, retorno, prazo, reembolso, devolução, bônus, exceção ou que um saque/depósito vai cair até tal hora;
+- não diga quanto a pessoa deve depositar ou investir, nem que "vale a pena": é decisão dela, e operar tem risco de perda;
+- não oriente sobre imposto, lei, regulação ou processo: diga que não pode orientar sobre isso;
+- não admita erro, falha ou culpa da plataforma ou da Deriv, nem critique ninguém: diga que entende e indique o caminho;
+- não invente regra, preço, prazo ou recurso que não veio de uma ferramenta.
+Problema com dinheiro (depósito ou saque que não apareceu), cobrança, acesso ou algo que você não consegue resolver: explique
+o que dá para conferir e diga que a equipe atende pelo Suporte da plataforma (Ajuda › Suporte). Pediu para falar com uma
+pessoa: o mesmo caminho. Você não abre atendimento nem fala pela equipe.
 Períodos: "esse mês" = mes; "semana" = 7_dias; "ontem", "hoje"; datas soltas viram de/ate (AAAA-MM-DD). Sem período dito, use mes.
 Sem conta dita, traga real e demonstração separadas. Diga sempre de qual período e conta é o número.
 
@@ -221,15 +232,6 @@ const FERRAMENTAS: Anthropic.Tool[] = [
     description: 'Como usar a plataforma: depositar, sacar, conectar a Deriv, ligar I.A., planos, compartilhamento, conta travada, simulador, aulas, senha, suporte.',
     input_schema: { type: 'object', properties: { assunto: { type: 'string' } }, additionalProperties: false },
   },
-  {
-    name: 'falar_com_a_equipe',
-    description: 'Manda o pedido do cliente para a equipe de suporte (abre um atendimento em nome dele). Só quando ele pedir para falar com alguém ou a dúvida não se resolver.',
-    input_schema: {
-      type: 'object',
-      properties: { mensagem: { type: 'string', description: 'O pedido do cliente, com os detalhes que ele deu.' } },
-      required: ['mensagem'], additionalProperties: false,
-    },
-  },
 ]
 
 /** A proposta que a tela desenha. Números daqui, nunca do texto da IA. */
@@ -264,7 +266,16 @@ export interface Dono {
   perguntarConta?: boolean
   /** De onde fala (vai no atendimento aberto com a equipe). */
   canal?: 'assistente' | 'assessor-whatsapp'
+  /**
+   * 25/11/2026: os rótulos real/demonstração estão trocados na tela desta pessoa (ADMs da GF, accountAccess.ts).
+   * Tudo que as ferramentas devolvem já sai com o nome DA TELA; o que se liga segue a conta de verdade.
+   */
+  trocados?: boolean
 }
+
+/** O nome da conta como a pessoa vê na plataforma (com os rótulos trocados, a virtual é "real"). */
+export const rotuloDaConta = (demo: boolean, trocados = false) => (demo !== trocados ? 'demonstração' : 'real')
+const resumoNaTela = (s: Parameters<typeof resumir>[0], dono: Dono) => ({ ...resumir(s), conta: `${s.contaId} (${rotuloDaConta(s.demo, dono.trocados) === 'real' ? 'REAL' : 'demonstração'})` })
 
 /** As contas Deriv que são deste cliente E que a autorização enxerga. */
 async function contasDele(dono: Dono) {
@@ -319,7 +330,7 @@ async function executar(
       return {
         contas: lista.map((c) => ({
           conta: c.accountId,
-          tipo: c.type === 'demo' ? 'demonstração' : 'real',
+          tipo: rotuloDaConta(c.type === 'demo', dono.trocados),
           moeda: c.currency,
           saldo: c.balance,
         })),
@@ -328,30 +339,29 @@ async function executar(
 
     case 'sessoes': {
       const minhas = await contasDoUsuario(dono.id)
-      return { sessoes: todas().filter(dele(dono, minhas)).map(resumir) }
+      return { sessoes: todas().filter(dele(dono, minhas)).map((s) => resumoNaTela(s, dono)) }
     }
 
     case 'status_sessao': {
       const s = await sessaoDele(dono, String(args.id))
       if (!s) throw new Error(`Sessão ${args.id} não é sua ou não existe mais.`)
-      return resumir(s)
+      return resumoNaTela(s, dono)
     }
 
     case 'parar_sessao': {
       const s = await sessaoDele(dono, String(args.id))
       if (!s) throw new Error(`Sessão ${args.id} não é sua ou não existe mais.`)
       parar(s.id)
-      return { ...resumir(s), observacao: 'Pedido de parada enviado. Uma operação já aberta ainda vai liquidar.' }
+      return { ...resumoNaTela(s, dono), observacao: 'Pedido de parada enviado. Uma operação já aberta ainda vai liquidar.' }
     }
 
     // 25/11/2026, o "cérebro": tudo preso a dono.id e à marca (cerebro.ts); nada vem dos argumentos além de período e filtros
-    case 'meus_resultados': return meusResultados({ userId: dono.id, marca }, args)
-    case 'historico_de_sessoes': return historicoDeSessoes({ userId: dono.id, marca }, args)
-    case 'minhas_operacoes': return minhasOperacoes({ userId: dono.id, marca }, args)
-    case 'depositos_e_saques': return depositosESaques({ userId: dono.id, marca }, args)
-    case 'meu_cadastro': return meuCadastro({ userId: dono.id, marca })
+    case 'meus_resultados': return meusResultados({ userId: dono.id, marca, trocados: dono.trocados }, args)
+    case 'historico_de_sessoes': return historicoDeSessoes({ userId: dono.id, marca, trocados: dono.trocados }, args)
+    case 'minhas_operacoes': return minhasOperacoes({ userId: dono.id, marca, trocados: dono.trocados }, args)
+    case 'depositos_e_saques': return depositosESaques({ userId: dono.id, marca, trocados: dono.trocados }, args)
+    case 'meu_cadastro': return meuCadastro({ userId: dono.id, marca, trocados: dono.trocados })
     case 'ajuda_da_plataforma': return ajudaDaPlataforma(marca)
-    case 'falar_com_a_equipe': return falarComAEquipe({ userId: dono.id, marca }, args, dono.canal ?? 'assistente')
 
     case 'propor_sessao': {
       const roboId = String(args.robo ?? '')
@@ -363,7 +373,8 @@ async function executar(
       if (!args.conta && dono.perguntarConta && !dono.somenteDemo && disponiveis.some((c) => c.type === 'demo') && disponiveis.some((c) => c.type !== 'demo')) {
         const ok = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : undefined)
         lembrarPedidoSemConta(dono.id, { robo: roboId, nome: ficha.nome, entrada: ok(args.entrada), meta: ok(args.take_profit), stop: ok(args.stop_loss) })
-        return { recusado: true, motivo: `Falta saber a conta. Pergunte ao cliente se liga na demonstração (${disponiveis.find((c) => c.type === 'demo')!.accountId}) ou na real (${disponiveis.find((c) => c.type !== 'demo')!.accountId}); não ligue antes de ele responder.` }
+        const d = disponiveis.find((c) => c.type === 'demo')!; const rl = disponiveis.find((c) => c.type !== 'demo')!
+        return { recusado: true, motivo: `Falta saber a conta. Pergunte ao cliente se liga na conta ${rotuloDaConta(true, dono.trocados)} (${d.accountId}) ou na ${rotuloDaConta(false, dono.trocados)} (${rl.accountId}); não ligue antes de ele responder.` }
       }
       const conta = args.conta
         ? disponiveis.find((c) => c.accountId === String(args.conta))
@@ -415,6 +426,7 @@ async function executar(
       return {
         ligado: true,
         ...proposta,
+        conta_na_tela: rotuloDaConta(proposta.demo, dono.trocados),
         observacao: 'A I.A. já está operando. Diga em poucas linhas o que ligou (I.A., conta, entrada, meta e limite) ' +
           'e que você avisa aqui quando a sessão terminar.',
       }
@@ -717,11 +729,11 @@ export function periodoDaFrase(q: string): string {
   return 'mes'
 }
 /** O resumo de meus_resultados em texto (o mesmo modelo no WhatsApp e na tela). */
-export function textoDosResultados(r: Awaited<ReturnType<typeof meusResultados>>, trocados = false): string {
+export function textoDosResultados(r: Awaited<ReturnType<typeof meusResultados>>): string {
   if (!r.contas.length) return `Você não tem operações ${r.periodo} pela plataforma.`
   const linhas = [`📊 **Seus resultados ${r.periodo}**`]
   for (const c of r.contas as any[]) {
-    const nome = (c.conta === 'real') !== trocados ? 'Conta real' : 'Conta demonstração'
+    const nome = c.conta === 'real' ? 'Conta real' : 'Conta demonstração'
     linhas.push('', `**${nome}: ${comSinal(c.resultado_total, c.moeda)}**`)
     if (c.ia) linhas.push(`I.A.: ${comSinal(c.ia.resultado, c.moeda)} em ${c.ia.sessoes} ${c.ia.sessoes === 1 ? 'sessão' : 'sessões'} (${c.ia.operacoes} ${c.ia.operacoes === 1 ? 'operação' : 'operações'}: ${c.ia.ganhas} ${c.ia.ganhas === 1 ? 'ganho' : 'ganhos'} · ${c.ia.perdidas} ${c.ia.perdidas === 1 ? 'perda' : 'perdas'})` +
       (c.ia.por_ia.length > 1 ? `\n${c.ia.por_ia.slice(0, 5).map((x: any) => `${x.nome} ${comSinal(x.resultado, c.moeda)}`).join(' · ')}` : ''))
@@ -741,6 +753,7 @@ export const RESPOSTA_DE_CONTA = /^(e |eh |pode ser |pode |liga )?(na |em |a |o 
 async function perguntaDaConta(dono: Dono, pedido: PedidoDeLigar, marca: string): Promise<string | null> {
   if (!dono.perguntarConta || dono.somenteDemo) return null
   const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string; moeda: string; saldo: number }> }).contas
+  // minhas_contas já devolve o nome da tela (com os rótulos trocados, a virtual aparece como "real")
   const demo = contas.find((c) => c.tipo !== 'real'); const real = contas.find((c) => c.tipo === 'real')
   if (!demo || !real) return null
   lembrarPedidoSemConta(dono.id, pedido)
@@ -770,13 +783,13 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
 
   // "quanto eu já lucrei esse mês?" (25/11/2026): a conta do banco, sem I.A. no meio
   const qr = corrigirDigitacao(q)
-  if (PERGUNTA_DE_RESULTADO.test(qr)) return textoDosResultados(await meusResultados({ userId: dono.id, marca }, { periodo: periodoDaFrase(qr) }), !!anexos.trocados)
+  if (PERGUNTA_DE_RESULTADO.test(qr)) return textoDosResultados(await meusResultados({ userId: dono.id, marca, trocados: dono.trocados }, { periodo: periodoDaFrase(qr) }))
   const IA = gf ? '(i ?a|ias?|inteligencias?)' : '(robos?|i ?a|ias?)'
 
   if (new RegExp(`^(quais (sao )?(as )?minhas contas|minhas contas|(qual|quanto) (e |eh )?(o )?meu saldo|meu saldo|saldo|quanto (eu )?tenho( de saldo)?|quais contas eu tenho)$`).test(q)) {
     const r = await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string; moeda: string; saldo: number }>; observacao?: string }
     if (!r.contas.length) return r.observacao ?? 'Nenhuma conta da Deriv está ligada a este login.'
-    return `Suas contas na Deriv:\n${r.contas.map((c) => `• ${c.tipo === 'real' ? 'Real' : 'Demonstração'} ${c.conta}: ${dinheiro(c.saldo, c.moeda)}`).join('\n')}`
+    return `Suas contas na Deriv:\n${r.contas.map((c) => `• ${c.tipo === 'real' ? 'Real' : 'Demonstração'} ${c.conta}: ${dinheiro(c.saldo, c.moeda)}`).join('\n')}` // tipo já vem com o nome da tela
   }
 
   if (new RegExp(`^(como (estao|esta|vao|vai) (as |os )?(minhas |meus )?${IA}( agora| hoje)?|(as |os )?(minhas |meus )?${IA} (agora|operando|ligad[ao]s?)|o que (esta|ta) operando( agora)?|tem (alguma |algum )?${IA} (ligad[ao]|operando)( agora)?)$`).test(q)) {
@@ -799,6 +812,7 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
   if (ligar) {
     const ficha = robos.find((r) => chave(r.nome) === ligar[5] || r.id === ligar[5])
     if (ficha) {
+      // a palavra é a da tela, e minhas_contas devolve o nome da tela: compara direto
       const tipo = ligar[7] === 'real' ? 'real' : ligar[7] ? 'demo' : null
       const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string }> }).contas
       const conta = tipo ? contas.find((c) => (tipo === 'real' ? c.tipo === 'real' : c.tipo !== 'real'))?.conta : undefined
@@ -811,7 +825,7 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
       const r = await executar(dono, 'propor_sessao', { robo: ficha.id, ...(conta ? { conta } : {}), ...(ligar[6] ? { entrada: Number(ligar[6].replace(',', '.')) } : {}) }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
       if (r.recusado || !proposta) return `Não liguei: ${r.motivo ?? 'não consegui falar com a corretora agora. Tente de novo em instantes.'}`
       propostaDireta.set(dono.id, proposta)
-      return `Pronto, liguei a ${ficha.nome} na conta ${proposta.demo !== !!anexos.trocados ? 'de demonstração' : 'REAL'}:\n` +
+      return `Pronto, liguei a ${ficha.nome} na conta ${rotuloDaConta(proposta.demo, dono.trocados) === 'real' ? 'REAL' : 'de demonstração'}:\n` +
         `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
         'Te aviso aqui quando terminar.'
     }
@@ -885,8 +899,9 @@ export function pedidoDeLigar(q: string, robos: Array<{ id: string; nome: string
 
 async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, anexos: Anexos): Promise<string> {
   const contas = (await executar(dono, 'minhas_contas', {}, () => undefined, marca) as { contas: Array<{ conta: string; tipo: string }> }).contas
-  // a pessoa fala pelo que vê: com os rótulos trocados, a "real" da tela é a virtual
-  const tipoDeVerdade = pedido.tipo && anexos.trocados ? (pedido.tipo === 'real' ? 'demo' : 'real') : pedido.tipo
+  // a pessoa fala pelo que vê, e minhas_contas já devolve o nome DA TELA (com os rótulos trocados, a virtual
+  // aparece como "real"): basta comparar palavra com palavra, sem trocar de novo
+  const tipoDeVerdade = pedido.tipo
   if (!tipoDeVerdade && !anexos.contaAtual) {
     const pergunta = await perguntaDaConta(dono, pedido, marca)
     if (pergunta) return pergunta
@@ -902,7 +917,7 @@ async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, 
   }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
   if (r.recusado || !proposta) return `Não liguei: ${r.motivo ?? 'não consegui falar com a corretora agora. Tente de novo em instantes.'}`
   propostaDireta.set(dono.id, proposta)
-  const rotulo = proposta.demo !== !!anexos.trocados ? 'de demonstração' : 'REAL'
+  const rotulo = proposta.demo !== !!(dono.trocados ?? anexos.trocados) ? 'de demonstração' : 'REAL'
   const sugeridos = [!pedido.entrada && 'entrada', !pedido.meta && 'meta', !pedido.stop && 'stop'].filter(Boolean) as string[]
   return `Pronto, liguei a ${pedido.nome} na conta ${rotulo}:\n` +
     `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
@@ -987,7 +1002,7 @@ export async function conversar(
     // "por" aqui é quase sempre a preposição ("por favor", "por dia"), não o verbo pôr
     const pediu = (t: string) => { const q = normalizar(t).replace(/\bpor\b/g, ' '); return !!q && VERBO_DE_LIGAR.test(q) && !PERGUNTA.test(q) && !/\b(nao|nunca|desliga)\b/.test(q) && !/\b(como (ela |ele |a |o )?(opera|funciona)|saber|explica|explicar|entender|funciona)\b/.test(q) }
     const anterior = [...historico].reverse().find((t) => t.papel === 'cliente')?.texto ?? ''
-    dono = { ...dono, pediuParaLigar: !comImagem && (pediu(pergunta) || (pergunta.length <= 60 && pediu(anterior))) }
+    dono = { ...dono, trocados: dono.trocados ?? !!anexos.trocados, pediuParaLigar: !comImagem && (pediu(pergunta) || (pergunta.length <= 60 && pediu(anterior))) }
   }
   if (comImagem && !pergunta) pergunta = anexos.video ? 'O que aparece neste vídeo? Explique o que for útil para operar na plataforma.' : 'O que aparece nesta imagem? Explique o que for útil para operar na plataforma.'
   const comTranscricao = <T extends Resposta>(r: T): T => (transcricao !== undefined ? { ...r, transcricao } : r)
@@ -1006,7 +1021,7 @@ export async function conversar(
     const rec = await recomendacaoRapida()
     if (rec) contexto.texto += `\nI.A. recomendada agora (é o cartão da Início da plataforma; use SEMPRE esta, nunca escolha outra): ${rec.ia.nome}, análise das ${horaDeBrasilia(rec.de)}, válida até ${horaDeBrasilia(rec.ate)}; também alinhada: ${rec.segunda.nome}. Fale que o mercado "ficou alinhado" com a estratégia dela; nunca fale de chance maior, ticks ou porcentagens. "A recomendada" = ${rec.ia.nome}.`
   }
-  if (anexos.trocados) contexto.texto += '\nNa tela deste cliente os nomes das contas estão trocados (uso interno): chame a conta real de "demonstração" e a de demonstração de "real", e entenda o que ele disser do mesmo jeito.'
+  if (dono.trocados) contexto.texto += '\nOs nomes de conta (real/demonstração) que as ferramentas devolvem já estão como aparecem na tela deste cliente: use-os como vieram, sem trocar nada, e para ligar passe o número da conta que ele escolheu por esse nome.'
 
   // imagem e vídeo: só o Gemini enxerga aqui
   if (comImagem) {
