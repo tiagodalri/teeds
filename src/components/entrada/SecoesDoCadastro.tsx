@@ -54,7 +54,7 @@ export function MiniCartao({ id, grande }: { id: IdDoPlano; grande?: boolean }) 
 /* ------------------------------------------------------------------ muito além das I.A. */
 const AULAS_DA_VITRINE: Array<{ modulo: string; aulas: Array<[string, string]> }> = [
   { modulo: 'Comece aqui', aulas: [['introducao', `Introdução à ${GF_NOME}`], ['visao-geral', 'Conhecendo a plataforma'], ['conta-deriv', 'Abertura de conta'], ['primeiro-deposito', 'Como depositar?'], ['saldo-demo-real', 'Conta demo e conta real'], ['deriv-confiavel', 'A Deriv é confiável?']] },
-  { modulo: 'Estratégias de I.A. na prática', aulas: [['o-que-sao-as-ias', 'O que são as I.A. de operações'], ['robo-raptor', 'A estratégia Raptor'], ['robo-gulf', 'A estratégia Gulf'], ['robo-falcon', 'A estratégia Falcon'], ['robo-legacy', 'A estratégia Legacy'], ['robo-phenom', 'A estratégia Phenom'], ['operando-na-pratica', 'Operando na prática']] },
+  { modulo: 'Estratégias de I.A. na prática', aulas: [['o-que-sao-as-ias', 'O que são as I.A. de operações'], ['robo-raptor', `A estratégia ${nomeCurtoDaIA('goreme')}`], ['robo-gulf', `A estratégia ${nomeCurtoDaIA('superior5')}`], ['robo-falcon', `A estratégia ${nomeCurtoDaIA('falcon')}`], ['robo-legacy', `A estratégia ${nomeCurtoDaIA('legacy')}`], ['robo-phenom', `A estratégia ${nomeCurtoDaIA('ag2')}`], ['operando-na-pratica', 'Operando na prática']] },
   { modulo: 'Gerenciamento e emocional', aulas: [['gerenciamento', 'O que é gerenciamento de risco'], ['gestao-na-pratica', 'Gestão na prática'], ['day-trade', 'Day trade'], ['erros-de-iniciante', 'Erros de iniciante'], ['consistencia', 'Consistência'], ['ganhar-e-perder', 'Saber ganhar e perder']] },
 ]
 const capa = (id: string) => (capaEspecial(id) ?? capaDaAula(id)).replace(/\.jpg$/, '-mobile.webp')
@@ -191,7 +191,7 @@ function CabineReal() {
           const j = SESSOES.findIndex((s) => s.f === f)
           return (
             <figure key={f} className={j === i ? 'cpl-on' : ''}>
-              <img src={`${b}aulas-globalfly/robo-${f}-mobile.webp`} alt={`GF ${f[0].toUpperCase()}${f.slice(1)}`} width="640" height="960" loading="lazy" />
+              <img src={`${b}aulas-globalfly/robo-${f}-mobile.webp`} alt={comNomesDaMarca(`GF ${f[0].toUpperCase()}${f.slice(1)}`)} width="640" height="960" loading="lazy" />
               {j >= 0 && <button type="button" onClick={() => setI(j)} aria-label={`Ver a sessão da GF ${f}`} />}
             </figure>
           )

@@ -4,6 +4,10 @@
  * a pasta (vite.config.ts tira aulas-<outra marca> dos outros builds).
  */
 import { vitrine } from '../core/teeds/parceiro'
+import { MARCA } from '../marca'
+
+/** As capas com o Victor e o Naor são da GlobalFly; a outra marca da família (Legacy Pro) usa as suas. */
+const DA_GF = MARCA.id === 'globalfly'
 
 export const capaDaAula = (id: string): string =>
   `${import.meta.env.BASE_URL}aulas-globalfly/${id}.jpg`
@@ -31,7 +35,7 @@ const DO_NAOR = new Set([
  * Valem por cima da capa gravada na grade (as do ChatGPT foram recusadas).
  */
 export const capaEspecial = (id: string, v: string = vitrine()): string | null =>
-  !DO_NAOR.has(id) ? null
+  !DA_GF || !DO_NAOR.has(id) ? null
     : v === 'n' ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg`
     : `${import.meta.env.BASE_URL}aulas-globalfly/victor/${id}.jpg`
 
@@ -41,9 +45,9 @@ export const capaEspecial = (id: string, v: string = vitrine()): string | null =
  * e perde para a enviada. Ver capaResolvida em components/aulas/CapaDaAula.tsx.
  */
 export const capaDoParceiroNoCodigo = (id: string, v: string = vitrine()): string | null =>
-  v === 'n' && DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg` : null
+  DA_GF && v === 'n' && DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg` : null
 
 /** As artes dos Destaques com o Naor (09/11/2026), mesma regra da vitrine /n. */
 const DESTAQUES_DO_NAOR = new Set(['ao-vivo', 'comunidade', 'conta', 'deposito', 'apostila'])
 export const destaqueEspecial = (id: string): string | null =>
-  vitrine() === 'n' && DESTAQUES_DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/destaque-${id}.webp` : null
+  DA_GF && vitrine() === 'n' && DESTAQUES_DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/destaque-${id}.webp` : null

@@ -20,12 +20,12 @@ const RO = R + ESP / 2, RI = R - ESP / 2
 const pt = (a: number, r: number) => [CX + r * Math.cos((a * Math.PI) / 180), CY - r * Math.sin((a * Math.PI) / 180)]
 const f = (n: number) => n.toFixed(2)
 /** Os 10 segmentos do arco, do dígito 0 (embaixo) ao 9 (em cima). */
-const SEGMENTOS = Array.from({ length: 10 }, (_, d) => {
+export const SEGMENTOS = Array.from({ length: 10 }, (_, d) => {
   const a0 = -90 + d * 18 + VAO / 2, a1 = -90 + (d + 1) * 18 - VAO / 2
   const [x0, y0] = pt(a0, RO), [x1, y1] = pt(a1, RO), [x2, y2] = pt(a1, RI), [x3, y3] = pt(a0, RI)
   return `M${f(x0)} ${f(y0)} A${RO} ${RO} 0 0 0 ${f(x1)} ${f(y1)} L${f(x2)} ${f(y2)} A${RI} ${RI} 0 0 1 ${f(x3)} ${f(y3)} Z`
 })
-const HASTE = `M6 ${f(CY - RO)} H${CX - 2} V${f(CY + RO)} H15 L6 ${f(CY + RO - 9)} Z`
+export const HASTE = `M6 ${f(CY - RO)} H${CX - 2} V${f(CY + RO)} H15 L6 ${f(CY + RO - 9)} Z`
 
 export const linhaDaMarca = () => MARCA.linhaDasIas
 /** A I.A. desta marca na linha própria, pelo id do robô ou pelo nome ("Dealer Speed"). */

@@ -101,3 +101,12 @@
 .entrada-abrindo-demorou { display: grid; gap: 10px; width: 100%; }
 .entrada-abrindo-demorou p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.5; }
 .entrada-abrindo-sair { min-height: 44px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+/* Legacy Pro (linha Dealer, 25/11/2026): o carregando é o mostrador do D, os dígitos
+   acendendo em ouro do 0 ao 9 e apagando, em ciclo. */
+.dg-rota.dg-mostrador { width: auto; height: auto; display: inline-grid; place-items: center; background: none; }
+.dg-mostrador svg { display: block; overflow: visible; }
+.dg-mostrador-haste { fill: #D9DCE0; stroke: none; }
+.dg-mostrador-seg { fill: #2E3035; stroke: none; animation: dg-digito 1.65s ease-in-out infinite; }
+@keyframes dg-digito { 0%, 100% { fill: #2E3035 } 18%, 46% { fill: #C9A24A } }
+@media (prefers-reduced-motion: reduce) { .dg-mostrador-seg { animation: none; fill: #C9A24A; } }

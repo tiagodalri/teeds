@@ -3,6 +3,7 @@ import { MARCA } from '../../marca'
 import { sair } from '../../core/teeds/conta'
 import { Monograma } from '../marca/Monograma'
 import { Aviao } from './Aviao'
+import { HASTE, SEGMENTOS } from '../marca/LogotipoDealer'
 import './decolagem.css'
 
 /**
@@ -12,6 +13,15 @@ import './decolagem.css'
  * → início é uma cena só, sem troca de cenário no meio.
  */
 export function RotaCarregando() {
+  // Legacy Pro (linha Dealer): o mostrador do D, os dígitos acendendo do 0 ao 9
+  if (MARCA.linhaDasIas) return (
+    <span className="dg-rota dg-mostrador" aria-hidden="true">
+      <svg viewBox="2 2 92 96" width="42" height="44">
+        <path d={HASTE} className="dg-mostrador-haste" />
+        {SEGMENTOS.map((d, i) => <path key={i} d={d} className="dg-mostrador-seg" style={{ animationDelay: `${i * 0.11}s` }} />)}
+      </svg>
+    </span>
+  )
   return (
     <span className="dg-rota" aria-hidden="true">
       <i className="dg-rota-trilho" />
@@ -24,7 +34,7 @@ export function RotaCarregando() {
 /** Depois disso, o carregando oferece a saída (28/10/2026: "só fica carregando"). */
 const DEMOROU = 15_000
 
-export function Carregando({ texto = 'Preparando sua cabine' }: { texto?: string }) {
+export function Carregando({ texto = MARCA.linhaDasIas ? 'Preparando sua mesa' : 'Preparando sua cabine' }: { texto?: string }) {
   const [demorou, setDemorou] = useState(false)
   useEffect(() => { const t = window.setTimeout(() => setDemorou(true), DEMOROU); return () => window.clearTimeout(t) }, [])
   const entrarDeNovo = async () => { await sair(); location.reload() }

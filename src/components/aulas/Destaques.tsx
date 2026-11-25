@@ -52,7 +52,7 @@ export function bannersDaMarca({ treino, noAr }: { treino: boolean; noAr: boolea
     titulo: noAr ? 'A sala de treino está no ar' : 'Fique atento às próximas transmissões',
     texto: noAr ? 'A equipe está operando ao vivo agora. Entre para acompanhar cada decisão em tempo real.' : 'Quando a equipe abrir uma sala ao vivo, você recebe o aviso na hora. Opere junto e tire dúvidas no chat.',
     pontos: noAr ? ['Equipe operando agora', 'Cada decisão explicada', 'Chat aberto'] : ['Aviso na hora', 'Opere junto com a equipe', 'Dúvidas no chat'],
-    acao: noAr ? 'Entrar na sala' : 'Conhecer a sala', tela: 'aovivo', imagem: `${BASE}login-globalfly/nuvens.webp`, posicao: 'center 45%',
+    acao: noAr ? 'Entrar na sala' : 'Conhecer a sala', tela: 'aovivo', imagem: MARCA.linhaDasIas ? `${BASE}robos-globalfly/legacy.webp` : `${BASE}login-globalfly/nuvens.webp`, posicao: MARCA.linhaDasIas ? 'center 40%' : 'center 45%',
   })
   if (MARCA.comunidade) l.push({
     id: 'comunidade', selo: 'Comunidade oficial', marca: 'whatsapp',

@@ -1,4 +1,4 @@
-import { MARCA } from '../../marca'
+import { MARCA, nomeCurtoDaIA } from '../../marca'
 import type { Aula, Modulo } from './aulas'
 
 /* Pedido de 16/10/2026: a vitrine da GlobalFly já aparece, com as capas.
@@ -51,11 +51,11 @@ export const MODULOS: Modulo[] = [
     cor: '#9CB1C7',
     aulas: [
       aula('o-que-sao-as-ias', 'O que são essas I.A. de operações e como funcionam?', 'O que cada estratégia automática faz por você, como decide a entrada e o que continua nas suas mãos.'),
-      aula('robo-raptor', 'Como funciona a estratégia RAPTOR?', 'Os dígitos em que ela entra, como recupera uma perda e como configurar meta e limite antes de ligar.'),
-      aula('robo-gulf', 'Como funciona a estratégia GULF?', 'A leitura dos dígitos altos, quando ela entra e o que acompanhar durante a sessão.'),
-      aula('robo-falcon', 'Como funciona a estratégia FALCON?', 'Os dígitos de 0 a 5, a entrada direta, a recuperação e como configurar antes de ligar.'),
-      aula('robo-legacy', 'Como funciona a estratégia LEGACY?', 'Os dígitos de 4 a 9, a entrada direta, a recuperação e como configurar antes de ligar.'),
-      aula('robo-phenom', 'Como funciona a estratégia PHENOM?', 'A estratégia dos dígitos baixos, quando ela entra e o que acompanhar durante a sessão.'),
+      aula('robo-raptor', `Como funciona a estratégia ${nomeCurtoDaIA('goreme').toUpperCase()}?`, 'Os dígitos em que ela entra, como recupera uma perda e como configurar meta e limite antes de ligar.'),
+      aula('robo-gulf', `Como funciona a estratégia ${nomeCurtoDaIA('superior5').toUpperCase()}?`, 'A leitura dos dígitos altos, quando ela entra e o que acompanhar durante a sessão.'),
+      aula('robo-falcon', `Como funciona a estratégia ${nomeCurtoDaIA('falcon').toUpperCase()}?`, 'Os dígitos de 0 a 5, a entrada direta, a recuperação e como configurar antes de ligar.'),
+      aula('robo-legacy', `Como funciona a estratégia ${nomeCurtoDaIA('legacy').toUpperCase()}?`, 'Os dígitos de 4 a 9, a entrada direta, a recuperação e como configurar antes de ligar.'),
+      aula('robo-phenom', `Como funciona a estratégia ${nomeCurtoDaIA('ag2').toUpperCase()}?`, 'A estratégia dos dígitos baixos, quando ela entra e o que acompanhar durante a sessão.'),
       aula('operando-na-pratica', 'Operando na prática', 'Uma sessão do começo ao fim: escolher a estratégia, definir valores, acompanhar e encerrar.'),
       aula('dicas', 'Dicas e orientações', 'Os cuidados que fazem diferença no dia a dia e os erros mais comuns de quem está começando.'),
     ],
