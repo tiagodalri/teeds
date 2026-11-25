@@ -105,6 +105,7 @@ Nunca:
 Ligar ${ia(marca).um}:
 - Quando o cliente pedir claramente para ligar, chame propor_sessao: ela LIGA na hora (não existe cartão nem botão).
 - Passe só os valores que o cliente disse; o que faltar ela sugere pelo saldo. Na dúvida sobre qual I.A., pergunte antes.
+- Pediu "sem stop"/"sem limite": respeite (a plataforma liga sem limite de perda: para na meta, se ele pedir, ou quando o saldo acabar). Não passe stop_loss e diga isso claramente.
 - Se ela recusar, explique em uma linha o motivo devolvido. Não tente contornar.
 - Só diga que ligou depois que propor_sessao devolver ligado: true nesta conversa. Diga a I.A., a conta, a entrada, a meta e o limite, e que você avisa aqui quando terminar.${ia(marca).regra}`
 
@@ -254,6 +255,8 @@ export interface Proposta {
   takeProfit: number
   /** A sessão que já foi ligada (19/11/2026: o chat liga direto; a tela acompanha e avisa no fim). */
   sessaoId?: string
+  /** Ligou sem limite de perda a pedido da pessoa (o stop é o saldo inteiro). */
+  semStop?: boolean
 }
 
 /** Quem fala. `vitrine`/`app`: o parceiro do endereço (/n, /v) e o app da Deriv dele, como na rota do botão. */
@@ -277,7 +280,16 @@ export interface Dono {
    * Tudo que as ferramentas devolvem já sai com o nome DA TELA; o que se liga segue a conta de verdade.
    */
   trocados?: boolean
+  /**
+   * 25/11/2026 (Tiago: "se a pessoa pedir para entrar sem stop, deve respeitar o pedido dela"): a pessoa disse
+   * "sem stop"/"sem limite" nesta mensagem. O limite de perda vira o saldo inteiro da conta: só para na meta,
+   * se ela pedir para parar ou quando o saldo não cobrir a próxima entrada. Só vale com o pedido dito, nunca sozinho.
+   */
+  semStop?: boolean
 }
+
+/** "sem stop", "sem limite (de perda)", "sem stop loss", "sem loss". */
+export const PEDIU_SEM_STOP = /\bsem (o |nenhum |nada de )?(stop|stop ?loss|loss|limite( de perda)?)\b/
 
 /** O nome da conta como a pessoa vê na plataforma (com os rótulos trocados, a virtual é "real"). */
 export const rotuloDaConta = (demo: boolean, trocados = false) => (demo !== trocados ? 'demonstração' : 'real')
@@ -391,7 +403,8 @@ async function executar(
       const limites = await limitesDe(dono)
       const sugestao = sugerir(conta.balance, conta.type === 'demo', limites)
       const entrada = Number(args.entrada ?? sugestao.entrada)
-      const stopLoss = Number(args.stop_loss ?? sugestao.stopLoss)
+      // sem stop (pedido dito pela pessoa): o freio é o saldo inteiro da conta
+      const stopLoss = dono.semStop ? Math.floor(conta.balance * 100) / 100 : Number(args.stop_loss ?? sugestao.stopLoss)
       const takeProfit = Number(args.take_profit ?? sugestao.takeProfit)
 
       const veredito = conferir({
@@ -427,7 +440,7 @@ async function executar(
         roboId, roboNome: ficha.nome, regra: ficha.ganhaQuando,
         contaId: conta.accountId, demo: conta.type === 'demo',
         moeda: conta.currency, saldo: conta.balance,
-        entrada, stopLoss, takeProfit, sessaoId: sessao.id,
+        entrada, stopLoss, takeProfit, sessaoId: sessao.id, ...(dono.semStop ? { semStop: true } : {}),
       }
       guardar(proposta)
       return {
@@ -833,7 +846,7 @@ async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexo
       if (r.recusado || !proposta) return `Não liguei: ${r.motivo ?? 'não consegui falar com a corretora agora. Tente de novo em instantes.'}`
       propostaDireta.set(dono.id, proposta)
       return `Pronto, liguei a ${ficha.nome} na conta ${rotuloDaConta(proposta.demo, dono.trocados) === 'real' ? 'REAL' : 'de demonstração'}:\n` +
-        `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
+        `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${proposta.semStop ? 'sem limite (para na meta ou quando o saldo acabar)' : dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
         'Te aviso aqui quando terminar.'
     }
   }
@@ -868,7 +881,7 @@ const valorDe = (t: string) => POR_EXTENSO[t] ?? Number(t.replace(',', '.'))
 const VERBO_DE_LIGAR = /\b(liga|ligar|ligue|liguem|opera|operar|opere|roda|rodar|rode|coloca|colocar|coloque|poe|por|inicia|iniciar|inicie|comeca|comecar|comece|bota|botar|bote|ativa|ativar|ative|aciona|acionar|acione|starta|startar|start|dispara|disparar)\b/
 const PERGUNTA = /^(como|qual|quais|o que|oque|por que|porque|quando|quanto|sera que|vale a pena|devo|e se)\b/
 
-export interface PedidoDeLigar { robo: string; nome: string; entrada?: number; meta?: number; stop?: number; tipo?: 'real' | 'demo' }
+export interface PedidoDeLigar { robo: string; nome: string; entrada?: number; meta?: number; stop?: number; tipo?: 'real' | 'demo'; semStop?: boolean }
 
 export function pedidoDeLigar(q: string, robos: Array<{ id: string; nome: string }>): PedidoDeLigar | null {
   if (PERGUNTA.test(q) || !VERBO_DE_LIGAR.test(q) || /\b(nao|nunca|para de|parar de|desliga)\b/.test(q)) return null
@@ -901,7 +914,8 @@ export function pedidoDeLigar(q: string, robos: Array<{ id: string; nome: string
   const tipo = /\b(conta real|na real|em real|real)\b/.test(q.replace(/\breais\b/g, '').replace(/\b(\d+(?:[.,]\d+)?|um|uma|dois|cinco|dez|vinte) real\b/g, '')) ? 'real'
     : /\b(demo|demonstracao|treino|virtual|teste|simulacao)\b/.test(q) ? 'demo' : undefined
   const ok = (v?: number) => (v !== undefined && Number.isFinite(v) && v > 0 ? v : undefined)
-  return { robo: citadas[0].id, nome: citadas[0].nome, entrada: ok(entrada), meta: ok(meta), stop: ok(stop), tipo }
+  const semStop = PEDIU_SEM_STOP.test(q)
+  return { robo: citadas[0].id, nome: citadas[0].nome, entrada: ok(entrada), meta: ok(meta), stop: semStop ? undefined : ok(stop), tipo, ...(semStop ? { semStop } : {}) }
 }
 
 async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, anexos: Anexos): Promise<string> {
@@ -918,7 +932,7 @@ async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, 
     : contas.find((c) => c.conta === anexos.contaAtual)?.conta
   if (tipoDeVerdade && !conta) return `Não achei uma conta ${pedido.tipo === 'real' ? 'real' : 'de demonstração'} da Deriv ligada a este login.`
   let proposta: Proposta | undefined
-  const r = await executar(dono, 'propor_sessao', {
+  const r = await executar({ ...dono, semStop: dono.semStop || !!pedido.semStop }, 'propor_sessao', {
     robo: pedido.robo, ...(conta ? { conta } : {}),
     ...(pedido.entrada ? { entrada: pedido.entrada } : {}), ...(pedido.meta ? { take_profit: pedido.meta } : {}), ...(pedido.stop ? { stop_loss: pedido.stop } : {}),
   }, (x) => { proposta = x }, marca) as { recusado?: boolean; motivo?: string }
@@ -927,7 +941,7 @@ async function cartaoDoPedido(dono: Dono, pedido: PedidoDeLigar, marca: string, 
   const rotulo = proposta.demo !== !!(dono.trocados ?? anexos.trocados) ? 'de demonstração' : 'REAL'
   const sugeridos = [!pedido.entrada && 'entrada', !pedido.meta && 'meta', !pedido.stop && 'stop'].filter(Boolean) as string[]
   return `Pronto, liguei a ${pedido.nome} na conta ${rotulo}:\n` +
-    `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
+    `• Entrada: ${dinheiro(proposta.entrada, proposta.moeda)}\n• Meta de ganho: ${dinheiro(proposta.takeProfit, proposta.moeda)}\n• Limite de perda: ${proposta.semStop ? 'sem limite (para na meta ou quando o saldo acabar)' : dinheiro(proposta.stopLoss, proposta.moeda)}\n` +
     (sugeridos.length ? `${sugeridos.length === 1 ? 'A' : 'Os valores de'} ${sugeridos.join(' e ').replace(/ e (?=.* e )/, ', ')} eu escolhi pelo seu saldo, porque você não disse. ` : '') +
     'Te aviso aqui quando terminar.'
 }
@@ -1009,7 +1023,7 @@ export async function conversar(
     // "por" aqui é quase sempre a preposição ("por favor", "por dia"), não o verbo pôr
     const pediu = (t: string) => { const q = normalizar(t).replace(/\bpor\b/g, ' '); return !!q && VERBO_DE_LIGAR.test(q) && !PERGUNTA.test(q) && !/\b(nao|nunca|desliga)\b/.test(q) && !/\b(como (ela |ele |a |o )?(opera|funciona)|saber|explica|explicar|entender|funciona)\b/.test(q) }
     const anterior = [...historico].reverse().find((t) => t.papel === 'cliente')?.texto ?? ''
-    dono = { ...dono, trocados: dono.trocados ?? !!anexos.trocados, pediuParaLigar: !comImagem && (pediu(pergunta) || (pergunta.length <= 60 && pediu(anterior))) }
+    dono = { ...dono, trocados: dono.trocados ?? !!anexos.trocados, semStop: PEDIU_SEM_STOP.test(normalizar(pergunta)), pediuParaLigar: !comImagem && (pediu(pergunta) || (pergunta.length <= 60 && pediu(anterior))) }
   }
   if (comImagem && !pergunta) pergunta = anexos.video ? 'O que aparece neste vídeo? Explique o que for útil para operar na plataforma.' : 'O que aparece nesta imagem? Explique o que for útil para operar na plataforma.'
   const comTranscricao = <T extends Resposta>(r: T): T => (transcricao !== undefined ? { ...r, transcricao } : r)

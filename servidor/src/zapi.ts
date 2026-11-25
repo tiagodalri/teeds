@@ -343,9 +343,7 @@ async function atender(numero: string, corpo: any): Promise<void> {
     }).catch(() => null)
   }
   // 25/11/2026 (Tiago: "melhorar o padrão dessas mensagens"): ligou = sempre o mesmo modelo, com os números da proposta
-  // "sem stop": a plataforma não liga sem limite de perda (limites.ts); diz qual foi usado em vez de calar
-  const pediuSemStop = /\bsem (o )?(stop|limite|loss)\b/i.test(`${texto} ${r.transcricao ?? ''}`.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))
-  const resposta = r.proposta?.sessaoId ? mensagemDoInicio(r.proposta, trocados) + (pediuSemStop ? `\n\nSem limite de perda a plataforma não liga: usei US$ ${r.proposta.stopLoss.toFixed(2).replace('.', ',')}, pelo seu saldo. Para outro valor, é só pedir.` : '') : (r.texto || 'Me embolei aqui. Pode repetir de outro jeito?')
+  const resposta = r.proposta?.sessaoId ? mensagemDoInicio(r.proposta, trocados) : (r.texto || 'Me embolei aqui. Pode repetir de outro jeito?')
   await enviar(numero, resposta, dono.user_id, 1)
   if (r.proposta?.sessaoId) vigiar(r.proposta.sessaoId, numero, dono.user_id, trocados)
 }
@@ -393,9 +391,10 @@ const din = (v: number, moeda: string) => `${moeda === 'USD' ? 'US$' : moeda} ${
 const nomeDaConta = (demo: boolean, _contaId: string, trocados = false) => (demo !== trocados ? 'Conta demo' : '*Conta real*')
 const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
 
-export function mensagemDoInicio(p: { roboNome: string; contaId: string; demo: boolean; moeda: string; entrada: number; takeProfit: number; stopLoss: number }, trocados = false): string {
+export function mensagemDoInicio(p: { roboNome: string; contaId: string; demo: boolean; moeda: string; entrada: number; takeProfit: number; stopLoss: number; semStop?: boolean }, trocados = false): string {
   return `🟢 *${p.roboNome} ligada*\n${nomeDaConta(p.demo, p.contaId, trocados)}\n\n` +
-    `Entrada: *${din(p.entrada, p.moeda)}*\nMeta: *${din(p.takeProfit, p.moeda)}*\nLimite de perda: *${din(p.stopLoss, p.moeda)}*\n\n` +
+    `Entrada: *${din(p.entrada, p.moeda)}*\nMeta: *${din(p.takeProfit, p.moeda)}*\nLimite de perda: *${p.semStop ? 'sem limite' : din(p.stopLoss, p.moeda)}*\n\n` +
+    (p.semStop ? '_Sem limite de perda: ela só para na meta, se você pedir para parar ou quando o saldo acabar._\n' : '') +
     '_Te aviso aqui quando terminar._'
 }
 
