@@ -260,3 +260,68 @@ html:has(body.sl) { overflow-x: hidden; }
   .sl-fone { height: 540px; border-radius: 28px; }
   .sl-ias .lp-cabine { margin-inline: 0; }
 }
+
+/* ------------------------------------------------ o celular (titânio, vidro, reflexo, inclinação 3D), todo em CSS */
+.sl-iphone { --rx: 0deg; --ry: -9deg; --brilho: 20%; position: relative; justify-self: center; width: min(350px, 82vw); perspective: 1600px; }
+.sl-ip-flutua { animation: sl-ip-flutua 6s ease-in-out infinite; transform-style: preserve-3d; }
+@keyframes sl-ip-flutua { 50% { transform: translateY(-12px) } }
+.sl-ip-corpo { position: relative; aspect-ratio: 430 / 900; padding: 3.2%; border-radius: 15.5% / 7.4%; transform: rotateX(var(--rx)) rotateY(var(--ry)); transform-style: preserve-3d; will-change: transform;
+  background:
+    linear-gradient(calc(115deg + var(--ry) * 3), rgba(255, 255, 255, .55) 0%, rgba(255, 255, 255, 0) 22%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, .35) 100%),
+    linear-gradient(160deg, #B9B2A6 0%, #6E6A63 18%, #3B3936 38%, #8C867C 55%, #2E2C2A 74%, #A39C90 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .28), inset 0 0 0 4px rgba(0, 0, 0, .55), inset 0 0 10px 4px rgba(0, 0, 0, .5),
+    0 2px 2px rgba(255, 255, 255, .12), 0 60px 90px -30px rgba(0, 0, 0, .95), 0 30px 60px -30px rgba(242, 178, 92, .28); }
+/* botões laterais */
+.sl-ip-bt { position: absolute; width: 1.1%; border-radius: 3px; background: linear-gradient(90deg, #4A4743, #B5AEA2 45%, #55524D); box-shadow: 0 0 2px rgba(0, 0, 0, .7); }
+.sl-ip-bt1 { left: -1%; top: 17%; height: 4% } .sl-ip-bt2 { left: -1%; top: 25%; height: 8% } .sl-ip-bt3 { left: -1%; top: 35%; height: 8% } .sl-ip-bt4 { right: -1%; top: 28%; height: 12% }
+.sl-ip-tela { position: relative; height: 100%; border-radius: 13% / 6.2%; overflow: hidden; background: #000; isolation: isolate; box-shadow: 0 0 0 2px #050505, 0 0 0 3px rgba(255, 255, 255, .06); display: grid; grid-template-rows: auto 1fr; }
+.sl-ip-status { position: relative; z-index: 6; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 46px; padding: 6px 22px 0 28px; color: #fff; }
+.sl-ip-status b { font: 700 15px/1 -apple-system, "SF Pro Text", Arimo, sans-serif; letter-spacing: -.01em; }
+.sl-ip-ilha { width: 96px; height: 28px; border-radius: 20px; background: #000; display: flex; align-items: center; justify-content: flex-end; padding-right: 9px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .05); }
+.sl-ip-ilha i { width: 9px; height: 9px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #2B3A66, #0A0F1E 60%); box-shadow: 0 0 0 1.5px #0C0C0C; }
+.sl-ip-icones { display: flex; justify-content: flex-end; align-items: center; gap: 5px; }
+.sl-ip-icones svg { fill: currentColor; }
+.sl-ip-cena { grid-row: 2; grid-column: 1; min-height: 0; transition: opacity .55s ease, transform .65s cubic-bezier(.16, 1, .3, 1), filter .55s; }
+.sl-ip-zap { display: grid; grid-template-rows: auto 1fr auto; background: #0B141A; }
+.sl-iphone .sl-ip-tela { background: #0B141A; }
+.sl-iphone .sl-ip-status { background: #1F2C34; transition: background .5s; }
+.sl-iphone .sl-fone-topo { padding: 6px 12px 10px; gap: 9px; }
+.sl-ip-voltar { width: 22px; height: 22px; color: #53BDEB; flex: none; }
+.sl-iphone .sl-fone-conversa { padding: 12px 10px; }
+.sl-iphone .sl-zap-msg { font-size: 13.5px; }
+.sl-iphone .sl-fone-barra { padding: 8px 9px 26px; }
+/* tela bloqueada */
+.sl-ip-bloqueio { position: relative; z-index: 4; margin-top: -46px; padding: 74px 12px 30px; display: flex; flex-direction: column; align-items: center; color: #fff; opacity: 0; transform: scale(1.06); pointer-events: none;
+  background: radial-gradient(120% 60% at 70% 12%, rgba(242, 178, 92, .55), transparent 60%), radial-gradient(90% 50% at 15% 75%, rgba(18, 48, 79, .9), transparent 70%), linear-gradient(180deg, #0A2038 0%, #051528 55%, #02070F 100%); }
+.sl-ip-data { font: 600 15px/1 -apple-system, "SF Pro Text", Arimo, sans-serif; opacity: .85; }
+.sl-ip-relogio { margin-top: 4px; font: 700 clamp(64px, 22vw, 86px)/1 -apple-system, "SF Pro Display", Arimo, sans-serif; letter-spacing: -.03em; font-variant-numeric: tabular-nums; text-shadow: 0 6px 30px rgba(0, 0, 0, .35); }
+.sl-ip-notifs { width: 100%; margin-top: auto; display: grid; gap: 8px; }
+.sl-ip-notif { display: grid; grid-template-columns: 38px 1fr; gap: 10px; align-items: center; padding: 11px 12px; border-radius: 20px; background: rgba(245, 245, 247, .2); backdrop-filter: blur(22px) saturate(1.6); -webkit-backdrop-filter: blur(22px) saturate(1.6); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 14px 30px -14px rgba(0, 0, 0, .7); animation: sl-ip-notif .6s cubic-bezier(.2, 1.3, .4, 1) both; text-align: left; }
+@keyframes sl-ip-notif { from { opacity: 0; transform: translateY(-34px) scale(.9) } }
+.sl-ip-notif-icone { width: 38px; height: 38px; border-radius: 9px; }
+.sl-ip-notif-wa { display: grid; place-items: center; background: #25D366; color: #fff; }
+.sl-ip-notif-wa svg { width: 26px; height: 26px; }
+.sl-ip-notif div { display: grid; gap: 1px; min-width: 0; }
+.sl-ip-notif span { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; opacity: .7; }
+.sl-ip-notif time { text-transform: none; font-weight: 400; }
+.sl-ip-notif b { font-size: 14px; line-height: 1.25; }
+.sl-ip-notif em { font-style: normal; font-size: 13px; line-height: 1.3; opacity: .92; }
+.sl-ip-notif em.sl-verde { color: #7CF2A8; opacity: 1; font-weight: 700; }
+.sl-iphone[data-cena="bloqueio"] .sl-ip-bloqueio { opacity: 1; transform: none; }
+.sl-iphone[data-cena="bloqueio"] .sl-ip-zap { opacity: 0; transform: scale(.94); filter: blur(6px); }
+.sl-iphone[data-cena="bloqueio"] .sl-ip-status { background: transparent; }
+.sl-iphone[data-cena="bloqueio"] .sl-ip-status b { opacity: 0; }
+.sl-ip-home { position: absolute; z-index: 7; left: 50%; bottom: 8px; width: 36%; height: 5px; border-radius: 5px; background: rgba(255, 255, 255, .85); transform: translateX(-50%); }
+/* o reflexo do vidro, que anda com a inclinação */
+.sl-ip-reflexo { position: absolute; z-index: 8; inset: 0; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(112deg, transparent 0%, transparent calc(var(--brilho) - 18%), rgba(255, 255, 255, .13) calc(var(--brilho) - 4%), rgba(255, 255, 255, .03) calc(var(--brilho) + 6%), transparent calc(var(--brilho) + 22%), transparent 100%); }
+.sl-ip-sombra { display: block; width: 76%; height: 26px; margin: 26px auto 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(0, 0, 0, .7), transparent); filter: blur(6px); animation: sl-ip-sombra 6s ease-in-out infinite; }
+@keyframes sl-ip-sombra { 50% { transform: scale(.88); opacity: .7 } }
+.sl-ip-vibra .sl-ip-corpo { animation: sl-ip-vibra .38s linear; }
+@keyframes sl-ip-vibra { 20% { translate: -2px 0 } 40% { translate: 2px 0 } 60% { translate: -1.5px 0 } 80% { translate: 1px 0 } }
+@media (max-width: 980px) { .sl-assessor .sl-iphone { order: 2; --ry: 0deg; } }
+@media (prefers-reduced-motion: reduce) { .sl-ip-flutua, .sl-ip-sombra, .sl-ip-vibra .sl-ip-corpo { animation: none; } .sl-iphone { --ry: 0deg; } }
+.sl-ip-status { padding: 6px 18px 0 24px; grid-template-columns: 1fr 27% 1fr; }
+.sl-ip-ilha { width: 100%; height: 27px; }
+.sl-ip-icones { gap: 4px; }
+.sl-ip-icones svg:first-child { width: 16px; } .sl-ip-icones svg:nth-child(2) { width: 14px; } .sl-ip-icones svg:last-child { width: 24px; }
