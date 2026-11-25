@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId, familiaDa } from './src/marca/marcas'
@@ -412,6 +412,11 @@ export default defineConfig({
           cpSync(pastaDosTermos, join(SAIDA, 'termos'), { recursive: true, filter: (f) => !f.endsWith('.md') })
           writeFileSync(join(SAIDA, 'termos', 'index.html'), paginaDosTermos(pastaDosTermos, MARCA.prosa, versao))
         }
+        // 25/11/2026: /favicon.ico na raiz, com o ícone da marca. O navegador e o Google pedem
+        // esse endereço em toda página sem ícone próprio (redirecionamentos, termos, 404) e
+        // davam 404. Na Legacy Pro, a pasta pwa-legacypro já tem o ícone da marca.
+        const iconeDaMarca = join(SAIDA, `pwa-${MARCA.id}`, 'favicon.ico')
+        if (existsSync(iconeDaMarca)) copyFileSync(iconeDaMarca, join(SAIDA, 'favicon.ico'))
         const destinoCaptura = join(SAIDA, 'cadastro')
         rmSync(destinoCaptura, { recursive: true, force: true })
         // 26/10/2026: a GlobalFly tem a captação própria do lançamento
