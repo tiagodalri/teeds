@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { carregarMeuSubplano, cobrancaLegivel, compartilhamentoLegivel, listarSubplanos, salvarSubplano, simuladorLegivel, type Subplano } from '../../core/teeds/subplanos'
 import './admin-subplanos.css'
-import { GF_MEMBRO } from '../../marca'
+import { GF_MEMBRO, GF_LAB } from '../../marca'
 
 /**
  * Administração › Planos › Subplanos do GF Member (05/11/2026). O que cada
@@ -44,7 +44,7 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
           <article key={s.id} className={`asp-item ${aberto === s.id ? 'aberto' : ''}`}>
             <button type="button" className="asp-cab" onClick={() => (aberto === s.id ? (setAberto(null), setForm(null)) : abrir(s))} aria-expanded={aberto === s.id}>
               <span className={`mpl-nome ${s.id}`}>{s.nome}</span>
-              <span className="asp-resumo"><b>{cobrancaLegivel(s)}</b><small>{compartilhamentoLegivel(s.compartilhamento)} · {s.ias ? `${s.ias.length} I.A.` : 'Todas as I.A.'} · simulador {simuladorLegivel(s.simuladorHoras).toLowerCase()}{s.salaExtra ? ' · sala extra' : ''}{s.assessor ? ' · assessor' : ''}{s.lab ? ' · GFT Lab' : ''}</small></span>
+              <span className="asp-resumo"><b>{cobrancaLegivel(s)}</b><small>{compartilhamentoLegivel(s.compartilhamento)} · {s.ias ? `${s.ias.length} I.A.` : 'Todas as I.A.'} · simulador {simuladorLegivel(s.simuladorHoras).toLowerCase()}{s.salaExtra ? ' · sala extra' : ''}{s.assessor ? ' · assessor' : ''}{s.lab ? ` · ${GF_LAB}` : ''}</small></span>
               <em>{aberto === s.id ? 'Fechar' : 'Editar'}</em>
             </button>
             {aberto === s.id && form && (
@@ -68,7 +68,7 @@ export function AdminSubplanos({ sessao, marca }: { sessao: SessaoTeeds; marca: 
                 <div className="asp-chaves largo">
                   <label><input type="checkbox" checked={form.salaExtra} onChange={(e) => mudar({ salaExtra: e.target.checked })} /> Sala ao vivo extra</label>
                   <label><input type="checkbox" checked={form.assessor} onChange={(e) => mudar({ assessor: e.target.checked })} /> Assessor no WhatsApp</label>
-                  <label><input type="checkbox" checked={form.lab} onChange={(e) => mudar({ lab: e.target.checked })} /> GFT Lab (beta)</label>
+                  <label><input type="checkbox" checked={form.lab} onChange={(e) => mudar({ lab: e.target.checked })} /> {GF_LAB} (beta)</label>
                 </div>
                 {form.assessor && <label><span>WhatsApp do assessor</span><input inputMode="tel" value={form.assessorWhatsapp ?? ''} placeholder="55 11 99999-9999" onChange={(e) => mudar({ assessorWhatsapp: e.target.value || null })} /></label>}
                 <label className="largo"><span>Link do checkout (padrão)</span><input value={form.checkoutUrl ?? ''} placeholder="https://pay.cakto.com.br/…  (vazio = o botão abre o suporte)" onChange={(e) => mudar({ checkoutUrl: e.target.value.trim() || null })} /></label>

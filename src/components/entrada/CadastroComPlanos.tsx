@@ -17,7 +17,7 @@
  * lê as cores das variáveis do CSS. Prefixo das classes: cpl-.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { MARCA, GF_NOME, GF_SIGLA, GF_MEMBRO } from '../../marca'
+import { MARCA, GF_NOME, GF_SIGLA, GF_MEMBRO, GF_LAB } from '../../marca'
 import { Brand } from '../Brand'
 import { DerivLogo, IconeSaida } from '../DerivMarca'
 import { afiliadoDaDeriv } from '../../core/rotas'
@@ -75,12 +75,12 @@ function itensDoPlano(p: PlanoDoCadastro): Item[] {
     { sim: true, texto: p.compartilhamento > 0 ? <>Compartilhamento de <b>{porcentagem(p.compartilhamento)}</b> do lucro do mês</> : <><b>0% de compartilhamento</b>: o lucro é todo seu</> },
   ]
   if (p.assessor) sim.push({ sim: true, texto: <><b>Assessor</b> só seu no WhatsApp</> })
-  if (p.lab) sim.push({ sim: true, texto: <><b>GFT Lab</b> (beta)</> })
+  if (p.lab) sim.push({ sim: true, texto: <><b>{GF_LAB}</b> (beta)</> })
   const nao: Item[] = []
   if (!todas) nao.push({ sim: false, texto: `${GF_SIGLA} Gulf e ${GF_SIGLA} Phenom` })
   if (!p.salaExtra) nao.push({ sim: false, texto: 'Sala ao vivo extra' })
   if (!p.assessor) nao.push({ sim: false, texto: 'Assessor no WhatsApp' })
-  if (!p.lab) nao.push({ sim: false, texto: 'GFT Lab (beta)' })
+  if (!p.lab) nao.push({ sim: false, texto: `${GF_LAB} (beta)` })
   return [...sim, ...nao].slice(0, 6)
 }
 
@@ -515,7 +515,7 @@ export function CadastroComPlanos({ ocupado, erro, limparErro, onCadastrar, aoEn
                       <tr><td>Sala ao vivo extra por dia</td>{planos.map((p) => <td key={p.id} className={p.id === sel ? 'cpl-on' : ''}>{p.salaExtra ? <span className="cpl-ok" aria-label="Incluída">✓</span> : <span className="cpl-no" aria-label="Não incluída">—</span>}</td>)}</tr>
                       <tr className="cpl-grupo"><td colSpan={4}>Atendimento e extras</td></tr>
                       <tr><td>Assessor no WhatsApp</td>{planos.map((p) => <td key={p.id} className={p.id === sel ? 'cpl-on' : ''}>{p.assessor ? <span className="cpl-ok" aria-label="Incluído">✓</span> : <span className="cpl-no" aria-label="Não incluído">—</span>}</td>)}</tr>
-                      <tr><td>GFT Lab (beta)</td>{planos.map((p) => <td key={p.id} className={p.id === sel ? 'cpl-on' : ''}>{p.lab ? <span className="cpl-ok" aria-label="Incluído">✓</span> : <span className="cpl-no" aria-label="Não incluído">—</span>}</td>)}</tr>
+                      <tr><td>{GF_LAB} (beta)</td>{planos.map((p) => <td key={p.id} className={p.id === sel ? 'cpl-on' : ''}>{p.lab ? <span className="cpl-ok" aria-label="Incluído">✓</span> : <span className="cpl-no" aria-label="Não incluído">—</span>}</td>)}</tr>
                       <tr className="cpl-grupo"><td colSpan={4}>Valores</td></tr>
                       <tr><td>Compartilhamento do lucro do mês</td>{planos.map((p) => <td key={p.id} className={`cpl-forte ${p.id === sel ? 'cpl-on' : ''}`}>{porcentagem(p.compartilhamento)}</td>)}</tr>
                       <tr><td>Investimento</td>{planos.map((p) => <td key={p.id} className={`cpl-forte ${p.id === sel ? 'cpl-on' : ''}`}>{p.preco ? `R$ ${brl(p.preco)}/ano` : 'R$ 0'}</td>)}</tr>

@@ -36,4 +36,6 @@ export const GF_NOME = FAMILIA_GF ? (MARCA.nomeCurto ?? MARCA.prosa) : 'GlobalFl
 export const GF_NOME_COMPLETO = FAMILIA_GF ? MARCA.prosa : 'GlobalFly Trade'
 export const GF_SIGLA = FAMILIA_GF ? (MARCA.sigla ?? GF_NOME) : 'GF'
 export const GF_MEMBRO = FAMILIA_GF ? (MARCA.membro ?? `${GF_SIGLA} Member`) : 'GF Member'
+/** O laboratório de estratégias: GFT Lab na GlobalFly, LP Lab na Legacy Pro. */
+export const GF_LAB = FAMILIA_GF && MARCA.id !== 'globalfly' ? `${GF_SIGLA} Lab` : 'GFT Lab'
 export const PREFIXO_DA_IA = /^(GF|LP|GlobalFly|Legacy Pro|OMNI)\s+/i

@@ -14,7 +14,7 @@
  */
 import { SUPABASE } from './config'
 import { parceiroGuardado, vitrine } from './parceiro'
-import { GF_SIGLA, GF_MEMBRO } from '../../marca'
+import { GF_SIGLA, GF_MEMBRO, GF_LAB } from '../../marca'
 
 export type IdDoPlano = 'gold' | 'black' | 'prestige'
 
@@ -49,7 +49,7 @@ export const PLANOS_PADRAO: PlanoDoCadastro[] = [
     preco: 997, referencia: 1997, compartilhamento: 0.05, ias: null, simuladorHoras: 12,
     salaExtra: true, assessor: false, lab: false,
     checkout: 'https://pay.cakto.com.br/7a8jgb7', checkoutPorParceiro: { n: 'https://pay.cakto.com.br/f2jvqbi' } },
-  { id: 'prestige', nome: 'Prestige', chamada: 'Tudo liberado, sem compartilhamento, com assessor e GFT Lab.',
+  { id: 'prestige', nome: 'Prestige', chamada: `Tudo liberado, sem compartilhamento, com assessor e ${GF_LAB}.`,
     preco: 1997, referencia: 2997, compartilhamento: 0, ias: null, simuladorHoras: null,
     salaExtra: true, assessor: true, lab: true,
     checkout: 'https://pay.cakto.com.br/h7d75ko', checkoutPorParceiro: { n: 'https://pay.cakto.com.br/3fnk7dt' } },

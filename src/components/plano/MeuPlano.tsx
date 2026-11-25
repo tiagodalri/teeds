@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MARCA, GF_SIGLA, GF_MEMBRO } from '../../marca'
+import { MARCA, GF_SIGLA, GF_MEMBRO, GF_LAB } from '../../marca'
 import { abrirSuporte } from '../../core/teeds/suporte'
 import { comComprador, type CompradorDoCheckout } from '../../core/teeds/checkout'
 import { cobrancaLegivel, compartilhamentoLegivel, precoLegivel, simuladorLegivel, type MeuSubplano, type Subplano } from '../../core/teeds/subplanos'
@@ -35,7 +35,7 @@ export function MeuPlano({ dados, foco, aoFechar, comprador }: { dados: MeuSubpl
     { rot: 'Aulas e sala ao vivo', v: () => <i className="mpl-sim" aria-label="Incluída">✓</i> },
     { rot: 'Sala ao vivo extra por dia', v: (s) => (s.salaExtra ? <i className="mpl-sim" aria-label="Incluída">✓</i> : <i className="mpl-nao" aria-label="Não incluída">✕</i>) },
     { rot: 'Assessor no WhatsApp', v: (s) => (s.assessor ? <i className="mpl-sim" aria-label="Incluído">✓</i> : <i className="mpl-nao" aria-label="Não incluído">✕</i>) },
-    { rot: 'GFT Lab (beta)', v: (s) => (s.lab ? <i className="mpl-sim" aria-label="Incluído">✓</i> : <i className="mpl-nao" aria-label="Não incluído">✕</i>) },
+    { rot: `${GF_LAB} (beta)`, v: (s) => (s.lab ? <i className="mpl-sim" aria-label="Incluído">✓</i> : <i className="mpl-nao" aria-label="Não incluído">✕</i>) },
   ]
   const quero = (s: Subplano) => {
     if (s.checkoutUrl) { window.open(comComprador(s.checkoutUrl, comprador), '_blank', 'noopener,noreferrer'); return }

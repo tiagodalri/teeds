@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MARCA, GF_MEMBRO } from '../../marca'
+import { MARCA, GF_MEMBRO, GF_LAB } from '../../marca'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { pararNoServidor, type SessaoViva } from '../../core/teeds/servidorRobos'
 import { carregarMeuSubplano, precoLegivel, subplanoAtual, useMeuSubplano, type MeuSubplano, type Subplano } from '../../core/teeds/subplanos'
@@ -201,7 +201,7 @@ export function JanelaSemTempo({ dados, atual, comprador, aoFechar }: { dados: M
                 <ul>
                   <li>{s.ias == null ? 'As 5 I.A. liberadas' : `${s.ias.length} I.A. liberadas`}</li>
                   <li>{s.compartilhamento > 0 ? `Compartilhamento de ${Math.round(s.compartilhamento * 1000) / 10}% do lucro` : 'Sem compartilhamento: 0% do lucro'}</li>
-                  <li>{s.assessor && s.lab ? 'Assessor dedicado e GFT Lab' : s.salaExtra ? 'Sala extra ao vivo' : 'Aulas e sala ao vivo'}</li>
+                  <li>{s.assessor && s.lab ? `Assessor dedicado e ${GF_LAB}` : s.salaExtra ? 'Sala extra ao vivo' : 'Aulas e sala ao vivo'}</li>
                 </ul>
                 <button type="button" className="lsim-cta" onClick={() => quero(s)} disabled={!s.checkoutUrl}>Quero o {s.nome}</button>
               </article>

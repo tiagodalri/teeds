@@ -6,7 +6,7 @@ import {
   abrirMeuPlano, carregarMeuSubplano, cobrancaLegivel, compartilhamentoLegivel, precoLegivel, simuladorLegivel, useMeuSubplano, type Subplano,
 } from '../../core/teeds/subplanos'
 import './marketplace-gf.css'
-import { GF_NOME, GF_MEMBRO } from '../../marca'
+import { GF_NOME, GF_MEMBRO, GF_LAB } from '../../marca'
 
 /**
  * O Marketplace da GlobalFly (05/11/2026, Tiago: "precisamos criar lá no
@@ -26,7 +26,7 @@ function beneficios(s: Subplano): string[] {
   l.push(s.simuladorHoras == null ? 'Simulador ilimitado' : `Simulador ${simuladorLegivel(s.simuladorHoras)}`)
   if (s.salaExtra) l.push('Sala ao vivo extra todos os dias')
   if (s.assessor) l.push('Assessor particular no WhatsApp')
-  if (s.lab) l.push('GFT Lab (beta): crie e automatize a sua estratégia')
+  if (s.lab) l.push(`${GF_LAB} (beta): crie e automatize a sua estratégia`)
   l.push('Aulas, sala ao vivo e a plataforma completa')
   return l
 }
@@ -52,7 +52,7 @@ export function MarketplaceDoGF({ sessao }: { sessao?: SessaoTeeds | null }) {
         <div className="msp-heroi-txt">
           <span className="msp-rot">{GF_MEMBRO} · Marketplace</span>
           <h1>Leve o seu {GF_MEMBRO} para o <em>próximo nível.</em></h1>
-          <p>Todas as I.A., mais horas de simulador e menos compartilhamento. No Prestige, nenhum compartilhamento, um assessor só seu e o GFT Lab.</p>
+          <p>Todas as I.A., mais horas de simulador e menos compartilhamento. No Prestige, nenhum compartilhamento, um assessor só seu e o {GF_LAB}.</p>
           <div className="msp-heroi-acoes">
             <button type="button" className="msp-btn ouro" onClick={() => abrirMeuPlano(vitrine[0]?.id)}>Comparar os subplanos</button>
             {meu && <span className="msp-atual">Seu subplano: <b className={`msp-chip ${meu.id}`}>{meu.nome}</b></span>}
