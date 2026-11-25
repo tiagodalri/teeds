@@ -38,6 +38,8 @@ export interface ContatoWpp {
   id: string; waId: string; nome: string | null; userId: string | null; leadId: string | null
   ultimaEm: string | null; ultimaTexto: string | null; ultimaDirecao: 'entrada' | 'saida' | 'nota' | null; ultimaEntradaEm: string | null
   naoLidas: number; responsavel: string | null; situacao: 'aberta' | 'resolvida'; etiquetas: string[]; criadoEm: string; fixada: boolean
+  /** Só no chat do Assessor: a equipe assumiu e a I.A. está quieta nesta conversa. */
+  iaPausada?: boolean; pausadaEm?: string | null; pausadaPor?: string | null
 }
 export type TipoMsg = 'texto' | 'imagem' | 'audio' | 'video' | 'documento' | 'figurinha' | 'modelo' | 'localizacao' | 'contato' | 'botao' | 'outro'
 export type StatusMsg = 'pendente' | 'enviada' | 'entregue' | 'lida' | 'falhou' | 'recebida'
@@ -69,9 +71,19 @@ export interface ArquivosDoContato { midias: MensagemWpp[]; docs: MensagemWpp[];
 
 export type MudancaWpp = { tipo: 'contato'; item: ContatoWpp } | { tipo: 'mensagem'; item: MensagemWpp; nova: boolean }
 
+/**
+ * O que muda quando a central serve a outro número (25/11/2026: o chat do Assessor GF, pela Z-API):
+ * sem janela de 24 h, sem modelos aprovados, sem começar conversa, com a I.A. que responde sozinha.
+ */
+export interface PerfilDaCentral {
+  assessor?: boolean; semJanela?: boolean; semModelos?: boolean; semNovaConversa?: boolean
+  titulo?: string; aviso?: string; boasVindas?: string
+}
+
 export interface WhatsAppApi {
   euId: string
   exemplo: boolean
+  perfil?: PerfilDaCentral
   estado(): Promise<EstadoWpp>
   conectar(d: DadosDeConexao): Promise<{ numero?: string; nome?: string; modelos?: number; aviso?: string | null }>
   desconectar(): Promise<void>
@@ -83,7 +95,7 @@ export interface WhatsAppApi {
   enviarModelo(contatoId: string, m: ModeloWpp, vars: { cabecalho: string[]; corpo: string[] }): Promise<void>
   nota(contatoId: string, texto: string): Promise<MensagemWpp>
   ler(contatoId: string): Promise<void>
-  mudarContato(contatoId: string, campos: Partial<Pick<ContatoWpp, 'responsavel' | 'situacao' | 'etiquetas' | 'nome' | 'fixada' | 'naoLidas'>>): Promise<void>
+  mudarContato(contatoId: string, campos: Partial<Pick<ContatoWpp, 'responsavel' | 'situacao' | 'etiquetas' | 'nome' | 'fixada' | 'naoLidas' | 'iaPausada'>>): Promise<void>
   reagir(contatoId: string, wamid: string, emoji: string): Promise<void>
   novo(numero: string, nome: string): Promise<string>
   respostas(): Promise<RespostaPronta[]>
@@ -106,6 +118,8 @@ export interface WhatsAppApi {
 /* ------------------------------------------------------------ apoio */
 export const POR_PAGINA = 60
 
+/** Janela sempre aberta (Z-API não tem a regra das 24 h da Meta). */
+export const JANELA_LIVRE = { aberta: true, restaMs: Number.POSITIVE_INFINITY } as const
 export function janela(c: Pick<ContatoWpp, 'ultimaEntradaEm'> | null, agora = Date.now()): { aberta: boolean; restaMs: number } {
   if (!c?.ultimaEntradaEm) return { aberta: false, restaMs: 0 }
   const resta = new Date(c.ultimaEntradaEm).getTime() + JANELA_MS - agora

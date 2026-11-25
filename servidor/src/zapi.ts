@@ -5,6 +5,7 @@ import { ver } from './sessoes'
 import { loginDoUsuario, papelDoAdmin, restDoBanco as rest, somenteDemoDoUsuario } from './supabase'
 import { appDaVitrine, vitrineDoPedido } from './apps-parceiros'
 import { rotulosTrocados } from '../../src/core/deriv/accountAccess'
+import { aposMensagem, assessorPausado, equipeAssumiu, guardarArquivo, guardarDaEquipe, guardarMidiaRecebida, marcarReacao, numeroValido, usuarioDaConversa, type MensagemDoChat } from './assessor-chat'
 
 /*
   Assessor GF no WhatsApp pela Z-API (19/11/2026, Tiago).
@@ -199,12 +200,14 @@ async function enviar(numero: string, texto: string, userId: string | null, digi
   }
 }
 
-async function guardarMensagem(m: { numero: string; userId: string | null; papel: 'cliente' | 'assessor'; texto: string; tipo?: string; idWhatsapp: string | null }): Promise<boolean> {
+async function guardarMensagem(m: { numero: string; userId: string | null; papel: 'cliente' | 'assessor'; texto: string; tipo?: string; idWhatsapp: string | null; nome?: string | null; citando?: string | null }): Promise<boolean> {
   try {
     await rest('/assessor_whatsapp_mensagens', {
       method: 'POST', headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ marca: MARCA_DO_ASSESSOR, numero: m.numero, user_id: m.userId, papel: m.papel, texto: m.texto.slice(0, 4000), tipo: m.tipo ?? 'texto', id_whatsapp: m.idWhatsapp }),
+      body: JSON.stringify({ marca: MARCA_DO_ASSESSOR, numero: m.numero, user_id: m.userId, papel: m.papel, texto: m.texto.slice(0, 4000), tipo: m.tipo ?? 'texto', id_whatsapp: m.idWhatsapp, ...(m.citando ? { citando: m.citando } : {}) }), // citando só quando há (a coluna nasceu em 25/11)
     })
+    // 25/11/2026: a conversa do número (lista do chat no ADM) acompanha cada mensagem
+    await aposMensagem(m.numero, { papel: m.papel, texto: /^\[\w+\]$/.test(m.texto) ? null : m.texto, tipo: m.tipo, userId: m.userId, nome: m.nome })
     return true
   } catch (e) {
     if ((e as any)?.code === '23505') return false // a Z-API mandou o mesmo aviso de novo
@@ -219,6 +222,64 @@ async function historicoDe(numero: string, userId: string): Promise<Turno[]> {
   ).catch(() => [])
   // a primeira é a mensagem que acabou de chegar (já guardada): sai do histórico
   return l.slice(1).reverse().filter((t) => t.texto).map((t) => ({ papel: t.papel === 'cliente' ? 'cliente' : 'assistente', texto: t.texto }))
+}
+
+/* ------------------------------------------------------------------ a equipe responde pelo ADM (chat) */
+
+/** Texto da equipe para o cliente, pelo número do Assessor. Quem escreve assume a conversa (o Assessor pausa). */
+export async function enviarPelaEquipe(adminId: string, numero: unknown, texto: unknown, citando?: unknown): Promise<MensagemDoChat> {
+  const n = numeroValido(numero)
+  const t = String(texto ?? '').trim().slice(0, 4000)
+  if (!t) throw new Error('Escreva a mensagem.')
+  const c = await config()
+  if (!c) throw new Error('O WhatsApp do Assessor não está conectado.')
+  const cit = typeof citando === 'string' && /^[\w-]{4,80}$/.test(citando) ? citando : null
+  const r = await zapi<{ messageId?: string }>(c, 'send-text', { method: 'POST', body: JSON.stringify({ phone: n, message: t, ...(cit ? { messageId: cit } : {}) }) })
+  await equipeAssumiu(n, adminId)
+  return guardarDaEquipe({ numero: n, papel: 'equipe', texto: t, autor: adminId, idWhatsapp: r?.messageId ? `env:${r.messageId}` : null, citando: cit, userId: await usuarioDaConversa(n) })
+}
+
+/** Foto, áudio, vídeo ou documento da equipe (chega em base64 da tela, até ~1,4 MB). */
+export async function arquivoPelaEquipe(adminId: string, d: any): Promise<MensagemDoChat> {
+  const n = numeroValido(d?.numero)
+  const mime = String(d?.mime ?? '').split(';')[0].trim().toLowerCase()
+  const nome = String(d?.nome ?? 'arquivo').replace(/[\\/]/g, '_').slice(0, 120)
+  const legenda = String(d?.legenda ?? '').trim().slice(0, 1000)
+  const dados = Buffer.from(String(d?.dados ?? ''), 'base64')
+  if (!dados.length) throw new Error('Arquivo vazio.')
+  if (dados.length > 1_400_000) throw new Error('O arquivo passou de 1,4 MB. Mande um menor.')
+  const c = await config()
+  if (!c) throw new Error('O WhatsApp do Assessor não está conectado.')
+  const tipo = mime.startsWith('image/') ? 'imagem' : mime.startsWith('audio/') ? 'audio' : mime.startsWith('video/') ? 'video' : 'documento'
+  const uri = `data:${mime || 'application/octet-stream'};base64,${dados.toString('base64')}`
+  const ext = (nome.match(/\.([a-z0-9]{2,5})$/i)?.[1] ?? (mime === 'application/pdf' ? 'pdf' : 'bin')).toLowerCase()
+  const voz = tipo === 'audio' && nome.startsWith('audio-gravado')
+  const caminho = tipo === 'imagem' ? 'send-image' : tipo === 'audio' ? 'send-audio' : tipo === 'video' ? 'send-video' : `send-document/${ext}`
+  const corpo = tipo === 'imagem' ? { phone: n, image: uri, caption: legenda || undefined }
+    : tipo === 'audio' ? { phone: n, audio: uri, waveform: voz }
+    : tipo === 'video' ? { phone: n, video: uri, caption: legenda || undefined }
+    : { phone: n, document: uri, fileName: nome, caption: legenda || undefined }
+  const r = await zapi<{ messageId?: string }>(c, caminho, { method: 'POST', body: JSON.stringify(corpo) })
+  const chave = r?.messageId ? `env_${r.messageId}` : `equipe_${Date.now()}`
+  const guardado = await guardarArquivo(n, chave, dados, mime, nome)
+  await equipeAssumiu(n, adminId)
+  return guardarDaEquipe({
+    numero: n, papel: 'equipe', tipo, texto: legenda || null, autor: adminId, idWhatsapp: r?.messageId ? `env:${r.messageId}` : null,
+    midia: guardado ? { caminho: guardado, mime, nome, tamanho: dados.length, voz } : null, userId: await usuarioDaConversa(n),
+  })
+}
+
+/** Reação da equipe numa mensagem do cliente (vazio tira a reação). */
+export async function reagirPelaEquipe(numero: unknown, wamid: unknown, emoji: unknown): Promise<void> {
+  const n = numeroValido(numero)
+  const w = String(wamid ?? '')
+  if (!/^[\w-]{4,80}$/.test(w)) throw new Error('Mensagem inválida.')
+  const e = String(emoji ?? '').slice(0, 8)
+  const c = await config()
+  if (!c) throw new Error('O WhatsApp do Assessor não está conectado.')
+  if (e) await zapi(c, 'send-reaction', { method: 'POST', body: JSON.stringify({ phone: n, messageId: w, reaction: e }) })
+  else await zapi(c, 'send-remove-reaction', { method: 'POST', body: JSON.stringify({ phone: n, messageId: w }) }).catch(() => null)
+  await marcarReacao(n, w, e)
 }
 
 /* ------------------------------------------------------------------ receber */
@@ -256,14 +317,17 @@ const SITE = 'https://globalflytrade.com'
 
 async function atender(numero: string, corpo: any): Promise<void> {
   const texto = String(corpo.text?.message ?? corpo.image?.caption ?? corpo.video?.caption ?? '').trim().slice(0, 2000)
-  const tipo = corpo.audio ? 'audio' : corpo.image ? 'imagem' : corpo.video ? 'video' : corpo.text ? 'texto' : 'outro'
+  const tipo = corpo.audio ? 'audio' : corpo.image ? 'imagem' : corpo.video ? 'video' : corpo.document ? 'documento' : corpo.sticker ? 'figurinha' : corpo.text ? 'texto' : 'outro'
   const idWpp = corpo.messageId ? `rec:${corpo.messageId}` : null
+  // o nome que a pessoa usa no WhatsApp (aparece na lista do chat até ela ser reconhecida)
+  const nomeNoWhats = String(corpo.senderName ?? corpo.chatName ?? '').trim() || null
+  const citando = typeof corpo.referenceMessageId === 'string' ? corpo.referenceMessageId : null
   const chave = chaveDoTelefone(numero)
 
   // 1) confirmação do número
   const pedidoDeConfirmar = texto.match(CONFIRMAR)
   if (pedidoDeConfirmar) {
-    if (!(await guardarMensagem({ numero, userId: null, papel: 'cliente', texto, idWhatsapp: idWpp }))) return
+    if (!(await guardarMensagem({ numero, userId: null, papel: 'cliente', texto, idWhatsapp: idWpp, nome: nomeNoWhats }))) return
     const l = await rest<Vinculo[]>(`/assessor_whatsapp_vinculos?marca=eq.${MARCA_DO_ASSESSOR}&codigo=eq.${pedidoDeConfirmar[1]}&codigo_expira_em=gt.${new Date().toISOString()}&limit=2`)
     const v = l.length === 1 ? l[0] : null
     if (!v) return enviar(numero, 'Esse código venceu ou não existe. Gere um novo em *Meu perfil › WhatsApp do Assessor* na plataforma e mande de novo.', null)
@@ -289,7 +353,11 @@ async function atender(numero: string, corpo: any): Promise<void> {
   const validos: Vinculo[] = []
   for (const v of candidatos) if (chaveDoTelefone(await telefoneDoPerfil(v.user_id)) === chave) validos.push(v)
   const dono = validos.length === 1 ? validos[0] : null
-  if (!(await guardarMensagem({ numero, userId: dono?.user_id ?? null, papel: 'cliente', texto: texto || `[${tipo}]`, tipo, idWhatsapp: idWpp }))) return
+  if (!(await guardarMensagem({ numero, userId: dono?.user_id ?? null, papel: 'cliente', texto: texto || `[${tipo}]`, tipo, idWhatsapp: idWpp, nome: nomeNoWhats, citando }))) return
+  // a foto, o áudio, o vídeo ou o documento ficam guardados para a equipe ver no chat (sem segurar a resposta)
+  if (idWpp && tipo !== 'texto') void guardarMidiaRecebida(idWpp, numero, corpo)
+  // a equipe assumiu esta conversa no ADM: o Assessor fica quieto (a mensagem já aparece no chat)
+  if (await assessorPausado(numero)) { console.log(`[assessor] …${numero.slice(-4)} com a equipe: o Assessor não respondeu`); return }
 
   if (validos.length > 1) {
     if (!jaAvisado(numero)) await enviar(numero, 'Este número aparece em mais de uma conta da GlobalFly, então por segurança não consigo mexer em nenhuma. Fale com o suporte na plataforma para deixarmos o número em uma conta só.', null)

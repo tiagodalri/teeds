@@ -33,3 +33,14 @@
 .aas-como li b { color: var(--text); }
 .aas-como li { color: var(--muted); }
 .aas-erro { margin: 0; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, #C95F5F 12%, transparent); color: #C95F5F; font-size: 13.5px; }
+
+/* 25/11/2026: Conversas | Conexão */
+.aas-pagina { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.aas-pagina.conversas { flex: 1; }
+.aas-vistas { display: inline-flex; align-self: flex-start; gap: 4px; padding: 4px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--aas-linha, var(--border)); }
+.aas-vistas button { padding: 7px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.aas-vistas button.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.aas-vistas button:focus-visible { outline: 2px solid var(--gf-ouro, var(--primary)); outline-offset: 2px; }
+.admin-shell.modo-suporte .aas-pagina.conversas { flex: 1; min-height: 0; }
+.admin-shell.modo-suporte .aas-pagina.conversas .wz { flex: 1; min-height: 0; }
+.admin-shell.modo-suporte .aas-pagina.conexao { overflow-y: auto; }

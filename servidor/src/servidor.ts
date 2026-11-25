@@ -41,6 +41,8 @@ import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
+import { arquivoPelaEquipe, enviarPelaEquipe, reagirPelaEquipe } from './zapi'
+import * as chatDoAssessor from './assessor-chat'
 import { assessorLiberado, assessorLiberadoPara, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
 import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
 import { ehFamiliaGF } from '../../src/marca/marcas'
@@ -943,7 +945,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
     let corpo: any = {}
     if (req.method === 'POST') {
       // o chat leva áudio e imagens (19/11/2026): 1,9 MB só nele, abaixo do teto de 2 MB do Caddy
-      const pedacos = await lerCorpoComTeto(req, url.pathname === '/api/chat' ? 1_900_000 : 1_000_000)
+      const grande = url.pathname === '/api/chat' || url.pathname === '/api/admin/assessor/arquivo'
+      const pedacos = await lerCorpoComTeto(req, grande ? 1_900_000 : 1_000_000)
       if (!pedacos) return json(413, { erro: url.pathname === '/api/chat' ? 'O anexo passou do tamanho máximo. Mande um áudio mais curto ou menos imagens.' : 'Pedido grande demais.' })
       const cru = Buffer.concat(pedacos).toString('utf8')
       if (cru) { try { corpo = JSON.parse(cru) } catch { return json(400, { erro: 'Pedido malformado.' }) } }
@@ -1342,6 +1345,37 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
         if (url.pathname === '/api/admin/zapi' && req.method === 'GET') return json(200, await estadoDaConexao())
         if (url.pathname === '/api/admin/zapi' && req.method === 'POST') return json(200, await ligarZapi(corpo, publico))
         if (url.pathname === '/api/admin/zapi/desligar' && req.method === 'POST') { await desligarZapi(); return json(200, await estadoDaConexao()) }
+      }
+
+      // ---- o chat do Assessor no ADM (25/11/2026): conversas, resposta manual, assumir/devolver; só a administração geral da GF
+      if (url.pathname.startsWith('/api/admin/assessor/')) {
+        if (!(await administradorDaMarca(dono.id, MARCA_DO_ASSESSOR).catch(() => false))) return json(403, { erro: 'Só a administração geral vê as conversas do Assessor.' })
+        const q = url.searchParams
+        const r = url.pathname.slice('/api/admin/assessor/'.length)
+        if (req.method === 'GET') {
+          if (r === 'conversas') return json(200, { conversas: await chatDoAssessor.conversas() })
+          if (r === 'mensagens') return json(200, { mensagens: await chatDoAssessor.mensagens(q.get('numero'), q.get('antes') ?? undefined) })
+          if (r === 'todas') return json(200, { mensagens: await chatDoAssessor.todasAsMensagens(q.get('numero')) })
+          if (r === 'mudancas') return json(200, await chatDoAssessor.mudancas(q.get('desde')))
+          if (r === 'ficha') return json(200, await chatDoAssessor.ficha(q.get('numero')))
+          if (r === 'arquivos') return json(200, await chatDoAssessor.arquivos(q.get('numero')))
+          if (r === 'buscar') return json(200, { achados: await chatDoAssessor.buscar(q.get('q')) })
+          if (r === 'arquivo') return json(200, { url: await chatDoAssessor.linkDoArquivo(q.get('caminho')) })
+        }
+        if (req.method === 'POST') {
+          if (r === 'enviar') return json(200, { mensagem: await enviarPelaEquipe(dono.id, corpo.numero, corpo.texto, corpo.citando) })
+          if (r === 'arquivo') return json(200, { mensagem: await arquivoPelaEquipe(dono.id, corpo) })
+          if (r === 'nota') {
+            const t = String(corpo.texto ?? '').trim().slice(0, 4000)
+            if (!t) return json(400, { erro: 'Escreva a nota.' })
+            return json(200, { mensagem: await chatDoAssessor.guardarDaEquipe({ numero: chatDoAssessor.numeroValido(corpo.numero), papel: 'nota', texto: t, autor: dono.id }) })
+          }
+          if (r === 'conversa') { await chatDoAssessor.mudarConversa(corpo.numero, corpo.campos ?? {}, dono.id); return json(200, { ok: true }) }
+          if (r === 'ler') { await chatDoAssessor.lerConversa(corpo.numero); return json(200, { ok: true }) }
+          if (r === 'reagir') { await reagirPelaEquipe(corpo.numero, corpo.wamid, corpo.emoji); return json(200, { ok: true }) }
+          if (r === 'favoritar') { await chatDoAssessor.favoritar(corpo.id, corpo.sim); return json(200, { ok: true }) }
+        }
+        return json(404, { erro: 'Rota do chat do Assessor não encontrada.' })
       }
 
       // ---- a chave da I.A. do Assistente (19/11/2026): só o admin geral troca; testada antes de guardar

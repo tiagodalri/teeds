@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
+import { assessorDoServidor } from '../../core/teeds/assessorChat'
+import type { WhatsAppApi } from '../../core/teeds/whatsapp'
 import { desligarZapi, estadoDaZapi, ligarZapi, linkDoAssessor, numeroBonito, type EstadoDaZapi } from '../../core/teeds/assessorWhatsapp'
 import './admin-assessor.css'
+
+const CentralWhatsApp = lazy(() => import('../whatsapp/CentralWhatsApp').then((m) => ({ default: m.CentralWhatsApp })))
 
 /*
   Administração › WhatsApp do Assessor (19/11/2026). Cola os três códigos da Z-API: o servidor testa, aponta o
@@ -9,7 +13,34 @@ import './admin-assessor.css'
   de novo. Sem conexão, o QR code aparece aqui para escanear com o celular do assessor.
 */
 
-export function AdminAssessor({ sessao }: { sessao: SessaoTeeds }) {
+/*
+  25/11/2026 (Tiago: "preciso do chat mesmo, pra visualizar as conversas, até mesmo se eu quiser responder
+  alguém manualmente"): a aba abre em Conversas (a mesma central da aba WhatsApp, com as conversas do Assessor);
+  Conexão é a tela de antes, igual.
+*/
+export function AdminAssessor({ sessao, onAbrirCliente, onVista, apiDeTeste }: {
+  sessao: SessaoTeeds
+  onAbrirCliente?: (userId: string) => void
+  /** avisa o painel qual vista está aberta (Conversas usa a tela cheia, como Suporte e WhatsApp) */
+  onVista?: (v: 'conversas' | 'conexao') => void
+  apiDeTeste?: WhatsAppApi
+}) {
+  const [vista, setVista] = useState<'conversas' | 'conexao'>('conversas')
+  useEffect(() => { onVista?.(vista) }, [vista]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => onVista?.('conexao'), []) // eslint-disable-line react-hooks/exhaustive-deps
+  const api = useMemo(() => apiDeTeste ?? assessorDoServidor(sessao), [apiDeTeste, sessao])
+  return <div className={`aas-pagina ${vista}`}>
+    <div className="aas-vistas" role="tablist" aria-label="WhatsApp do Assessor">
+      <button role="tab" aria-selected={vista === 'conversas'} className={vista === 'conversas' ? 'on' : ''} onClick={() => setVista('conversas')}>Conversas</button>
+      <button role="tab" aria-selected={vista === 'conexao'} className={vista === 'conexao' ? 'on' : ''} onClick={() => setVista('conexao')}>Conexão</button>
+    </div>
+    {vista === 'conversas'
+      ? <Suspense fallback={<p className="og-carregando">Abrindo as conversas…</p>}><CentralWhatsApp sessao={sessao} marca="globalfly" apiDeTeste={api} onAbrirCliente={onAbrirCliente} onConexao={() => setVista('conexao')} /></Suspense>
+      : <ConexaoDoAssessor sessao={sessao} />}
+  </div>
+}
+
+function ConexaoDoAssessor({ sessao }: { sessao: SessaoTeeds }) {
   const [estado, setEstado] = useState<EstadoDaZapi | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [indo, setIndo] = useState(false)
@@ -60,7 +91,7 @@ export function AdminAssessor({ sessao }: { sessao: SessaoTeeds }) {
           <div className="aas-ok">
             <div className="aas-numero"><span>Número do assessor</span><b>{numeroBonito(estado.numero) || 'Lendo…'}</b></div>
             {estado.celularOnline === false && <p className="aas-nota aviso">O celular do assessor está sem internet agora. As mensagens continuam chegando; abra o WhatsApp nele de vez em quando para a conexão não cair.</p>}
-            <p className="aas-nota">Os clientes liberados confirmam o número em <b>Meu perfil › WhatsApp do Assessor</b> e já podem conversar. Por enquanto só a sua conta está liberada.</p>
+            <p className="aas-nota">Os clientes liberados confirmam o número em <b>Meu perfil › WhatsApp do Assessor</b> e já podem conversar. Por enquanto, os administradores da GlobalFly.</p>
             <div className="aas-acoes">
               {estado.numero && <a className="aas-btn ouro" href={linkDoAssessor(estado.numero)} target="_blank" rel="noreferrer">Abrir a conversa</a>}
               <button type="button" className="aas-btn" onClick={() => setTrocar(true)}>Trocar os códigos</button>

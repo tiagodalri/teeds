@@ -767,3 +767,17 @@
 .wz-sem-conversa .wz-btn.verde { margin-top: 4px; min-height: 40px; padding: 0 18px; font-size: 14px; }
 .wz-sem-conversa .wz-btn.verde svg { width: 18px; height: 18px; }
 @media (prefers-reduced-motion: reduce) { .wz-nova { animation: none; } }
+
+/* ================================================================ chat do Assessor GF (25/11/2026) */
+.wz-item-selos i.pausada { background: color-mix(in srgb, var(--wz-ouro) 16%, transparent); color: var(--wz-ouro); }
+.wz-btn.assumir { white-space: nowrap; }
+.wz-btn.devolver { color: var(--wz-verde); border-color: color-mix(in srgb, var(--wz-verde) 45%, var(--wz-linha)); white-space: nowrap; }
+.wz-btn.devolver:hover { background: color-mix(in srgb, var(--wz-verde) 10%, var(--wz-app)); }
+.wz-faixa-assumir { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--wz-topo); border-top: 1px solid var(--wz-linha); color: var(--wz-sub); font-size: 12.5px; line-height: 1.4; }
+.wz-faixa-assumir svg { width: 16px; height: 16px; flex: none; color: var(--wz-verde); }
+.wz-faixa-assumir span { flex: 1; min-width: 0; }
+.wz-faixa-assumir b { color: var(--wz-texto); font-weight: 600; }
+.wz-faixa-assumir.com-equipe { background: color-mix(in srgb, var(--wz-ouro) 10%, var(--wz-topo)); }
+.wz-faixa-assumir.com-equipe svg { color: var(--wz-ouro); }
+.wz-faixa-assumir .wz-btn { min-height: 30px; padding: 0 12px; font-size: 12.5px; flex: none; }
+@media (max-width: 640px) { .wz-faixa-assumir { flex-wrap: wrap; } .wz-faixa-assumir .wz-btn { width: 100%; } }

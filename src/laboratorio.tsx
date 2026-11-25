@@ -140,6 +140,7 @@ const LabGerenciamento = lazy(() => import('./components/OperationalManagementPa
 const LabDivulgacao = lazy(() => import('./components/LabDivulgacao'))
 const LabLaboratorio = lazy(() => import('./components/laboratorio/LabLaboratorio'))
 const LabPerfil = lazy(() => import('./components/perfil/LabPerfil'))
+const LabAssessorChat = lazy(() => Promise.all([import('./components/assessor/AdminAssessor'), import('./core/teeds/assessorChat')]).then(([m, c]) => ({ default: () => <div className="app workspace-app"><div className="admin-shell modo-suporte" style={{ gridTemplateColumns: '1fr' }}><main className="admin-main" style={{ padding: 16 }}><m.AdminAssessor apiDeTeste={c.assessorDeExemplo('lab')} sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 3_600_000, usuario: { id: 'lab', email: 'tiagodalri1@live.com', nome: 'Tiago', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} /></main></div></div> })))
 const LabAssessor = lazy(() => import('./components/assessor/AdminAssessor').then((m) => ({ default: () => <div style={{ padding: 24, background: 'var(--bg)', minHeight: '100vh' }}><m.AdminAssessor sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 3_600_000, usuario: { id: 'lab', email: 'tiagodalri1@live.com', nome: 'Tiago', telefone: null, cpf: null, criadoEm: '', trocarSenha: false } } as never} /></div> })))
 const LabSuporte = lazy(() => import('./components/suporte/LabSuporte'))
 /** &cursos=1: a sala com três cursos (um de todos, um vendido à parte, um de plano), como o aluno sem compra vê. */
@@ -762,6 +763,8 @@ function Laboratorio() {
   if (qual === 'inicio') return <Suspense fallback={null}><LabInicio /></Suspense>
   if (qual === 'perfil') return <Suspense fallback={null}><LabPerfil /></Suspense>
   if (qual === 'assessor') return <Suspense fallback={null}><LabAssessor /></Suspense>
+  // ?tela=assessor-chat: o chat do Assessor no ADM (25/11/2026) com as conversas de exemplo da central
+  if (qual === 'assessor-chat') return <Suspense fallback={null}><LabAssessorChat /></Suspense>
   if (qual === 'organizacao') return <Suspense fallback={null}><LabOrganizacao /></Suspense>
   // ?tela=planos: Administração > Planos com o banco de mentira
   if (qual === 'planos') return <Suspense fallback={null}><LabPlanos /></Suspense>
