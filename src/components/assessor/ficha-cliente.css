@@ -189,3 +189,10 @@
 .fc-cad-copiar:hover { background: var(--fc-cartao); color: var(--wz-texto); }
 .fc-cad-copiar.ok { color: var(--fc-verde); }
 @media (hover: none) { .fc-cad-copiar { opacity: 1; } }
+
+/* 25/11/2026: texto centrado de verdade nos selos do topo (antes o texto ficava torto dentro da pílula) */
+.fc-selos { align-items: center; }
+.fc .fc-selo, .fc .fc-plano { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 24px; padding: 0 11px; line-height: 1; white-space: nowrap; box-sizing: border-box; }
+.fc .fc-plano { border: 1px solid transparent; }
+.fc .fc-selo.online::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #25D366; box-shadow: 0 0 0 3px rgba(37, 211, 102, .2); }
+.fc .fc-pilula, .fc .fc-tempo time, .fc .fc-cad-valor i { display: inline-flex; align-items: center; height: 20px; padding-top: 0; padding-bottom: 0; line-height: 1; box-sizing: border-box; }

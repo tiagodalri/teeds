@@ -113,7 +113,7 @@ export function FichaDoCliente({ api, contato, onAbrirCliente }: { api: WhatsApp
     {f && <div className="fc-selos">
       <span className={`fc-plano ${plano}`}>GF Member {PLANO[plano] ?? plano}</span>
       {f.pessoa.parceiroNome && <span className="fc-selo">via {f.pessoa.parceiroNome}</span>}
-      <span className="fc-selo">{f.pessoa.online ? '● Online agora' : `Visto ${haQuanto(f.pessoa.vistoEm)}`}</span>
+      <span className={`fc-selo ${f.pessoa.online ? 'online' : ''}`}>{f.pessoa.online ? 'Online agora' : `Visto ${haQuanto(f.pessoa.vistoEm)}`}</span>
     </div>}
     {f && <p className="fc-desde">Cliente desde <b>{data(f.pessoa.criadoEm)}</b> · {diasDesde(f.pessoa.criadoEm)} dias{f.pessoa.cidade ? ` · ${f.pessoa.cidade}${f.pessoa.uf ? `/${f.pessoa.uf}` : ''}` : ''}</p>}
   </section>
