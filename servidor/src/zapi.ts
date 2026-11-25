@@ -328,7 +328,15 @@ async function atender(numero: string, corpo: any): Promise<void> {
   const t0 = Date.now()
   const r = await conversar({ id: dono.user_id, somenteDemo: somenteDemoDoUsuario(login), vitrine, app }, historico, texto, MARCA_DO_ASSESSOR, anexos)
   console.log(`[assessor] respondeu …${numero.slice(-4)} em ${Date.now() - t0} ms${r.proposta?.sessaoId ? ` · ligou ${r.proposta.roboNome}` : ''}`)
-  await enviar(numero, r.texto || 'Me embolei aqui. Pode repetir de outro jeito?', dono.user_id, 1)
+  // o que a pessoa falou no áudio fica no histórico (sem isso, "me enganei, era na demo" chegava sem os valores)
+  if (anexos.audio && r.transcricao && idWpp) {
+    void rest(`/assessor_whatsapp_mensagens?marca=eq.${MARCA_DO_ASSESSOR}&id_whatsapp=eq.${encodeURIComponent(idWpp)}`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ texto: `🎤 ${r.transcricao}`.slice(0, 4000) }),
+    }).catch(() => null)
+  }
+  // 25/11/2026 (Tiago: "melhorar o padrão dessas mensagens"): ligou = sempre o mesmo modelo, com os números da proposta
+  const resposta = r.proposta?.sessaoId ? mensagemDoInicio(r.proposta) : (r.texto || 'Me embolei aqui. Pode repetir de outro jeito?')
+  await enviar(numero, resposta, dono.user_id, 1)
   if (r.proposta?.sessaoId) vigiar(r.proposta.sessaoId, numero, dono.user_id)
 }
 
@@ -367,17 +375,57 @@ function vigiar(sessaoId: string, numero: string, userId: string): void {
   t.unref?.()
 }
 
+/* Modelo das mensagens (25/11/2026): título em negrito com o emoji do momento, a conta logo abaixo,
+ * uma linha em branco e os números um por linha. Sem "•", sem frase quebrada. */
 const din = (v: number, moeda: string) => `${moeda === 'USD' ? 'US$' : moeda} ${v.toFixed(2).replace('.', ',')}`
-export function mensagemDoFim(s: { roboNome: string; moeda: string; demo: boolean; estado: { resultado: number; operacoes: number; vitorias: number; derrotas: number; motivoParada: string | null } }): string {
+const nomeDaConta = (demo: boolean, contaId: string) => `${demo ? 'Conta demo' : '*Conta real*'}${contaId ? ` · ${contaId}` : ''}`
+const plural = (n: number, um: string, varios: string) => `${n} ${n === 1 ? um : varios}`
+
+export function mensagemDoInicio(p: { roboNome: string; contaId: string; demo: boolean; moeda: string; entrada: number; takeProfit: number; stopLoss: number }): string {
+  return `🟢 *${p.roboNome} ligada*\n${nomeDaConta(p.demo, p.contaId)}\n\n` +
+    `Entrada: *${din(p.entrada, p.moeda)}*\nMeta: *${din(p.takeProfit, p.moeda)}*\nLimite de perda: *${din(p.stopLoss, p.moeda)}*\n\n` +
+    '_Te aviso aqui quando terminar._'
+}
+
+/** O motivo da parada em português de gente (o motor guarda o texto técnico, às vezes em inglês da Deriv). */
+export function motivoLegivel(motivo: string): string {
+  const m = motivo.toLowerCase()
+  if (/insufficientbalance|insufficient balance|saldo insuficiente/.test(m)) return 'saldo insuficiente nessa conta'
+  if (/tabela de recupera/.test(m)) return 'a recuperação chegou ao fim da tabela'
+  if (/marketisclosed|market is (presently )?closed|mercado fechado/.test(m)) return 'o mercado está fechado agora'
+  if (/autoriza|token|invalidtoken|authoriz/.test(m)) return 'a ligação com a sua conta da Deriv venceu (entre de novo na plataforma)'
+  if (/recusou a compra|buy/.test(m)) return 'a corretora recusou a operação'
+  if (/conex|socket|timeout|caiu/.test(m)) return 'a conexão com a corretora caiu'
+  return motivo.replace(/\s*—\s*\[[^\]]+\].*$/, '').replace(/\s*\(USD[^)]*\)/, '').trim() || 'parou'
+}
+
+const duracao = (ms: number) => {
+  const s = Math.max(0, Math.round(ms / 1000))
+  if (s < 60) return `${s} s`
+  const min = Math.floor(s / 60)
+  if (min < 60) return `${min} min${s % 60 ? ` ${s % 60} s` : ''}`
+  return `${Math.floor(min / 60)} h${min % 60 ? ` ${min % 60} min` : ''}`
+}
+
+export function mensagemDoFim(s: { roboNome: string; contaId?: string; moeda: string; demo: boolean; comecouEm?: number; terminouEm?: number | null; estado: { resultado: number; operacoes: number; vitorias: number; derrotas: number; motivoParada: string | null } }): string {
   const e = s.estado
   const motivo = (e.motivoParada ?? '').trim()
+  const conta = nomeDaConta(s.demo, s.contaId ?? '')
   const como = /meta/i.test(motivo) ? { emoji: '✅', txt: 'bateu a meta' }
     : /limite de perda|stop/i.test(motivo) ? { emoji: '🛡️', txt: 'parou no limite de perda' }
     : /você pediu|desligad/i.test(motivo) ? { emoji: '⏹️', txt: 'foi desligada' }
     : /limite de \d+ opera/i.test(motivo) ? { emoji: '🏁', txt: 'completou as operações' }
-    : { emoji: 'ℹ️', txt: 'terminou' }
+    : null
+  // parou sem operar nada por um problema: diz o porquê em vez de "terminou, US$ 0,00"
+  if (!como && e.operacoes === 0) {
+    return `⚠️ *${s.roboNome} não operou*\n${conta}\n\nMotivo: ${motivoLegivel(motivo)}.` +
+      (/saldo insuficiente/.test(motivoLegivel(motivo)) ? `\n\n_${s.demo ? 'Recarregue a conta demo na plataforma' : 'Deposite na conta real ou me peça para ligar na demo'}._` : '')
+  }
   const sinal = e.resultado > 0 ? '+' : e.resultado < 0 ? '−' : ''
-  return `${como.emoji} A *${s.roboNome}* ${como.txt} (conta ${s.demo ? 'demonstração' : 'real'}).\n` +
-    `• Resultado: *${sinal}${din(Math.abs(e.resultado), s.moeda)}*\n` +
-    `• ${e.operacoes} ${e.operacoes === 1 ? 'operação' : 'operações'}: ${e.vitorias} ${e.vitorias === 1 ? 'ganho' : 'ganhos'}, ${e.derrotas} ${e.derrotas === 1 ? 'perda' : 'perdas'}`
+  const titulo = como ? `${como.emoji} *${s.roboNome} ${como.txt}*` : `ℹ️ *${s.roboNome} parou*`
+  const tempo = s.comecouEm != null && s.terminouEm != null ? `\nDuração: ${duracao(s.terminouEm - s.comecouEm)}` : ''
+  return `${titulo}\n${conta}\n\n` +
+    `Resultado: *${sinal}${din(Math.abs(e.resultado), s.moeda)}*\n` +
+    `Operações: ${e.operacoes} (${plural(e.vitorias, 'ganho', 'ganhos')} · ${plural(e.derrotas, 'perda', 'perdas')})` + tempo +
+    (como ? '' : `\nMotivo: ${motivoLegivel(motivo)}`)
 }
