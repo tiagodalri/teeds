@@ -661,7 +661,7 @@ function Conversa(p: {
           <b>{nomeDoContato(contato)}</b>
           <small><span className="wz-tel">{telefoneBonito(contato.waId)}</span>{perfil?.assessor
             ? p.presenca === 'COMPOSING' || p.presenca === 'RECORDING' || p.presenca === 'AVAILABLE'
-              ? <span className="wz-presenca"><i />{p.presenca === 'COMPOSING' ? 'digitando…' : p.presenca === 'RECORDING' ? 'gravando áudio…' : 'online'}</span>
+              ? <span className="wz-presenca"><i />{p.presenca === 'COMPOSING' ? 'Digitando…' : p.presenca === 'RECORDING' ? 'Gravando áudio…' : 'Online'}</span>
               : <span className={`wz-janela ${contato.iaPausada || p.estado.assessorPausadoGeral ? 'fechada' : 'aberta'}`}><i />{contato.iaPausada ? <>Com a equipe · Assessor quieto</> : p.estado.assessorPausadoGeral ? <>Assessor pausado para todos</> : !contato.userId ? <>Número não confirmado</> : <>Assessor respondendo</>}</span>
             : <span className={`wz-janela ${j.aberta ? 'aberta' : 'fechada'}`}><i />{j.aberta ? <>Janela aberta · {textoDaJanela(j.restaMs)}</> : <>Janela de 24 h fechada</>}</span>}</small>
         </span>
