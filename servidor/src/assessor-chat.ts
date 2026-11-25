@@ -1,5 +1,6 @@
 import './ambiente'
 import { restDoBanco as rest } from './supabase'
+import { todas } from './sessoes'
 
 /*
   O chat do Assessor GF no ADM (25/11/2026, Tiago: "preciso do chat mesmo, pra visualizar as conversas, até
@@ -197,12 +198,34 @@ export async function ficha(numero: unknown) {
   const [f] = await rest<any[]>(`/clientes?marca=eq.${MARCA_DO_CHAT}&user_id=eq.${c.user_id}&select=user_id,nome,email,telefone,categoria,parceiro,status_acesso,criado_em,visto_em,cidade,end_uf&limit=1`)
   if (!f) return { cliente: null, lead: null }
   return {
+    extras: await extrasDoCliente(c.user_id),
     cliente: {
       userId: f.user_id, nome: f.nome, email: f.email ? String(f.email).replace(/\+marca-[a-z0-9-]+@/i, '@') : null, telefone: f.telefone,
       categoria: f.categoria, subplano: f.categoria, parceiro: f.parceiro, status: f.status_acesso, criadoEm: f.criado_em, vistoEm: f.visto_em, cidade: f.cidade, uf: f.end_uf,
     },
     lead: null,
   }
+}
+
+const din = (v: number, moeda = 'USD') => `${v > 0 ? '+' : v < 0 ? '−' : ''}${moeda === 'USD' ? 'US$' : moeda} ${Math.abs(v).toFixed(2).replace('.', ',')}`
+/** O que a equipe precisa ver para responder (25/11/2026): I.A. operando agora, resultado de hoje, saldos guardados e o WhatsApp confirmado. Tipo de conta verdadeiro (tela do ADM). */
+async function extrasDoCliente(userId: string): Promise<Array<{ rotulo: string; valor: string; tom?: 'ok' | 'alerta' }>> {
+  const extras: Array<{ rotulo: string; valor: string; tom?: 'ok' | 'alerta' }> = []
+  const vivas = todas().filter((s) => s.parametros?.userId === userId && (s.estado?.rodando || s.estado?.emOperacao))
+  extras.push({ rotulo: 'Operando agora', valor: vivas.length ? vivas.map((s) => `${s.roboNome} · ${s.demo ? 'demo' : 'real'} · ${din(s.estado?.resultado ?? 0, s.moeda)} em ${s.estado?.operacoes ?? 0} op.`).join(' | ') : 'Nenhuma I.A.', tom: vivas.length ? 'ok' : undefined })
+  const inicioHoje = new Date(); inicioHoje.setUTCHours(3, 0, 0, 0); if (Date.now() < inicioHoje.getTime()) inicioHoje.setUTCDate(inicioHoje.getUTCDate() - 1)
+  const [sess, contas, vinc] = await Promise.all([
+    rest<any[]>(`/sessoes_robos?user_id=eq.${userId}&marca=eq.${MARCA_DO_CHAT}&criada_em=gte.${inicioHoje.toISOString()}&select=demo,resultado,moeda&limit=500`).catch(() => []),
+    rest<any[]>(`/contas_deriv?user_id=eq.${userId}&marca=eq.${MARCA_DO_CHAT}&select=conta_id,tipo,saldo,moeda&order=tipo.asc`).catch(() => []),
+    rest<any[]>(`/assessor_whatsapp_vinculos?user_id=eq.${userId}&marca=eq.${MARCA_DO_CHAT}&select=confirmado_em&limit=1`).catch(() => []),
+  ])
+  for (const demo of [false, true]) {
+    const l = sess.filter((x) => !!x.demo === demo)
+    if (l.length) extras.push({ rotulo: `Hoje na ${demo ? 'demo' : 'real'}`, valor: `${din(l.reduce((t, x) => t + Number(x.resultado ?? 0), 0))} em ${l.length} ${l.length === 1 ? 'sessão' : 'sessões'}`, tom: demo ? undefined : 'ok' })
+  }
+  for (const c of contas) extras.push({ rotulo: `Saldo ${c.tipo === 'real' ? 'real' : 'demo'}`, valor: `${c.conta_id} · ${c.moeda === 'USD' || !c.moeda ? 'US$' : c.moeda} ${Number(c.saldo ?? 0).toFixed(2).replace('.', ',')}`, tom: c.tipo === 'real' && Number(c.saldo ?? 0) <= 0 ? 'alerta' : undefined })
+  extras.push({ rotulo: 'WhatsApp', valor: vinc[0]?.confirmado_em ? 'Confirmado no perfil' : 'Não confirmado', tom: vinc[0]?.confirmado_em ? 'ok' : 'alerta' })
+  return extras
 }
 
 export async function arquivos(numero: unknown) {

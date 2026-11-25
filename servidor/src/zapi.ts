@@ -33,7 +33,13 @@ const CHAVE_CONFIG = 'ZAPI_GLOBALFLY'
 const BASE = 'https://api.z-api.io'
 const CODIGO_VALE_MS = 30 * 60_000
 
-interface Config { instancia: string; token: string; clientToken: string; segredo: string; numero?: string; conectadoEm?: string }
+interface Config {
+  instancia: string; token: string; clientToken: string; segredo: string; numero?: string; conectadoEm?: string
+  /** 25/11/2026: o aviso de "entregue/lida" das mensagens enviadas também vem para a plataforma (tiques no chat do ADM) */
+  avisoDeStatus?: boolean
+  /** 25/11/2026: botão geral do chat no ADM; o Assessor não responde ninguém (as mensagens seguem chegando no chat) */
+  pausadoGeral?: boolean
+}
 
 /* ------------------------------------------------------------------ configuração (config_servicos) */
 
@@ -68,7 +74,7 @@ async function zapi<T>(c: Pick<Config, 'instancia' | 'token' | 'clientToken'>, c
 /** O endereço que a Z-API chama a cada mensagem recebida (o segredo no caminho: a Z-API não assina o aviso). */
 const enderecoDoAviso = (publico: string, segredo: string) => `${publico.replace(/\/+$/, '')}/zapi/${MARCA_DO_ASSESSOR}/${segredo}`
 
-export interface EstadoDaConexao { configurado: boolean; conectado: boolean; celularOnline?: boolean; numero?: string; instancia?: string; erro?: string; qr?: string }
+export interface EstadoDaConexao { configurado: boolean; conectado: boolean; celularOnline?: boolean; numero?: string; instancia?: string; erro?: string; qr?: string; pausadoGeral?: boolean }
 
 /** Como está a ligação com a Z-API agora (para o ADM). Desconectado traz o QR code para escanear ali mesmo. */
 export async function estadoDaConexao(): Promise<EstadoDaConexao> {
@@ -86,7 +92,8 @@ export async function estadoDaConexao(): Promise<EstadoDaConexao> {
       const d = await zapi<{ phone?: string }>(c, 'device').catch(() => null)
       if (d?.phone) { numero = String(d.phone).replace(/\D/g, ''); await guardar({ ...c, numero, conectadoEm: new Date().toISOString() }) }
     }
-    return { configurado: true, conectado: true, celularOnline: s.smartphoneConnected, numero, instancia: c.instancia }
+    if (!c.avisoDeStatus) void garantirAvisoDeStatus(c)
+    return { configurado: true, conectado: true, celularOnline: s.smartphoneConnected, numero, instancia: c.instancia, pausadoGeral: !!c.pausadoGeral }
   } catch (e) {
     return { configurado: true, conectado: false, instancia: c.instancia, erro: (e as Error).message }
   }
@@ -107,8 +114,31 @@ export async function ligarZapi(dados: { instancia: unknown; token: unknown; cli
   await zapi(novo, 'update-webhook-received', { method: 'PUT', body: JSON.stringify({ value: url }) })
     .catch(() => zapi(novo, 'update-every-webhooks', { method: 'PUT', body: JSON.stringify({ value: url, notifySentByMe: false }) }))
     .catch((e) => { throw new Error(`Não consegui apontar os avisos da Z-API para a plataforma (${(e as Error).message}).`) })
-  await guardar({ ...novo, segredo, numero: anterior?.instancia === novo.instancia ? anterior.numero : undefined })
+  await guardar({ ...novo, segredo, numero: anterior?.instancia === novo.instancia ? anterior.numero : undefined, pausadoGeral: anterior?.pausadoGeral })
+  void garantirAvisoDeStatus({ ...novo, segredo })
   console.log(`[assessor] Z-API ligada (instância ${novo.instancia.slice(0, 6)}…)`)
+  return estadoDaConexao()
+}
+
+/** Aponta também o aviso de status (enviada/entregue/lida) para a plataforma. Uma vez por conexão. */
+async function garantirAvisoDeStatus(c: Config): Promise<void> {
+  try {
+    // o mesmo endereço que a rota do ADM usa ao ligar (servidor.ts: RETORNO sem o /callback)
+    const publico = (process.env.RETORNO ?? 'https://motor.teedscompany.com/callback').replace(/\/callback$/, '').replace(/\/+$/, '')
+    if (!/^https:\/\//.test(publico)) return
+    await zapi(c, 'update-webhook-message-status', { method: 'PUT', body: JSON.stringify({ value: enderecoDoAviso(publico, c.segredo) }) })
+    const atual = await config()
+    if (atual && atual.instancia === c.instancia) await guardar({ ...atual, avisoDeStatus: true })
+    console.log('[assessor] aviso de status (entregue/lida) apontado para a plataforma')
+  } catch (e) { console.warn(`[assessor] não apontei o aviso de status: ${(e as Error).message}`) }
+}
+
+/** O botão geral do chat no ADM: o Assessor para (ou volta) de responder todo mundo. */
+export async function pausarAssessorGeral(sim: boolean, adminId: string): Promise<EstadoDaConexao> {
+  const c = await config()
+  if (!c) throw new Error('O WhatsApp do Assessor não está conectado.')
+  await guardar({ ...c, pausadoGeral: !!sim })
+  console.log(`[assessor] ${sim ? 'PAUSADO para todos' : 'religado para todos'} (admin ${adminId.slice(0, 8)}…)`)
   return estadoDaConexao()
 }
 
@@ -269,6 +299,31 @@ export async function arquivoPelaEquipe(adminId: string, d: any): Promise<Mensag
   })
 }
 
+/**
+ * "Sugerir resposta" (25/11/2026): o Assessor escreve a resposta para a última mensagem do cliente, com os dados
+ * dele, como rascunho para a equipe revisar. Nada é executado (Dono.rascunho) e nada é enviado daqui.
+ */
+export async function sugerirResposta(numero: unknown): Promise<string> {
+  const n = numeroValido(numero)
+  const userId = await usuarioDaConversa(n)
+  if (!userId) throw new Error('Este número ainda não confirmou o WhatsApp no perfil: o Assessor não sabe de quem é a conta.')
+  const login = await loginDoUsuario(userId)
+  if (!login) throw new Error('Não achei o login deste cliente.')
+  const l = await rest<Array<{ papel: string; texto: string }>>(
+    `/assessor_whatsapp_mensagens?marca=eq.${MARCA_DO_ASSESSOR}&numero=eq.${n}&papel=in.(cliente,assessor,equipe)&select=papel,texto&order=criado_em.desc&limit=14`)
+  const real = (t: string) => !!t && !/^\[\w+\]$/.test(t)
+  const i = l.findIndex((x) => x.papel === 'cliente' && real(x.texto))
+  if (i < 0) throw new Error('O cliente ainda não escreveu nada para responder.')
+  const historico: Turno[] = l.slice(i + 1).reverse().filter((t) => real(t.texto)).map((t) => ({ papel: t.papel === 'cliente' ? 'cliente' : 'assistente', texto: t.texto.replace(/^🎤 /, '') }))
+  const trocados = rotulosTrocados(login.email, MARCA_DO_ASSESSOR)
+  const parceiro = await rest<Array<{ parceiro: string | null }>>(`/clientes?user_id=eq.${encodeURIComponent(userId)}&select=parceiro&limit=1`).then((x) => x[0]?.parceiro ?? '').catch(() => '')
+  const vitrine = vitrineDoPedido(MARCA_DO_ASSESSOR, parceiro ?? '')
+  const app = await appDaVitrine(MARCA_DO_ASSESSOR, vitrine)
+  const r = await conversar({ id: userId, somenteDemo: somenteDemoDoUsuario(login), vitrine, app, canal: 'assessor-whatsapp', trocados, rascunho: true },
+    historico, l[i].texto.replace(/^🎤 /, ''), MARCA_DO_ASSESSOR, trocados ? { trocados: true } : {})
+  return paraWhatsapp(r.texto || '')
+}
+
 /** Reação da equipe numa mensagem do cliente (vazio tira a reação). */
 export async function reagirPelaEquipe(numero: unknown, wamid: unknown, emoji: unknown): Promise<void> {
   const n = numeroValido(numero)
@@ -303,6 +358,7 @@ export function segredoConfere(segredo: string): Promise<boolean> {
 
 /** O aviso da Z-API (já com o segredo conferido). Responde na hora; o trabalho segue por fora. */
 export function avisoRecebido(corpo: any): void {
+  if (corpo?.type === 'MessageStatusCallback') { void statusRecebido(corpo); return }
   if (corpo?.type !== 'ReceivedCallback' || corpo.fromMe || corpo.isGroup || corpo.isNewsletter || corpo.broadcast || corpo.isStatusReply || corpo.isEdit) return
   const numero = String(corpo.phone ?? '')
   if (!/^\d{10,15}$/.test(numero)) { console.warn('[assessor] mensagem sem número de telefone (contato oculto): ignorada'); return }
@@ -310,6 +366,19 @@ export function avisoRecebido(corpo: any): void {
   const agora = antes.then(() => atender(numero, corpo)).catch((e) => console.error(`[assessor] falhou com …${numero.slice(-4)}: ${(e as Error).message}`))
   filas.set(numero, agora)
   void agora.finally(() => { if (filas.get(numero) === agora) filas.delete(numero) })
+}
+
+/** Os tiques das mensagens que saíram pelo Assessor (Assessor e equipe): SENT → enviada, RECEIVED → entregue, READ/PLAYED → lida. */
+async function statusRecebido(corpo: any): Promise<void> {
+  const status = String(corpo?.status ?? '').toUpperCase()
+  const novo = status === 'READ' || status === 'PLAYED' || status === 'READ_BY_ME' ? 'lida' : status === 'RECEIVED' || status === 'DELIVERED' ? 'entregue' : status === 'SENT' ? 'enviada' : null
+  const ids = (Array.isArray(corpo?.ids) ? corpo.ids : [corpo?.id ?? corpo?.messageId]).map(String).filter((x: string) => /^[\w-]{4,80}$/.test(x)).slice(0, 50)
+  if (!novo || !ids.length) return
+  // nunca volta atrás (lida não vira entregue se os avisos chegarem fora de ordem)
+  const antes = novo === 'lida' ? '' : novo === 'entregue' ? '&status=in.(enviada,pendente)' : '&status=eq.pendente'
+  await rest(`/assessor_whatsapp_mensagens?marca=eq.${MARCA_DO_ASSESSOR}&id_whatsapp=in.(${ids.map((i: string) => `env:${i}`).join(',')})${antes}`, {
+    method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: novo, atualizado_em: new Date().toISOString() }),
+  }).catch(() => null)
 }
 
 const CONFIRMAR = /\bconfirmar\s*gf\s*(\d{6})\b/i
@@ -358,6 +427,7 @@ async function atender(numero: string, corpo: any): Promise<void> {
   if (idWpp && tipo !== 'texto') void guardarMidiaRecebida(idWpp, numero, corpo)
   // a equipe assumiu esta conversa no ADM: o Assessor fica quieto (a mensagem já aparece no chat)
   if (await assessorPausado(numero)) { console.log(`[assessor] …${numero.slice(-4)} com a equipe: o Assessor não respondeu`); return }
+  if ((await config())?.pausadoGeral) { console.log(`[assessor] pausado para todos: …${numero.slice(-4)} ficou para a equipe`); return }
 
   if (validos.length > 1) {
     if (!jaAvisado(numero)) await enviar(numero, 'Este número aparece em mais de uma conta da GlobalFly, então por segurança não consigo mexer em nenhuma. Fale com o suporte na plataforma para deixarmos o número em uma conta só.', null)

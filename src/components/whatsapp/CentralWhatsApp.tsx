@@ -24,7 +24,7 @@ import { GaleriaDoContato, Visualizador, FaixaDeMidias, NotasDoContato } from '.
 import { formatar, soEmoji, rotuloDoTipo, horaCurta, dataCurta, dataEHora, tamanho, duracao, horaOuDia, diaDaMensagem, haQuanto, corDaEtiqueta, EMOJIS, REACOES } from './textoWpp'
 import './central-whatsapp.css'
 
-type Filtro = 'todas' | 'esperando' | 'nao-lidas' | 'minhas' | 'sem-dono' | 'resolvidas'
+type Filtro = 'todas' | 'esperando' | 'nao-lidas' | 'minhas' | 'sem-dono' | 'equipe' | 'resolvidas'
 
 /** Há quanto tempo o cliente espera resposta (a última mensagem é dele). Verde até 5 min, amarelo até 30, vermelho depois. */
 function espera(c: ContatoWpp): { min: number; tom: 'ok' | 'alerta' | 'perigo'; texto: string } | null {
@@ -73,19 +73,29 @@ export function CentralWhatsApp({ sessao, marca, apiDeTeste, onAbrirCliente, ped
   }
 
   return <div className={`wz ${api.perfil?.assessor ? 'wz-assessor' : ''}`}>
-    {api.perfil?.assessor ? <FaixaDoAssessor estado={estado} onConexao={onConexao} /> : <FaixaDaConexao estado={estado} onAbrir={() => setConectando(true)} />}
+    {api.perfil?.assessor ? <FaixaDoAssessor estado={estado} onConexao={onConexao} onGeral={api.pausarGeral ? async (sim) => { await api.pausarGeral!(sim); await carregar() } : undefined} /> : <FaixaDaConexao estado={estado} onAbrir={() => setConectando(true)} />}
     <Mesa key={api.exemplo ? 'exemplo' : 'real'} api={api} estado={estado} marca={marca} onAbrirCliente={onAbrirCliente} pedido={pedido ?? null} />
     {conectando && <Conexao api={real} estado={estado} onFechar={() => setConectando(false)} onMudou={() => void carregar()} />}
   </div>
 }
 
 /** A faixa do topo no chat do Assessor (Z-API): número, ao vivo e o atalho para a conexão. */
-function FaixaDoAssessor({ estado, onConexao }: { estado: EstadoWpp; onConexao?: () => void }) {
+function FaixaDoAssessor({ estado, onConexao, onGeral }: { estado: EstadoWpp; onConexao?: () => void; onGeral?: (sim: boolean) => Promise<void> }) {
   const c = estado.conta
-  return <div className={`wz-faixa ${estado.conectado ? 'ok' : 'perigo'}`}>
+  const pausado = !!estado.assessorPausadoGeral
+  const [indo, setIndo] = useState(false)
+  const alternar = async () => {
+    if (!onGeral) return
+    if (!pausado && !window.confirm('Pausar o Assessor em TODAS as conversas? A I.A. para de responder todo mundo até você religar. As mensagens continuam chegando aqui.')) return
+    setIndo(true); try { await onGeral(!pausado) } catch (e) { window.alert((e as Error).message) } finally { setIndo(false) }
+  }
+  return <div className={`wz-faixa ${!estado.conectado || pausado ? 'perigo' : 'ok'}`}>
     <span className="wz-faixa-icone"><I.whats /></span>
-    <div><b>Assessor GF {c?.numero && <span className="wz-num">{c.numero}</span>}</b>
-      <small>{estado.conectado ? 'A I.A. responde sozinha. Toque em Assumir para responder você mesmo: o Assessor fica quieto naquela conversa até você devolver.' : (c?.erro || 'O WhatsApp do Assessor está desconectado: as mensagens novas não chegam até reconectar.')}</small></div>
+    <div><b>Assessor GF {c?.numero && <span className="wz-num">{telefoneBonito(c.numero)}</span>}{estado.conectado && <em className={`wz-ponto ${pausado ? 'perigo' : 'ok'}`}>{pausado ? 'Pausado para todos' : 'Respondendo'}</em>}</b>
+      <small>{!estado.conectado ? (c?.erro || 'O WhatsApp do Assessor está desconectado: as mensagens novas não chegam até reconectar.')
+        : pausado ? 'A I.A. não está respondendo ninguém: tudo o que chegar fica para a equipe responder por aqui.'
+        : 'A I.A. responde sozinha. Toque em Assumir para responder você mesmo: o Assessor fica quieto naquela conversa até você devolver.'}</small></div>
+    {onGeral && estado.conectado && <button className={`wz-btn ${pausado ? 'ouro' : ''}`} disabled={indo} onClick={() => void alternar()}>{indo ? '…' : pausado ? 'Religar o Assessor' : 'Pausar para todos'}</button>}
     {onConexao && <button className={`wz-btn ${estado.conectado ? '' : 'ouro'}`} onClick={onConexao}>Conexão</button>}
   </div>
 }
@@ -308,6 +318,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
       if (filtro === 'nao-lidas') return c.naoLidas > 0
       if (filtro === 'minhas') return c.responsavel === api.euId && c.situacao === 'aberta'
       if (filtro === 'sem-dono') return !c.responsavel && c.situacao === 'aberta'
+      if (filtro === 'equipe') return !!c.iaPausada && c.situacao === 'aberta'
       return c.situacao === 'resolvida'
     }).sort((a, b) => filtro === 'esperando'
       ? (a.ultimaEm ?? '').localeCompare(b.ultimaEm ?? '') // quem espera há mais tempo primeiro
@@ -319,6 +330,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
     return {
       todas: l.filter((c) => c.situacao === 'aberta').length, esperando: l.filter((c) => !!espera(c)).length, 'nao-lidas': l.filter((c) => c.naoLidas > 0).length,
       minhas: l.filter((c) => c.responsavel === api.euId && c.situacao === 'aberta').length, 'sem-dono': l.filter((c) => !c.responsavel && c.situacao === 'aberta').length,
+      equipe: l.filter((c) => !!c.iaPausada && c.situacao === 'aberta').length,
       resolvidas: l.filter((c) => c.situacao === 'resolvida').length,
     }
   }, [contatos, api.euId])
@@ -351,7 +363,9 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
       </header>
       <label className="wz-busca"><I.lupa /><input ref={campoBusca} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquisar nome, número ou mensagem" aria-label="Pesquisar conversa" />{busca && <button onClick={() => setBusca('')} aria-label="Limpar busca"><I.x /></button>}</label>
       <div className="wz-filtros" role="tablist" aria-label="Filtrar conversas">
-        {([['todas', 'Abertas'], ['esperando', 'Esperando'], ['nao-lidas', 'Não lidas'], ['minhas', 'Minhas'], ['sem-dono', 'Sem dono'], ['resolvidas', 'Resolvidas']] as const).map(([id, nome]) =>
+        {(api.perfil?.assessor
+          ? [['todas', 'Abertas'], ['nao-lidas', 'Não lidas'], ['equipe', 'Com a equipe'], ['esperando', 'Esperando'], ['minhas', 'Minhas'], ['resolvidas', 'Resolvidas']] as const
+          : [['todas', 'Abertas'], ['esperando', 'Esperando'], ['nao-lidas', 'Não lidas'], ['minhas', 'Minhas'], ['sem-dono', 'Sem dono'], ['resolvidas', 'Resolvidas']] as const).map(([id, nome]) =>
           <button key={id} role="tab" aria-selected={filtro === id} className={filtro === id ? 'on' : ''} onClick={() => setFiltro(id)}>{nome}{contagem[id] > 0 && id !== 'resolvidas' && <b>{contagem[id]}</b>}</button>)}
       </div>
       {todasEtiquetas.length > 0 && <div className="wz-filtro-etiquetas">
@@ -365,6 +379,7 @@ function Mesa({ api, estado, marca, onAbrirCliente, pedido }: { api: WhatsAppApi
             : filtro === 'nao-lidas' ? <><b>Tudo lido ✓</b><small>Nenhuma conversa esperando resposta.</small></>
             : filtro === 'minhas' ? <><b>Nenhuma conversa sua</b><small>Assuma uma conversa no topo dela para ela aparecer aqui.</small></>
             : filtro === 'sem-dono' ? <><b>Todas têm responsável</b><small>Nenhuma conversa aberta sem dono.</small></>
+            : filtro === 'equipe' ? <><b>O Assessor está em todas ✓</b><small>Nenhuma conversa assumida pela equipe agora.</small></>
             : filtro === 'resolvidas' ? <><b>Nenhuma resolvida</b><small>Quando terminar um atendimento, toque em "Resolver".</small></>
             : <><b>Nenhuma conversa ainda</b><small>Quando alguém mandar mensagem para o {api.perfil?.assessor ? 'Assessor' : 'número'}, ela aparece aqui na hora.</small></>}
         </div>}
@@ -460,8 +475,9 @@ function ItemDaLista({ c, ativo, rascunho, nomeDe, onAbrir, onMudar, semJanela }
             {c.naoLidas > 0 && <em className="wz-nao-lidas" aria-label={`${c.naoLidas} não lidas`}>{c.naoLidas}</em>}
           </span>
         </span>
-        {(c.etiquetas.length > 0 || c.responsavel || e || c.iaPausada || (!j.aberta && c.situacao === 'aberta')) && <span className="wz-item-selos">
+        {(c.etiquetas.length > 0 || c.responsavel || e || c.iaPausada || (semJanela && !c.userId) || (!j.aberta && c.situacao === 'aberta')) && <span className="wz-item-selos">
           {c.iaPausada && <i className="pausada" title="A equipe assumiu: o Assessor não responde esta conversa"><I.pausa />Com a equipe</i>}
+          {semJanela && !c.userId && <i className="fechada" title="Este número ainda não confirmou o WhatsApp no perfil: o Assessor não mexe em conta nenhuma"><I.alerta />Não confirmado</i>}
           {e && <i className={`espera ${e.tom}`} title="O cliente está esperando resposta"><I.relogio />Esperando {e.texto}</i>}
           {!j.aberta && c.situacao === 'aberta' && <i className="fechada" title="Janela de 24 horas fechada: só modelo aprovado"><I.relogio />Só modelo</i>}
           {c.responsavel && <i className="dono"><I.pessoa />{nomeDe(c.responsavel)}</i>}
@@ -503,6 +519,14 @@ function Conversa(p: {
   const [termo, setTermo] = useState('')
   const [achado, setAchado] = useState(0)
   const [menuTopo, setMenuTopo] = useState(false)
+  const [sugestao, setSugestao] = useState<{ texto: string; vez: number } | null>(null)
+  const [sugerindo, setSugerindo] = useState<string | null>(null)
+  async function sugerir() {
+    if (!api.sugerirResposta) return
+    setSugerindo('Escrevendo…')
+    try { setSugestao({ texto: await api.sugerirResposta(contato.id), vez: Date.now() }); setSugerindo(null) }
+    catch (e) { setSugerindo((e as Error).message); setTimeout(() => setSugerindo(null), 6000) }
+  }
   const rolagem = useRef<HTMLDivElement>(null)
   const noFim = useRef(true)
   const qtd = useRef(0)
@@ -599,7 +623,7 @@ function Conversa(p: {
         <span>
           <b>{nomeDoContato(contato)}</b>
           <small><span className="wz-tel">{telefoneBonito(contato.waId)}</span>{perfil?.assessor
-            ? <span className={`wz-janela ${contato.iaPausada ? 'fechada' : 'aberta'}`}><i />{contato.iaPausada ? <>Com a equipe · Assessor quieto</> : <>Assessor respondendo</>}</span>
+            ? <span className={`wz-janela ${contato.iaPausada || p.estado.assessorPausadoGeral ? 'fechada' : 'aberta'}`}><i />{contato.iaPausada ? <>Com a equipe · Assessor quieto</> : p.estado.assessorPausadoGeral ? <>Assessor pausado para todos</> : !contato.userId ? <>Número não confirmado</> : <>Assessor respondendo</>}</span>
             : <span className={`wz-janela ${j.aberta ? 'aberta' : 'fechada'}`}><i />{j.aberta ? <>Janela aberta · {textoDaJanela(j.restaMs)}</> : <>Janela de 24 h fechada</>}</span>}</small>
         </span>
       </button>
@@ -672,9 +696,11 @@ function Conversa(p: {
     {perfil?.assessor && <div className={`wz-faixa-assumir ${contato.iaPausada ? 'com-equipe' : ''}`}>
       {contato.iaPausada
         ? <><I.pessoa /><span><b>{p.nomeDe(contato.pausadaPor ?? contato.responsavel) ?? 'A equipe'} assumiu esta conversa.</b> O Assessor fica quieto até alguém devolver (ou 6 h sem a equipe escrever).</span><button className="wz-btn" onClick={() => p.onMudar({ iaPausada: false })}>Devolver ao Assessor</button></>
-        : <><I.whats /><span>O Assessor está respondendo. Se você escrever, assume a conversa e ele para de responder aqui.</span></>}
+        : <><I.whats /><span>{p.estado.assessorPausadoGeral ? 'O Assessor está pausado para todos: responda por aqui.' : 'O Assessor está respondendo. Se você escrever, assume a conversa e ele para de responder aqui.'}</span></>}
+      {api.sugerirResposta && contato.userId && <button className="wz-btn sugerir" disabled={sugerindo === 'Escrevendo…'} onClick={() => void sugerir()} title="O Assessor escreve a resposta para a última mensagem do cliente, com os dados dele. Você revisa antes de enviar; nada é ligado nem enviado sozinho.">{sugerindo === 'Escrevendo…' ? 'Escrevendo…' : <><I.raio />Sugerir resposta</>}</button>}
     </div>}
-    <Compositor key={contato.id} contato={contato} janelaAberta={j.aberta} semModelos={!!perfil?.semModelos} respostas={p.respostas} citando={citando} arquivoSolto={soltou}
+    {sugerindo && sugerindo !== 'Escrevendo…' && <div className="wz-aviso-sugestao" role="alert">{sugerindo}</div>}
+    <Compositor key={contato.id} contato={contato} janelaAberta={j.aberta} semModelos={!!perfil?.semModelos} textoNovo={sugestao} respostas={p.respostas} citando={citando} arquivoSolto={soltou}
       rascunho={p.rascunho} onRascunho={p.onRascunho} onRespostas={p.onRespostas}
       onSoltouUsado={() => setSoltou(null)} onTirarCitacao={() => setCitando(null)} onModelo={() => setEscolhendoModelo(true)}
       onTexto={(t) => { const c = citando; setCitando(null); if (perfil?.assessor && !contato.iaPausada) p.onMudarLocal?.({ iaPausada: true, pausadaPor: api.euId }); p.onEnviar({ texto: t, citando: c?.wamid ?? null }, () => api.enviarTexto(contato.id, t, c?.wamid ?? null)) }}
@@ -789,8 +815,8 @@ function Audio({ url, exemplo, duracaoExemplo, falhou, voz, sai }: { url: string
 }
 
 /* ================================================================ compositor */
-function Compositor({ contato, janelaAberta, semModelos, respostas, citando, arquivoSolto, rascunho, onRascunho, onRespostas, onSoltouUsado, onTirarCitacao, onModelo, onTexto, onArquivo, onNota }: {
-  contato: ContatoWpp; janelaAberta: boolean; semModelos?: boolean; respostas: RespostaPronta[]; citando: MensagemWpp | null; arquivoSolto: File[] | null
+function Compositor({ contato, janelaAberta, semModelos, textoNovo, respostas, citando, arquivoSolto, rascunho, onRascunho, onRespostas, onSoltouUsado, onTirarCitacao, onModelo, onTexto, onArquivo, onNota }: {
+  contato: ContatoWpp; janelaAberta: boolean; semModelos?: boolean; textoNovo?: { texto: string; vez: number } | null; respostas: RespostaPronta[]; citando: MensagemWpp | null; arquivoSolto: File[] | null
   rascunho: string; onRascunho: (t: string) => void; onRespostas: () => void
   onSoltouUsado: () => void; onTirarCitacao: () => void; onModelo: () => void
   onTexto: (t: string) => void; onArquivo: (f: File, legenda: string) => void; onNota: (t: string) => Promise<void>
@@ -812,6 +838,8 @@ function Compositor({ contato, janelaAberta, semModelos, respostas, citando, arq
   const seletorFoto = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (arquivoSolto) { escolher(arquivoSolto); onSoltouUsado() } }, [arquivoSolto]) // eslint-disable-line react-hooks/exhaustive-deps
+  // "Sugerir resposta": o texto entra na caixa para revisar antes de enviar
+  useEffect(() => { if (textoNovo?.texto) { setNota(false); setTexto(textoNovo.texto); setTimeout(() => { const el = campo.current; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length) } }, 0) } }, [textoNovo?.vez]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const el = campo.current; if (!el) return; el.style.height = 'auto'; el.style.height = `${Math.min(el.scrollHeight, 148)}px` }, [texto])
   useEffect(() => { if (citando) { setNota(false); campo.current?.focus() } }, [citando])
   useEffect(() => { if (!janelaAberta) setNota(true); else setMostrarTravada(false) }, [janelaAberta])
@@ -991,6 +1019,9 @@ function DadosDoContato({ api, contato, equipe, mensagens, nomeDe, onFechar, onM
       <section className="wz-dados-bloco">
         <span className="wz-dados-titulo">Na plataforma</span>
         {ficha === undefined && <div className="wz-carregando pequeno"><i />Procurando o cadastro…</div>}
+        {ficha?.extras && ficha.extras.length > 0 && <dl className="wz-dados-extras">
+          {ficha.extras.map((x) => <div key={x.rotulo}><dt>{x.rotulo}</dt><dd className={x.tom ?? ''}>{x.valor}</dd></div>)}
+        </dl>}
         {k && <dl>
           <div><dt>Subplano</dt><dd><span className={`wz-subplano ${k.subplano ?? 'gold'}`}>{(k.subplano ?? 'gold').replace(/^./, (x) => x.toUpperCase())}</span></dd></div>
           {k.parceiro && <div><dt>Veio de</dt><dd>/{k.parceiro}</dd></div>}

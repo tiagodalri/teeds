@@ -33,6 +33,8 @@ export interface EstadoWpp {
   conectado: boolean
   webhook: { url: string; senha: string } | null
   exemplo?: boolean
+  /** chat do Assessor: o botão geral está pausando a I.A. em todas as conversas */
+  assessorPausadoGeral?: boolean
 }
 export interface ContatoWpp {
   id: string; waId: string; nome: string | null; userId: string | null; leadId: string | null
@@ -54,6 +56,8 @@ export interface MensagemWpp {
 export interface RespostaPronta { id: string; atalho: string; titulo: string; texto: string }
 export interface ModeloWpp { nome: string; idioma: string; categoria: string | null; situacao: string | null; componentes: Array<{ type: string; format?: string; text?: string; buttons?: Array<{ type: string; text: string; url?: string }> }> }
 export interface FichaWpp {
+  /** linhas a mais (chat do Assessor: I.A. operando agora, resultado de hoje, saldos, WhatsApp confirmado) */
+  extras?: Array<{ rotulo: string; valor: string; tom?: 'ok' | 'alerta' }>
   cliente: { userId: string; nome: string | null; email: string | null; telefone: string | null; categoria: string | null; subplano: string | null; parceiro: string | null; status: string | null; criadoEm: string | null; vistoEm: string | null; cidade: string | null; uf: string | null } | null
   lead: { nome: string | null; email: string | null; parceiro: string | null; temperatura: string | null; campanha: string | null; consentiu: boolean | null; criadoEm: string | null } | null
 }
@@ -113,6 +117,10 @@ export interface WhatsAppApi {
   parceiros(): Promise<Parceiro[]>
   abrirArquivo(m: MidiaWpp): Promise<string>
   acompanhar(aoMudar: (m: MudancaWpp) => void, aoEstado?: (aoVivo: boolean) => void): () => void
+  /** só no Assessor: a I.A. escreve a resposta para a última mensagem do cliente (rascunho, nada é enviado nem executado) */
+  sugerirResposta?(contatoId: string): Promise<string>
+  /** só no Assessor: pausa (ou religa) a I.A. em todas as conversas */
+  pausarGeral?(sim: boolean): Promise<void>
 }
 
 /* ------------------------------------------------------------ apoio */

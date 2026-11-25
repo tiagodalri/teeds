@@ -41,7 +41,7 @@ import { ligarFechamentoDasManuais } from './manuais-vencidas'
 import { coletarTudo, dataOuPadrao, desvincular, diaUtc, ligarColetorDeAfiliados, painelDeAfiliados, podeVincular, RecusaDeAfiliado, somarDiasA, vincular } from './afiliados'
 import { ligarFaxinaDoEspelho } from './espelho'
 import { aplicarNoBanco, assinaturaConfere, ehOSimulador, lerAviso, tokenDoGancho } from './kiwify'
-import { arquivoPelaEquipe, enviarPelaEquipe, reagirPelaEquipe } from './zapi'
+import { arquivoPelaEquipe, enviarPelaEquipe, pausarAssessorGeral, reagirPelaEquipe, sugerirResposta } from './zapi'
 import * as chatDoAssessor from './assessor-chat'
 import { assessorLiberado, assessorLiberadoPara, avisoRecebido, codigoDoPerfil, desligarZapi, desvincularPerfil, estadoDaConexao, estadoDoPerfil, ligarZapi, MARCA_DO_ASSESSOR, segredoConfere } from './zapi'
 import { aplicarNoBanco as aplicarNoBancoCakto, contaDoAviso, lerAviso as lerAvisoCakto, produtoDaCaktoNoBanco, segredosDoGancho } from './cakto'
@@ -1374,6 +1374,8 @@ async function atenderPedido(req: IncomingMessage, res: ServerResponse) {
           if (r === 'ler') { await chatDoAssessor.lerConversa(corpo.numero); return json(200, { ok: true }) }
           if (r === 'reagir') { await reagirPelaEquipe(corpo.numero, corpo.wamid, corpo.emoji); return json(200, { ok: true }) }
           if (r === 'favoritar') { await chatDoAssessor.favoritar(corpo.id, corpo.sim); return json(200, { ok: true }) }
+          if (r === 'sugerir') return json(200, { texto: await sugerirResposta(corpo.numero) })
+          if (r === 'geral') return json(200, await pausarAssessorGeral(!!corpo.pausado, dono.id))
         }
         return json(404, { erro: 'Rota do chat do Assessor não encontrada.' })
       }

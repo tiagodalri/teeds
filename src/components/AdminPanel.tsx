@@ -6,7 +6,7 @@ import './plano/meu-plano.css'
 
 /* Revisão de 04/11/2026: o filtro de parceiro só aparece onde muda alguma coisa (as configurações
    valem para a plataforma inteira), e a chave do Modo CEO só onde há markup ou dinheiro na tela. */
-const ABAS_SEM_PARCEIRO = ['aulas', 'robos', 'planos', 'produtos', 'whatsapp', 'financeiro']
+const ABAS_SEM_PARCEIRO = ['aulas', 'robos', 'planos', 'produtos', 'whatsapp', 'assessor', 'financeiro']
 const ABAS_COM_MODO_CEO = ['visao', 'inteligencia', 'resultados', 'comissoes', 'estudo', 'movimentacoes', 'clientes', 'leads', 'parceiros']
 import type { ReactNode } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
@@ -48,7 +48,7 @@ import { AdminSuporte } from './suporte/AdminSuporte'
 import { aguardandoEquipe } from '../core/teeds/suporte'
 import { pedirCentral } from '../core/live/treino'
 import { hojeISO, orgDoBanco } from '../core/teeds/organizacao'
-import { SUPABASE } from '../core/teeds/config'
+import { SERVIDOR, SUPABASE } from '../core/teeds/config'
 import { NomeDoRobo } from './NomeDoRobo'
 import { abaPedida } from '../core/teeds/stories'
 import { finDoBanco } from '../core/teeds/financeiro'
@@ -390,6 +390,17 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
     window.addEventListener('whatsapp:conversar', f); return () => window.removeEventListener('whatsapp:conversar', f)
   }, [])
   // conversas do WhatsApp esperando resposta (05/11/2026): o selo verde no menu, como no aplicativo
+  // 25/11/2026: conversas do Assessor com mensagem não lida (o número no menu, como o do WhatsApp)
+  const [filaAssessor, setFilaAssessor] = useState(0)
+  useEffect(() => {
+    if (marcaFoco !== 'globalfly' || naRede || !assessorNoAdm(sessao.usuario.email)) { setFilaAssessor(0); return }
+    let vivo = true
+    const ver = () => fetch(`${SERVIDOR.url}/api/admin/assessor/conversas`, { headers: { Authorization: `Bearer ${sessao.token}` } })
+      .then((r) => (r.ok ? r.json() : { conversas: [] })).then((d) => vivo && setFilaAssessor((d?.conversas ?? []).filter((c: { naoLidas: number; situacao: string }) => c.naoLidas > 0 && c.situacao === 'aberta').length)).catch(() => undefined)
+    ver()
+    const t = window.setInterval(() => { if (!document.hidden) ver() }, 45_000)
+    return () => { vivo = false; window.clearInterval(t) }
+  }, [marcaFoco, naRede]) // eslint-disable-line react-hooks/exhaustive-deps
   const [filaWhatsApp, setFilaWhatsApp] = useState(0)
   useEffect(() => {
     if (marcaFoco !== 'globalfly' || naRede) { setFilaWhatsApp(0); return }
@@ -506,7 +517,7 @@ export function AdminPanel({ sessao, comissoes, onNavigate, mostrarMarkup = fals
       // o WhatsApp oficial do Naor (05/11/2026): o admin geral e os admins do parceiro dono do número
       ...(marcaFoco === 'globalfly' && !naRede ? [item('whatsapp', 'WhatsApp', 'whatsapp', { n: filaWhatsApp, urgente: true, dica: 'Conversas do WhatsApp esperando resposta' })] : []),
       // 19/11/2026: o Assessor GF no WhatsApp pela Z-API, por enquanto só para o Tiago
-      ...(marcaFoco === 'globalfly' && !naRede && assessorNoAdm(sessao.usuario.email) ? [item('assessor', 'WhatsApp do Assessor', 'whatsapp')] : []),
+      ...(marcaFoco === 'globalfly' && !naRede && assessorNoAdm(sessao.usuario.email) ? [item('assessor', 'WhatsApp do Assessor', 'whatsapp', { n: filaAssessor, urgente: true, dica: 'Conversas do Assessor com mensagem não lida' })] : []),
       item('emails', 'E-mails', 'emails'),
     ] },
     { id: 'clientes', titulo: 'Clientes', itens: [

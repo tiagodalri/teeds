@@ -53,7 +53,7 @@ export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
     async estado() {
       const z = await fetch(`${SERVIDOR.url}/api/admin/zapi`, { headers: { Authorization: `Bearer ${sessao.token}` } }).then((r) => r.json()).catch(() => ({} as any))
       return {
-        podeVer: true, podeConectar: null, dono: null, conectado: !!z?.conectado, webhook: null,
+        podeVer: true, podeConectar: null, dono: null, conectado: !!z?.conectado, webhook: null, assessorPausadoGeral: !!z?.pausadoGeral,
         conta: { marca: 'globalfly', parceiro: null, numero: z?.numero ? `+${z.numero}` : null, nomeVerificado: 'Assessor GF', qualidade: null, limite: null, situacao: z?.conectado ? 'conectado' : z?.configurado ? 'erro' : 'desconectado', erro: z?.erro ?? null, ultimoAvisoEm: null, conectadoEm: null, phoneNumberId: null, wabaId: null, appId: null },
       }
     },
@@ -82,6 +82,8 @@ export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
     buscarPessoas: async () => [],
     async buscarMensagens(q) { return (await pedir<{ achados: any[] }>(sessao, `buscar?q=${encodeURIComponent(q)}`)).achados },
     async favoritar(id, sim) { await postar(sessao, 'favoritar', { id, sim }) },
+    async sugerirResposta(id) { return (await postar<{ texto: string }>(sessao, 'sugerir', { numero: id })).texto },
+    async pausarGeral(sim) { await postar(sessao, 'geral', { pausado: sim }) },
     async todasMensagens(id) { return (await pedir<{ mensagens: MensagemWpp[] }>(sessao, `todas?numero=${encodeURIComponent(id)}`)).mensagens },
     equipe: () => banco.equipe(),
     parceiros: () => banco.parceiros(),
@@ -127,10 +129,15 @@ export function assessorDoServidor(sessao: SessaoTeeds): WhatsAppApi {
 export function assessorDeExemplo(euId = 'eu'): WhatsAppApi {
   const base = whatsappDeExemplo({ conectado: true, podeVer: true }, euId)
   const pausas = new Map<string, boolean>()
+  let geral = false
   return {
     ...base,
     exemplo: false,
     perfil: PERFIL_DO_ASSESSOR,
+    async estado() { return { ...(await base.estado()), assessorPausadoGeral: geral, conta: { marca: 'globalfly', parceiro: null, numero: '+5511914801613', nomeVerificado: 'Assessor GF', qualidade: null, limite: null, situacao: 'conectado', erro: null, ultimoAvisoEm: null, conectadoEm: null, phoneNumberId: null, wabaId: null, appId: null } } },
+    async pausarGeral(sim) { geral = sim },
+    async sugerirResposta() { await new Promise((r) => setTimeout(r, 900)); return 'Oi! Pra ligar a *GF Raptor* é só me dizer a conta (demo ou real), a entrada, a meta e o limite de perda. Quer que eu ligue na demo com entrada de US$ 1?' },
+    async ficha(id) { const f = await base.ficha(id); return f ? { ...f, extras: [{ rotulo: 'Operando agora', valor: 'GF Raptor · demo · +US$ 3,20 em 12 op.', tom: 'ok' }, { rotulo: 'Hoje na real', valor: '−US$ 4,00 em 1 sessão' }, { rotulo: 'Saldo real', valor: 'ROT92075216 · US$ 0,00', tom: 'alerta' }, { rotulo: 'WhatsApp', valor: 'Confirmado no perfil', tom: 'ok' }] } : f },
     async contatos() {
       const l = await base.contatos()
       return l.map((c, i) => ({ ...c, iaPausada: pausas.get(c.id) ?? i === 1 }))

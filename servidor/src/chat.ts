@@ -367,6 +367,7 @@ async function executar(
     }
 
     case 'parar_sessao': {
+      if (dono.rascunho) return { recusado: true, motivo: 'Isto é um rascunho para a equipe: não desligue nada, só escreva a resposta.' }
       const s = await sessaoDele(dono, String(args.id))
       if (!s) throw new Error(`Sessão ${args.id} não é sua ou não existe mais.`)
       parar(s.id)
@@ -382,6 +383,7 @@ async function executar(
     case 'ajuda_da_plataforma': return ajudaDaPlataforma(marca)
 
     case 'propor_sessao': {
+      if (dono.rascunho) return { recusado: true, motivo: 'Isto é um rascunho para a equipe: não ligue nada. Escreva a resposta dizendo o que será feito, sem afirmar que já ligou.' }
       const roboId = String(args.robo ?? '')
       const ficha = listarRobos(marca).find((r) => r.id === roboId)
       if (!ficha) throw new Error(`Robô "${roboId}" não existe. Chame listar_robos para ver os que existem.`)
@@ -486,6 +488,11 @@ export interface Anexos {
   video?: boolean
   contaAtual?: string
   trocados?: boolean
+  /**
+   * 25/11/2026: "Sugerir resposta" no chat do Assessor. A I.A. escreve como se fosse responder este cliente, mas
+   * nada é executado (nem ligar, nem desligar), o limite do dia não trava e pedido pendente do cliente não é mexido.
+   */
+  rascunho?: boolean
 }
 
 /*
@@ -782,6 +789,8 @@ async function perguntaDaConta(dono: Dono, pedido: PedidoDeLigar, marca: string)
 
 async function respostaDireta(dono: Dono, pergunta: string, marca: string, anexos: Anexos = {}): Promise<string | null> {
   let q = normalizar(pergunta)
+  // rascunho para a equipe: nada de atalho que liga ou resolve pendência (a I.A. só escreve)
+  if (dono.rascunho && (VERBO_DE_LIGAR.test(q) || pedidosSemConta.has(dono.id))) return null
   const pendente = pedidosSemConta.get(dono.id)
   if (pendente) {
     pedidosSemConta.delete(dono.id)
@@ -993,7 +1002,7 @@ export async function conversar(
   const limites = await limitesDe(dono)
   // O custo do chat é contado por plataforma: o da OMNI não some no da Teeds.
   const hoje = await usoDeHojeDoChat(dono.id, marca)
-  if (hoje >= limites.mensagensPorDia) {
+  if (hoje >= limites.mensagensPorDia && !dono.rascunho) {
     return {
       texto: `Você chegou ao limite de ${limites.mensagensPorDia} mensagens por hoje. ` +
         `${ehFamiliaGF(marca) ? 'As I.A.' : 'Os robôs'} continuam operando normalmente — o limite é só da conversa. Amanhã zera.`,
