@@ -34,8 +34,16 @@ const DO_NAOR = new Set([
  * profissionais dele em viagem com tratamento de cinema (public/aulas-globalfly/victor/).
  * Valem por cima da capa gravada na grade (as do ChatGPT foram recusadas).
  */
+/**
+ * 26/11/2026: aulas que só existem no /n (core/teeds/gradeAulas.ts, AULAS_SO_DO_PARCEIRO) usam a
+ * capa do Naor da aula equivalente. "Quem é Naor Bezerra?" = a capa do Naor do "Quem é..." ("A HISTÓRIA").
+ */
+const SO_DO_NAOR: Record<string, string> = { 'quem-e-naor-bezerra': 'quem-e-victor-cordeiro' }
+
 export const capaEspecial = (id: string, v: string = vitrineDoConteudo()): string | null =>
-  !DA_GF || !DO_NAOR.has(id) ? null
+  !DA_GF ? null
+    : SO_DO_NAOR[id] ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${SO_DO_NAOR[id]}.jpg`
+    : !DO_NAOR.has(id) ? null
     : v === 'n' ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg`
     : `${import.meta.env.BASE_URL}aulas-globalfly/victor/${id}.jpg`
 
@@ -45,7 +53,8 @@ export const capaEspecial = (id: string, v: string = vitrineDoConteudo()): strin
  * e perde para a enviada. Ver capaResolvida em components/aulas/CapaDaAula.tsx.
  */
 export const capaDoParceiroNoCodigo = (id: string, v: string = vitrineDoConteudo()): string | null =>
-  DA_GF && v === 'n' && DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg` : null
+  DA_GF && SO_DO_NAOR[id] ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${SO_DO_NAOR[id]}.jpg`
+    : DA_GF && v === 'n' && DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/${id}.jpg` : null
 
 /** As artes dos Destaques com o Naor (09/11/2026), mesma regra da vitrine /n. */
 const DESTAQUES_DO_NAOR = new Set(['ao-vivo', 'comunidade', 'conta', 'deposito', 'apostila'])

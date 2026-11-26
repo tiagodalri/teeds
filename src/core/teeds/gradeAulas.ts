@@ -321,9 +321,20 @@ export function cursosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}): Cur
 const AULAS_FORA_DO_PARCEIRO: Record<string, string[]> = {
   n: ['quem-e-victor-cordeiro'],
 }
+/**
+ * O contrário (26/11/2026, Tiago: "quem é Victor Cordeiro deve ser pra /v e alunos do Victor, e
+ * quem é Naor Bezerra apenas pros alunos do Naor /n"): aulas que SÓ o cliente daquele parceiro
+ * vê, pela mesma regra de cima (vitrine /n ou parceiro gravado na conta). Assim quem não vê
+ * "Quem é Victor Cordeiro?" vê "Quem é Naor Bezerra?", e vice-versa.
+ */
+const AULAS_SO_DO_PARCEIRO: Record<string, string> = {
+  'quem-e-naor-bezerra': 'n',
+}
 let parceiroDaConta: string | null = null
 function aulaForaDoParceiro(id: string, ctx: ContextoDaSala): boolean {
   if (ctx.admin) return false
+  const so = AULAS_SO_DO_PARCEIRO[id]
+  if (so) return ![vitrine(), parceiroDaConta].includes(so)
   return [vitrine(), parceiroDaConta].some((p) => !!p && (AULAS_FORA_DO_PARCEIRO[p] ?? []).includes(id))
 }
 
