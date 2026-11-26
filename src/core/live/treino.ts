@@ -121,6 +121,10 @@ export interface EstadoDoTreino {
   fixadoParaTodos: string | null
   /** O quadro que esta pessoa fixou para si; '' = desfixou o da equipe; null = segue a equipe. */
   fixadoAqui: string | null
+  /** Para a equipe: os membros de verdade na sala (a conta de cada um), para a ficha. */
+  membrosNaSala: Array<{ id: string; nome: string }>
+  /** Quando a live começou (para o markup "nesta live"); 0 = fora do ar. */
+  inicioDaLive: number
 }
 
 const CHAVE_PLAYER = `${MARCA.id}.treino.player`
@@ -142,6 +146,7 @@ const INICIAL: EstadoDoTreino = {
   local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
   usandoEstudio: false, teste: null, vitrines: null,
   coApresentando: false, dono: '', donoSumiu: null, noPalco: false, palco: [], grade: false, conversa: true, fixadoParaTodos: null, fixadoAqui: null,
+  membrosNaSala: [], inicioDaLive: 0,
 }
 /** O estado do zero, mas com as preferências da pessoa e o que o admin já tem ligado. */
 const zerado = (): EstadoDoTreino => {
@@ -214,7 +219,7 @@ const TOPICO = 'treino'
 export type ComandoDoPainel = ComandoDaSimulacao | { a: 'tela'; id: string } | { a: 'fixar'; chave: string | null }
 type Pacote =
   | { t: 'estado'; ativa: boolean; publico: number; momento: Momento | null; pausada: boolean; canto: CantoDaCamera; chatAberto?: boolean; conversa?: boolean; fixado?: string | null }
-  | { t: 'painel'; s: Partial<EstadoDaSimulacao>; programa: string | null }
+  | { t: 'painel'; s: Partial<EstadoDaSimulacao>; programa: string | null; desde?: number }
   | { t: 'eq-msgs'; lista: MensagemSimulada[] }
   | { t: 'cmd'; c: ComandoDoPainel }
   | { t: 'msgs'; lista: MensagemSimulada[] }
@@ -363,6 +368,8 @@ function atualizarSala() {
   if (estado.apresentador && souDono) anotarPresencas(membros.map((p) => ({ id: p.identity, nome: p.name || 'Membro' })))
   mudar({
     membros: membros.length, nomes: membros.map((p) => p.name || 'Membro').slice(0, 80),
+    ...(estado.apresentador ? { membrosNaSala: membros.map((p) => ({ id: p.identity, nome: p.name || 'Membro' })).slice(0, 300) } : {}),
+    inicioDaLive: souDono ? registro.inicio : espelho ? inicioDoDono : 0,
     presente: estado.apresentador || !!quemTransmite, quemApresenta: quemTransmite?.name || '', tela, camera, audios,
     outroTransmitindo: outroNoAr(),
     coApresentando: espelho, dono: donoAdmin?.name || (espelho ? 'Outro administrador' : ''), donoSumiu: donoQueSumiu,
@@ -379,6 +386,8 @@ function atualizarSala() {
    microfone e a tela deles vão para a live, cada um no seu quadro (como no Meet). */
 
 let ultimoDono: { id: string; nome: string } | null = null
+/** No espelho: quando a live do dono começou (vem no painel dele). */
+let inicioDoDono = 0
 let donoQueSumiu: string | null = null
 /** A tela no ar do dono é de conversa (o painel informa; no celular, sem telas, é sempre). */
 let conversaLocal = true
@@ -486,7 +495,7 @@ function pacoteDeEstado(): Pacote {
 /** Para os outros administradores: o painel do dono (sem as mensagens, que vão à parte). */
 function pacoteDoPainel(): Pacote {
   const { mensagens: _m, ...resto } = simulacaoAgora()
-  return { t: 'painel', s: resto, programa: programaAtual?.() ?? null }
+  return { t: 'painel', s: resto, programa: programaAtual?.() ?? null, desde: registro.inicio }
 }
 /** O painel diz qual tela está no ar (para o espelho dos outros administradores). */
 let programaAtual: (() => string | null) | null = null
@@ -726,6 +735,7 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
           if (pacote.t === 'painel') {
             outroAtivo = { id: p.identity, nome: p.name || 'Outro administrador', quando: Date.now() }
             receberEspelho(pacote.s)
+            if (pacote.desde && pacote.desde !== inicioDoDono) { inicioDoDono = pacote.desde; mudar({ inicioDaLive: pacote.desde }) }
             if (pacote.programa) programaDoDono?.(pacote.programa)
           } else if (pacote.t === 'eq-msgs') {
             const atuais = simulacaoAgora().mensagens

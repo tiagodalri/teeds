@@ -1120,6 +1120,14 @@ function LabCentral() {
           { id: 'c', nome: 'Carla', texto: 'Como faço o limite de perda?', apresentador: false, entrada: false, membro: true, hora: Date.now() - 10000 },
         ] })
         tr.simularTreino({ fase: 'conectada', apresentador: true, meuNome: 'Naor Bezerra', coApresentando: true, dono: 'Victor Dias', noPalco: new URLSearchParams(location.search).has('nopalco'), ...palco })
+      } else if (modo === 'fichas') {
+        sim.iniciarSimulacao('Victor Dias')
+        const gente = [['a', 'Ana Paula Reis', 'São Paulo', 'SP', 1250.4, 312.8, 18.6, 7], ['b', 'João Ferreira', 'Recife', 'PE', 87.1, 41.2, 4.3, 3], ['c', 'Mariana Lopes', 'Curitiba', 'PR', null, 0, 0, 0], ['d', 'Lucas Martins', 'Goiânia', 'GO', 5320, 1840.55, 62.1, 21]] as const
+        tr.simularTreino({ fase: 'conectada', apresentador: true, meuNome: 'Victor Dias', membros: 4, inicioDaLive: Date.now() - 1800_000, membrosNaSala: gente.map(([id, nome]) => ({ id, nome })) })
+        void import('./components/aovivo/MembrosDaLive').then(({ simularFichas }) => simularFichas(gente.map(([id, nome, cidade, uf, saldo, total, live, ops], i) => ({
+          id, nome, foto: null, desde: new Date(Date.now() - (i + 1) * 97 * 864e5).toISOString(), plano: 'treino', cidade, uf, saldo, moeda: 'USD',
+          markupTotal: total, markupLive: live, opsLive: ops, ultimaOp: i % 2 ? null : new Date().toISOString(),
+        }))))
       } else {
         sim.iniciarSimulacao('Victor Dias')
         tr.simularTreino({ fase: 'conectada', apresentador: true, meuNome: 'Victor Dias', ...palco, palco: (palco.palco ?? []).map((p, i) => ({ ...p, eu: i === 0 })) })

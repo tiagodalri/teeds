@@ -17,6 +17,7 @@ import {
 } from '../../core/live/treino'
 import { ChatDoTreino, PalcoDoTreino, VideoDaFaixa } from './PlayerDoTreino'
 import { PalcoLadoALado } from './PalcoLadoALado'
+import { MembrosDaLive } from './MembrosDaLive'
 import { saidaDoEstudio } from '../../core/live/estudio/motor'
 import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
 
@@ -240,6 +241,9 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
       Modo aluno
     </button>
   )
+  // a ficha dos membros de verdade na live (26/11/2026)
+  const [verMembros, setVerMembros] = useState(false)
+  const membrosDaLive = verMembros && <MembrosDaLive fechar={() => setVerMembros(false)} />
   const modoAluno = comoAluno && <ModoAluno sair={() => setComoAluno(false)} publico={sim.ativa ? sim.publicoAgora : 0} />
   // vários administradores (26/11/2026): na live de outro, "Sair" não encerra nada para ninguém
   const encerraAoSair = sim.ativa && !tr.coApresentando
@@ -481,6 +485,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const naSalaCard = (
     <section className="cv-card cv-na-sala" aria-label="Membros na sala">
       <h4>Na sala agora <small>{naSala.length} {naSala.length === 1 ? 'membro' : 'membros'}</small></h4>
+      {sessao && <button type="button" className="av-link" onClick={() => setVerMembros(true)}>Ver a ficha de cada membro</button>}
       {naSala.length === 0
         ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para quem é do {GF_MEMBRO}.</span>
         : <ul>{naSala.map(([n, desde]) => <li key={n}><span>{n}</span><b className="cv-num">{duracao(Date.now() - desde)}</b></li>)}</ul>}
@@ -505,6 +510,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     return (
       <div className={`cv-app ps-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
         {modoAluno}
+        {membrosDaLive}
         <header className="cv-app-topo ps-topo">
           <div className="cv-app-marca">
             {FAMILIA_GF && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
@@ -644,7 +650,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
           <aside className="ps-lado ps-direita" aria-label="Chat e números da live">
             <div className="ps-agora" role="group" aria-label="Números da live">
-              <div title={`Membros de verdade na sala agora · pico ${central.pico} · passaram ${central.pessoas.size}`}><small>Na sala agora</small><b className="cv-num">{tr.membros}</b></div>
+              <div className="ps-agora-abrir" role="button" tabIndex={0} onClick={() => setVerMembros(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerMembros(true) } }}
+                title={`Ver a ficha de cada membro · pico ${central.pico} · passaram ${central.pessoas.size}`} aria-label={`${tr.membros} membros na sala agora. Ver as fichas`}><small>Na sala agora <em>Ver fichas</em></small><b className="cv-num">{tr.membros}</b></div>
               <div className={naoRespondidas > 0 ? 'alerta' : ''} title="Mensagens de membros ainda sem resposta"><small>A responder</small><b className="cv-num">{naoRespondidas}</b></div>
             </div>
             <div className="ps-chat">
@@ -673,6 +680,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   return (
     <div className="ger av-pagina av-com-palco tr-sala cv">
       {modoAluno}
+      {membrosDaLive}
       <section className={`av-mesa ${sim.ativa ? 'tr-ativa' : ''}`} aria-label="Central ao vivo">
         <div className="av-mesa-estado">
           <span className="tr-chip">Central ao vivo · sala de treino</span>

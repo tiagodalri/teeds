@@ -447,3 +447,9 @@ button.ps-ia-estado:hover { background: var(--ps-card3); }
 .ps-dono-saiu small { color: var(--muted); font-size: 11px; }
 .ps-dono-saiu button { height: 32px; padding: 0 14px; border: 0; border-radius: 9px; background: linear-gradient(180deg, var(--ps-ouro-claro), var(--ps-ouro)); color: #15110a; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .ps-palco-botao.on i { animation: none; } }
+
+/* o "Na sala agora" abre a ficha dos membros (26/11/2026) */
+.ps-agora-abrir { cursor: pointer; transition: background .15s; }
+.ps-agora-abrir:hover { background: rgba(255,255,255,.045); }
+.ps-agora-abrir:focus-visible { outline: 2px solid var(--ps-ouro-claro, #D6AE5B); outline-offset: -2px; }
+.ps-agora-abrir small em { margin-left: 4px; color: var(--ps-ouro-claro, #D6AE5B); font-style: normal; font-weight: 700; }
