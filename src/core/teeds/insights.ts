@@ -98,6 +98,26 @@ export async function registrarAula(sessao: SessaoTeeds | null | undefined, aula
   }
 }
 
+/**
+ * O que o banco sabe do pop-up de boas-vindas desta conta (26/11/2026, Tiago: "deve aparecer
+ * somente no primeiro acesso da pessoa na plataforma, depois nunca mais; cuidado pra não mostrar
+ * pra quem já viu"). Até aqui o "visto" morava só no aparelho: outro celular, outro navegador ou
+ * os dados limpos traziam o vídeo de novo (342 de 589 pessoas tinham aberto 2 vezes ou mais).
+ * O pop-up grava a abertura e o fim em aulas_progresso (aula 'boas-vindas'); cada um lê a sua linha.
+ * aberto = o pop-up já abriu para esta conta; concluido = viu até o fim (ou viu a introdução inteira).
+ */
+export async function boasVindasNoBanco(sessao: SessaoTeeds): Promise<{ aberto: boolean; concluido: boolean }> {
+  const q = new URLSearchParams({ select: 'aula_id,aberturas,concluida', marca: `eq.${MARCA.id}`, user_id: `eq.${sessao.usuario.id}`, aula_id: 'in.(boas-vindas,introducao)' })
+  const res = await fetch(`${SUPABASE.url}/rest/v1/aulas_progresso?${q}`, {
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}` },
+  })
+  if (!res.ok) throw new Error(`Erro ${res.status} ao ler o pop-up de boas-vindas`)
+  const linhas = (await res.json()) as Array<{ aula_id: string; aberturas: number | null; concluida: boolean | null }>
+  const bv = linhas.find((l) => l.aula_id === 'boas-vindas')
+  const intro = linhas.find((l) => l.aula_id === 'introducao')
+  return { aberto: !!bv, concluido: !!bv?.concluida || !!intro?.concluida }
+}
+
 /* ------------------------------------------------ nomes para a tela */
 
 /** "America/Sao_Paulo" → "São Paulo · Brasil". Só o que dá para saber pelo fuso. */

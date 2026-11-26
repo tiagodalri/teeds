@@ -85,6 +85,7 @@ import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { dinheiro, simboloMoeda } from './core/dinheiro'
 import { usePeriodos } from './core/chart/periodos'
 import { aulasTravadasParaGfMember, aulasVistas } from './core/teeds/aulas'
+import { boasVindasNoBanco } from './core/teeds/insights'
 import { conviteRecebido, liveNoAr, podeTreinar, treinoNoAr, treinoPedido, type Live, type TreinoNoAr } from './core/live/api'
 import { IconeAtivo } from './components/IconeAtivo'
 import { usePlayerAtivo, useTreinoAtivo } from './core/live/presenca'
@@ -751,12 +752,32 @@ export default function App() {
   const [videoInicioVisto, setVideoInicioVisto] = useState(true)
   // sem vídeo publicado (ou o banco não respondeu): some só nesta visita, sem marcar como visto
   const [videoInicioDispensado, setVideoInicioDispensado] = useState(false)
+  // 26/11/2026 (Tiago: "somente no primeiro acesso, depois nunca mais; cuidado pra não mostrar pra
+  // quem já viu"): além deste aparelho, vale o que o banco sabe (boasVindasNoBanco), em qualquer
+  // aparelho. Viu até o fim: nunca mais. Abriu e não terminou: só volta num recarregar desta
+  // mesma aba (o vídeo é obrigatório no primeiro acesso); outro dia ou outro aparelho, não.
+  // Banco sem resposta: na dúvida, não abre nesta visita (e não marca, tenta de novo na próxima).
+  const [videoInicioConferido, setVideoInicioConferido] = useState(false)
+  const chaveAbaVideoInicio = chaveVideoInicio ? `${chaveVideoInicio}.nesta-aba` : ''
   useEffect(() => {
-    if (!chaveVideoInicio) { setVideoInicioVisto(true); return }
+    setVideoInicioConferido(false)
+    const sessao = teeds.sessao
+    if (!chaveVideoInicio || !sessao) { setVideoInicioVisto(true); setVideoInicioConferido(true); return }
     let visto = false
     try { visto = !!localStorage.getItem(chaveVideoInicio) || aulasVistas().has('introducao') } catch { visto = false }
-    setVideoInicioVisto(visto)
-  }, [chaveVideoInicio])
+    if (visto) { setVideoInicioVisto(true); setVideoInicioConferido(true); return }
+    let vivo = true
+    boasVindasNoBanco(sessao).then(({ aberto, concluido }) => {
+      if (!vivo) return
+      let nestaAba = false
+      try { nestaAba = !!sessionStorage.getItem(chaveAbaVideoInicio) } catch { /* sem armazenamento */ }
+      const jaViu = concluido || (aberto && !nestaAba)
+      if (jaViu) { try { localStorage.setItem(chaveVideoInicio, new Date().toISOString()) } catch { /* vale o banco */ } }
+      setVideoInicioVisto(jaViu)
+      setVideoInicioConferido(true)
+    }).catch(() => { if (vivo) { setVideoInicioVisto(true); setVideoInicioConferido(true) } })
+    return () => { vivo = false }
+  }, [chaveVideoInicio]) // eslint-disable-line react-hooks/exhaustive-deps
   const fecharVideoInicio = useCallback((irParaAulas: boolean) => {
     try { if (chaveVideoInicio) localStorage.setItem(chaveVideoInicio, new Date().toISOString()) } catch { /* só nesta sessão */ }
     setVideoInicioVisto(true)
@@ -794,10 +815,14 @@ export default function App() {
   // com a transmissão no ar, o Ao vivo aparece no menu de todos (o clique abre o popup com o link)
   const mostrarAoVivo = LIVES_AO_VIVO || admin === true || membroTreino === true || transmissaoAgora
   // nunca por cima da live (na liberação de 09/11 a live abre sozinha para quem acabou de ser liberado)
-  const mostrarVideoInicio = !videoInicioVisto && !videoInicioDispensado && !JANELA && !!teeds.sessao && !trancado && planoLido && admin !== null
+  const mostrarVideoInicio = videoInicioConferido && !videoInicioVisto && !videoInicioDispensado && !JANELA && !!teeds.sessao && !trancado && planoLido && admin !== null
     && (liberadoAntes || !aulasTravadasParaGfMember(plano, admin, liberadoGeral)) && !assistindoLive && !live?.noAr
   // enquanto não se sabe se o vídeo vai abrir, o tour espera (senão ele abre e some no meio)
-  const decidindoVideoInicio = !videoInicioVisto && !videoInicioDispensado && (!planoLido || admin === null)
+  const decidindoVideoInicio = (!!chaveVideoInicio && !videoInicioConferido) || (!videoInicioVisto && !videoInicioDispensado && (!planoLido || admin === null))
+  // o pop-up abriu nesta aba: um recarregar no meio do primeiro acesso traz o vídeo de novo (ver acima)
+  useEffect(() => {
+    if (mostrarVideoInicio && chaveAbaVideoInicio) try { sessionStorage.setItem(chaveAbaVideoInicio, '1') } catch { /* sem armazenamento */ }
+  }, [mostrarVideoInicio, chaveAbaVideoInicio])
   useEffect(() => {
     // quem abriu um link de transmissão de teste (31/10/2026) vê a sala mesmo sem ser GF Member
     let comTeste = false
