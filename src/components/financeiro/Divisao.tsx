@@ -18,7 +18,9 @@ export function Divisao({ api, restrito = false, dados, periodo, rotuloPeriodo, 
   aoIr: () => void
 }) {
   const d = useMemo(() => dividir(dados, periodo), [dados, periodo])
-  const movimentos = useMemo(() => dados.lancamentos.filter((l) => l.socio_id).sort((a, b) => diaDe(b).localeCompare(diaDe(a))), [dados.lancamentos])
+  // só o que já aconteceu (pago_em), como no acerto acima: uma assinatura mensal lançada para 12 meses
+  // aparecia 12 vezes como "Pagou do bolso" (26/11/2026, Manychat do Victor), embora só a primeira estivesse paga
+  const movimentos = useMemo(() => dados.lancamentos.filter((l) => l.socio_id && l.pago_em).sort((a, b) => diaDe(b).localeCompare(diaDe(a))), [dados.lancamentos])
   const soc = new Map(dados.socios.map((s) => [s.id, s]))
 
   if (restrito) return <div className="fin-divisao"><Partilha api={api} dados={dados} periodo={periodo} rotuloPeriodo={rotuloPeriodo} souDono={false} restrito aoMudar={aoMudar} /></div>
@@ -72,7 +74,7 @@ export function Divisao({ api, restrito = false, dados, periodo, rotuloPeriodo, 
           const legenda = m.tipo === 'devolucao' ? 'Recebeu devolução de parceiro' : m.tipo === 'despesa' && m.pago_fora ? 'Pagou gasto de projeto de parceiro (o projeto devolve)' : m.tipo === 'despesa' ? 'Pagou do bolso' : m.tipo === 'receita' ? 'Recebeu na conta pessoal' : ROTULO_TIPO[m.tipo]
           return <li key={m.id}><button type="button" onClick={() => aoAbrir(m)}>
             <Avatar nome={s?.nome ?? '?'} cor={s?.cor} tamanho={32} />
-            <span><b>{m.descricao}</b><small>{s?.nome} · {legenda} · {m.pago_em ? dataCurta(m.pago_em) : `Previsto ${dataCurta(m.vencimento)}`}</small></span>
+            <span><b>{m.descricao}</b><small>{s?.nome} · {legenda} · {dataCurta(m.pago_em!)}</small></span>
             <strong className={colocou ? 'fin-entra' : 'fin-sai'}>{colocou ? '+' : '−'} {reais(m.valor)}</strong>
           </button></li>
         })}
