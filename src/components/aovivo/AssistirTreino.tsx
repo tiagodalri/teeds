@@ -1,9 +1,9 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { definirModoDoTreino, entrarNoTreino, esquecerTesteDoLink, modoForaDoTreino, sairDoTreino, simularTreino, testeDoLink, useTreino, type ModoDoTreino } from '../../core/live/treino'
+import { definirModoDoTreino, entrarNoTreino, esquecerTesteDoLink, modoForaDoTreino, sairDoTreino, simularTreino, testeDoLink, type ModoDoTreino } from '../../core/live/treino'
 import { MARCA, FAMILIA_GF, GF_MEMBRO } from '../../marca'
 import { ICONE_PALCO, abrirPorCima, podeAbrirPorCima, useLargo, useTeatro } from './AoVivo'
-import PlayerDoTreino, { ChatDoTreino, ControleDeVolume, PalcoDoTreino } from './PlayerDoTreino'
+import PlayerDoTreino, { ChatDoTreino, ControleDeVolume, PalcoDoTreino, useTreinoNaTela } from './PlayerDoTreino'
 import './aovivo.css'
 
 /**
@@ -18,8 +18,8 @@ import './aovivo.css'
  * live (PlayerDoTreino.tsx).
  */
 
-export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeeds | null; conectar?: boolean }) {
-  const t = useTreino()
+export function AssistirTreino({ sessao, conectar = true, comoAluno = false }: { sessao: SessaoTeeds | null; conectar?: boolean; comoAluno?: boolean }) {
+  const t = useTreinoNaTela()
   const largo = useLargo()
   const [cheia, alternarCheia] = useTeatro()
   const [chatNoTeatro, setChatNoTeatro] = useState(true)
@@ -81,7 +81,7 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
         <div className="av-lado-aluno"><ChatDoTreino /></div>
       </div>
 
-      <div className="av-rodape-aluno">
+      {!comoAluno && <div className="av-rodape-aluno">
         {podeAbrirPorCima() && temImagem && (
           <button className="av-botao-secundario av-por-cima" onClick={() => void abrirPorCima(document.querySelector('.tr-assistir .av-palco-e-chat'))}>
             Assistir por cima de outros apps
@@ -90,14 +90,14 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
         {t.fase === 'fora' && conectar && sessao
           ? <button className="av-botao-secundario" onClick={() => void entrarNoTreino(sessao)}>Entrar de novo na transmissão</button>
           : <button className="av-link" onClick={() => { if (teste) esquecerTesteDoLink(); void sairDoTreino() }}>{teste ? 'Sair do teste' : 'Sair da transmissão'}</button>}
-      </div>
+      </div>}
     </div>
   )
 }
 
 /** Sobre a imagem: tela cheia e, nela, mostrar ou esconder o chat. */
 function BotoesDoTreino({ cheia, alternar, chat, setChat }: { cheia: boolean; alternar: (v: boolean) => void; chat: boolean; setChat: (v: boolean) => void }) {
-  const t = useTreino()
+  const t = useTreinoNaTela()
   // no canto oposto ao rosto do apresentador, para nunca cobrir ninguém
   const canto = t.tela && t.camera ? t.canto : 'inf-esq'
   return (

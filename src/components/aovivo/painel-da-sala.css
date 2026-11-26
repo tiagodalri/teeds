@@ -453,3 +453,29 @@ button.ps-ia-estado:hover { background: var(--ps-card3); }
 .ps-agora-abrir:hover { background: rgba(255,255,255,.045); }
 .ps-agora-abrir:focus-visible { outline: 2px solid var(--ps-ouro-claro, #D6AE5B); outline-offset: -2px; }
 .ps-agora-abrir small em { margin-left: 4px; color: var(--ps-ouro-claro, #D6AE5B); font-style: normal; font-weight: 700; }
+
+/* o botão "Modo aluno" do topo (26/11/2026): do mesmo jeito dos outros botões do painel */
+.ps-modo-aluno {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 12px; cursor: pointer;
+  border: 1px solid var(--ps-linha); border-radius: 10px; background: transparent; color: var(--ps-texto2);
+  font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; transition: color .15s, border-color .15s, background .15s;
+}
+.ps-modo-aluno svg { color: var(--ps-ouro-claro, #D6AE5B); }
+.ps-modo-aluno:hover { color: var(--text); border-color: color-mix(in srgb, var(--ps-ouro, #B78D39) 55%, transparent); background: color-mix(in srgb, var(--ps-ouro, #B78D39) 8%, transparent); }
+@media (max-width: 1280px) { .ps-modo-aluno span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } .ps-modo-aluno { padding: 0; width: 38px; justify-content: center; } }
+/* no celular (a Central sem as telas), o mesmo botão na mesa */
+.av-mesa-acao .ps-modo-aluno { color: var(--text); border-color: var(--border); }
+
+/* aprovar a mensagem de um membro para todos (26/11/2026) */
+.av-msg.cv-de-membro { padding-right: 34px; }
+.cv-aprovar {
+  position: absolute; top: -1px; right: -2px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; cursor: pointer;
+  border: 1.5px solid color-mix(in srgb, #2fbf71 55%, transparent); border-radius: 50%; background: transparent; color: #5fd796;
+  transition: background .15s, color .15s, transform .12s;
+}
+.cv-aprovar:hover:not(:disabled) { background: #2fbf71; color: #07130c; transform: scale(1.06); }
+.cv-aprovar:disabled { opacity: .35; cursor: not-allowed; }
+.cv-aprovar:focus-visible { outline: 2px solid #5fd796; outline-offset: 2px; }
+.cv-aprovar.feito { border-color: transparent; background: #2fbf71; color: #07130c; cursor: default; }
+.av-msg.cv-aprovada p { opacity: .82; }
+.cv-tag-aprovada { background: rgba(47,191,113,.16) !important; color: #5fd796 !important; }

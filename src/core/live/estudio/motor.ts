@@ -106,6 +106,7 @@ function audio(): AudioContext {
   paraAlunos = ctx.createMediaStreamDestination()
   paraAlunos.channelCount = 2
   fone = ctx.createGain()
+  if (retornoMudo) fone.gain.value = 0
   fone.connect(ctx.destination)
   ctx.addEventListener('statechange', () => mudar({ somBloqueado: ctx?.state !== 'running' }))
   mudar({ somBloqueado: ctx.state !== 'running' })
@@ -1182,6 +1183,17 @@ export function faixasDosAparelhos(): { camera: MediaStreamTrack | null; tela: M
 export function telaDeConversa(id = estado.config?.programa): boolean {
   const t = id ? cenaPorId(id)?.modelo?.tipo : undefined
   return t === 'aovivo' || t === 'camera'
+}
+
+/**
+ * Na live de outro administrador, o painel deste navegador não toca o próprio som (as músicas e vídeos
+ * das telas): o som vem da live do dono, e tocar os dois dobrava a vinheta (26/11/2026).
+ */
+let retornoMudo = false
+export function silenciarRetorno(sim: boolean): void {
+  if (retornoMudo === sim) return
+  retornoMudo = sim
+  if (fone && ctx) fone.gain.setTargetAtTime(sim ? 0 : 1, ctx.currentTime, 0.05)
 }
 
 /** No navegador de quem só acompanha a live de outro administrador: marca a tela que está no ar lá (sem salvar nem transicionar). */

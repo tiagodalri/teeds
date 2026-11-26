@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Track } from 'livekit-client'
-import { fixarAqui, fixarParaTodos, useTreino, type PessoaNoPalco } from '../../core/live/treino'
+import { fixarAqui, fixarParaTodos, type PessoaNoPalco } from '../../core/live/treino'
+import { useTreinoNaTela } from './PlayerDoTreino'
 import './palco-lado-a-lado.css'
 
 /**
@@ -93,7 +94,7 @@ function QuadroDoPalco({ q, fixado, destaque, compacto, equipe, fixadoParaTodos 
 
 /** O palco lado a lado. `compacto`: o player pequeno (flutuante, ao lado do gráfico). */
 export function PalcoLadoALado({ compacto = false }: { compacto?: boolean }) {
-  const t = useTreino()
+  const t = useTreinoNaTela()
   const quadros = quadrosDo(t.palco)
   if (!quadros.length) return null
   // fixado: o meu (se escolhi), senão o da equipe; sem nenhum, a tela compartilhada ganha o destaque

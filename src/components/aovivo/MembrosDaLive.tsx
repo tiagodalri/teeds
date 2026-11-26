@@ -3,6 +3,9 @@ import { SUPABASE } from '../../core/teeds/config'
 import { sessaoGuardada } from '../../core/teeds/conta'
 import { MARCA } from '../../marca'
 import { useTreino } from '../../core/live/treino'
+import type { ContatoWpp, WhatsAppApi } from '../../core/teeds/whatsapp'
+import type { FichaDoContato } from '../../core/teeds/fichaDoCliente'
+import { FichaDoCliente } from '../assessor/FichaDoCliente'
 import './membros-da-live.css'
 
 /**
@@ -55,6 +58,27 @@ async function lerFichas(ids: string[], desde: number): Promise<Ficha[]> {
   }))
 }
 
+/** A ficha completa de um membro (o mesmo formato da lateral do WhatsApp do Assessor), montada no banco. */
+async function lerFichaCompleta(userId: string): Promise<FichaDoContato> {
+  // laboratório: a ficha de exemplo do Assessor
+  if (fichasDoLab) { const { assessorDeExemplo } = await import('../../core/teeds/assessorChat'); return assessorDeExemplo().fichaCompleta!(`lab-${userId}2`) }
+  const s = sessaoGuardada()
+  if (!s) return { ficha: null, fotoWhatsapp: null, talvez: [] }
+  const r = await fetch(`${SUPABASE.url}/rest/v1/rpc/teeds_ficha_do_membro`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${s.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_marca: MARCA.id, p_user: userId }),
+  })
+  if (!r.ok) throw new Error(`ficha ${r.status}`)
+  return { ficha: await r.json(), fotoWhatsapp: null, talvez: [] }
+}
+/** A ficha da lateral do Assessor pede um "contato" e uma "api": aqui os dois saem da conta do membro. */
+const API_DA_FICHA = { fichaCompleta: (id: string) => lerFichaCompleta(id) } as unknown as WhatsAppApi
+const contatoDo = (id: string, nome: string, telefone: string): ContatoWpp => ({
+  id, waId: telefone, nome, userId: id, leadId: null, ultimaEm: null, ultimaTexto: null, ultimaDirecao: null, ultimaEntradaEm: null,
+  naoLidas: 0, responsavel: null, situacao: 'aberta', etiquetas: [], criadoEm: new Date().toISOString(), fixada: false,
+})
+
 /** A lista que se atualiza sozinha enquanto está aberta. */
 function useFichas(aberta: boolean): { fichas: Map<string, Ficha>; erro: boolean; lendo: boolean } {
   const t = useTreino()
@@ -85,7 +109,7 @@ function useFichas(aberta: boolean): { fichas: Map<string, Ficha>; erro: boolean
   return { fichas, erro, lendo }
 }
 
-function Cartao({ nome, f, noAr }: { nome: string; f: Ficha | undefined; noAr: boolean }) {
+function Cartao({ nome, f, noAr, abrir }: { nome: string; f: Ficha | undefined; noAr: boolean; abrir: () => void }) {
   const [subiu, setSubiu] = useState(false)
   const antes = useRef(f?.markupLive ?? 0)
   useEffect(() => {
@@ -97,7 +121,8 @@ function Cartao({ nome, f, noAr }: { nome: string; f: Ficha | undefined; noAr: b
   const operando = !!f?.ultimaOp && Date.now() - Date.parse(f.ultimaOp) < 3 * 60_000
   const lugar = [f?.cidade, f?.uf].filter(Boolean).join(' · ')
   return (
-    <li className={`ml-cartao ${subiu ? 'subiu' : ''}`}>
+    <li className={`ml-cartao ${subiu ? 'subiu' : ''}`} role="button" tabIndex={0} onClick={abrir}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir() } }} aria-label={`Abrir a ficha de ${exibido}`}>
       <div className="ml-topo">
         <span className="ml-foto">{f?.foto ? <img src={f.foto} alt="" loading="lazy" /> : <span aria-hidden>{iniciais(exibido)}</span>}<i className="ml-online" title="Na live agora" aria-hidden /></span>
         <span className="ml-quem">
@@ -125,8 +150,12 @@ export function MembrosDaLive({ fechar }: { fechar: () => void }) {
   const { fichas, erro, lendo } = useFichas(true)
   const [busca, setBusca] = useState('')
   const [ordem, setOrdem] = useState<'live' | 'saldo' | 'total' | 'nome'>('live')
+  // a ficha completa de um membro (clique no cartão)
+  const [aberta, setAberta] = useState<string | null>(null)
+  const abertaRef = useRef<string | null>(null)
+  abertaRef.current = aberta
   useEffect(() => {
-    const esc = (ev: KeyboardEvent) => { if (ev.key === 'Escape') fechar() }
+    const esc = (ev: KeyboardEvent) => { if (ev.key !== 'Escape') return; if (abertaRef.current) setAberta(null); else fechar() }
     document.addEventListener('keydown', esc)
     return () => document.removeEventListener('keydown', esc)
   }, [fechar])
@@ -145,7 +174,8 @@ export function MembrosDaLive({ fechar }: { fechar: () => void }) {
   const operando = [...fichas.values()].filter((f) => f.ultimaOp && Date.now() - Date.parse(f.ultimaOp) < 3 * 60_000).length
   return (
     <div className="ml-fundo" onPointerDown={(e) => { if (e.target === e.currentTarget) fechar() }}>
-      <aside className="ml-gaveta" role="dialog" aria-modal="true" aria-label="Membros na live">
+      {aberta ? <FichaAberta id={aberta} nome={t.membrosNaSala.find((m) => m.id === aberta)?.nome ?? ''} f={fichas.get(aberta)} noAr={noAr} voltar={() => setAberta(null)} fechar={fechar} />
+      : <aside className="ml-gaveta" role="dialog" aria-modal="true" aria-label="Membros na live">
         <header className="ml-cabeca">
           <div>
             <h2>Membros na live</h2>
@@ -172,8 +202,53 @@ export function MembrosDaLive({ fechar }: { fechar: () => void }) {
         {erro && <p className="ml-aviso" role="alert">Não consegui atualizar as fichas agora. Tentando de novo…</p>}
         {t.membrosNaSala.length === 0
           ? <p className="ml-vazio">Nenhum membro na sala agora. Quando alguém entrar, a ficha aparece aqui.</p>
-          : <ul className="ml-lista" aria-busy={lendo}>{lista.map(({ m, f }) => <Cartao key={m.id} nome={m.nome} f={f} noAr={noAr} />)}</ul>}
-      </aside>
+          : <ul className="ml-lista" aria-busy={lendo}>{lista.map(({ m, f }) => <Cartao key={m.id} nome={m.nome} f={f} noAr={noAr} abrir={() => setAberta(m.id)} />)}</ul>}
+      </aside>}
     </div>
+  )
+}
+
+/** A ficha completa, no mesmo visual da lateral do WhatsApp do Assessor, com o que ele fez NESTA live em cima. */
+function FichaAberta({ id, nome, f, noAr, voltar, fechar }: { id: string; nome: string; f: Ficha | undefined; noAr: boolean; voltar: () => void; fechar: () => void }) {
+  const t = useTreino()
+  const naSala = t.membrosNaSala.some((m) => m.id === id)
+  const contato = contatoDo(id, f?.nome?.trim() || nome, '')
+  const operando = !!f?.ultimaOp && Date.now() - Date.parse(f.ultimaOp) < 3 * 60_000
+  // confere antes se a ficha existe (sem ela, a lateral do Assessor falaria de "número não confirmado")
+  const [existe, setExiste] = useState<boolean | null>(null)
+  useEffect(() => {
+    let vivo = true
+    setExiste(null)
+    void lerFichaCompleta(id).then((d) => vivo && setExiste(!!d.ficha)).catch(() => vivo && setExiste(false))
+    return () => { vivo = false }
+  }, [id])
+  return (
+    <aside className="ml-gaveta ml-gaveta-ficha" role="dialog" aria-modal="true" aria-label={`Ficha de ${contato.nome}`}>
+      <header className="ml-cabeca ml-cabeca-ficha">
+        <button type="button" className="ml-voltar" onClick={voltar}>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+          Membros na live
+        </button>
+        <button type="button" className="ml-fechar" onClick={fechar} aria-label="Fechar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <section className={`ml-nesta-live ${f && f.markupLive > 0 ? 'tem' : ''}`} aria-label="Nesta live">
+        <div className="ml-nesta-topo">
+          <span className={`ml-estado ${naSala ? 'on' : ''}`}><i aria-hidden />{naSala ? 'Na live agora' : 'Saiu da live'}</span>
+          {operando && <span className="ml-operando"><i aria-hidden />Operando agora</span>}
+        </div>
+        <div className="ml-nesta-numeros">
+          <div className="ouro"><small>Markup nesta live</small><b className="cv-num">{f ? dinheiro(f.markupLive) : '…'}</b><span>{f && noAr ? `${f.opsLive} ${f.opsLive === 1 ? 'operação real' : 'operações reais'}` : 'conta real'}</span></div>
+          <div><small>Saldo real</small><b className="cv-num">{f ? (f.saldo === null ? '—' : dinheiro(f.saldo, f.moeda)) : '…'}</b><span>agora</span></div>
+        </div>
+      </section>
+      <div className="ml-ficha-rolagem">
+        {existe === false
+          ? <p className="ml-vazio">Não consegui abrir a ficha completa desta pessoa agora. Ela pode não estar no seu escopo de clientes, ou a conexão falhou. Tente de novo em instantes.</p>
+          : existe === null ? <div className="ml-carregando" aria-busy="true"><i /><i /><i /></div>
+            : <FichaDoCliente api={API_DA_FICHA} contato={contato} />}
+      </div>
+    </aside>
   )
 }

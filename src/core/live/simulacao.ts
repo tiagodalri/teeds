@@ -43,6 +43,10 @@ export interface MensagemSimulada {
   membro?: boolean
   /** Na tela de quem assiste: a mensagem que esta própria pessoa escreveu. */
   minha?: boolean
+  /** Mensagem de membro que a equipe aprovou: já foi para todos (26/11/2026). */
+  aprovada?: boolean
+  /** A cópia pública de uma mensagem de membro aprovada (o id da original). */
+  deMembro?: string
 }
 
 export interface EstadoDaSimulacao {
@@ -88,6 +92,7 @@ export type ComandoDaSimulacao =
   | { a: 'velocidade'; v: Velocidade }
   | { a: 'chat'; aberto: boolean }
   | { a: 'encerrar' }
+  | { a: 'aprovar'; id: string }
 
 let encaminhar: ((c: ComandoDaSimulacao) => void) | null = null
 /** Liga (com para onde mandar os comandos) ou desliga o espelho. Ao desligar, a loja volta ao repouso. */
@@ -116,6 +121,7 @@ export function executarComando(c: ComandoDaSimulacao): void {
     case 'velocidade': mudarVelocidade(c.v); break
     case 'chat': abrirChatDoTreino(c.aberto); break
     case 'encerrar': pararSimulacao(); break
+    case 'aprovar': aprovarMensagem(c.id); break
   }
 }
 
@@ -265,7 +271,8 @@ export function iniciarSimulacao(apresentador: string): void {
   pararSimulacaoAqui()
   montarPublico()
   inicio = Date.now()
-  mudar({ ativa: true, pausada: false, apresentador, mensagens: [], momento: null, publicoAgora: Math.round(estado.publicoAlvo * 0.35) })
+  // 26/11/2026 (Victor Dias): os comentários da I.A. começam PAUSADOS; só entram quando a equipe der o play
+  mudar({ ativa: true, pausada: true, apresentador, mensagens: [], momento: null, publicoAgora: Math.round(estado.publicoAlvo * 0.35) })
   timerPublico = window.setInterval(passoDoPublico, 2200)
   agendarChat()
 }
@@ -357,7 +364,8 @@ function agendarBloco(primeira = false) {
 function passoDoBloco() {
   const b = estado.bloco
   if (!b || !estado.ativa) return
-  if (estado.pausada || !estado.chatAberto) { timerBloco = window.setTimeout(passoDoBloco, 1000); return }
+  // o roteiro toca quando alguém dá o play nele, mesmo com os comentários automáticos pausados (26/11/2026)
+  if (!estado.chatAberto) { timerBloco = window.setTimeout(passoDoBloco, 1000); return }
   const texto = fila.shift()
   if (texto) {
     const p = quemDiz(texto)
@@ -402,6 +410,20 @@ export function abrirChatDoTreino(aberto: boolean): void {
   if (encaminhar) { encaminhar({ a: 'chat', aberto }); return }
   mudar({ chatAberto: aberto })
   adicionar({ nome: '', texto: aberto ? 'O apresentador abriu o chat' : 'O apresentador fechou o chat', apresentador: false, entrada: false, sistema: true })
+}
+
+/**
+ * A equipe aprova a mensagem de um membro (26/11/2026, pedido do Tiago): ela sobe para todos,
+ * como uma mensagem qualquer do chat (só o nome, sem a etiqueta de membro). A original fica
+ * marcada como aprovada na Central.
+ */
+export function aprovarMensagem(id: string): void {
+  if (encaminhar) { encaminhar({ a: 'aprovar', id }); return }
+  const m = estado.mensagens.find((x) => x.id === id)
+  if (!m || !m.membro || m.aprovada) return
+  const marcadas = estado.mensagens.map((x) => (x.id === id ? { ...x, aprovada: true } : x))
+  mudar({ mensagens: marcadas })
+  adicionar({ nome: m.nome, texto: m.texto, apresentador: false, entrada: false, deMembro: m.id })
 }
 
 /** Mensagem de verdade de um membro que assiste o ensaio: entra no chat junto com as simuladas. */

@@ -125,6 +125,10 @@ export interface EstadoDoTreino {
   membrosNaSala: Array<{ id: string; nome: string }>
   /** Quando a live começou (para o markup "nesta live"); 0 = fora do ar. */
   inicioDaLive: number
+  /** As faixas de voz da equipe que esta pessoa ouve direto (pelo sid). */
+  vozesDaEquipe: string[]
+  /** Esta pessoa (no palco) está falando agora: as vozes da equipe abaixam, contra microfonia. */
+  euFalando: boolean
 }
 
 const CHAVE_PLAYER = `${MARCA.id}.treino.player`
@@ -146,7 +150,7 @@ const INICIAL: EstadoDoTreino = {
   local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
   usandoEstudio: false, teste: null, vitrines: null,
   coApresentando: false, dono: '', donoSumiu: null, noPalco: false, palco: [], grade: false, conversa: true, fixadoParaTodos: null, fixadoAqui: null,
-  membrosNaSala: [], inicioDaLive: 0,
+  membrosNaSala: [], inicioDaLive: 0, vozesDaEquipe: [], euFalando: false,
 }
 /** O estado do zero, mas com as preferências da pessoa e o que o admin já tem ligado. */
 const zerado = (): EstadoDoTreino => {
@@ -277,11 +281,39 @@ function donoRemoto(): RemoteParticipant | null {
   return remotos.find((p) => ehApresentador(p) && mandaVideo(p)) ?? null
 }
 
+/**
+ * Esta aba (26/11/2026): cada aba entra na sala com uma identidade própria (conta~aba), para a mesma
+ * conta poder assistir em duas abas sem uma derrubar a outra. Vale enquanto a página estiver aberta
+ * (cair e voltar usa a mesma, e o LiveKit troca a antiga pela nova sem duplicar).
+ */
+const ABA = Math.random().toString(36).slice(2, 12).padEnd(8, '0')
+/**
+ * O nome da equipe na live (26/11/2026, pedido do Tiago): o primeiro e o último nome, sempre
+ * ("Naor Bezerra", "Victor Cordeiro", "Victor Dias"), nunca o nome completo.
+ */
+export function nomeDaEquipe(completo: string): string {
+  const partes = completo.trim().split(/\s+/).filter(Boolean)
+  // sobrenomes que só fazem sentido inteiros
+  const junto = completo.trim().match(/^(\S+)\s+(Dal\s+Ri|Dal\s+Pozzo|Del\s+\S+|Van\s+\S+)\b/i)
+  if (junto) return `${junto[1]} ${junto[2]}`
+  const particulas = new Set(['de', 'da', 'do', 'das', 'dos', 'e'])
+  const segundo = partes.slice(1).find((p) => !particulas.has(p.toLowerCase()))
+  return segundo ? `${partes[0]} ${segundo}` : (partes[0] ?? '')
+}
+/** A conta por trás de uma identidade da sala ("conta~aba" ou só "conta", de quem ainda está na versão antiga). */
+export const contaDa = (identidade: string) => identidade.split('~')[0]
+/** Os membros por conta (a mesma pessoa em duas abas conta uma vez). */
+function porConta(lista: RemoteParticipant[]): Array<{ id: string; nome: string }> {
+  const vistos = new Map<string, string>()
+  for (const p of lista) { const c = contaDa(p.identity); if (!vistos.has(c)) vistos.set(c, p.name || 'Membro') }
+  return [...vistos].map(([id, nome]) => ({ id, nome }))
+}
+
 async function pedirIngresso(sessao: SessaoTeeds | null, nome: string): Promise<{ url: string; token: string; nome: string; moderador: boolean }> {
   const r = await fetch(`${SUPABASE.url}/functions/v1/live-token`, {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao?.token ?? SUPABASE.anonKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ acao: 'treino', marca: MARCA.id, nome, vitrine: vitrine(), ...(testeAtual ? { teste: testeAtual, apresentar: apresentarNoTeste } : {}) }),
+    body: JSON.stringify({ acao: 'treino', marca: MARCA.id, nome, vitrine: vitrine(), aba: ABA, ...(testeAtual ? { teste: testeAtual, apresentar: apresentarNoTeste } : {}) }),
   })
   const dados = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(dados?.erro || `Não consegui abrir a sala de treino (${r.status}).`)
@@ -296,6 +328,7 @@ function atualizarSala() {
   if (!sala) return
   const remotos = [...sala.remoteParticipants.values()]
   const membros = remotos.filter((p) => !ehApresentador(p))
+  const pessoas = porConta(membros)
   const souDono = estado.apresentador && simulacaoLocalAtiva()
   // o admin que não comanda acompanha a live do dono (se houver) como quem assiste
   const donoAdmin = estado.apresentador && !souDono ? donoRemoto() : null
@@ -311,13 +344,16 @@ function atualizarSala() {
   const quemTransmite = estado.apresentador ? donoAdmin ?? undefined : apresentadorQueVale(remotos)
   let tela: Track | null = null, camera: Track | null = null
   const audios: Track[] = []
+  /** As vozes da equipe que esta pessoa ouve direto (abaixam quando ela fala, contra microfonia). */
+  const daEquipe: Track[] = []
   for (const pub of quemTransmite?.trackPublications.values() ?? []) {
     const t = pub.track
     if (!t || pub.isMuted || ehDoPalco(pub.trackName)) continue
     if (pub.source === Track.Source.ScreenShare) tela = t
     else if (pub.source === Track.Source.Camera) camera = t
-    // o som da live: quem assiste ouve; o admin no espelho ouve a voz do dono pelo palco (o som das telas toca no painel dele)
-    else if (t.kind === Track.Kind.Audio && !estado.apresentador) audios.push(t)
+    // o som da live: quem assiste ouve; o admin que acompanha pela Central também (fora do palco, como um aluno);
+    // no palco, ele ouve a voz do dono direto (o som da live traria a voz dele mesmo de volta)
+    else if (t.kind === Track.Kind.Audio && (!estado.apresentador || (!!donoAdmin && !estado.noPalco))) audios.push(t)
   }
   // ----- o palco: quem está com câmera, tela ou microfone junto do dono
   const conversa = souDono ? conversaLocal : estado.conversa
@@ -329,14 +365,14 @@ function atualizarSala() {
     const pub = (nome: string) => [...p.trackPublications.values()].find((x) => x.trackName === nome)
     const cam = pub('palco-camera'), tl = pub('palco-tela'), mic = pub('palco-mic')
     return {
-      id: p.identity, nome: p.name || (dono ? 'Apresentador' : 'Equipe'), eu: false, dono,
+      id: p.identity, nome: nomeDaEquipe(p.name || (dono ? 'Apresentador' : 'Equipe')), eu: false, dono,
       camera: cam && !cam.isMuted ? cam.track ?? null : null, tela: tl && !tl.isMuted ? tl.track ?? null : null,
       mic: !!mic && !mic.isMuted, falando: falando.has(p.identity),
     }
   }
   const eu = (dono: boolean): PessoaNoPalco => {
     const f = fontesDoPalco()
-    return { id: sala!.localParticipant.identity, nome: estado.meuNome || 'Você', eu: true, dono, camera: f.camera, tela: f.tela, mic: !!f.mic && !f.micMudo, falando: falando.has(sala!.localParticipant.identity) }
+    return { id: sala!.localParticipant.identity, nome: nomeDaEquipe(estado.meuNome || 'Você'), eu: true, dono, camera: f.camera, tela: f.tela, mic: !!f.mic && !f.micMudo, falando: falando.has(sala!.localParticipant.identity) }
   }
   const palco: PessoaNoPalco[] = []
   if (ativa && donoId) {
@@ -361,19 +397,22 @@ function atualizarSala() {
       if (!t || pub.isMuted || t.kind !== Track.Kind.Audio) continue
       // a voz da equipe: o dono ouve quem está no palco; quem ajuda ouve o dono e os outros;
       // quem assiste ouve os convidados só na tela de conversa (o dono já vem no som da live)
-      // (quem só acompanha a live na Central não ouve: no mesmo ambiente, o som voltaria pelo microfone do dono)
-      if (estado.apresentador ? quer && (souDono || estado.noPalco) : quer && conversa) audios.push(t)
+      // quem acompanha pela Central fora do palco ouve como o aluno (a live + os convidados na conversa)
+      const comoAluno = !estado.apresentador || (!souDono && !estado.noPalco)
+      if (comoAluno ? quer && conversa && !micDoDono : quer) { audios.push(t); if (!comoAluno) daEquipe.push(t) }
     }
   }
-  if (estado.apresentador && souDono) anotarPresencas(membros.map((p) => ({ id: p.identity, nome: p.name || 'Membro' })))
+  if (estado.apresentador && souDono) anotarPresencas(pessoas)
   mudar({
-    membros: membros.length, nomes: membros.map((p) => p.name || 'Membro').slice(0, 80),
-    ...(estado.apresentador ? { membrosNaSala: membros.map((p) => ({ id: p.identity, nome: p.name || 'Membro' })).slice(0, 300) } : {}),
+    membros: pessoas.length, nomes: pessoas.map((p) => p.nome).slice(0, 80),
+    ...(estado.apresentador ? { membrosNaSala: pessoas.slice(0, 300) } : {}),
     inicioDaLive: souDono ? registro.inicio : espelho ? inicioDoDono : 0,
     presente: estado.apresentador || !!quemTransmite, quemApresenta: quemTransmite?.name || '', tela, camera, audios,
     outroTransmitindo: outroNoAr(),
     coApresentando: espelho, dono: donoAdmin?.name || (espelho ? 'Outro administrador' : ''), donoSumiu: donoQueSumiu,
     palco, grade, conversa,
+    vozesDaEquipe: daEquipe.map((t) => t.sid ?? t.mediaStreamTrack.id),
+    euFalando: (souDono || estado.noPalco) && falando.has(sala.localParticipant.identity),
     ...(souDono ? { fixadoParaTodos: fixadoDaEquipe } : {}),
   })
   sincronizarPalco()
@@ -635,7 +674,8 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
     const ingresso = await pedirIngresso(sessao, nome)
     // mesmas escolhas da live: H.264 no chip de vídeo, uma camada menor só
     const r = new Room({
-      adaptiveStream: true, dynacast: true,
+      // 26/11/2026: minimizar ou trocar de aba não pausa mais a imagem (voltava preta por uns segundos)
+      adaptiveStream: { pauseVideoInBackground: false }, dynacast: true,
       // 26/11/2026: a sala nunca desliga sozinha a câmera, o microfone ou a imagem das telas
       // (são do painel; ao cair e voltar, as mesmas faixas entram de novo)
       stopLocalTrackOnUnpublish: false,
@@ -762,7 +802,16 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
           atualizarSala()
         } else if (pacote.t === 'msgs') {
           const ja = new Set(estado.mensagens.map((m) => m.id))
-          mudar({ mensagens: [...estado.mensagens, ...pacote.lista.filter((m) => !m.membro && !ja.has(m.id))].slice(-200) })
+          // a minha mensagem que a equipe aprovou volta como pública: aqui ela já está (fica a minha, marcada)
+          const minhas = estado.mensagens.filter((m) => m.minha && !m.aprovada)
+          let lista = estado.mensagens
+          const novas = pacote.lista.filter((m) => {
+            if (m.membro || ja.has(m.id)) return false
+            const eraMinha = m.deMembro && minhas.find((x) => x.texto === m.texto && !x.aprovada)
+            if (eraMinha) { eraMinha.aprovada = true; lista = lista.map((x) => (x.id === eraMinha.id ? { ...x, aprovada: true } : x)); return false }
+            return true
+          })
+          mudar({ mensagens: [...lista, ...novas].slice(-200) })
         } else if (pacote.t === 'historico') {
           // o histórico chega sem as mensagens de membros; as minhas, já na tela, ficam
           const minhas = estado.mensagens.filter((m) => m.minha)
@@ -1123,7 +1172,7 @@ function resumoDoRegistro(fim = false) {
 function comecarRegistro() {
   window.clearInterval(registro.timer)
   registro.id = null; registro.inicio = Date.now(); registro.pessoas = new Map(); registro.pico = 0; registro.mensagens = 0
-  if (sala) anotarPresencas([...sala.remoteParticipants.values()].filter((p) => !ehApresentador(p)).map((p) => ({ id: p.identity, nome: p.name || 'Membro' })))
+  if (sala) anotarPresencas(porConta([...sala.remoteParticipants.values()].filter((p) => !ehApresentador(p))))
   void abrirTransmissao({ apresentador: estado.meuNome, teste: !!estado.teste, vitrines: estado.vitrines }).then((id) => { if (registro.inicio) registro.id = id })
   registro.timer = window.setInterval(() => { if (registro.id) gravarTransmissao(registro.id, resumoDoRegistro()) }, 30_000)
 }

@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as PEvent, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type PointerEvent as PEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Track } from 'livekit-client'
 import {
   definirCantoDoPlayer, definirModoDoTreino, definirTamanhoDoTreino, mandarNoTreino, sairDoTreino, treinoTrocouDeTela, useTreino,
-  cantoDoTreino, liberarSomDoTreino, type ModoDoTreino,
+  cantoDoTreino, liberarSomDoTreino, type EstadoDoTreino, type ModoDoTreino,
 } from '../../core/live/treino'
 import { falarComoApresentador, useSimulacao, type MensagemSimulada } from '../../core/live/simulacao'
 import { Icone, abrirPorCima, podeAbrirPorCima, useCelular, useLargo } from './AoVivo'
@@ -25,6 +25,20 @@ import { PalcoLadoALado } from './PalcoLadoALado'
  */
 
 const fmt = (n: number) => n.toLocaleString('pt-BR')
+
+/**
+ * Modo aluno da equipe (26/11/2026): a tela do aluno de verdade (AssistirTreino), alimentada com o
+ * estado de quem comanda visto como aluno. Fora do modo aluno, cada tela lê o treino normalmente.
+ */
+export interface VisaoDeAluno { estado: EstadoDoTreino; nome: string }
+const VisaoDoTreino = createContext<VisaoDeAluno | null>(null)
+export const VisaoDoTreinoProvider = VisaoDoTreino.Provider
+/** O treino como esta tela mostra: o real, ou o "como o aluno vê" do modo aluno. */
+export function useTreinoNaTela(): EstadoDoTreino {
+  const real = useTreino()
+  return useContext(VisaoDoTreino)?.estado ?? real
+}
+const useModoAluno = () => useContext(VisaoDoTreino)
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 /** Liga uma faixa recebida a um <video>. */
@@ -46,17 +60,20 @@ function VideoLocal({ fluxo, className, espelhar = false }: { fluxo: MediaStream
   if (!fluxo) return null
   return <video ref={ref} className={className} autoPlay playsInline muted style={espelhar ? { transform: 'scaleX(-1)' } : undefined} />
 }
-function AudioDaFaixa({ faixa }: { faixa: Track }) {
+function AudioDaFaixa({ faixa, abafar = false }: { faixa: Track; abafar?: boolean }) {
   const ref = useRef<HTMLAudioElement>(null)
   const { nivel, mudo } = useVolumeDoTreino()
+  // a voz de outro administrador abaixa (sem sumir) enquanto esta pessoa fala no palco: evita microfonia e eco
+  const alvo = abafar ? nivel * 0.18 : nivel
   useEffect(() => { const el = ref.current; if (!el) return; faixa.attach(el); return () => { faixa.detach(el) } }, [faixa])
   // o volume escolhido por quem assiste (26/11/2026); reaplicado a cada troca de faixa
   useEffect(() => {
     const el = ref.current
-    if (!el || !FAMILIA_GF) return
+    if (!el) return
+    if (!FAMILIA_GF && !abafar) return
     el.muted = mudo
-    try { el.volume = nivel } catch { /* iOS: só leitura */ }
-  }, [faixa, nivel, mudo])
+    try { el.volume = Math.max(0, Math.min(1, alvo)) } catch { /* iOS: só leitura */ }
+  }, [faixa, alvo, mudo, abafar])
   return <audio ref={ref} autoPlay />
 }
 
@@ -96,7 +113,7 @@ export function ControleDeVolume({ barra = true, className = '' }: { barra?: boo
 
 /** Quantas pessoas estão ao vivo, em destaque em cima do chat (26/11/2026, pedido do Naor). */
 function ContadorAoVivo() {
-  const t = useTreino()
+  const t = useTreinoNaTela()
   const sim = useSimulacao()
   const eu = t.apresentador
   const ativa = eu ? sim.ativa : t.sim.ativa
@@ -115,12 +132,12 @@ export function SomDoTreino() {
   const t = useTreino()
   // 26/11/2026: a equipe também ouve (a voz dos outros administradores no palco)
   if (t.fase === 'fora') return null
-  return <>{t.audios.map((a) => <AudioDaFaixa key={a.sid ?? a.mediaStreamTrack.id} faixa={a} />)}</>
+  return <>{t.audios.map((a) => { const id = a.sid ?? a.mediaStreamTrack.id; return <AudioDaFaixa key={id} faixa={a} abafar={t.euFalando && t.vozesDaEquipe.includes(id)} /> })}</>
 }
 
 /** A imagem do ensaio, com o selo "GF Streaming" sempre por cima. */
 export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean; filhos?: ReactNode }) {
-  const t = useTreino()
+  const t = useTreinoNaTela()
   const sim = useSimulacao()
   // quem comanda vê a própria imagem; o administrador no espelho vê o que os alunos veem
   const eu = t.apresentador && !t.coApresentando
@@ -161,14 +178,15 @@ export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean
 
 /** As mensagens que esta pessoa vê: o membro, as que chegam; o admin, as da simulação. */
 function useMensagens(): MensagemSimulada[] {
-  const t = useTreino()
+  const t = useTreinoNaTela()
   const sim = useSimulacao()
   return t.apresentador ? sim.mensagens : t.mensagens
 }
 
 /** O chat do ensaio. O membro escreve só para o apresentador; o admin responde como apresentador. */
 export function ChatDoTreino({ titulo = true, comoAluno = false }: { titulo?: boolean; comoAluno?: boolean }) {
-  const t = useTreino()
+  const t = useTreinoNaTela()
+  const modoAluno = useModoAluno()
   const todas = useMensagens()
   // modo aluno da equipe (26/11/2026): o chat como o aluno vê (sem as mensagens dos membros, que só a equipe recebe)
   const mensagens = comoAluno ? todas.filter((m) => !m.membro) : todas
@@ -184,7 +202,9 @@ export function ChatDoTreino({ titulo = true, comoAluno = false }: { titulo?: bo
   const pode = eu || (t.fase === 'conectada' && t.presente && !fechado)
   const enviar = async () => {
     if (!texto.trim()) return
-    if (eu) falarComoApresentador(texto); else await mandarNoTreino(texto)
+    // no modo aluno, a equipe escreve como equipe (o aluno não escreve no chat público)
+    if (modoAluno) falarComoApresentador(texto, modoAluno.nome)
+    else if (eu) falarComoApresentador(texto); else await mandarNoTreino(texto)
     setTexto('')
   }
   return (

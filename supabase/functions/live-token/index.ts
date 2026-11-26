@@ -26,6 +26,8 @@
 // (`teste-<marca>-<código>`): entra quem tem o link e uma conta, e ninguém é
 // avisado. E as plataformas: com a sala no ar só para algumas vitrines
 // (`treino_no_ar.vitrines`), o membro de outra não entra.
+// v12 (26/11/2026): a Legacy Pro também tem sala de treino.
+// v13 (26/11/2026): identidade por aba na sala de treino (duas abas da mesma conta não se derrubam).
 //
 // O LiveKit roda no nosso servidor (código aberto, sem conta em serviço de
 // fora). Endereço e chaves ficam na tabela `config_servicos`, que só a chave
@@ -122,7 +124,7 @@ Deno.serve(async (req) => {
   // Sem conta, o navegador manda a chave pública no lugar do token da pessoa.
   const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return resposta(401, { erro: 'Entre na sua conta para assistir.' })
-  const corpo = await req.json().catch(() => ({})) as { liveId?: string; convite?: string; acao?: string; identidade?: string; nome?: string; marca?: string; teste?: string; vitrine?: string; apresentar?: boolean }
+  const corpo = await req.json().catch(() => ({})) as { liveId?: string; convite?: string; acao?: string; identidade?: string; nome?: string; marca?: string; teste?: string; vitrine?: string; apresentar?: boolean; aba?: string }
   let { liveId } = corpo
   const { acao, identidade } = corpo
 
@@ -157,9 +159,12 @@ Deno.serve(async (req) => {
     const [ficha] = await banco<Array<{ nome: string | null }>>(`/rest/v1/clientes?select=nome&user_id=eq.${u.id}&marca=eq.${marca}&limit=1`, token).catch(() => [])
     const completo = String(ficha?.nome || u.user_metadata?.nome || u.user_metadata?.full_name || '').trim()
     const nome = (admin ? completo : completo.split(/\s+/)[0]) || (admin ? 'Apresentador' : 'Membro')
+    // v13 (26/11/2026): cada aba entra com uma identidade própria (conta~aba). Com a mesma conta em duas
+    // abas, uma não derruba mais a outra (antes o LiveKit expulsava a mais antiga, e elas se derrubavam em vai e vem).
+    const aba = typeof corpo.aba === 'string' && /^[a-z0-9]{6,16}$/.test(corpo.aba) ? corpo.aba : null
     const ingresso = await assinar({
-      iss: LK_KEY, sub: u.id, name: nome, nbf: agora, exp: agora + 6 * 3600,
-      metadata: JSON.stringify({ moderador: admin, treino: true, ...(teste ? { teste: true } : {}) }),
+      iss: LK_KEY, sub: aba ? `${u.id}~${aba}` : u.id, name: nome, nbf: agora, exp: agora + 6 * 3600,
+      metadata: JSON.stringify({ moderador: admin, treino: true, conta: u.id, ...(teste ? { teste: true } : {}) }),
       video: {
         room: sala, roomJoin: true, canSubscribe: true, canPublishData: true,
         canPublish: admin, roomAdmin: admin, canUpdateOwnMetadata: false,

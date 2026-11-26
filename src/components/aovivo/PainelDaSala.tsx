@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  alternarAparelho, aplicarModelo, apagarCena, cenaPorId, colocarNoAr as colocarNoArAqui, criarTela, espelharPrograma, faixasDosAparelhos, ouvirEstudio, telaDeConversa, desenharMiniatura, duplicarTela, enviarArquivo,
+  alternarAparelho, aplicarModelo, apagarCena, cenaPorId, colocarNoAr as colocarNoArAqui, criarTela, espelharPrograma, faixasDosAparelhos, ouvirEstudio, silenciarRetorno, telaDeConversa, desenharMiniatura, duplicarTela, enviarArquivo,
   estudioAgora, fecharAviso, iniciarEstudio, videoNoAr, liberarSom, microfoneMudo, moverCena, nivelDoCanal, saidaDoEstudio, situacaoDoAparelho, telaAoVivo, useEstudio,
   type Aparelho,
 } from '../../core/live/estudio/motor'
@@ -428,6 +428,8 @@ export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null })
     return () => { parar(); ligarTelasDoTreino(null); informarProgramaDoTreino(null); definirFontesDoPalco(null) }
   }, [])
   const tr = useTreino()
+  // na live de outro administrador, o som das telas vem da live (o painel daqui não toca junto)
+  useEffect(() => { silenciarRetorno(tr.coApresentando); return () => silenciarRetorno(false) }, [tr.coApresentando])
   // entrou no palco da live de outro administrador: a câmera e o microfone ligam sozinhos (como ao entrar no Meet)
   useEffect(() => {
     if (!tr.noPalco) return
