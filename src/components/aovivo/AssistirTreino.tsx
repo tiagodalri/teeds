@@ -38,7 +38,9 @@ export function AssistirTreino({ sessao, conectar = true }: { sessao: SessaoTeed
         : t.encerrada ? { cls: 'fora', txt: 'Encerrada' }
         : t.presente ? { cls: 'sala', txt: 'Apresentador na sala', curto: 'Na sala' }
           : { cls: 'fora', txt: 'Aguardando início', curto: 'Em breve' }
-  const primeiro = (t.quemApresenta || '').trim().split(/\s+/)[0]
+  // 26/11/2026: com mais gente da equipe no palco, o cabeçalho diz todos ("Com Victor e Naor")
+  const nomesDoPalco = t.palco.length > 1 ? t.palco.map((p) => p.nome.trim().split(/\s+/)[0]) : []
+  const primeiro = nomesDoPalco.length ? `${nomesDoPalco.slice(0, -1).join(', ')} e ${nomesDoPalco[nomesDoPalco.length - 1]}` : (t.quemApresenta || '').trim().split(/\s+/)[0]
   const modoFora = modoForaDoTreino()
   // chegou pelo link de uma transmissão de teste (31/10/2026)
   const teste = !!testeDoLink()
@@ -133,6 +135,7 @@ export function LabAssistirTreino({ fora }: { fora?: ModoDoTreino } = {}) {
         fase: 'conectada', presente: true, quemApresenta: 'Tiago Dalri', apresentador: false, canto: 'inf-dir',
         tela: new LocalVideoTrack(canvas.captureStream(15).getVideoTracks()[0]),
         sim: { ativa: true, publico: 712, momento: 'meta', pausada: false, chatAberto: true },
+        ...palcoDoLab(),
         mensagens: [m(6, 'Ana', 'boa noite pessoal'), m(5, 'Tiago', 'Meta da sessão: 5%. Limite de perda: 3%.', { apresentador: true }),
           m(4, 'Bruno', 'bora!!! meta no bolso'), m(3, 'Carla', 'Como faço para definir o limite de perda?', { membro: true, minha: true }),
           m(2, 'Diego', 'disciplina demais'), m(1, 'Elaine', 'parabéns pela gestão')],
@@ -151,6 +154,41 @@ export function LabAssistirTreino({ fora }: { fora?: ModoDoTreino } = {}) {
   }
   return <div className="ger av-pagina"><AssistirTreino sessao={null} conectar={false} /></div>
 }
+/** ?palco=2|3|4|tela|fixado no laboratório: a live com vários administradores, com câmeras de exemplo. */
+export function palcoDoLab() {
+  const q = new URLSearchParams(location.search).get('palco')
+  if (!q) return {}
+  const camera = (cor: string, letra: string) => {
+    const c = document.createElement('canvas'); c.width = 640; c.height = 360
+    const x = c.getContext('2d')!
+    let k = 0
+    window.setInterval(() => {
+      const g = x.createLinearGradient(0, 0, 640, 360); g.addColorStop(0, cor); g.addColorStop(1, '#0b0f17')
+      x.fillStyle = g; x.fillRect(0, 0, 640, 360)
+      x.fillStyle = 'rgba(255,255,255,.85)'; x.beginPath(); x.arc(320, 150 + Math.sin(k++ / 8) * 4, 62, 0, Math.PI * 2); x.fill()
+      x.fillRect(220, 230, 200, 130); x.fillStyle = '#0b0f17'; x.font = '700 54px system-ui'; x.textAlign = 'center'; x.fillText(letra, 320, 170)
+    }, 66)
+    return c.captureStream(15).getVideoTracks()[0]
+  }
+  const tela = () => {
+    const c = document.createElement('canvas'); c.width = 1280; c.height = 720
+    const x = c.getContext('2d')!
+    x.fillStyle = '#0b1726'; x.fillRect(0, 0, 1280, 720)
+    for (let i = 0; i < 40; i++) { x.fillStyle = i % 3 ? '#16C784' : '#EA3943'; x.fillRect(60 + i * 29, 300 + Math.sin(i / 4) * 120, 16, 80) }
+    return c.captureStream(5).getVideoTracks()[0]
+  }
+  const gente = [
+    { id: 'v', nome: 'Victor Dias', cor: '#8A6726' }, { id: 'n', nome: 'Naor Bezerra', cor: '#1f4f7a' },
+    { id: 'd', nome: 'Douglas Lima', cor: '#5a2d6b' }, { id: 't', nome: 'Tiago Dalri', cor: '#2b5d43' },
+  ]
+  const n = q === 'tela' || q === 'fixado' ? 2 : Math.max(1, Math.min(4, Number(q) || 2))
+  const palco = gente.slice(0, n).map((p, i) => ({
+    id: p.id, nome: p.nome, eu: false, dono: i === 0, mic: i !== 1, falando: i === 0,
+    camera: q === '3' && i === 2 ? null : camera(p.cor, p.nome[0]), tela: q === 'tela' && i === 1 ? tela() : null,
+  }))
+  return { palco, grade: true, conversa: true, fixadoAqui: q === 'fixado' ? 'n:camera' : null, quemApresenta: 'Victor Dias' }
+}
+
 function LabPlayer({ modo }: { modo: ModoDoTreino }) {
   useEffect(() => { const id = window.setTimeout(() => definirModoDoTreino(modo, false), 400); return () => window.clearTimeout(id) }, [modo])
   return <PlayerDoTreino naPagina={false} abrirPagina={() => undefined} />

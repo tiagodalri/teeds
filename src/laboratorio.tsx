@@ -1106,6 +1106,26 @@ ReactDOM.createRoot(document.getElementById('root')!).render(semModoEstrito ? <L
 
 /** A Central ao vivo no laboratório: com &membros=1, membros de mentira entram, saem e escrevem. */
 function LabCentral() {
+  // ?tela=treino&equipe=espelho|dono&palco=2: a Central na live com outros administradores (26/11/2026)
+  useEffect(() => {
+    const modo = new URLSearchParams(location.search).get('equipe')
+    if (!modo) return
+    void Promise.all([import('./core/live/treino'), import('./core/live/simulacao'), import('./components/aovivo/AssistirTreino')]).then(([tr, sim, lab]) => {
+      const palco = lab.palcoDoLab()
+      if (modo === 'espelho') {
+        sim.espelharSimulacao(() => undefined)
+        sim.receberEspelho({ ativa: true, publicoAgora: 712, publicoAlvo: 700, apresentador: 'Victor Dias', mensagens: [
+          { id: 'a', nome: 'Ana', texto: 'boa noite pessoal', apresentador: false, entrada: false, hora: Date.now() - 60000 },
+          { id: 'b', nome: 'Victor Dias', texto: 'Meta de hoje: 5%.', apresentador: true, entrada: false, hora: Date.now() - 30000 },
+          { id: 'c', nome: 'Carla', texto: 'Como faço o limite de perda?', apresentador: false, entrada: false, membro: true, hora: Date.now() - 10000 },
+        ] })
+        tr.simularTreino({ fase: 'conectada', apresentador: true, meuNome: 'Naor Bezerra', coApresentando: true, dono: 'Victor Dias', noPalco: new URLSearchParams(location.search).has('nopalco'), ...palco })
+      } else {
+        sim.iniciarSimulacao('Victor Dias')
+        tr.simularTreino({ fase: 'conectada', apresentador: true, meuNome: 'Victor Dias', ...palco, palco: (palco.palco ?? []).map((p, i) => ({ ...p, eu: i === 0 })) })
+      }
+    })
+  }, [])
   useEffect(() => {
     if (!new URLSearchParams(location.search).has('membros')) return
     let vivo = true

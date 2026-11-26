@@ -1166,6 +1166,30 @@ export function alternarAparelho(a: Aparelho): void {
   void ligarCaptura(f)
 }
 
+/* ===================================== vários administradores (26/11/2026) */
+
+/** As faixas da câmera, da tela e do microfone do painel (o que entra no palco da live com outros administradores). */
+export function faixasDosAparelhos(): { camera: MediaStreamTrack | null; tela: MediaStreamTrack | null; mic: MediaStreamTrack | null; micMudo: boolean } {
+  const viva = (chave: string, tipo: 'video' | 'audio') => {
+    const s = capturas.get(chave)?.stream
+    const t = (tipo === 'video' ? s?.getVideoTracks() : s?.getAudioTracks())?.[0]
+    return t && t.readyState === 'live' ? t : null
+  }
+  return { camera: viva('camera:padrao', 'video'), tela: viva('tela', 'video'), mic: viva('mic:padrao', 'audio'), micMudo: microfoneMudo() }
+}
+
+/** A tela no ar é de conversa (Ao vivo, Só câmera)? Nelas a live com vários administradores vira o palco lado a lado. */
+export function telaDeConversa(id = estado.config?.programa): boolean {
+  const t = id ? cenaPorId(id)?.modelo?.tipo : undefined
+  return t === 'aovivo' || t === 'camera'
+}
+
+/** No navegador de quem só acompanha a live de outro administrador: marca a tela que está no ar lá (sem salvar nem transicionar). */
+export function espelharPrograma(id: string): void {
+  if (!estado.config || estado.config.programa === id || !cenaPorId(id)) return
+  mudar({ config: { ...estado.config, programa: id } })
+}
+
 /* ============================================== telas na nuvem (23/11/2026) */
 
 export const ouvirEstudio = (f: () => void) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }

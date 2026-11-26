@@ -130,7 +130,8 @@ Deno.serve(async (req) => {
   // 20/10/2026 o link público NÃO abre a sala de treino: só GF Member entra.
   if (acao === 'treino') {
     const marca = String(corpo.marca ?? '')
-    if (!['teeds', 'omni', 'globalfly'].includes(marca)) return resposta(400, { erro: 'Marca inválida.' })
+    // v12 (26/11/2026): a Legacy Pro (família GlobalFly) também tem sala de treino
+    if (!['teeds', 'omni', 'globalfly', 'legacypro'].includes(marca)) return resposta(400, { erro: 'Marca inválida.' })
     const teste = typeof corpo.teste === 'string' && /^[0-9a-f]{12}$/.test(corpo.teste) ? corpo.teste : null
     if (teste) {
       const [t] = await servico<Array<{ codigo: string }>>(`/rest/v1/aovivo_testes?select=codigo&codigo=eq.${teste}&marca=eq.${marca}&expira_em=gt.${encodeURIComponent(new Date().toISOString())}`).catch(() => [])

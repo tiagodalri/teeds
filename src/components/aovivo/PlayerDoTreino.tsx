@@ -11,6 +11,7 @@ import './aovivo.css'
 import { naPagina as emPxDaPagina } from '../../core/escala'
 import { alternarMudoDoTreino, definirVolumeDoTreino, useVolumeDoTreino, volumeAjustavel } from '../../core/live/volumeDoTreino'
 import { FAMILIA_GF } from '../../marca'
+import { PalcoLadoALado } from './PalcoLadoALado'
 
 /**
  * A sala de treino fora da página "Ao vivo" (20/10/2026, pedido do Tiago:
@@ -112,7 +113,8 @@ function ContadorAoVivo() {
 /** O som do ensaio: fica montado em qualquer modo (inclusive no "só o áudio"). */
 export function SomDoTreino() {
   const t = useTreino()
-  if (t.apresentador || t.fase === 'fora') return null
+  // 26/11/2026: a equipe também ouve (a voz dos outros administradores no palco)
+  if (t.fase === 'fora') return null
   return <>{t.audios.map((a) => <AudioDaFaixa key={a.sid ?? a.mediaStreamTrack.id} faixa={a} />)}</>
 }
 
@@ -120,14 +122,15 @@ export function SomDoTreino() {
 export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean; filhos?: ReactNode }) {
   const t = useTreino()
   const sim = useSimulacao()
-  const eu = t.apresentador
+  // quem comanda vê a própria imagem; o administrador no espelho vê o que os alunos veem
+  const eu = t.apresentador && !t.coApresentando
   const { tela, camera } = t.local
-  const temImagem = eu ? !!tela || !!camera : !!t.tela || !!t.camera
-  const publico = eu ? sim.publicoAgora : t.sim.publico
-  const ativa = eu ? sim.ativa : t.sim.ativa
+  const temImagem = t.grade || (eu ? !!tela || !!camera : !!t.tela || !!t.camera)
+  const publico = t.apresentador ? sim.publicoAgora : t.sim.publico
+  const ativa = t.apresentador ? sim.ativa : t.sim.ativa
   return (
-    <div className={`av-palco ${compacto ? 'compacto' : ''}`}>
-      {eu ? (
+    <div className={`av-palco ${compacto ? 'compacto' : ''} ${t.grade ? 'com-palco' : ''}`}>
+      {t.grade ? <PalcoLadoALado compacto={compacto} /> : eu ? (
         <>
           {tela ? <VideoLocal fluxo={tela} className="av-tela" /> : camera ? <VideoLocal fluxo={camera} className="av-tela av-so-camera" espelhar /> : null}
           {tela && camera && <VideoLocal fluxo={camera} className={`av-camera canto-${cantoDoTreino()}`} espelhar />}

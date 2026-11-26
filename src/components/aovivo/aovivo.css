@@ -1133,3 +1133,6 @@ body.av-teatro-aberto { overflow: hidden; }
 :root:not([data-tema='escuro']) .tr-chat-destaque .av-escrever input { background: #fff; }
 .av-teatro .av-chat.tr-chat-destaque { background: rgba(22, 25, 30, .9); border-color: rgba(255,255,255,.1); }
 .av-teatro .tr-chat-destaque .tr-contador { color: #fff; }
+
+/* Central no celular, na live com outros administradores: o que os alunos veem */
+.cv-palco-equipe > .av-palco { aspect-ratio: 16 / 9; }

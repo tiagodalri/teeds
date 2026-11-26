@@ -72,6 +72,51 @@ export const useSimulacao = () => useSyncExternalStore((f) => { ouvintes.add(f);
 export const ouvirSimulacao = (f: () => void) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }
 export const simulacaoAgora = () => estado
 
+/* ------------------------------------------------ vários administradores (26/11/2026)
+   Pedido do Tiago: dois ou mais administradores tocam a mesma live, cada um da sua
+   casa, como no Meet. O motor roda só no navegador de quem começou a transmissão (o
+   dono). Nos outros, esta mesma loja vira um espelho: recebe o estado do dono pela sala
+   e cada comando do painel (público, I.A., roteiros, chat) vai para o dono executar. */
+
+export type ComandoDaSimulacao =
+  | { a: 'ajustar'; p: Partial<Pick<EstadoDaSimulacao, 'publicoAlvo' | 'oscilacao' | 'ritmo' | 'pausada'>> }
+  | { a: 'momento'; m: Momento }
+  | { a: 'falar'; texto: string; nome: string }
+  | { a: 'limpar' }
+  | { a: 'bloco'; id: string; nome: string; mensagens: string[] }
+  | { a: 'pararBloco' }
+  | { a: 'velocidade'; v: Velocidade }
+  | { a: 'chat'; aberto: boolean }
+  | { a: 'encerrar' }
+
+let encaminhar: ((c: ComandoDaSimulacao) => void) | null = null
+/** Liga (com para onde mandar os comandos) ou desliga o espelho. Ao desligar, a loja volta ao repouso. */
+export function espelharSimulacao(para: ((c: ComandoDaSimulacao) => void) | null): void {
+  if (!!para === !!encaminhar) { encaminhar = para; return }
+  encaminhar = para
+  if (!para) mudar({ ativa: false, momento: null, bloco: null, mensagens: [], publicoAgora: 0, pausada: false })
+}
+export const espelhando = () => !!encaminhar
+/** O dono mandou o estado dele: só vale no espelho. */
+export function receberEspelho(p: Partial<EstadoDaSimulacao>): void { if (encaminhar) mudar(p) }
+/** A simulação está rodando NESTE navegador (no espelho, quem roda é o dono). */
+export const simulacaoLocalAtiva = () => estado.ativa && !encaminhar
+/** O dono executa o comando que outro administrador mandou. */
+export function executarComando(c: ComandoDaSimulacao): void {
+  if (encaminhar || !estado.ativa) return
+  switch (c.a) {
+    case 'ajustar': ajustar(c.p); break
+    case 'momento': dispararMomento(c.m); break
+    case 'falar': falarComoApresentador(c.texto, c.nome); break
+    case 'limpar': limparChat(); break
+    case 'bloco': tocarBloco(c.id, c.nome, c.mensagens); break
+    case 'pararBloco': pararBloco(); break
+    case 'velocidade': mudarVelocidade(c.v); break
+    case 'chat': abrirChatDoTreino(c.aberto); break
+    case 'encerrar': pararSimulacao(); break
+  }
+}
+
 /* ------------------------------------------------------------- vocabulário */
 
 const robos = () => MARCA.robos.map((id) => (MARCA.nomesDosRobos?.[id] ?? id).replace(PREFIXO_DA_IA, ''))
@@ -214,7 +259,8 @@ function passoDoPublico() {
 }
 
 export function iniciarSimulacao(apresentador: string): void {
-  pararSimulacao()
+  if (encaminhar) return
+  pararSimulacaoAqui()
   montarPublico()
   inicio = Date.now()
   mudar({ ativa: true, pausada: false, apresentador, mensagens: [], momento: null, publicoAgora: Math.round(estado.publicoAlvo * 0.35) })
@@ -222,30 +268,42 @@ export function iniciarSimulacao(apresentador: string): void {
   agendarChat()
 }
 
+/** Encerrar (o botão do painel). No espelho, pede ao dono para encerrar para todos. */
 export function pararSimulacao(): void {
+  if (encaminhar) { encaminhar({ a: 'encerrar' }); return }
+  pararSimulacaoAqui()
+}
+/** Para o motor deste navegador, sem nunca mexer na live de outro administrador. */
+export function pararSimulacaoAqui(): void {
+  if (encaminhar) return
   window.clearInterval(timerPublico); window.clearTimeout(timerChat); window.clearTimeout(timerBloco)
   fila = []
   mudar({ ativa: false, momento: null, bloco: null })
 }
 
 export function ajustar(p: Partial<Pick<EstadoDaSimulacao, 'publicoAlvo' | 'oscilacao' | 'ritmo' | 'pausada'>>): void {
+  if (encaminhar) { mudar(p); encaminhar({ a: 'ajustar', p }); return }
   mudar(p)
   if ('ritmo' in p || 'pausada' in p) agendarChat()
 }
 
 /** Dispara um momento: o assunto do chat muda por ~25 s e o ritmo sobe. */
 export function dispararMomento(m: Momento): void {
+  if (encaminhar) { encaminhar({ a: 'momento', m }); return }
   fimMomento = Date.now() + 25000
   mudar({ momento: m })
   agendarChat()
 }
 
-export function falarComoApresentador(texto: string): void {
+/** A equipe fala no chat. `nome`: quem escreveu (vários administradores na live); sem ele, o dono. */
+export function falarComoApresentador(texto: string, nome?: string): void {
   const t = texto.trim().slice(0, 500)
-  if (t) adicionar({ nome: estado.apresentador || 'Você', texto: t, apresentador: true, entrada: false })
+  if (!t) return
+  if (encaminhar) { encaminhar({ a: 'falar', texto: t, nome: nome || '' }); return }
+  adicionar({ nome: (nome || estado.apresentador || 'Você').slice(0, 40), texto: t, apresentador: true, entrada: false })
 }
 
-export const limparChat = () => mudar({ mensagens: [] })
+export const limparChat = () => { if (encaminhar) { encaminhar({ a: 'limpar' }); return } mudar({ mensagens: [] }) }
 
 /* ------------------------------------------------- blocos de mensagens (09/11/2026)
    O Tiago prepara e aprova as mensagens antes (blocos.ts) e dá o play na hora certa.
@@ -313,6 +371,7 @@ function passoDoBloco() {
 export function tocarBloco(id: string, nome: string, mensagens: string[]): void {
   const lista = mensagens.map((m) => m.trim()).filter(Boolean)
   if (!estado.ativa || !lista.length) return
+  if (encaminhar) { encaminhar({ a: 'bloco', id, nome, mensagens: lista.slice(0, 120) }); return }
   for (let i = lista.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [lista[i], lista[j]] = [lista[j], lista[i]] }
   fila = lista
   ultimoNoBloco = ''
@@ -323,12 +382,14 @@ export function tocarBloco(id: string, nome: string, mensagens: string[]): void 
 
 /** Para o bloco no meio; o chat automático volta. */
 export function pararBloco(): void {
+  if (encaminhar) { encaminhar({ a: 'pararBloco' }); return }
   window.clearTimeout(timerBloco)
   fila = []
   if (estado.bloco) { mudar({ bloco: null }); agendarChat() }
 }
 
 export function mudarVelocidade(v: Velocidade): void {
+  if (encaminhar) { mudar({ velocidade: v }); encaminhar({ a: 'velocidade', v }); return }
   mudar({ velocidade: v })
   if (estado.bloco) agendarBloco()
 }
@@ -336,13 +397,14 @@ export function mudarVelocidade(v: Velocidade): void {
 /** Abre ou fecha o chat da sala de treino; a sala vê o aviso, como numa live de verdade. */
 export function abrirChatDoTreino(aberto: boolean): void {
   if (estado.chatAberto === aberto) return
+  if (encaminhar) { encaminhar({ a: 'chat', aberto }); return }
   mudar({ chatAberto: aberto })
   adicionar({ nome: '', texto: aberto ? 'O apresentador abriu o chat' : 'O apresentador fechou o chat', apresentador: false, entrada: false, sistema: true })
 }
 
 /** Mensagem de verdade de um membro que assiste o ensaio: entra no chat junto com as simuladas. */
 export function mensagemDeMembro(nome: string, texto: string): void {
-  if (!estado.chatAberto) return // chat fechado: nem a mensagem de membro entra
+  if (encaminhar || !estado.chatAberto) return // chat fechado: nem a mensagem de membro entra
   const t = texto.trim().slice(0, 500)
   if (t) adicionar({ nome: nome.slice(0, 30) || 'Membro', texto: t, apresentador: false, entrada: false, membro: true })
 }
