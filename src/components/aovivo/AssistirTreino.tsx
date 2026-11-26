@@ -3,7 +3,7 @@ import type { SessaoTeeds } from '../../core/teeds/conta'
 import { definirModoDoTreino, entrarNoTreino, esquecerTesteDoLink, modoForaDoTreino, sairDoTreino, simularTreino, testeDoLink, useTreino, type ModoDoTreino } from '../../core/live/treino'
 import { MARCA, FAMILIA_GF, GF_MEMBRO } from '../../marca'
 import { ICONE_PALCO, abrirPorCima, podeAbrirPorCima, useLargo, useTeatro } from './AoVivo'
-import PlayerDoTreino, { ChatDoTreino, PalcoDoTreino } from './PlayerDoTreino'
+import PlayerDoTreino, { ChatDoTreino, ControleDeVolume, PalcoDoTreino } from './PlayerDoTreino'
 import './aovivo.css'
 
 /**
@@ -100,6 +100,7 @@ function BotoesDoTreino({ cheia, alternar, chat, setChat }: { cheia: boolean; al
   const canto = t.tela && t.camera ? t.canto : 'inf-esq'
   return (
     <div className={`av-botoes-palco ${canto === 'inf-dir' ? 'pos-sup-dir' : 'pos-inf-dir'}`}>
+      <ControleDeVolume className="tr-volume-palco" />
       {cheia && (
         <button onClick={() => setChat(!chat)} aria-pressed={chat} aria-label={chat ? 'Esconder o chat' : 'Mostrar o chat'} title={chat ? 'Esconder o chat' : 'Mostrar o chat'}>
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d={ICONE_PALCO.chat} /></svg>

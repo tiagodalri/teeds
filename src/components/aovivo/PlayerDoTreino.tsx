@@ -9,6 +9,8 @@ import { falarComoApresentador, useSimulacao, type MensagemSimulada } from '../.
 import { Icone, abrirPorCima, podeAbrirPorCima, useCelular, useLargo } from './AoVivo'
 import './aovivo.css'
 import { naPagina as emPxDaPagina } from '../../core/escala'
+import { alternarMudoDoTreino, definirVolumeDoTreino, useVolumeDoTreino, volumeAjustavel } from '../../core/live/volumeDoTreino'
+import { FAMILIA_GF } from '../../marca'
 
 /**
  * A sala de treino fora da página "Ao vivo" (20/10/2026, pedido do Tiago:
@@ -45,8 +47,67 @@ function VideoLocal({ fluxo, className, espelhar = false }: { fluxo: MediaStream
 }
 function AudioDaFaixa({ faixa }: { faixa: Track }) {
   const ref = useRef<HTMLAudioElement>(null)
+  const { nivel, mudo } = useVolumeDoTreino()
   useEffect(() => { const el = ref.current; if (!el) return; faixa.attach(el); return () => { faixa.detach(el) } }, [faixa])
+  // o volume escolhido por quem assiste (26/11/2026); reaplicado a cada troca de faixa
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !FAMILIA_GF) return
+    el.muted = mudo
+    try { el.volume = nivel } catch { /* iOS: só leitura */ }
+  }, [faixa, nivel, mudo])
   return <audio ref={ref} autoPlay />
+}
+
+const ICONE_SOM = {
+  base: 'M4 10v4h4l5 4V6L8 10z',
+  baixo: 'M16.5 9.5a3.5 3.5 0 010 5',
+  alto: 'M16.5 9.5a3.5 3.5 0 010 5M19 7a7 7 0 010 10',
+  mudo: 'M16 9.5l5 5M21 9.5l-5 5',
+}
+
+/**
+ * Aumentar, diminuir e tirar o som (26/11/2026, pedido do Naor). O botão do
+ * alto-falante liga e desliga; a barra ajusta o nível. Onde o navegador não
+ * deixa mudar o volume (iPhone), fica só o botão.
+ */
+export function ControleDeVolume({ barra = true, className = '' }: { barra?: boolean; className?: string }) {
+  const { nivel, mudo } = useVolumeDoTreino()
+  if (!FAMILIA_GF) return null
+  const semSom = mudo || nivel === 0
+  const rotulo = semSom ? 'Ativar o som' : 'Tirar o som'
+  const icone = semSom ? ICONE_SOM.mudo : nivel < 0.5 ? ICONE_SOM.baixo : ICONE_SOM.alto
+  const pct = Math.round((semSom ? 0 : nivel) * 100)
+  return (
+    <div className={`tr-volume ${className}`} role="group" aria-label="Volume">
+      <button type="button" onClick={alternarMudoDoTreino} aria-label={rotulo} title={rotulo} aria-pressed={semSom}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE_SOM.base} /><path d={icone} /></svg>
+      </button>
+      {barra && volumeAjustavel && (
+        <input type="range" min={0} max={100} step={5} value={pct} aria-label="Volume" aria-valuetext={`${pct}%`}
+          style={{ '--tr-vol': `${pct}%` } as CSSProperties}
+          onChange={(e) => definirVolumeDoTreino(Number(e.target.value) / 100)}
+          onPointerDown={(e) => e.stopPropagation()} />
+      )}
+    </div>
+  )
+}
+
+/** Quantas pessoas estão ao vivo, em destaque em cima do chat (26/11/2026, pedido do Naor). */
+function ContadorAoVivo() {
+  const t = useTreino()
+  const sim = useSimulacao()
+  const eu = t.apresentador
+  const ativa = eu ? sim.ativa : t.sim.ativa
+  const publico = eu ? sim.publicoAgora : t.sim.publico
+  if (!FAMILIA_GF || !ativa) return null
+  return (
+    <div className="tr-contador" role="status" aria-live="off">
+      <i aria-hidden />
+      <b>{fmt(publico)}</b>
+      <span>{publico === 1 ? 'pessoa ao vivo' : 'pessoas ao vivo'}</span>
+    </div>
+  )
 }
 /** O som do ensaio: fica montado em qualquer modo (inclusive no "só o áudio"). */
 export function SomDoTreino() {
@@ -122,7 +183,8 @@ export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
     setTexto('')
   }
   return (
-    <section className="av-chat tr-chat" aria-label="Chat ao vivo">
+    <section className={`av-chat tr-chat ${FAMILIA_GF ? 'tr-chat-destaque' : ''}`} aria-label="Chat ao vivo">
+      <ContadorAoVivo />
       {titulo && <div className="tr-chat-topo"><h2>Chat ao vivo</h2></div>}
       <div className="av-mensagens" ref={lista} role="log" aria-live="off">
         {mensagens.length === 0 && <p className="av-chat-vazio">{(eu ? true : t.sim.ativa) ? 'O chat está começando…' : 'As mensagens aparecem aqui quando a transmissão começar.'}</p>}
@@ -226,6 +288,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
         <div className="av-pilula" role="region" aria-label="Sala de treino minimizada">
           <i className="av-ponto" aria-hidden />
           <span onClick={() => definirModoDoTreino('flutuante', false)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') definirModoDoTreino('flutuante', false) }}>{descricao}</span>
+          {!eu && <ControleDeVolume className="tr-volume-pilula" />}
           <button onClick={() => definirModoDoTreino('flutuante', false)} aria-label="Mostrar o vídeo" title="Mostrar o vídeo"><Icone nome="video" /></button>
           <button onClick={fechar} aria-label={rotuloFechar} title={rotuloFechar}><Icone nome="fechar" /></button>
         </div>
@@ -235,6 +298,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
 
   const controles = (
     <div className="av-controles">
+      {!eu && <ControleDeVolume className="tr-volume-compacto" />}
       {modo === 'flutuante' && (['P', 'M', 'G'] as const).map((tm) => (
         <button key={tm} className={t.tamanho === tm ? 'on' : ''} onClick={() => definirTamanhoDoTreino(tm)} aria-label={`Tamanho ${tm === 'P' ? 'pequeno' : tm === 'M' ? 'médio' : 'grande'}`}>{tm}</button>
       ))}
@@ -299,6 +363,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
   const barraMini = (
     <div className="av-mini-barra">
       {botaoChat}
+      {!eu && <ControleDeVolume barra={false} className="tr-volume-mini" />}
       <button onClick={() => definirTamanhoDoTreino(proximoTamanho[t.tamanho])} aria-label="Mudar o tamanho da miniatura" title="Tamanho">{t.tamanho}</button>
       {podeAbrirPorCima() && temImagem && <button onClick={() => void pip()} aria-label="Janela fora do navegador" title="Janela fora do navegador"><Icone nome="pip" /></button>}
       <button onClick={abrirPagina} aria-label="Abrir em tela grande" title="Abrir em tela grande"><Icone nome="grande" /></button>
