@@ -226,7 +226,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const sairDaSala = () => { void sairDoTreino(); aoSair() }
   // vários administradores (26/11/2026): na live de outro, "Sair" não encerra nada para ninguém
   const encerraAoSair = sim.ativa && !tr.coApresentando
-  const meuNome = tr.meuNome || apresentador
+  // o nome no chat: o primeiro nome, como sempre foi (vale para o dono e para quem ajuda)
+  const meuNome = apresentador
   const equipeNoPalco = tr.palco.filter((p) => !p.eu)
   const botaoPalco = tr.coApresentando && (
     <button type="button" className={`ps-palco-botao ${tr.noPalco ? 'on' : ''}`} aria-pressed={tr.noPalco} onClick={() => (tr.noPalco ? void sairDoPalco() : entrarNoPalco())}
@@ -442,7 +443,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
         ) : (
           <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.membro && central.respondidas.has(m.id) ? 'cv-vista' : ''}`}>
-            <p><b>{m.nome}{m.apresentador && <em>{m.nome === meuNome || (!tr.coApresentando && m.nome === apresentador) ? 'Você' : 'Equipe'}</em>}{m.membro && <em className="tr-tag-membro">Membro</em>}</b> {m.texto}</p>
+            <p><b>{m.nome}{m.apresentador && <em>{m.nome === meuNome ? 'Você' : 'Equipe'}</em>}{m.membro && <em className="tr-tag-membro">Membro</em>}</b> {m.texto}</p>
             <time>{hora(m.hora)}</time>
             {m.membro && abaChat === 'equipe' && (
               <div className="cv-msg-acoes">

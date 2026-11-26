@@ -94,7 +94,9 @@ let encaminhar: ((c: ComandoDaSimulacao) => void) | null = null
 export function espelharSimulacao(para: ((c: ComandoDaSimulacao) => void) | null): void {
   if (!!para === !!encaminhar) { encaminhar = para; return }
   encaminhar = para
-  if (!para) mudar({ ativa: false, momento: null, bloco: null, mensagens: [], publicoAgora: 0, pausada: false })
+  // entrando no espelho: o chat é o do dono (chega logo em seguida); saindo, a loja volta ao repouso
+  if (para) mudar({ mensagens: [], bloco: null })
+  else mudar({ ativa: false, momento: null, bloco: null, mensagens: [], publicoAgora: 0, pausada: false })
 }
 export const espelhando = () => !!encaminhar
 /** O dono mandou o estado dele: só vale no espelho. */

@@ -453,9 +453,10 @@ let filaDoPalco: Promise<unknown> = Promise.resolve()
 function sincronizarPalco() { filaDoPalco = filaDoPalco.then(sincronizarPalcoAgora).catch(() => undefined) }
 async function sincronizarPalcoAgora(): Promise<void> {
   const r = sala
-  // manda: o dono, com outro administrador na sala; quem ajuda, depois de entrar no palco
-  const outrosAdmins = r ? [...r.remoteParticipants.values()].some(ehApresentador) : false
-  const manda = !!r && estado.apresentador && ((simulacaoLocalAtiva() && outrosAdmins) || (estado.coApresentando && estado.noPalco))
+  // manda: o dono, só com outro administrador já no palco (sem ninguém, não gasta a internet dele à toa);
+  // quem ajuda, depois de entrar no palco
+  const convidadoNoPalco = r ? [...r.remoteParticipants.values()].some((p) => ehApresentador(p) && temPalco(p)) : false
+  const manda = !!r && estado.apresentador && ((simulacaoLocalAtiva() && convidadoNoPalco) || (estado.coApresentando && estado.noPalco))
   const f = manda ? fontesDoPalco() : { camera: null, tela: null, mic: null, micMudo: false }
   for (const qual of ['camera', 'tela', 'mic'] as const) {
     const bruta = f[qual]
@@ -626,6 +627,9 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
     // mesmas escolhas da live: H.264 no chip de vídeo, uma camada menor só
     const r = new Room({
       adaptiveStream: true, dynacast: true,
+      // 26/11/2026: a sala nunca desliga sozinha a câmera, o microfone ou a imagem das telas
+      // (são do painel; ao cair e voltar, as mesmas faixas entram de novo)
+      stopLocalTrackOnUnpublish: false,
       publishDefaults: {
         videoCodec: 'h264',
         screenShareEncoding: { maxBitrate: 2_500_000, maxFramerate: 15 },
@@ -712,6 +716,11 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
             else executarComando(c)
             return
           }
+          // o painel do dono no ar: entra no espelho antes de tudo (o histórico do chat vem logo atrás)
+          if (pacote.t === 'painel' && pacote.s.ativa && !espelhando()) {
+            outroAtivo = { id: p.identity, nome: p.name || 'Outro administrador', quando: Date.now() }
+            atualizarSala()
+          }
           // no espelho: o painel e o chat do dono
           if (!espelhando() || p.identity !== ultimoDono?.id) return
           if (pacote.t === 'painel') {
@@ -778,7 +787,11 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
 /** Sai da sala do LiveKit (sem mexer no que o admin tem ligado). */
 async function desconectar(): Promise<void> {
   if (estado.apresentador) pararDeAnunciar()
-  for (const k of Object.keys(doPalco) as Array<keyof typeof doPalco>) delete doPalco[k]
+  for (const k of Object.keys(doPalco) as Array<keyof typeof doPalco>) {
+    const d = doPalco[k]
+    delete doPalco[k]
+    if (d && sala) await sala.localParticipant.unpublishTrack(d.local, false).catch(() => undefined)
+  }
   espelharSimulacao(null)
   outroAtivo = null; ultimoDono = null; donoQueSumiu = null
   desligarEscuta?.(); desligarEscuta = null

@@ -588,8 +588,9 @@ export default function App() {
   const canalDoTreino = useRef<AssinaturaRealtime | null>(null)
   useEffect(() => { if (teeds.sessao?.token) canalDoTreino.current?.atualizarToken(teeds.sessao.token) }, [teeds.sessao?.token])
   useEffect(() => {
-    // só para quem assiste: o admin é quem abre a sala
-    if (!MARCA.aoVivo || !teeds.sessao || admin !== false) { setTreinoAgora(null); return }
+    // 26/11/2026 (pedido do Tiago): o Ao vivo pisca também para a equipe quando a sala de treino está no ar,
+    // como na transmissão pelo link do Meet; o aviso que aparece na tela continua só para quem assiste
+    if (!MARCA.aoVivo || !teeds.sessao || admin === null) { setTreinoAgora(null); return }
     let vivo = true
     let t: number | undefined
     let pedido = 0
@@ -601,6 +602,7 @@ export default function App() {
         if (!vivo || este !== pedido) return // vale só a resposta mais nova
         setTreinoAgora((antes) => (antes?.iniciadaEm === agora?.iniciadaEm ? antes : agora))
         if (!agora) { setAvisoTreino(false); return }
+        if (admin) return
         // uma vez por sessão de treino
         const chave = `${MARCA.id}.treino.avisado`
         let visto: string | null = null
