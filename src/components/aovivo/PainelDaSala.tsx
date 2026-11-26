@@ -1,13 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
-  alternarAparelho, aplicarModelo, apagarCena, cenaPorId, colocarNoAr, criarTela, desenharMiniatura, duplicarTela, enviarArquivo,
+  alternarAparelho, aplicarModelo, apagarCena, cenaPorId, colocarNoAr as colocarNoArAqui, criarTela, espelharPrograma, faixasDosAparelhos, ouvirEstudio, silenciarRetorno, telaDeConversa, desenharMiniatura, duplicarTela, enviarArquivo,
   estudioAgora, fecharAviso, iniciarEstudio, videoNoAr, liberarSom, microfoneMudo, moverCena, nivelDoCanal, saidaDoEstudio, situacaoDoAparelho, telaAoVivo, useEstudio,
   type Aparelho,
 } from '../../core/live/estudio/motor'
 import { MODELOS, VIDEOS_PRONTOS, infoDoModelo, quandoTerminar, type VideoPronto } from '../../core/live/estudio/modelo'
 import type { CamposDoModelo, Cena, TipoDeModelo } from '../../core/live/estudio/tipos'
 import { simulacaoAgora, useSimulacao } from '../../core/live/simulacao'
-import { usarEstudioNoTreino } from '../../core/live/treino'
+import {
+  definirFontesDoPalco, informarProgramaDoTreino, informarTelaDoTreino, ligarTelasDoTreino, porTelaNoAr, usarEstudioNoTreino, useTreino,
+} from '../../core/live/treino'
+import { PalcoDoTreino } from './PlayerDoTreino'
 import { enviarArquivoDaLive, ligarSincroniaDasTelas, type EstadoDaNuvem } from '../../core/live/estudio/nuvem'
 import { sessaoGuardada } from '../../core/teeds/conta'
 import type { SessaoTeeds } from '../../core/teeds/conta'
@@ -38,6 +41,9 @@ const ICONES = {
   lixo: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
   enviar: 'M12 16V4M7 9l5-5 5 5M5 20h14',
 }
+
+/** Põe a tela no ar: aqui, ou (na live de outro administrador) pedindo ao dono. */
+export const colocarNoAr = (id: string, naHora = false) => porTelaNoAr(id, (x) => colocarNoArAqui(x, naHora))
 
 /** As telas da abertura: o painel sempre começa por ela. */
 export function telaDeAbertura(cenas: Cena[]): Cena | undefined {
@@ -404,6 +410,32 @@ export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null })
     void iniciarEstudio().then(() => { const s = saidaDoEstudio(); if (vivo && s) void usarEstudioNoTreino(s) })
     return () => { vivo = false }
   }, [])
+  // vários administradores (26/11/2026): as telas pedidas pelos outros, a tela de conversa e as fontes do palco
+  useEffect(() => {
+    ligarTelasDoTreino({ porNoAr: (id) => colocarNoArAqui(id), marcarNoAr: espelharPrograma })
+    informarProgramaDoTreino(() => estudioAgora().config?.programa ?? null)
+    definirFontesDoPalco(faixasDosAparelhos)
+    let antes = ''
+    const olhar = () => {
+      const e = estudioAgora()
+      informarTelaDoTreino(telaDeConversa())
+      const f = faixasDosAparelhos()
+      const agora = [f.camera?.id, f.tela?.id, f.mic?.id, f.micMudo, e.config?.programa].join('|')
+      if (agora !== antes) { antes = agora; definirFontesDoPalco() }
+    }
+    olhar()
+    const parar = ouvirEstudio(olhar)
+    return () => { parar(); ligarTelasDoTreino(null); informarProgramaDoTreino(null); definirFontesDoPalco(null) }
+  }, [])
+  const tr = useTreino()
+  // na live de outro administrador, o som das telas vem da live (o painel daqui não toca junto)
+  useEffect(() => { silenciarRetorno(tr.coApresentando); return () => silenciarRetorno(false) }, [tr.coApresentando])
+  // entrou no palco da live de outro administrador: a câmera e o microfone ligam sozinhos (como ao entrar no Meet)
+  useEffect(() => {
+    if (!tr.noPalco) return
+    if (situacaoDoAparelho('camera') === 'desligada') alternarAparelho('camera')
+    if (situacaoDoAparelho('microfone') === 'desligada') alternarAparelho('microfone')
+  }, [tr.noPalco])
 
   const cenas = e.pronto ? e.config.cenas : []
   const ref = useMiniaturas(cenas.map((c) => c.id))
@@ -461,8 +493,9 @@ export function PainelDaSala({ sessao = null }: { sessao?: SessaoTeeds | null })
           <button type="button" className="ps-guia-botao" onClick={() => alternarAparelho(falta)}>{falta === 'tela' ? 'Compartilhar a tela' : 'Ligar a câmera'}</button></p>
       )}
 
-      <figure className={`ps-monitor ${sala.ativa ? 'no-ar' : ''}`}>
-        <Monitor pronto={e.pronto} />
+      <figure className={`ps-monitor ${sala.ativa ? 'no-ar' : ''} ${tr.coApresentando || tr.grade ? 'ps-monitor-palco' : ''}`}>
+        {/* na live com outros administradores: o que os alunos veem (o palco lado a lado ou a imagem do dono) */}
+        {tr.coApresentando || tr.grade ? <div className="ps-monitor-area"><PalcoDoTreino /></div> : <Monitor pronto={e.pronto} />}
         {entrando && <span key={entrando} className="ps-monitor-troca" aria-hidden style={{ animationDuration: `${e.config.duracaoMs}ms` }} />}
         <span className="ps-selo"><i aria-hidden />{sala.ativa ? 'No ar' : 'Prévia'} · {noAr?.nome}</span>
         {e.somBloqueado && <button type="button" className="ps-som" onClick={() => void liberarSom()}>Clique para liberar o som</button>}

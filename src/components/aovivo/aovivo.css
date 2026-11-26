@@ -1086,3 +1086,80 @@ body.av-teatro-aberto { overflow: hidden; }
   .cv-app-corpo { grid-template-columns: minmax(0, 1fr) 290px; }
   .cv-app-marca small, .cv-app .cv-modo { display: none; }
 }
+
+/* ==========================================================================
+   Sala de treino, pedidos do Naor (26/11/2026). Só na família GlobalFly
+   (GlobalFly e Legacy Pro): as classes abaixo só existem nessas marcas.
+   ========================================================================== */
+
+/* 1) volume de quem assiste: alto-falante + barra */
+.tr-volume { display: flex; align-items: center; gap: 4px; }
+.tr-volume input[type='range'] {
+  -webkit-appearance: none; appearance: none; width: 84px; height: 4px; margin: 0 6px 0 2px; border-radius: 2px; cursor: pointer;
+  background: linear-gradient(to right, #fff var(--tr-vol, 100%), rgba(255,255,255,.28) var(--tr-vol, 100%));
+}
+.tr-volume input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.tr-volume input[type='range']::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.tr-volume input[type='range']:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+/* na imagem da página: o botão de 40 px e a barra numa cápsula escura */
+.tr-volume-palco { padding-right: 4px; border-radius: 10px; background: rgba(4, 8, 15, .66); backdrop-filter: blur(6px); }
+.av-botoes-palco .tr-volume-palco button { background: transparent; }
+.av-botoes-palco .tr-volume-palco button:hover { background: rgba(255,255,255,.16); }
+/* nos controles da janela flutuante / ao lado do gráfico */
+.tr-volume-compacto { gap: 0; }
+.tr-volume-compacto input[type='range'] { width: 64px; }
+.av-flutuante.mini .tr-volume-compacto input[type='range'] { display: none; }
+/* só o áudio: a barra cabe na pílula */
+.tr-volume-pilula input[type='range'] { width: 72px; margin-left: 4px; }
+:root:not([data-tema='escuro']) .tr-volume-pilula input[type='range'] { background: linear-gradient(to right, currentColor var(--tr-vol, 100%), rgba(127,127,127,.35) var(--tr-vol, 100%)); }
+.tr-volume-mini { display: contents; }
+
+/* 2) quantas pessoas ao vivo, em destaque em cima do chat */
+.tr-contador {
+  display: flex; align-items: center; gap: 9px; flex: none; padding: 11px 14px;
+  border-bottom: 1px solid rgba(229, 56, 59, .35);
+  background: linear-gradient(90deg, rgba(229, 56, 59, .22), rgba(229, 56, 59, .06));
+  color: var(--text);
+}
+.tr-contador i { width: 9px; height: 9px; border-radius: 50%; background: var(--ao-vivo, #E5383B); box-shadow: 0 0 0 4px rgba(229, 56, 59, .22); animation: av-pulsa 1.6s ease-in-out infinite; }
+.tr-contador b { font-size: 19px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.tr-contador span { font-size: 13.5px; font-weight: 600; opacity: .85; }
+@media (prefers-reduced-motion: reduce) { .tr-contador i { animation: none; } }
+
+/* 3) fundo do chat em outra cor, para destacar: grafite no escuro, cinza no claro */
+.av-chat.tr-chat-destaque { --tr-chat-fundo: #eceef1; background: var(--tr-chat-fundo); border-color: rgba(0,0,0,.1); }
+:root[data-tema='escuro'] .av-chat.tr-chat-destaque { --tr-chat-fundo: #16191e; border-color: rgba(255,255,255,.1); }
+:root[data-tema='escuro'] .tr-chat-destaque .av-escrever input { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+:root:not([data-tema='escuro']) .tr-chat-destaque .av-escrever input { background: #fff; }
+.av-teatro .av-chat.tr-chat-destaque { background: rgba(22, 25, 30, .9); border-color: rgba(255,255,255,.1); }
+.av-teatro .tr-chat-destaque .tr-contador { color: #fff; }
+
+/* Central no celular, na live com outros administradores: o que os alunos veem */
+.cv-palco-equipe > .av-palco { aspect-ratio: 16 / 9; }
+
+/* modo aluno da equipe (26/11/2026): a tela do aluno de verdade, por cima de tudo (o painel segue rodando) */
+.tr-modo-aluno { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; background: var(--bg); color: var(--text); }
+.tr-modo-aluno-barra {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex: none;
+  padding: 10px 18px; background: #0b0f16; border-bottom: 1px solid rgba(214, 174, 91, .35); color: #e8eef5;
+}
+.tr-modo-aluno-titulo { display: flex; align-items: center; gap: 10px; min-width: 0; color: #E4C27A; }
+.tr-modo-aluno-titulo b { color: #fff; font-size: 14px; font-weight: 800; white-space: nowrap; }
+.tr-modo-aluno-titulo small { color: #8b95a5; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-modo-aluno-acoes { display: flex; align-items: center; gap: 10px; flex: none; }
+.tr-modo-aluno-tema { display: inline-flex; padding: 3px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.tr-modo-aluno-tema button { height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: #a9b3c2; font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.tr-modo-aluno-tema button.on { background: rgba(255,255,255,.14); color: #fff; }
+.tr-modo-aluno-voltar {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 16px 0 12px; border: 0; border-radius: 10px; cursor: pointer;
+  background: linear-gradient(180deg, #E4C27A, #B78D39); color: #15110a; font: inherit; font-size: 13.5px; font-weight: 800; white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(183, 141, 57, .28), inset 0 1px 0 rgba(255,255,255,.35);
+}
+.tr-modo-aluno-voltar:focus-visible, .tr-modo-aluno-tema button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.tr-modo-aluno-pagina { flex: 1; min-height: 0; overflow-y: auto; background: var(--bg); }
+.tr-modo-aluno-pagina > .av-pagina { max-width: 1680px; margin: 0 auto; }
+@media (max-width: 900px) {
+  .tr-modo-aluno-titulo small { display: none; }
+  .tr-modo-aluno-barra { padding: 8px 12px; }
+  .tr-modo-aluno-tema { display: none; }
+}

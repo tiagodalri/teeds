@@ -28,7 +28,10 @@ import { SUPABASE } from '../teeds/config'
 import { sessaoGuardada, type SessaoTeeds } from '../teeds/conta'
 import { MARCA } from '../../marca'
 import type { CantoDaCamera } from './api'
-import { mensagemDeMembro, ouvirSimulacao, pararSimulacao, simulacaoAgora, type MensagemSimulada, type Momento } from './simulacao'
+import {
+  espelharSimulacao, espelhando, executarComando, mensagemDeMembro, ouvirSimulacao, pararSimulacaoAqui, receberEspelho, simulacaoAgora, simulacaoLocalAtiva,
+  type ComandoDaSimulacao, type EstadoDaSimulacao, type MensagemSimulada, type Momento,
+} from './simulacao'
 import { marcarTreinoAtivo } from './presenca'
 import { marcarEmUso } from '../atualizacaoSegura'
 import { aplicarFundo, fundoGuardado, guardarFundo, prepararFundo, type EscolhaDeFundo } from './fundos'
@@ -43,6 +46,23 @@ import { abrirTransmissao, gravarTransmissao, type Presenca } from './historico'
 export type ModoDoTreino = 'palco' | 'lado' | 'flutuante' | 'pilula'
 export type TamanhoDoTreino = 'P' | 'M' | 'G'
 type Fonte = 'tela' | 'camera' | 'mic'
+
+/**
+ * Uma pessoa da equipe no palco da live (26/11/2026, vários administradores juntos,
+ * como no Meet): a câmera e a tela dela, cada uma no seu quadro, lado a lado.
+ * A faixa é a recebida da sala (`Track`) ou, para a própria pessoa, a do aparelho dela.
+ */
+export interface PessoaNoPalco {
+  id: string
+  nome: string
+  eu: boolean
+  /** Quem comanda a live (o navegador onde o público, a I.A. e as telas rodam). */
+  dono: boolean
+  camera: Track | MediaStreamTrack | null
+  tela: Track | MediaStreamTrack | null
+  mic: boolean
+  falando: boolean
+}
 
 export interface EstadoDoTreino {
   fase: 'fora' | 'conectando' | 'conectada' | 'reconectando' | 'erro'
@@ -82,6 +102,33 @@ export interface EstadoDoTreino {
   teste: string | null
   /** Para quais plataformas a live abre (null = todas). */
   vitrines: string[] | null
+  /* vários administradores na mesma live (26/11/2026) */
+  /** Admin acompanhando (e ajudando a comandar) a live que outro administrador começou. */
+  coApresentando: boolean
+  /** Nome de quem comanda a live, para quem está no espelho. */
+  dono: string
+  /** O dono saiu ou caiu no meio da live (nome dele): outro administrador pode assumir. */
+  donoSumiu: string | null
+  /** Este administrador entrou no palco: a câmera, o microfone e a tela dele vão para a live. */
+  noPalco: boolean
+  /** Quem está no palco agora (o dono e quem entrou com ele). */
+  palco: PessoaNoPalco[]
+  /** A live mostra o palco lado a lado (tela de conversa com duas ou mais pessoas no palco). */
+  grade: boolean
+  /** A tela no ar é de conversa (Ao vivo, Só câmera): o palco lado a lado vale nela. */
+  conversa: boolean
+  /** O quadro que a equipe fixou para todos (`id:camera` ou `id:tela`). */
+  fixadoParaTodos: string | null
+  /** O quadro que esta pessoa fixou para si; '' = desfixou o da equipe; null = segue a equipe. */
+  fixadoAqui: string | null
+  /** Para a equipe: os membros de verdade na sala (a conta de cada um), para a ficha. */
+  membrosNaSala: Array<{ id: string; nome: string }>
+  /** Quando a live começou (para o markup "nesta live"); 0 = fora do ar. */
+  inicioDaLive: number
+  /** As faixas de voz da equipe que esta pessoa ouve direto (pelo sid). */
+  vozesDaEquipe: string[]
+  /** Esta pessoa (no palco) está falando agora: as vozes da equipe abaixam, contra microfonia. */
+  euFalando: boolean
 }
 
 const CHAVE_PLAYER = `${MARCA.id}.treino.player`
@@ -102,6 +149,8 @@ const INICIAL: EstadoDoTreino = {
   modo: 'palco', tamanho: 'M', cantoPlayer: 'inf-dir',
   local: { tela: null, camera: null, mic: null }, fundo: 'nenhum', aplicandoFundo: false,
   usandoEstudio: false, teste: null, vitrines: null,
+  coApresentando: false, dono: '', donoSumiu: null, noPalco: false, palco: [], grade: false, conversa: true, fixadoParaTodos: null, fixadoAqui: null,
+  membrosNaSala: [], inicioDaLive: 0, vozesDaEquipe: [], euFalando: false,
 }
 /** O estado do zero, mas com as preferências da pessoa e o que o admin já tem ligado. */
 const zerado = (): EstadoDoTreino => {
@@ -170,8 +219,13 @@ const erroLegivel = (e: unknown, deNovo: boolean): string => {
 export const useTreino = () => useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => estado, () => estado)
 
 const TOPICO = 'treino'
+/** Um comando do painel que outro administrador manda para o dono executar. */
+export type ComandoDoPainel = ComandoDaSimulacao | { a: 'tela'; id: string } | { a: 'fixar'; chave: string | null }
 type Pacote =
-  | { t: 'estado'; ativa: boolean; publico: number; momento: Momento | null; pausada: boolean; canto: CantoDaCamera; chatAberto?: boolean }
+  | { t: 'estado'; ativa: boolean; publico: number; momento: Momento | null; pausada: boolean; canto: CantoDaCamera; chatAberto?: boolean; conversa?: boolean; fixado?: string | null }
+  | { t: 'painel'; s: Partial<EstadoDaSimulacao>; programa: string | null; desde?: number }
+  | { t: 'eq-msgs'; lista: MensagemSimulada[] }
+  | { t: 'cmd'; c: ComandoDoPainel }
   | { t: 'msgs'; lista: MensagemSimulada[] }
   | { t: 'historico'; lista: MensagemSimulada[] }
   | { t: 'limpar' }
@@ -193,7 +247,10 @@ const ehApresentador = (p?: Participant) => {
   try { return Boolean(p?.metadata && JSON.parse(p.metadata).moderador) } catch { return false }
 }
 /** Este apresentador está mandando imagem agora (e não só com a Central aberta)? */
-const mandaVideo = (p: Participant) => [...p.trackPublications.values()].some((pub) => pub.kind === Track.Kind.Video && !pub.isMuted)
+const mandaVideo = (p: Participant) => [...p.trackPublications.values()].some((pub) => pub.kind === Track.Kind.Video && !pub.isMuted && !ehDoPalco(pub.trackName))
+/** As faixas do palco (câmera, tela e microfone de cada administrador), separadas da imagem da live. */
+const ehDoPalco = (nome?: string) => !!nome && nome.startsWith('palco-')
+const temPalco = (p: Participant) => [...p.trackPublications.values()].some((pub) => ehDoPalco(pub.trackName))
 /**
  * 23/11/2026: com dois administradores na sala, o aluno seguia o primeiro que achava (que podia
  * nem estar transmitindo) e aceitava o "fora do ar" de quem só tinha a Central aberta.
@@ -208,20 +265,55 @@ function apresentadorQueVale(remotos: RemoteParticipant[]): RemoteParticipant | 
     ?? apresentadores.find(mandaVideo) ?? apresentadores.find((p) => p.identity === donoDaLive) ?? apresentadores[0]
 }
 /** Para o admin: o último "estou no ar" de outro administrador (vale por 10 s). */
-let outroAtivo: { nome: string; quando: number } | null = null
+let outroAtivo: { id: string; nome: string; quando: number } | null = null
 /** Outro administrador está no ar agora? (vídeo, ou disse que está há menos de 10 s) */
 export function outroNoAr(): string | null {
-  if (!sala || !estado.apresentador) return null
-  const comVideo = [...sala.remoteParticipants.values()].find((p) => ehApresentador(p) && mandaVideo(p))
-  if (comVideo) return comVideo.name || 'Outro administrador'
-  return outroAtivo && Date.now() - outroAtivo.quando < 10_000 ? outroAtivo.nome : null
+  return donoRemoto()?.name || (donoRemoto() ? 'Outro administrador' : null)
+}
+/** Para o admin: o outro administrador que está comandando a live agora (ou ninguém). */
+function donoRemoto(): RemoteParticipant | null {
+  if (!sala || !estado.apresentador || simulacaoLocalAtiva()) return null
+  const remotos = [...sala.remoteParticipants.values()]
+  if (outroAtivo && Date.now() - outroAtivo.quando < 10_000) {
+    const p = sala.remoteParticipants.get(outroAtivo.id)
+    if (p) return p
+  }
+  return remotos.find((p) => ehApresentador(p) && mandaVideo(p)) ?? null
+}
+
+/**
+ * Esta aba (26/11/2026): cada aba entra na sala com uma identidade própria (conta~aba), para a mesma
+ * conta poder assistir em duas abas sem uma derrubar a outra. Vale enquanto a página estiver aberta
+ * (cair e voltar usa a mesma, e o LiveKit troca a antiga pela nova sem duplicar).
+ */
+const ABA = Math.random().toString(36).slice(2, 12).padEnd(8, '0')
+/**
+ * O nome da equipe na live (26/11/2026, pedido do Tiago): o primeiro e o último nome, sempre
+ * ("Naor Bezerra", "Victor Cordeiro", "Victor Dias"), nunca o nome completo.
+ */
+export function nomeDaEquipe(completo: string): string {
+  const partes = completo.trim().split(/\s+/).filter(Boolean)
+  // sobrenomes que só fazem sentido inteiros
+  const junto = completo.trim().match(/^(\S+)\s+(Dal\s+Ri|Dal\s+Pozzo|Del\s+\S+|Van\s+\S+)\b/i)
+  if (junto) return `${junto[1]} ${junto[2]}`
+  const particulas = new Set(['de', 'da', 'do', 'das', 'dos', 'e'])
+  const segundo = partes.slice(1).find((p) => !particulas.has(p.toLowerCase()))
+  return segundo ? `${partes[0]} ${segundo}` : (partes[0] ?? '')
+}
+/** A conta por trás de uma identidade da sala ("conta~aba" ou só "conta", de quem ainda está na versão antiga). */
+export const contaDa = (identidade: string) => identidade.split('~')[0]
+/** Os membros por conta (a mesma pessoa em duas abas conta uma vez). */
+function porConta(lista: RemoteParticipant[]): Array<{ id: string; nome: string }> {
+  const vistos = new Map<string, string>()
+  for (const p of lista) { const c = contaDa(p.identity); if (!vistos.has(c)) vistos.set(c, p.name || 'Membro') }
+  return [...vistos].map(([id, nome]) => ({ id, nome }))
 }
 
 async function pedirIngresso(sessao: SessaoTeeds | null, nome: string): Promise<{ url: string; token: string; nome: string; moderador: boolean }> {
   const r = await fetch(`${SUPABASE.url}/functions/v1/live-token`, {
     method: 'POST',
     headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao?.token ?? SUPABASE.anonKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ acao: 'treino', marca: MARCA.id, nome, vitrine: vitrine(), ...(testeAtual ? { teste: testeAtual, apresentar: apresentarNoTeste } : {}) }),
+    body: JSON.stringify({ acao: 'treino', marca: MARCA.id, nome, vitrine: vitrine(), aba: ABA, ...(testeAtual ? { teste: testeAtual, apresentar: apresentarNoTeste } : {}) }),
   })
   const dados = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(dados?.erro || `Não consegui abrir a sala de treino (${r.status}).`)
@@ -236,29 +328,225 @@ function atualizarSala() {
   if (!sala) return
   const remotos = [...sala.remoteParticipants.values()]
   const membros = remotos.filter((p) => !ehApresentador(p))
+  const pessoas = porConta(membros)
+  const souDono = estado.apresentador && simulacaoLocalAtiva()
+  // o admin que não comanda acompanha a live do dono (se houver) como quem assiste
+  const donoAdmin = estado.apresentador && !souDono ? donoRemoto() : null
+  const espelho = !!donoAdmin
+  if (espelho !== espelhando()) espelharSimulacao(espelho ? enviarComando : null)
+  if (espelho) { donoQueSumiu = null; ultimoDono = { id: donoAdmin.identity, nome: donoAdmin.name || 'Outro administrador' } }
+  else if (estado.coApresentando && ultimoDono && !souDono) {
+    // o dono saiu (ou caiu) no meio da live: dá para assumir daqui
+    donoQueSumiu = ultimoDono.nome
+    if (estado.noPalco) void sairDoPalcoAgora()
+  }
+  if (souDono) donoQueSumiu = null
+  const quemTransmite = estado.apresentador ? donoAdmin ?? undefined : apresentadorQueVale(remotos)
   let tela: Track | null = null, camera: Track | null = null
   const audios: Track[] = []
-  const quemTransmite = apresentadorQueVale(remotos)
+  /** As vozes da equipe que esta pessoa ouve direto (abaixam quando ela fala, contra microfonia). */
+  const daEquipe: Track[] = []
   for (const pub of quemTransmite?.trackPublications.values() ?? []) {
     const t = pub.track
-    if (!t || pub.isMuted) continue
+    if (!t || pub.isMuted || ehDoPalco(pub.trackName)) continue
     if (pub.source === Track.Source.ScreenShare) tela = t
     else if (pub.source === Track.Source.Camera) camera = t
-    else if (t.kind === Track.Kind.Audio) audios.push(t)
+    // o som da live: quem assiste ouve; o admin que acompanha pela Central também (fora do palco, como um aluno);
+    // no palco, ele ouve a voz do dono direto (o som da live traria a voz dele mesmo de volta)
+    else if (t.kind === Track.Kind.Audio && (!estado.apresentador || (!!donoAdmin && !estado.noPalco))) audios.push(t)
   }
-  if (estado.apresentador) anotarPresencas(membros.map((p) => ({ id: p.identity, nome: p.name || 'Membro' })))
+  // ----- o palco: quem está com câmera, tela ou microfone junto do dono
+  const conversa = souDono ? conversaLocal : estado.conversa
+  const ativa = souDono || (estado.apresentador ? espelho : estado.sim.ativa)
+  const donoId = souDono ? sala.localParticipant.identity : quemTransmite?.identity ?? null
+  const outrosNoPalco = remotos.filter((p) => ehApresentador(p) && p.identity !== donoId && temPalco(p))
+  const falando = new Set(sala.activeSpeakers.map((p) => p.identity))
+  const daSala = (p: RemoteParticipant, dono: boolean): PessoaNoPalco => {
+    const pub = (nome: string) => [...p.trackPublications.values()].find((x) => x.trackName === nome)
+    const cam = pub('palco-camera'), tl = pub('palco-tela'), mic = pub('palco-mic')
+    return {
+      id: p.identity, nome: nomeDaEquipe(p.name || (dono ? 'Apresentador' : 'Equipe')), eu: false, dono,
+      camera: cam && !cam.isMuted ? cam.track ?? null : null, tela: tl && !tl.isMuted ? tl.track ?? null : null,
+      mic: !!mic && !mic.isMuted, falando: falando.has(p.identity),
+    }
+  }
+  const eu = (dono: boolean): PessoaNoPalco => {
+    const f = fontesDoPalco()
+    return { id: sala!.localParticipant.identity, nome: nomeDaEquipe(estado.meuNome || 'Você'), eu: true, dono, camera: f.camera, tela: f.tela, mic: !!f.mic && !f.micMudo, falando: falando.has(sala!.localParticipant.identity) }
+  }
+  const palco: PessoaNoPalco[] = []
+  if (ativa && donoId) {
+    if (souDono) palco.push(eu(true))
+    else if (quemTransmite) palco.push(daSala(quemTransmite, true))
+    if (espelho && estado.noPalco) palco.push(eu(false))
+    for (const p of outrosNoPalco) palco.push(daSala(p, false))
+  }
+  const grade = ativa && conversa && palco.length >= 2
+  // ----- o que cada um recebe das faixas do palco (o resto da sala nem baixa)
+  for (const p of remotos) {
+    if (!ehApresentador(p)) continue
+    const noPalco = palco.some((x) => x.id === p.identity)
+    for (const pub of p.trackPublications.values()) {
+      if (!ehDoPalco(pub.trackName)) continue
+      const micDoDono = pub.trackName === 'palco-mic' && p.identity === donoId
+      const quer = estado.apresentador
+        ? noPalco || p.identity === donoId
+        : noPalco && grade && !micDoDono
+      if (pub.isDesired !== quer) pub.setSubscribed(quer)
+      const t = pub.track
+      if (!t || pub.isMuted || t.kind !== Track.Kind.Audio) continue
+      // a voz da equipe: o dono ouve quem está no palco; quem ajuda ouve o dono e os outros;
+      // quem assiste ouve os convidados só na tela de conversa (o dono já vem no som da live)
+      // quem acompanha pela Central fora do palco ouve como o aluno (a live + os convidados na conversa)
+      const comoAluno = !estado.apresentador || (!souDono && !estado.noPalco)
+      if (comoAluno ? quer && conversa && !micDoDono : quer) { audios.push(t); if (!comoAluno) daEquipe.push(t) }
+    }
+  }
+  if (estado.apresentador && souDono) anotarPresencas(pessoas)
   mudar({
-    membros: membros.length, nomes: membros.map((p) => p.name || 'Membro').slice(0, 80),
+    membros: pessoas.length, nomes: pessoas.map((p) => p.nome).slice(0, 80),
+    ...(estado.apresentador ? { membrosNaSala: pessoas.slice(0, 300) } : {}),
+    inicioDaLive: souDono ? registro.inicio : espelho ? inicioDoDono : 0,
     presente: estado.apresentador || !!quemTransmite, quemApresenta: quemTransmite?.name || '', tela, camera, audios,
     outroTransmitindo: outroNoAr(),
+    coApresentando: espelho, dono: donoAdmin?.name || (espelho ? 'Outro administrador' : ''), donoSumiu: donoQueSumiu,
+    palco, grade, conversa,
+    vozesDaEquipe: daEquipe.map((t) => t.sid ?? t.mediaStreamTrack.id),
+    euFalando: (souDono || estado.noPalco) && falando.has(sala.localParticipant.identity),
+    ...(souDono ? { fixadoParaTodos: fixadoDaEquipe } : {}),
   })
+  sincronizarPalco()
+}
+
+/* ------------------------------------------ vários administradores (26/11/2026)
+   O dono (quem começou) comanda: o público, a I.A. e as telas rodam no navegador dele.
+   Os outros administradores entram no espelho: veem o que os alunos veem, mexem no
+   mesmo painel (o comando vai para o dono) e, ao "Entrar no palco", a câmera, o
+   microfone e a tela deles vão para a live, cada um no seu quadro (como no Meet). */
+
+let ultimoDono: { id: string; nome: string } | null = null
+/** No espelho: quando a live do dono começou (vem no painel dele). */
+let inicioDoDono = 0
+let donoQueSumiu: string | null = null
+/** A tela no ar do dono é de conversa (o painel informa; no celular, sem telas, é sempre). */
+let conversaLocal = true
+let fixadoDaEquipe: string | null = null
+/** Para o dono: põe no ar a tela que outro administrador escolheu (o painel registra). */
+let telaPedida: ((id: string) => void) | null = null
+/** No espelho: a tela que está no ar no dono (o painel marca). */
+let programaDoDono: ((id: string) => void) | null = null
+export function ligarTelasDoTreino(op: { porNoAr: (id: string) => void; marcarNoAr: (id: string) => void } | null): void {
+  telaPedida = op?.porNoAr ?? null
+  programaDoDono = op?.marcarNoAr ?? null
+}
+/** O painel avisa se a tela no ar é de conversa (vale para o palco lado a lado). */
+export function informarTelaDoTreino(conversa: boolean): void {
+  if (conversa === conversaLocal) return
+  conversaLocal = conversa
+  if (simulacaoLocalAtiva()) { void enviar(pacoteDeEstado()); atualizarSala() }
+}
+
+/** De onde vêm a câmera, a tela e o microfone do palco: do painel (estúdio) ou dos botões avulsos. */
+type FontesDoPalco = { camera: MediaStreamTrack | null; tela: MediaStreamTrack | null; mic: MediaStreamTrack | null; micMudo: boolean }
+let fontesDoPainel: (() => FontesDoPalco) | null = null
+const fontesAvulsas = (): FontesDoPalco => ({
+  camera: estado.local.camera?.getVideoTracks()[0] ?? null,
+  tela: estado.local.tela?.getVideoTracks()[0] ?? null,
+  mic: estado.local.mic?.getAudioTracks()[0] ?? null,
+  micMudo: false,
+})
+const fontesDoPalco = (): FontesDoPalco => (fontesDoPainel ?? fontesAvulsas)()
+/** O painel registra as fontes dele (e chama de novo, sem argumento, quando elas mudam). */
+export function definirFontesDoPalco(f?: (() => FontesDoPalco) | null): void {
+  if (f !== undefined) fontesDoPainel = f
+  atualizarSala()
+}
+
+/** No espelho: o comando vai para o dono executar. */
+function enviarComando(c: ComandoDoPainel): void {
+  const id = ultimoDono?.id
+  if (id) void enviar({ t: 'cmd', c }, [id])
+}
+/** Põe uma tela no ar: no dono, aqui; no espelho, pede ao dono. */
+export function porTelaNoAr(id: string, aqui: (id: string) => void): void {
+  if (estado.coApresentando) { enviarComando({ a: 'tela', id }); return }
+  aqui(id)
+}
+/** Fixar um quadro só para mim (null = voltar a seguir a equipe; '' = nenhum). */
+export function fixarAqui(chave: string | null): void { mudar({ fixadoAqui: chave }) }
+/** Fixar um quadro para todos (só a equipe). */
+export function fixarParaTodos(chave: string | null): void {
+  if (!estado.apresentador) return
+  if (estado.coApresentando) { enviarComando({ a: 'fixar', chave }); mudar({ fixadoAqui: null }); return }
+  fixadoDaEquipe = chave
+  mudar({ fixadoParaTodos: chave, fixadoAqui: null })
+  if (simulacaoLocalAtiva()) void enviar(pacoteDeEstado())
+}
+
+/** Entra no palco da live que outro administrador comanda (câmera, microfone e tela vão junto). */
+export function entrarNoPalco(): void {
+  if (!estado.apresentador || !estado.coApresentando) return
+  mudar({ noPalco: true })
+  atualizarSala()
+}
+export function sairDoPalco(): Promise<void> { return sairDoPalcoAgora() }
+async function sairDoPalcoAgora(): Promise<void> {
+  if (estado.noPalco) mudar({ noPalco: false })
+  await sincronizarPalcoAgora()
+}
+
+/** As faixas do palco que este navegador está mandando agora. */
+const doPalco: Partial<Record<'camera' | 'tela' | 'mic', { local: LocalVideoTrack | LocalAudioTrack; bruta: MediaStreamTrack }>> = {}
+let filaDoPalco: Promise<unknown> = Promise.resolve()
+function sincronizarPalco() { filaDoPalco = filaDoPalco.then(sincronizarPalcoAgora).catch(() => undefined) }
+async function sincronizarPalcoAgora(): Promise<void> {
+  const r = sala
+  // manda: o dono, só com outro administrador já no palco (sem ninguém, não gasta a internet dele à toa);
+  // quem ajuda, depois de entrar no palco
+  const convidadoNoPalco = r ? [...r.remoteParticipants.values()].some((p) => ehApresentador(p) && temPalco(p)) : false
+  const manda = !!r && estado.apresentador && ((simulacaoLocalAtiva() && convidadoNoPalco) || (estado.coApresentando && estado.noPalco))
+  const f = manda ? fontesDoPalco() : { camera: null, tela: null, mic: null, micMudo: false }
+  for (const qual of ['camera', 'tela', 'mic'] as const) {
+    const bruta = f[qual]
+    const atual = doPalco[qual]
+    if (atual && atual.bruta === bruta) {
+      if (qual === 'mic' && atual.local.isMuted !== f.micMudo) await (f.micMudo ? atual.local.mute() : atual.local.unmute()).catch(() => undefined)
+      continue
+    }
+    if (atual) { delete doPalco[qual]; if (r) await r.localParticipant.unpublishTrack(atual.local, false).catch(() => undefined) }
+    if (!bruta || !r || sala !== r) continue
+    const local = qual === 'mic' ? new LocalAudioTrack(bruta, undefined, true) : new LocalVideoTrack(bruta, undefined, true)
+    doPalco[qual] = { local, bruta }
+    const source = qual === 'tela' ? Track.Source.ScreenShare : qual === 'camera' ? Track.Source.Camera : Track.Source.Microphone
+    try {
+      await r.localParticipant.publishTrack(local, { name: `palco-${qual}`, source, ...(qual === 'tela' ? { simulcast: false, screenShareEncoding: { maxBitrate: 2_500_000, maxFramerate: 15 } } : {}) })
+      if (qual === 'mic' && f.micMudo) await local.mute()
+    } catch { if (doPalco[qual]?.local === local) delete doPalco[qual] }
+  }
 }
 
 /* --------------------------------------------- do admin para quem assiste */
 
 function pacoteDeEstado(): Pacote {
   const s = simulacaoAgora()
-  return { t: 'estado', ativa: s.ativa, publico: s.publicoAgora, momento: s.momento, pausada: s.pausada, canto, chatAberto: s.chatAberto }
+  return { t: 'estado', ativa: s.ativa, publico: s.publicoAgora, momento: s.momento, pausada: s.pausada, canto, chatAberto: s.chatAberto, conversa: conversaLocal, fixado: fixadoDaEquipe }
+}
+/** Para os outros administradores: o painel do dono (sem as mensagens, que vão à parte). */
+function pacoteDoPainel(): Pacote {
+  const { mensagens: _m, ...resto } = simulacaoAgora()
+  return { t: 'painel', s: resto, programa: programaAtual?.() ?? null, desde: registro.inicio }
+}
+/** O painel diz qual tela está no ar (para o espelho dos outros administradores). */
+let programaAtual: (() => string | null) | null = null
+export function informarProgramaDoTreino(f: (() => string | null) | null): void { programaAtual = f }
+const outrosAdministradores = () => (sala ? [...sala.remoteParticipants.values()].filter(ehApresentador).map((p) => p.identity) : [])
+/** Avisa os outros administradores do painel e das mensagens (de 40 em 40: o pacote da sala é pequeno). */
+function contarParaAEquipe(novas?: MensagemSimulada[]) {
+  const ids = outrosAdministradores()
+  if (!ids.length) return
+  void enviar(pacoteDoPainel(), ids)
+  const lista = novas ?? simulacaoAgora().mensagens.slice(-160)
+  for (let i = 0; i < lista.length; i += 40) void enviar({ t: 'eq-msgs', lista: lista.slice(i, i + 40) }, ids)
 }
 
 /** Repassa à sala o que a simulação produziu (só as mensagens novas). */
@@ -270,16 +558,21 @@ function repassar() {
   // mensagem de membro fica só com o apresentador: os outros membros não a recebem
   const publicas = novas.filter((m) => !m.membro)
   if (publicas.length) void enviar({ t: 'msgs', lista: publicas })
+  // os outros administradores veem tudo (as dos membros também: é o "Para a equipe" deles)
+  if (novas.length) contarParaAEquipe(novas)
 }
 
 function comecarARepassar() {
   enviadas = new Set(simulacaoAgora().mensagens.map((m) => m.id))
   let ultimo = ''
-  let eraAtiva = simulacaoAgora().ativa
+  let ultimoPainel = ''
+  let eraAtiva = simulacaoLocalAtiva()
   let eraNoArAntes = eraAtiva
   desligarEscuta = ouvirSimulacao(() => {
+    // 26/11/2026: no espelho (live de outro administrador) este navegador não transmite nada
+    if (espelhando()) { eraAtiva = false; eraNoArAntes = false; return }
     // Começar simulação = a transmissão começa; Encerrar = acaba, na hora (20/10/2026)
-    const ativa = simulacaoAgora().ativa
+    const ativa = simulacaoLocalAtiva()
     // 23/11/2026: ao entrar no ar, o "estou no ar" vai antes das mensagens (quem assiste aceita só o dono)
     if (ativa && !eraNoArAntes) void enviar(pacoteDeEstado())
     // 24/11/2026: fora do ar não repassa mensagens nem "limpar" (outro admin pode estar no ar)
@@ -291,10 +584,19 @@ function comecarARepassar() {
     eraNoArAntes = ativa
     const e = JSON.stringify(pacoteDeEstado())
     if (e !== ultimo) { ultimo = e; void enviar(JSON.parse(e)) }
+    const pn = JSON.stringify(pacoteDoPainel())
+    if (pn !== ultimoPainel && outrosAdministradores().length) { ultimoPainel = pn; void enviar(JSON.parse(pn), outrosAdministradores()) }
+    if (ativa !== eraAtivaPalco) { eraAtivaPalco = ativa; atualizarSala() }
   })
   // de tempos em tempos, o estado completo (quem perdeu um pacote se acerta) — só no ar
-  timerEstado = window.setInterval(() => { if (estaNoAr()) void enviar(pacoteDeEstado()) }, 3000)
+  timerEstado = window.setInterval(() => {
+    if (!estaNoAr()) return
+    void enviar(pacoteDeEstado())
+    const ids = outrosAdministradores()
+    if (ids.length) void enviar(pacoteDoPainel(), ids)
+  }, 3000)
 }
+let eraAtivaPalco = false
 
 /* ------------------------------------ avisar os GF Members que está no ar */
 
@@ -311,7 +613,7 @@ let anunciado = false
  * No ar = a simulação rodando. Antes de "Começar simulação", câmera e tela são
  * só a prévia do admin; ao "Encerrar", tudo sai do ar para os membros na hora.
  */
-const estaNoAr = () => simulacaoAgora().ativa
+const estaNoAr = () => simulacaoLocalAtiva()
 
 function anunciar(noAr: boolean, aoFechar = false) {
   // o token mais novo (a sessão é renovada pelo app; o ensaio pode passar de 1 h)
@@ -367,12 +669,16 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
   // a Central usa o teste que ela mesma ligou; quem assiste, o do link que abriu
   testeAtual = comoCentral ? (apresentarNoTeste ? testeAtual : null) : testeDoLink()
   mudar({ ...zerado(), fase: 'conectando' })
-  donoDaLive = null; donoVistoEm = 0; outroAtivo = null
+  donoDaLive = null; donoVistoEm = 0; outroAtivo = null; ultimoDono = null; donoQueSumiu = null
   try {
     const ingresso = await pedirIngresso(sessao, nome)
     // mesmas escolhas da live: H.264 no chip de vídeo, uma camada menor só
     const r = new Room({
-      adaptiveStream: true, dynacast: true,
+      // 26/11/2026: minimizar ou trocar de aba não pausa mais a imagem (voltava preta por uns segundos)
+      adaptiveStream: { pauseVideoInBackground: false }, dynacast: true,
+      // 26/11/2026: a sala nunca desliga sozinha a câmera, o microfone ou a imagem das telas
+      // (são do painel; ao cair e voltar, as mesmas faixas entram de novo)
+      stopLocalTrackOnUnpublish: false,
       publishDefaults: {
         videoCodec: 'h264',
         screenShareEncoding: { maxBitrate: 2_500_000, maxFramerate: 15 },
@@ -390,12 +696,19 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
       .on(RoomEvent.TrackPublished, atualizarSala)
       .on(RoomEvent.TrackUnpublished, atualizarSala)
       .on(RoomEvent.ParticipantDisconnected, atualizarSala)
+      .on(RoomEvent.ActiveSpeakersChanged, atualizarSala)
       .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
         atualizarSala()
         // quem chega no meio recebe as últimas mensagens e o estado
         if (estado.apresentador && estaNoAr()) {
           void enviar(pacoteDeEstado(), [p.identity])
           void enviar({ t: 'historico', lista: simulacaoAgora().mensagens.filter((m) => !m.membro).slice(-60) }, [p.identity])
+          // outro administrador chegou: o painel e o chat inteiro, para ele ajudar a comandar
+          if (ehApresentador(p)) {
+            void enviar(pacoteDoPainel(), [p.identity])
+            const todas = simulacaoAgora().mensagens.slice(-160)
+            for (let i = 0; i < todas.length; i += 40) void enviar({ t: 'eq-msgs', lista: todas.slice(i, i + 40) }, [p.identity])
+          }
         }
       })
       .on(RoomEvent.Reconnecting, () => mudar({ fase: 'reconectando' }))
@@ -432,9 +745,44 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
         try { pacote = JSON.parse(new TextDecoder().decode(dados)) } catch { return }
         if (estado.apresentador) {
           // do membro: a mensagem entra no chat da simulação (e volta para todos)
-          if (pacote.t === 'membro') { mensagemDeMembro(p.name || 'Membro', String(pacote.texto)); if (registro.inicio) registro.mensagens++ }
-          // de outro administrador: está no ar? (bloqueia começar outra live por cima)
-          if (pacote.t === 'estado' && ehApresentador(p)) { outroAtivo = pacote.ativa ? { nome: p.name || 'Outro administrador', quando: Date.now() } : null; atualizarSala() }
+          if (pacote.t === 'membro') { if (estaNoAr()) { mensagemDeMembro(p.name || 'Membro', String(pacote.texto)); if (registro.inicio) registro.mensagens++ } return }
+          if (!ehApresentador(p)) return
+          // de outro administrador: está no ar? (quem não comanda entra no espelho dele)
+          if (pacote.t === 'estado') {
+            outroAtivo = pacote.ativa ? { id: p.identity, nome: p.name || 'Outro administrador', quando: Date.now() } : (outroAtivo?.id === p.identity ? null : outroAtivo)
+            // o dono encerrou de propósito: não é "caiu" (ninguém precisa assumir)
+            if (!pacote.ativa && ultimoDono?.id === p.identity) ultimoDono = null
+            if (pacote.ativa && espelhando()) mudar({ canto: pacote.canto, conversa: pacote.conversa !== false, fixadoParaTodos: pacote.fixado ?? null })
+            atualizarSala()
+            return
+          }
+          if (pacote.t === 'fim') { if (ultimoDono?.id === p.identity) { ultimoDono = null; outroAtivo = null; atualizarSala() } return }
+          // o dono executa o comando que outro administrador deu no painel
+          if (pacote.t === 'cmd' && estaNoAr()) {
+            const c = pacote.c
+            if (c.a === 'tela') telaPedida?.(c.id)
+            else if (c.a === 'fixar') fixarParaTodos(c.chave)
+            else executarComando(c)
+            return
+          }
+          // o painel do dono no ar: entra no espelho antes de tudo (o histórico do chat vem logo atrás)
+          if (pacote.t === 'painel' && pacote.s.ativa && !espelhando()) {
+            outroAtivo = { id: p.identity, nome: p.name || 'Outro administrador', quando: Date.now() }
+            atualizarSala()
+          }
+          // no espelho: o painel e o chat do dono
+          if (!espelhando() || p.identity !== ultimoDono?.id) return
+          if (pacote.t === 'painel') {
+            outroAtivo = { id: p.identity, nome: p.name || 'Outro administrador', quando: Date.now() }
+            receberEspelho(pacote.s)
+            if (pacote.desde && pacote.desde !== inicioDoDono) { inicioDoDono = pacote.desde; mudar({ inicioDaLive: pacote.desde }) }
+            if (pacote.programa) programaDoDono?.(pacote.programa)
+          } else if (pacote.t === 'eq-msgs') {
+            const atuais = simulacaoAgora().mensagens
+            const ja = new Set(atuais.map((m) => m.id))
+            const novas = pacote.lista.filter((m) => !ja.has(m.id))
+            if (novas.length) receberEspelho({ mensagens: [...atuais, ...novas].sort((a, b) => a.hora - b.hora).slice(-300) })
+          } else if (pacote.t === 'limpar') receberEspelho({ mensagens: [] })
           return
         }
         if (!ehApresentador(p)) return
@@ -450,10 +798,20 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
         if (pacote.t === 'estado') {
           canto = pacote.canto
           if (pacote.ativa && estado.encerrada) mudar({ encerrada: false })
-          mudar({ canto: pacote.canto, sim: { ativa: pacote.ativa, publico: pacote.publico, momento: pacote.momento, pausada: pacote.pausada, chatAberto: pacote.chatAberto !== false } })
+          mudar({ canto: pacote.canto, conversa: pacote.conversa !== false, fixadoParaTodos: pacote.fixado ?? null, sim: { ativa: pacote.ativa, publico: pacote.publico, momento: pacote.momento, pausada: pacote.pausada, chatAberto: pacote.chatAberto !== false } })
+          atualizarSala()
         } else if (pacote.t === 'msgs') {
           const ja = new Set(estado.mensagens.map((m) => m.id))
-          mudar({ mensagens: [...estado.mensagens, ...pacote.lista.filter((m) => !m.membro && !ja.has(m.id))].slice(-200) })
+          // a minha mensagem que a equipe aprovou volta como pública: aqui ela já está (fica a minha, marcada)
+          const minhas = estado.mensagens.filter((m) => m.minha && !m.aprovada)
+          let lista = estado.mensagens
+          const novas = pacote.lista.filter((m) => {
+            if (m.membro || ja.has(m.id)) return false
+            const eraMinha = m.deMembro && minhas.find((x) => x.texto === m.texto && !x.aprovada)
+            if (eraMinha) { eraMinha.aprovada = true; lista = lista.map((x) => (x.id === eraMinha.id ? { ...x, aprovada: true } : x)); return false }
+            return true
+          })
+          mudar({ mensagens: [...lista, ...novas].slice(-200) })
         } else if (pacote.t === 'historico') {
           // o histórico chega sem as mensagens de membros; as minhas, já na tela, ficam
           const minhas = estado.mensagens.filter((m) => m.minha)
@@ -472,7 +830,7 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
     // o que o admin já tinha ligado antes de a sala abrir entra agora
     if (ingresso.moderador && estaNoAr() && [...r.remoteParticipants.values()].some((p) => ehApresentador(p) && mandaVideo(p))) {
       // 23/11/2026: caiu da rede, e outro administrador assumiu a live enquanto isso
-      pararSimulacao()
+      pararSimulacaoAqui()
       mudar({ erro: 'Outro administrador assumiu a live enquanto você estava sem conexão. A sua transmissão foi encerrada.' })
     } else if (ingresso.moderador) await republicarFontes()
     atualizarSala()
@@ -488,6 +846,13 @@ async function entrarDeVerdade(sessao: SessaoTeeds | null, nome: string, comoCen
 /** Sai da sala do LiveKit (sem mexer no que o admin tem ligado). */
 async function desconectar(): Promise<void> {
   if (estado.apresentador) pararDeAnunciar()
+  for (const k of Object.keys(doPalco) as Array<keyof typeof doPalco>) {
+    const d = doPalco[k]
+    delete doPalco[k]
+    if (d && sala) await sala.localParticipant.unpublishTrack(d.local, false).catch(() => undefined)
+  }
+  espelharSimulacao(null)
+  outroAtivo = null; ultimoDono = null; donoQueSumiu = null
   desligarEscuta?.(); desligarEscuta = null
   window.clearInterval(timerEstado)
   for (const k of Object.keys(publicadas) as Array<keyof typeof publicadas>) delete publicadas[k]
@@ -506,7 +871,8 @@ export async function sairDoTreino(): Promise<void> {
   const eraApresentador = estado.apresentador
   if (eraApresentador && registro.inicio) fecharRegistro()
   await desconectar()
-  if (eraApresentador) pararSimulacao()
+  if (eraApresentador) pararSimulacaoAqui()
+  fixadoDaEquipe = null
   desligarFontesLocais()
   mudar({ ...zerado(), local: { tela: null, camera: null, mic: null } })
 }
@@ -806,7 +1172,7 @@ function resumoDoRegistro(fim = false) {
 function comecarRegistro() {
   window.clearInterval(registro.timer)
   registro.id = null; registro.inicio = Date.now(); registro.pessoas = new Map(); registro.pico = 0; registro.mensagens = 0
-  if (sala) anotarPresencas([...sala.remoteParticipants.values()].filter((p) => !ehApresentador(p)).map((p) => ({ id: p.identity, nome: p.name || 'Membro' })))
+  if (sala) anotarPresencas(porConta([...sala.remoteParticipants.values()].filter((p) => !ehApresentador(p))))
   void abrirTransmissao({ apresentador: estado.meuNome, teste: !!estado.teste, vitrines: estado.vitrines }).then((id) => { if (registro.inicio) registro.id = id })
   registro.timer = window.setInterval(() => { if (registro.id) gravarTransmissao(registro.id, resumoDoRegistro()) }, 30_000)
 }

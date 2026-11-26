@@ -106,6 +106,7 @@ function audio(): AudioContext {
   paraAlunos = ctx.createMediaStreamDestination()
   paraAlunos.channelCount = 2
   fone = ctx.createGain()
+  if (retornoMudo) fone.gain.value = 0
   fone.connect(ctx.destination)
   ctx.addEventListener('statechange', () => mudar({ somBloqueado: ctx?.state !== 'running' }))
   mudar({ somBloqueado: ctx.state !== 'running' })
@@ -1164,6 +1165,41 @@ export function alternarAparelho(a: Aparelho): void {
   const f = todasAsFontes().find((x) => x.tipo === tipo && chaveDaCaptura(x) === chave)
     ?? { id: 'aparelho', tipo, nome: tipo, visivel: true, bloqueada: true, x: 0, y: 0, w: LARGURA, h: ALTURA, recorte: { esq: 0, topo: 0, dir: 0, baixo: 0 }, dispositivo: '' }
   void ligarCaptura(f)
+}
+
+/* ===================================== vários administradores (26/11/2026) */
+
+/** As faixas da câmera, da tela e do microfone do painel (o que entra no palco da live com outros administradores). */
+export function faixasDosAparelhos(): { camera: MediaStreamTrack | null; tela: MediaStreamTrack | null; mic: MediaStreamTrack | null; micMudo: boolean } {
+  const viva = (chave: string, tipo: 'video' | 'audio') => {
+    const s = capturas.get(chave)?.stream
+    const t = (tipo === 'video' ? s?.getVideoTracks() : s?.getAudioTracks())?.[0]
+    return t && t.readyState === 'live' ? t : null
+  }
+  return { camera: viva('camera:padrao', 'video'), tela: viva('tela', 'video'), mic: viva('mic:padrao', 'audio'), micMudo: microfoneMudo() }
+}
+
+/** A tela no ar é de conversa (Ao vivo, Só câmera)? Nelas a live com vários administradores vira o palco lado a lado. */
+export function telaDeConversa(id = estado.config?.programa): boolean {
+  const t = id ? cenaPorId(id)?.modelo?.tipo : undefined
+  return t === 'aovivo' || t === 'camera'
+}
+
+/**
+ * Na live de outro administrador, o painel deste navegador não toca o próprio som (as músicas e vídeos
+ * das telas): o som vem da live do dono, e tocar os dois dobrava a vinheta (26/11/2026).
+ */
+let retornoMudo = false
+export function silenciarRetorno(sim: boolean): void {
+  if (retornoMudo === sim) return
+  retornoMudo = sim
+  if (fone && ctx) fone.gain.setTargetAtTime(sim ? 0 : 1, ctx.currentTime, 0.05)
+}
+
+/** No navegador de quem só acompanha a live de outro administrador: marca a tela que está no ar lá (sem salvar nem transicionar). */
+export function espelharPrograma(id: string): void {
+  if (!estado.config || estado.config.programa === id || !cenaPorId(id)) return
+  mudar({ config: { ...estado.config, programa: id } })
 }
 
 /* ============================================== telas na nuvem (23/11/2026) */

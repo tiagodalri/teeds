@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { apagarBloco, gerarMensagens, listarBlocos, salvarBloco, type BlocoDoChat, type DadosDoBloco } from '../../core/live/blocos'
+import { apagarBloco, gerarMensagens, listarBlocos, salvarBloco, salvarOrdemDosBlocos, type BlocoDoChat, type DadosDoBloco } from '../../core/live/blocos'
 import { mudarVelocidade, pararBloco, tocarBloco, useSimulacao, type Velocidade } from '../../core/live/simulacao'
 import './blocos-do-chat.css'
 
@@ -26,6 +26,7 @@ const ICONES = {
   ok: 'M5 12.5l4.5 4.5L19 7.5',
   brilho: 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z',
   girar: 'M20 11a8 8 0 10-2.3 5.7M20 4v7h-7',
+  alca: 'M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01',
 }
 
 /** `embutido` (18/11/2026): dentro do cartão "Comentários da I.A." do painel da sala, como "Roteiros prontos". */
@@ -54,6 +55,23 @@ export function BlocosDoChat({ sessao, embutido = false, comandando = false }: {
     setEditando(null)
   }
 
+  /* a ordem dos roteiros (26/11/2026, Tiago): arrastar pela alça (ou setas do teclado nela) e a ordem vale para toda a equipe */
+  const [arrastando, setArrastando] = useState<string | null>(null)
+  const antesDeArrastar = useRef<BlocoDoChat[] | null>(null)
+  const mover = (id: string, para: number) => setBlocos((l) => {
+    if (!l) return l
+    const de = l.findIndex((x) => x.id === id)
+    if (de < 0 || para < 0 || para >= l.length || de === para) return l
+    const nova = [...l]; const [b] = nova.splice(de, 1); nova.splice(para, 0, b)
+    return nova
+  })
+  const guardarOrdem = async (lista: BlocoDoChat[] | null, antes: BlocoDoChat[] | null) => {
+    if (!sessao || !lista || !antes || lista.map((b) => b.id).join() === antes.map((b) => b.id).join()) return
+    try { await salvarOrdemDosBlocos(sessao, lista.map((b) => b.id)); setErro(null) }
+    catch (e) { setErro((e as Error).message); setBlocos(antes) }
+  }
+  const blocosRef = useRef(blocos)
+  blocosRef.current = blocos
   const total = (blocos ?? []).reduce((t, b) => t + b.mensagens.length, 0)
   const tocando = sim.bloco
 
@@ -86,10 +104,31 @@ export function BlocosDoChat({ sessao, embutido = false, comandando = false }: {
           : blocos.length === 0 ? <div className="bc-vazio">{embutido ? 'Nenhum roteiro ainda. Crie o primeiro: dê um tema, descreva as mensagens e gere com a I.A.' : 'Nenhum bloco ainda. Crie o primeiro: dê um tema, descreva as mensagens e gere com a I.A.'}</div>
             : (
               <ul className="bc-lista">
-                {blocos.map((b) => {
+                {blocos.map((b, i) => {
                   const esta = tocando?.id === b.id
                   return (
-                    <li key={b.id} className={esta ? 'tocando' : ''}>
+                    <li key={b.id} className={`${esta ? 'tocando' : ''} ${arrastando === b.id ? 'arrastando' : ''}`}
+                      draggable={!!sessao && blocos.length > 1}
+                      onDragStart={(e) => { antesDeArrastar.current = blocos; setArrastando(b.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', b.id) }}
+                      onDragOver={(e) => { if (!arrastando) return; e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (arrastando !== b.id) mover(arrastando, i) }}
+                      onDrop={(e) => e.preventDefault()}
+                      onDragEnd={() => { setArrastando(null); void guardarOrdem(blocosRef.current, antesDeArrastar.current); antesDeArrastar.current = null }}>
+                      {sessao && blocos.length > 1 && (
+                        <span className="bc-alca" role="button" tabIndex={0} aria-label={`Mover o roteiro ${b.nome || 'sem nome'} (posição ${i + 1} de ${blocos.length}). Use as setas para cima e para baixo.`}
+                          title="Arraste para mudar a ordem"
+                          onKeyDown={(e) => {
+                            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
+                            e.preventDefault()
+                            const antes = blocos
+                            const para = i + (e.key === 'ArrowUp' ? -1 : 1)
+                            if (para < 0 || para >= blocos.length) return
+                            const nova = [...blocos]; const [x] = nova.splice(i, 1); nova.splice(para, 0, x)
+                            setBlocos(nova); void guardarOrdem(nova, antes)
+                            window.setTimeout(() => document.querySelectorAll<HTMLElement>('.bc-alca')[para]?.focus(), 0)
+                          }}>
+                          <Icone d={ICONES.alca} />
+                        </span>
+                      )}
                       <button type="button" className={`bc-play ${esta ? 'on' : ''}`} disabled={!esta && (!sim.ativa || !b.mensagens.length)}
                         aria-label={esta ? `Parar o bloco ${b.nome}` : `Dar o play no bloco ${b.nome}`}
                         title={esta ? 'Parar' : !sim.ativa ? 'O play fica liberado quando a transmissão começar' : !b.mensagens.length ? 'Aprove mensagens para dar o play' : 'Mandar para o chat'}

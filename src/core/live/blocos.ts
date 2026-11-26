@@ -46,6 +46,14 @@ export async function salvarBloco(sessao: SessaoTeeds, dados: DadosDoBloco, id?:
   return linhas[0]
 }
 
+/** A ordem dos roteiros (26/11/2026): a equipe arrasta e a ordem vale para todos. */
+export async function salvarOrdemDosBlocos(sessao: SessaoTeeds, ids: string[]): Promise<void> {
+  const r = await Promise.all(ids.map((id, i) => fetch(`${SUPABASE.url}/rest/v1/chat_blocos?id=eq.${id}`, {
+    method: 'PATCH', headers: cabecalho(sessao.token), body: JSON.stringify({ ordem: i + 1 }),
+  }).then((x) => x.ok).catch(() => false)))
+  if (r.some((ok) => !ok)) throw new Error('Não consegui salvar a nova ordem. Confira a internet e tente de novo.')
+}
+
 export async function apagarBloco(sessao: SessaoTeeds, id: string): Promise<void> {
   const r = await fetch(`${SUPABASE.url}/rest/v1/chat_blocos?id=eq.${id}`, { method: 'DELETE', headers: cabecalho(sessao.token) })
   if (!r.ok) throw new Error('Não consegui apagar o bloco.')

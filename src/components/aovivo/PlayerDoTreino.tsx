@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as PEvent, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type PointerEvent as PEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { Track } from 'livekit-client'
 import {
   definirCantoDoPlayer, definirModoDoTreino, definirTamanhoDoTreino, mandarNoTreino, sairDoTreino, treinoTrocouDeTela, useTreino,
-  cantoDoTreino, liberarSomDoTreino, type ModoDoTreino,
+  cantoDoTreino, liberarSomDoTreino, type EstadoDoTreino, type ModoDoTreino,
 } from '../../core/live/treino'
 import { falarComoApresentador, useSimulacao, type MensagemSimulada } from '../../core/live/simulacao'
 import { Icone, abrirPorCima, podeAbrirPorCima, useCelular, useLargo } from './AoVivo'
 import './aovivo.css'
 import { naPagina as emPxDaPagina } from '../../core/escala'
+import { alternarMudoDoTreino, definirVolumeDoTreino, useVolumeDoTreino, volumeAjustavel } from '../../core/live/volumeDoTreino'
+import { FAMILIA_GF } from '../../marca'
+import { PalcoLadoALado } from './PalcoLadoALado'
 
 /**
  * A sala de treino fora da página "Ao vivo" (20/10/2026, pedido do Tiago:
@@ -22,6 +25,20 @@ import { naPagina as emPxDaPagina } from '../../core/escala'
  */
 
 const fmt = (n: number) => n.toLocaleString('pt-BR')
+
+/**
+ * Modo aluno da equipe (26/11/2026): a tela do aluno de verdade (AssistirTreino), alimentada com o
+ * estado de quem comanda visto como aluno. Fora do modo aluno, cada tela lê o treino normalmente.
+ */
+export interface VisaoDeAluno { estado: EstadoDoTreino; nome: string }
+const VisaoDoTreino = createContext<VisaoDeAluno | null>(null)
+export const VisaoDoTreinoProvider = VisaoDoTreino.Provider
+/** O treino como esta tela mostra: o real, ou o "como o aluno vê" do modo aluno. */
+export function useTreinoNaTela(): EstadoDoTreino {
+  const real = useTreino()
+  return useContext(VisaoDoTreino)?.estado ?? real
+}
+const useModoAluno = () => useContext(VisaoDoTreino)
 const hora = (ms: number) => new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 /** Liga uma faixa recebida a um <video>. */
@@ -43,30 +60,94 @@ function VideoLocal({ fluxo, className, espelhar = false }: { fluxo: MediaStream
   if (!fluxo) return null
   return <video ref={ref} className={className} autoPlay playsInline muted style={espelhar ? { transform: 'scaleX(-1)' } : undefined} />
 }
-function AudioDaFaixa({ faixa }: { faixa: Track }) {
+function AudioDaFaixa({ faixa, abafar = false }: { faixa: Track; abafar?: boolean }) {
   const ref = useRef<HTMLAudioElement>(null)
+  const { nivel, mudo } = useVolumeDoTreino()
+  // a voz de outro administrador abaixa (sem sumir) enquanto esta pessoa fala no palco: evita microfonia e eco
+  const alvo = abafar ? nivel * 0.18 : nivel
   useEffect(() => { const el = ref.current; if (!el) return; faixa.attach(el); return () => { faixa.detach(el) } }, [faixa])
+  // o volume escolhido por quem assiste (26/11/2026); reaplicado a cada troca de faixa
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (!FAMILIA_GF && !abafar) return
+    el.muted = mudo
+    try { el.volume = Math.max(0, Math.min(1, alvo)) } catch { /* iOS: só leitura */ }
+  }, [faixa, alvo, mudo, abafar])
   return <audio ref={ref} autoPlay />
+}
+
+const ICONE_SOM = {
+  base: 'M4 10v4h4l5 4V6L8 10z',
+  baixo: 'M16.5 9.5a3.5 3.5 0 010 5',
+  alto: 'M16.5 9.5a3.5 3.5 0 010 5M19 7a7 7 0 010 10',
+  mudo: 'M16 9.5l5 5M21 9.5l-5 5',
+}
+
+/**
+ * Aumentar, diminuir e tirar o som (26/11/2026, pedido do Naor). O botão do
+ * alto-falante liga e desliga; a barra ajusta o nível. Onde o navegador não
+ * deixa mudar o volume (iPhone), fica só o botão.
+ */
+export function ControleDeVolume({ barra = true, className = '' }: { barra?: boolean; className?: string }) {
+  const { nivel, mudo } = useVolumeDoTreino()
+  if (!FAMILIA_GF) return null
+  const semSom = mudo || nivel === 0
+  const rotulo = semSom ? 'Ativar o som' : 'Tirar o som'
+  const icone = semSom ? ICONE_SOM.mudo : nivel < 0.5 ? ICONE_SOM.baixo : ICONE_SOM.alto
+  const pct = Math.round((semSom ? 0 : nivel) * 100)
+  return (
+    <div className={`tr-volume ${className}`} role="group" aria-label="Volume">
+      <button type="button" onClick={alternarMudoDoTreino} aria-label={rotulo} title={rotulo} aria-pressed={semSom}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONE_SOM.base} /><path d={icone} /></svg>
+      </button>
+      {barra && volumeAjustavel && (
+        <input type="range" min={0} max={100} step={5} value={pct} aria-label="Volume" aria-valuetext={`${pct}%`}
+          style={{ '--tr-vol': `${pct}%` } as CSSProperties}
+          onChange={(e) => definirVolumeDoTreino(Number(e.target.value) / 100)}
+          onPointerDown={(e) => e.stopPropagation()} />
+      )}
+    </div>
+  )
+}
+
+/** Quantas pessoas estão ao vivo, em destaque em cima do chat (26/11/2026, pedido do Naor). */
+function ContadorAoVivo() {
+  const t = useTreinoNaTela()
+  const sim = useSimulacao()
+  const eu = t.apresentador
+  const ativa = eu ? sim.ativa : t.sim.ativa
+  const publico = eu ? sim.publicoAgora : t.sim.publico
+  if (!FAMILIA_GF || !ativa) return null
+  return (
+    <div className="tr-contador" role="status" aria-live="off">
+      <i aria-hidden />
+      <b>{fmt(publico)}</b>
+      <span>{publico === 1 ? 'pessoa ao vivo' : 'pessoas ao vivo'}</span>
+    </div>
+  )
 }
 /** O som do ensaio: fica montado em qualquer modo (inclusive no "só o áudio"). */
 export function SomDoTreino() {
   const t = useTreino()
-  if (t.apresentador || t.fase === 'fora') return null
-  return <>{t.audios.map((a) => <AudioDaFaixa key={a.sid ?? a.mediaStreamTrack.id} faixa={a} />)}</>
+  // 26/11/2026: a equipe também ouve (a voz dos outros administradores no palco)
+  if (t.fase === 'fora') return null
+  return <>{t.audios.map((a) => { const id = a.sid ?? a.mediaStreamTrack.id; return <AudioDaFaixa key={id} faixa={a} abafar={t.euFalando && t.vozesDaEquipe.includes(id)} /> })}</>
 }
 
 /** A imagem do ensaio, com o selo "GF Streaming" sempre por cima. */
 export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean; filhos?: ReactNode }) {
-  const t = useTreino()
+  const t = useTreinoNaTela()
   const sim = useSimulacao()
-  const eu = t.apresentador
+  // quem comanda vê a própria imagem; o administrador no espelho vê o que os alunos veem
+  const eu = t.apresentador && !t.coApresentando
   const { tela, camera } = t.local
-  const temImagem = eu ? !!tela || !!camera : !!t.tela || !!t.camera
-  const publico = eu ? sim.publicoAgora : t.sim.publico
-  const ativa = eu ? sim.ativa : t.sim.ativa
+  const temImagem = t.grade || (eu ? !!tela || !!camera : !!t.tela || !!t.camera)
+  const publico = t.apresentador ? sim.publicoAgora : t.sim.publico
+  const ativa = t.apresentador ? sim.ativa : t.sim.ativa
   return (
-    <div className={`av-palco ${compacto ? 'compacto' : ''}`}>
-      {eu ? (
+    <div className={`av-palco ${compacto ? 'compacto' : ''} ${t.grade ? 'com-palco' : ''}`}>
+      {t.grade ? <PalcoLadoALado compacto={compacto} /> : eu ? (
         <>
           {tela ? <VideoLocal fluxo={tela} className="av-tela" /> : camera ? <VideoLocal fluxo={camera} className="av-tela av-so-camera" espelhar /> : null}
           {tela && camera && <VideoLocal fluxo={camera} className={`av-camera canto-${cantoDoTreino()}`} espelhar />}
@@ -97,15 +178,18 @@ export function PalcoDoTreino({ compacto = false, filhos }: { compacto?: boolean
 
 /** As mensagens que esta pessoa vê: o membro, as que chegam; o admin, as da simulação. */
 function useMensagens(): MensagemSimulada[] {
-  const t = useTreino()
+  const t = useTreinoNaTela()
   const sim = useSimulacao()
   return t.apresentador ? sim.mensagens : t.mensagens
 }
 
 /** O chat do ensaio. O membro escreve só para o apresentador; o admin responde como apresentador. */
-export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
-  const t = useTreino()
-  const mensagens = useMensagens()
+export function ChatDoTreino({ titulo = true, comoAluno = false }: { titulo?: boolean; comoAluno?: boolean }) {
+  const t = useTreinoNaTela()
+  const modoAluno = useModoAluno()
+  const todas = useMensagens()
+  // modo aluno da equipe (26/11/2026): o chat como o aluno vê (sem as mensagens dos membros, que só a equipe recebe)
+  const mensagens = comoAluno ? todas.filter((m) => !m.membro) : todas
   const [texto, setTexto] = useState('')
   const lista = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -118,11 +202,14 @@ export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
   const pode = eu || (t.fase === 'conectada' && t.presente && !fechado)
   const enviar = async () => {
     if (!texto.trim()) return
-    if (eu) falarComoApresentador(texto); else await mandarNoTreino(texto)
+    // no modo aluno, a equipe escreve como equipe (o aluno não escreve no chat público)
+    if (modoAluno) falarComoApresentador(texto, modoAluno.nome)
+    else if (eu) falarComoApresentador(texto); else await mandarNoTreino(texto)
     setTexto('')
   }
   return (
-    <section className="av-chat tr-chat" aria-label="Chat ao vivo">
+    <section className={`av-chat tr-chat ${FAMILIA_GF ? 'tr-chat-destaque' : ''}`} aria-label="Chat ao vivo">
+      <ContadorAoVivo />
       {titulo && <div className="tr-chat-topo"><h2>Chat ao vivo</h2></div>}
       <div className="av-mensagens" ref={lista} role="log" aria-live="off">
         {mensagens.length === 0 && <p className="av-chat-vazio">{(eu ? true : t.sim.ativa) ? 'O chat está começando…' : 'As mensagens aparecem aqui quando a transmissão começar.'}</p>}
@@ -226,6 +313,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
         <div className="av-pilula" role="region" aria-label="Sala de treino minimizada">
           <i className="av-ponto" aria-hidden />
           <span onClick={() => definirModoDoTreino('flutuante', false)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') definirModoDoTreino('flutuante', false) }}>{descricao}</span>
+          {!eu && <ControleDeVolume className="tr-volume-pilula" />}
           <button onClick={() => definirModoDoTreino('flutuante', false)} aria-label="Mostrar o vídeo" title="Mostrar o vídeo"><Icone nome="video" /></button>
           <button onClick={fechar} aria-label={rotuloFechar} title={rotuloFechar}><Icone nome="fechar" /></button>
         </div>
@@ -235,6 +323,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
 
   const controles = (
     <div className="av-controles">
+      {!eu && <ControleDeVolume className="tr-volume-compacto" />}
       {modo === 'flutuante' && (['P', 'M', 'G'] as const).map((tm) => (
         <button key={tm} className={t.tamanho === tm ? 'on' : ''} onClick={() => definirTamanhoDoTreino(tm)} aria-label={`Tamanho ${tm === 'P' ? 'pequeno' : tm === 'M' ? 'médio' : 'grande'}`}>{tm}</button>
       ))}
@@ -299,6 +388,7 @@ function Conteudo({ naPagina, abrirPagina }: { naPagina: boolean; abrirPagina: (
   const barraMini = (
     <div className="av-mini-barra">
       {botaoChat}
+      {!eu && <ControleDeVolume barra={false} className="tr-volume-mini" />}
       <button onClick={() => definirTamanhoDoTreino(proximoTamanho[t.tamanho])} aria-label="Mudar o tamanho da miniatura" title="Tamanho">{t.tamanho}</button>
       {podeAbrirPorCima() && temImagem && <button onClick={() => void pip()} aria-label="Janela fora do navegador" title="Janela fora do navegador"><Icone nome="pip" /></button>}
       <button onClick={abrirPagina} aria-label="Abrir em tela grande" title="Abrir em tela grande"><Icone nome="grande" /></button>

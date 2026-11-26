@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { LocalVideoTrack, type Track } from 'livekit-client'
 import type { CantoDaCamera } from '../../core/live/api'
 import {
-  abrirChatDoTreino, ajustar, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, mudarVelocidade, pararSimulacao, useSimulacao,
+  abrirChatDoTreino, ajustar, aprovarMensagem, dispararMomento, falarComoApresentador, iniciarSimulacao, limparChat, mudarVelocidade, pararSimulacao, useSimulacao,
   type Momento, type Oscilacao, type Ritmo,
 } from '../../core/live/simulacao'
 import './aovivo.css'
@@ -13,8 +15,12 @@ import { ehCelular } from '../../core/celular'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import {
   alternarFonte, cantoDoTreino, cantoNoTreino, outroNoAr, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, voltarATreinar, prepararSalaDoAdmin, sairDoTreino,
-  trocarFundoDoTreino, trocarTeste, useTreino,
+  trocarFundoDoTreino, trocarTeste, useTreino, entrarNoPalco, sairDoPalco, nomeDaEquipe, type EstadoDoTreino,
 } from '../../core/live/treino'
+import { PalcoDoTreino, VisaoDoTreinoProvider, type VisaoDeAluno } from './PlayerDoTreino'
+import { AssistirTreino } from './AssistirTreino'
+import { MembrosDaLive } from './MembrosDaLive'
+import { saidaDoEstudio } from '../../core/live/estudio/motor'
 import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
 
 import { PainelDaSala, telaDeAbertura } from './PainelDaSala'
@@ -223,6 +229,39 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   useEffect(() => { const f = () => setCheia(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f) }, [])
   const alternarTelaCheia = () => { if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined); else void document.documentElement.requestFullscreen?.().catch(() => undefined) }
   const sairDaSala = () => { void sairDoTreino(); aoSair() }
+  // 26/11/2026: na live, a equipe aparece com o primeiro e o segundo nome ("Victor Dias", "Naor Bezerra")
+  const meuNome = nomeDaEquipe(tr.meuNome || '') || apresentador
+
+  // modo aluno (26/11/2026, pedido do Naor): a equipe vê a live exatamente como o aluno; o painel segue rodando por baixo
+  const [comoAluno, setComoAluno] = useState(false)
+  const sairDoModoAluno = useCallback(() => setComoAluno(false), [])
+  const botaoAluno = (
+    <button type="button" className="ps-modo-aluno" aria-pressed={comoAluno} onClick={() => setComoAluno(true)} title="Ver a live exatamente como o aluno vê">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+      <span>Modo aluno</span>
+    </button>
+  )
+  // a ficha dos membros de verdade na live (26/11/2026)
+  const [verMembros, setVerMembros] = useState(false)
+  const membrosDaLive = verMembros && <MembrosDaLive fechar={() => setVerMembros(false)} />
+  const modoAluno = comoAluno && <ModoAluno sair={sairDoModoAluno} nome={meuNome} />
+  // vários administradores (26/11/2026): na live de outro, "Sair" não encerra nada para ninguém
+  const encerraAoSair = sim.ativa && !tr.coApresentando
+  // o nome no chat: o primeiro nome, como sempre foi (vale para o dono e para quem ajuda)
+  const equipeNoPalco = tr.palco.filter((p) => !p.eu)
+  const botaoPalco = tr.coApresentando && (
+    <button type="button" className={`ps-palco-botao ${tr.noPalco ? 'on' : ''}`} aria-pressed={tr.noPalco} onClick={() => (tr.noPalco ? void sairDoPalco() : entrarNoPalco())}
+      title={tr.noPalco ? 'Sua câmera, microfone e tela saem da live' : 'Sua câmera, microfone e tela entram na live, lado a lado com quem está no palco'}>
+      <i aria-hidden />{tr.noPalco ? 'Sair do palco' : 'Entrar no palco'}
+    </button>
+  )
+  const quemComanda = tr.coApresentando && (
+    <span className="ps-com-dono" role="status"><small>Live de</small><b>{nomeDaEquipe(tr.dono)}</b></span>
+  )
+  const assumir = !sim.ativa && !tr.coApresentando && tr.donoSumiu && (
+    <span className="ps-dono-saiu" role="alert"><span><b>{tr.donoSumiu.split(' ')[0]} saiu da live</b><small>Os alunos estão sem imagem</small></span>
+      <button type="button" onClick={() => comecar(true)}>Assumir a live</button></span>
+  )
 
   const podeTela = typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getDisplayMedia === 'function'
   const fonte = (qual: 'tela' | 'camera' | 'mic', rotulo: string, ligado: boolean) => {
@@ -244,7 +283,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     </div>
   )
 
-  const comecar = () => {
+  const comecar = (assumir = false) => {
     // 24/11/2026: fora da sala (caiu, abrindo) ninguém receberia a live: não começa
     if (sessao && tr.fase !== 'conectada') { setErro(tr.fase === 'conectando' || tr.fase === 'reconectando' ? 'A sala ainda está abrindo. Espere um instante e comece de novo.' : 'Você está fora da sala. Toque em Voltar à sala e depois comece.'); return }
     setErro(null)
@@ -252,7 +291,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     const outro = outroNoAr()
     if (outro) { setErro(`${outro} já está transmitindo nesta sala. Espere ele encerrar para começar.`); return }
     // 18/11/2026: a live sempre abre pela tela "Começa em instantes"
-    if (comEstudio) { const c = estudioAgora().config; const ab = c ? telaDeAbertura(c.cenas) : undefined; if (ab) colocarNoAr(ab.id, true) }
+    // 26/11/2026: quem assume a live de um administrador que caiu continua na tela em que ela estava
+    if (comEstudio && !assumir) { const c = estudioAgora().config; const ab = c ? telaDeAbertura(c.cenas) : undefined; if (ab) colocarNoAr(ab.id, true) }
     iniciarSimulacao(apresentador); setAba('chat')
   }
   const temImagem = !!tela || !!camera || comEstudio
@@ -320,7 +360,10 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const marcarVista = (id: string) => { central.respondidas.add(id); setRespostas((n) => n + 1) }
   const responder = (nome: string) => { setAbaChat('todos'); setTexto(`@${nome.split(' ')[0]} `); window.setTimeout(() => document.getElementById('tr-campo')?.focus(), 0) }
   const naSala = [...central.naSalaDesde].sort((a, b) => a[1] - b[1])
-  const mensagensDoChat = abaChat === 'equipe' ? paraEquipe : sim.mensagens
+  // mensagens de membros aprovadas para todos (a cópia pública leva o id da original)
+  const aprovadas = new Set(sim.mensagens.map((m) => m.deMembro).filter(Boolean) as string[])
+  // em "Todos", a aprovada aparece uma vez só, como os alunos veem (sem a etiqueta de membro)
+  const mensagensDoChat = abaChat === 'equipe' ? paraEquipe : sim.mensagens.filter((m) => !(m.membro && aprovadas.has(m.id)))
 
   const controles = (
     <div className="cv-controles" onPointerDown={() => setAjustou(true)} onKeyDown={() => setAjustou(true)}>
@@ -422,9 +465,15 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         ) : m.entrada ? (
           <p key={m.id} className="tr-entrada">{m.nome} {m.saida ? 'saiu' : 'entrou'}</p>
         ) : (
-          <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.membro && central.respondidas.has(m.id) ? 'cv-vista' : ''}`}>
-            <p><b>{m.nome}{m.apresentador && <em>Você</em>}{m.membro && <em className="tr-tag-membro">Membro</em>}</b> {m.texto}</p>
+          <div key={m.id} className={`av-msg ${m.apresentador ? 'mod' : ''} ${m.membro && central.respondidas.has(m.id) ? 'cv-vista' : ''} ${m.membro ? 'cv-de-membro' : ''} ${m.membro && aprovadas.has(m.id) ? 'cv-aprovada' : ''}`}>
+            <p><b>{m.nome}{m.apresentador && <em>{m.nome === meuNome ? 'Você' : 'Equipe'}</em>}{m.membro && <em className="tr-tag-membro">Membro</em>}{m.deMembro && <em className="cv-tag-aprovada" title="Mensagem de membro aprovada pela equipe">Aprovada</em>}</b> {m.texto}</p>
             <time>{hora(m.hora)}</time>
+            {m.membro && (aprovadas.has(m.id)
+              ? <span className="cv-aprovar feito" title="Aprovada: todos os membros veem esta mensagem" aria-label="Aprovada para todos"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+              : <button type="button" className="cv-aprovar" onClick={() => aprovarMensagem(m.id)} disabled={!sim.ativa}
+                title={sim.ativa ? 'Aprovar: a mensagem sobe para todos os membros, só com o nome' : 'Libera quando a transmissão começar'} aria-label={`Aprovar a mensagem de ${m.nome} para todos`}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              </button>)}
             {m.membro && abaChat === 'equipe' && (
               <div className="cv-msg-acoes">
                 <button type="button" onClick={() => responder(m.nome)}>Responder no chat</button>
@@ -434,7 +483,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           </div>
         ))}
       </div>
-      <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); falarComoApresentador(texto); setTexto('') }}>
+      <form className="av-escrever" onSubmit={(e) => { e.preventDefault(); falarComoApresentador(texto, meuNome); setTexto('') }}>
         <label htmlFor="tr-campo" className="av-oculto">Responder no chat</label>
         <input id="tr-campo" value={texto} maxLength={500} autoComplete="off" placeholder="Escreva como equipe, todos veem" onChange={(e) => setTexto(e.target.value)} />
         <button type="submit" disabled={!texto.trim()}>Enviar</button>
@@ -444,6 +493,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   const naSalaCard = (
     <section className="cv-card cv-na-sala" aria-label="Membros na sala">
       <h4>Na sala agora <small>{naSala.length} {naSala.length === 1 ? 'membro' : 'membros'}</small></h4>
+      {sessao && <button type="button" className="av-link" onClick={() => setVerMembros(true)}>Ver a ficha de cada membro</button>}
       {naSala.length === 0
         ? <span className="tr-legenda">Ninguém ainda. Mande o link abaixo para quem é do {GF_MEMBRO}.</span>
         : <ul>{naSala.map(([n, desde]) => <li key={n}><span>{n}</span><b className="cv-num">{duracao(Date.now() - desde)}</b></li>)}</ul>}
@@ -467,6 +517,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     )
     return (
       <div className={`cv-app ps-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
+        {modoAluno}
+        {membrosDaLive}
         <header className="cv-app-topo ps-topo">
           <div className="cv-app-marca">
             {FAMILIA_GF && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
@@ -523,20 +575,30 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
           </div>
           <span className="cv-app-espaco" />
           {foraDaSala && sessao && <button type="button" className="ps-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button>}
+          {equipeNoPalco.length > 0 && !tr.coApresentando && (
+            <span className="ps-no-palco" title={`No palco com você: ${equipeNoPalco.map((p) => p.nome).join(', ')}`}>
+              <small>No palco</small>{equipeNoPalco.slice(0, 3).map((p) => <i key={p.id} className={p.falando ? 'falando' : ''} aria-hidden>{p.nome.trim()[0]?.toUpperCase()}</i>)}
+              <span className="av-oculto">No palco com você: {equipeNoPalco.map((p) => p.nome).join(', ')}</span>
+            </span>
+          )}
+          {quemComanda}
+          {botaoPalco}
+          {assumir}
           {!sim.ativa && tr.outroTransmitindo
-            ? <span className="ps-outro-no-ar" role="status"><i aria-hidden /><span><b>{tr.outroTransmitindo.split(' ')[0]} está no ar</b><small>Para começar, ele precisa encerrar</small></span></span>
+            ? <span className="ps-outro-no-ar" role="status"><i aria-hidden /><span><b>{tr.outroTransmitindo.split(' ')[0]} está no ar</b><small>Abrindo a live dele aqui…</small></span></span>
             : !sim.ativa
-            ? <button type="button" className="ps-comecar" onClick={comecar}><i aria-hidden />Começar transmissão</button>
+            ? !tr.donoSumiu && <button type="button" className="ps-comecar" onClick={() => comecar()}><i aria-hidden />Começar transmissão</button>
             : confirmarFim
               ? <span className="ps-confirmar-fim" role="group" aria-label="Confirmar o fim da transmissão">
                 <button type="button" className="ps-encerrar sim" onClick={() => { const sair = confirmarFim === 'sair'; setConfirmarFim(false); pararSimulacao(); if (sair) sairDaSala() }}>{confirmarFim === 'sair' ? 'Encerrar e sair' : 'Encerrar agora'}</button>
                 <button type="button" className="ps-cancelar" onClick={() => setConfirmarFim(false)}>Continuar no ar</button>
               </span>
               : <button type="button" className="ps-encerrar" onClick={() => setConfirmarFim('fim')}><i aria-hidden />Encerrar transmissão</button>}
+          {botaoAluno}
           <button type="button" className="ps-ico-topo" aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'} onClick={alternarTelaCheia}>
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={cheia ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} /></svg>
           </button>
-          <button type="button" className="ps-sair" onClick={() => (sim.ativa ? setConfirmarFim('sair') : sairDaSala())} title={sim.ativa ? 'Sair encerra a transmissão para todos' : undefined}>Sair</button>
+          <button type="button" className="ps-sair" onClick={() => (encerraAoSair ? setConfirmarFim('sair') : sairDaSala())} title={encerraAoSair ? 'Sair encerra a transmissão para todos' : tr.coApresentando ? 'Você sai; a live continua com quem está comandando' : undefined}>Sair</button>
         </header>
         {(erro || (tr.fase === 'conectada' && tr.erro)) && <p className="av-erro cv-app-erro" role="alert">{erro ?? tr.erro}</p>}
 
@@ -568,7 +630,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                   ? <button type="button" className={`ps-ia-estado ${iaEstado}`} onClick={() => ajustar({ pausada: !sim.pausada })} title={sim.pausada ? 'Retomar os comentários' : 'Pausar os comentários'}>
                     <i aria-hidden />{sim.pausada ? 'Pausados · retomar' : 'Ligados · pausar'}
                   </button>
-                  : <span className="ps-ia-estado espera"><i aria-hidden />Começam com a live</span>}
+                  : <span className="ps-ia-estado espera" title="Quando a live começar, os comentários entram pausados: eles só rodam quando alguém der o play"><i aria-hidden />Começam pausados</span>}
               </h3>
               {!comandando && <>
                 <span className="ps-rotulo">Velocidade <small>Vale para os comentários e para os roteiros</small></span>
@@ -596,7 +658,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
           <aside className="ps-lado ps-direita" aria-label="Chat e números da live">
             <div className="ps-agora" role="group" aria-label="Números da live">
-              <div title={`Membros de verdade na sala agora · pico ${central.pico} · passaram ${central.pessoas.size}`}><small>Na sala agora</small><b className="cv-num">{tr.membros}</b></div>
+              <div className="ps-agora-abrir" role="button" tabIndex={0} onClick={() => setVerMembros(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setVerMembros(true) } }}
+                title={`Ver a ficha de cada membro · pico ${central.pico} · passaram ${central.pessoas.size}`} aria-label={`${tr.membros} membros na sala agora. Ver as fichas`}><small>Na sala agora <em>Ver fichas</em></small><b className="cv-num">{tr.membros}</b></div>
               <div className={naoRespondidas > 0 ? 'alerta' : ''} title="Mensagens de membros ainda sem resposta"><small>A responder</small><b className="cv-num">{naoRespondidas}</b></div>
             </div>
             <div className="ps-chat">
@@ -624,6 +687,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
   return (
     <div className="ger av-pagina av-com-palco tr-sala cv">
+      {modoAluno}
+      {membrosDaLive}
       <section className={`av-mesa ${sim.ativa ? 'tr-ativa' : ''}`} aria-label="Central ao vivo">
         <div className="av-mesa-estado">
           <span className="tr-chip">Central ao vivo · sala de treino</span>
@@ -651,10 +716,12 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
               </span>
               : <button className="av-botao-encerrar" onClick={() => setConfirmarFim('fim')}>Encerrar transmissão</button>
             : tr.outroTransmitindo
-              ? <span className="tr-outro-no-ar" role="status"><b>{tr.outroTransmitindo.split(' ')[0]} está no ar</b> Para começar, ele precisa encerrar</span>
-              : <button className="tr-botao-iniciar" onClick={comecar}><i aria-hidden />Começar transmissão</button>}
+              ? <span className="tr-outro-no-ar" role="status"><b>{tr.outroTransmitindo.split(' ')[0]} está no ar</b> Abrindo a live dele aqui…</span>
+              : tr.donoSumiu ? assumir : <button className="tr-botao-iniciar" onClick={() => comecar()}><i aria-hidden />Começar transmissão</button>}
+          {sim.ativa && <>{quemComanda}{botaoPalco}</>}
           {sessao && (tr.fase === 'erro' || tr.fase === 'fora') && <button className="tr-botao-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button>}
-          {!confirmarFim && <button className="av-link" onClick={() => (sim.ativa ? setConfirmarFim('sair') : sairDaSala())}>Sair da Central</button>}
+          {botaoAluno}
+          {!confirmarFim && <button className="av-link" onClick={() => (encerraAoSair ? setConfirmarFim('sair') : sairDaSala())}>Sair da Central</button>}
         </div>
         {sim.ativa && sessao && tr.fase !== 'conectada' && <p className="av-erro" role="alert">Você está fora da sala: os alunos não estão vendo. {tr.fase === 'reconectando' ? 'Voltando…' : ''}</p>}
         {(erro || (tr.fase === 'conectada' && tr.erro)) && <p className="av-erro" role="alert">{erro ?? tr.erro}</p>}
@@ -686,7 +753,8 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
         {controles}
 
         <div className="cv-centro">
-          {!comEstudio && <div className="av-palco cv-palco">
+          {!comEstudio && (tr.coApresentando || tr.grade) && <div className="cv-palco-equipe"><PalcoDoTreino /></div>}
+          {!comEstudio && !(tr.coApresentando || tr.grade) && <div className="av-palco cv-palco">
             {tela && ocultarTela ? (
               <div className="av-previa-oculta">
                 <b>Sua tela inteira está na transmissão</b>
@@ -876,5 +944,85 @@ export function HistoricoDasTransmissoes({ sessao, noAr, compacto = false }: { s
         </div>
       )}
     </section>
+  )
+}
+
+/* ------------------------------------------------ modo aluno (26/11/2026) */
+
+/** Embrulha uma faixa do aparelho como faixa da sala (a tela do aluno toca faixas da sala); nunca a desliga. */
+function useFaixaDaSala(bruta: MediaStreamTrack | null | undefined): Track | null {
+  const [faixa, setFaixa] = useState<Track | null>(null)
+  useEffect(() => {
+    if (!bruta) { setFaixa(null); return }
+    setFaixa(new LocalVideoTrack(bruta, undefined, true))
+  }, [bruta])
+  return faixa
+}
+
+/**
+ * O treino como o aluno vê: a imagem que vai para os alunos (a saída das telas de quem comanda, ou a
+ * imagem recebida do dono), o público, o chat sem as mensagens só da equipe e o palco lado a lado.
+ */
+function useVisaoDeAluno(nome: string): VisaoDeAluno {
+  const tr = useTreino()
+  const sim = useSimulacao()
+  const souDono = !tr.coApresentando
+  const [, setTique] = useState(0)
+  // a saída das telas pode nascer depois (o painel abre o motor): confere de vez em quando
+  useEffect(() => { const t = window.setInterval(() => setTique((n) => n + 1), 1500); return () => window.clearInterval(t) }, [])
+  const saida = souDono ? saidaDoEstudio()?.video ?? null : null
+  const tela = useFaixaDaSala(souDono ? saida ?? tr.local.tela?.getVideoTracks()[0] ?? null : null)
+  const camera = useFaixaDaSala(souDono && !saida ? tr.local.camera?.getVideoTracks()[0] ?? null : null)
+  const estado: EstadoDoTreino = {
+    ...tr,
+    apresentador: false, coApresentando: false, noPalco: false, fase: 'conectada', erro: null, encerrada: false, somBloqueado: false,
+    presente: sim.ativa || tr.presente, quemApresenta: tr.coApresentando ? tr.dono : (tr.meuNome || nome),
+    tela: souDono ? tela : tr.tela, camera: souDono ? camera : tr.camera, audios: [],
+    sim: { ativa: sim.ativa, publico: sim.publicoAgora, momento: sim.momento, pausada: sim.pausada, chatAberto: sim.chatAberto },
+    mensagens: sim.mensagens.filter((m) => !m.membro),
+  }
+  return { estado, nome }
+}
+
+function ModoAluno({ sair, nome }: { sair: () => void; nome: string }) {
+  const visao = useVisaoDeAluno(nome)
+  // ver nos dois temas, como cada aluno escolheu (sem mudar o tema guardado de ninguém)
+  const [temaOriginal] = useState(() => document.documentElement.dataset.tema ?? 'escuro')
+  const [tema, setTema] = useState(temaOriginal)
+  useEffect(() => { document.documentElement.dataset.tema = tema }, [tema])
+  useEffect(() => () => { document.documentElement.dataset.tema = temaOriginal }, [temaOriginal])
+  useEffect(() => {
+    const esc = (ev: KeyboardEvent) => { if (ev.key === 'Escape' && !document.fullscreenElement) sair() }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [sair])
+  return createPortal(
+    <div className="tr-modo-aluno" role="dialog" aria-modal="true" aria-label="Modo aluno: a live como o aluno vê">
+      <div className="tr-modo-aluno-barra">
+        <span className="tr-modo-aluno-titulo">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+          <b>Modo aluno</b>
+          <small>Exatamente o que os alunos veem agora. O painel continua comandando a live.</small>
+        </span>
+        <div className="tr-modo-aluno-acoes">
+          <div className="tr-modo-aluno-tema" role="radiogroup" aria-label="Ver no tema">
+            <button type="button" role="radio" aria-checked={tema === 'escuro'} className={tema === 'escuro' ? 'on' : ''} onClick={() => setTema('escuro')}>Escuro</button>
+            <button type="button" role="radio" aria-checked={tema === 'claro'} className={tema === 'claro' ? 'on' : ''} onClick={() => setTema('claro')}>Claro</button>
+          </div>
+          <button type="button" className="tr-modo-aluno-voltar" onClick={sair} autoFocus>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+            Voltar ao painel
+          </button>
+        </div>
+      </div>
+      <div className="tr-modo-aluno-pagina">
+        <div className="ger av-pagina">
+          <VisaoDoTreinoProvider value={visao}>
+            <AssistirTreino sessao={null} conectar={false} comoAluno />
+          </VisaoDoTreinoProvider>
+        </div>
+      </div>
+    </div>,
+    document.body,
   )
 }

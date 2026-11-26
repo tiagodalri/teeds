@@ -418,3 +418,64 @@ button.ps-ia-estado:hover { background: var(--ps-card3); }
 @media (prefers-reduced-motion: reduce) {
   .ps-app *, .ps-fundo, .ps-janela { animation: none !important; transition: none !important; }
 }
+
+/* vários administradores (26/11/2026): o monitor mostra o que os alunos veem */
+.ps-monitor-palco .ps-monitor-area > .av-palco { position: absolute; inset: 0; border-radius: 0; }
+.ps-monitor-palco .tr-selo { display: none; }
+
+/* vários administradores na mesma live (26/11/2026) */
+.ps-com-dono { display: inline-grid; line-height: 1.15; padding: 0 4px; white-space: nowrap; }
+.ps-com-dono small { color: var(--muted); font-size: 11px; }
+.ps-com-dono b { color: var(--text); font-size: 13.5px; }
+.ps-palco-botao {
+  display: inline-flex; align-items: center; gap: 9px; height: 42px; padding: 0 18px; border: 0; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(180deg, var(--ps-ouro-claro), var(--ps-ouro)); color: #15110a; font: inherit; font-size: 13.5px; font-weight: 800; white-space: nowrap;
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--ps-ouro) 28%, transparent), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+.ps-palco-botao i { width: 10px; height: 10px; border-radius: 50%; background: #15110a; opacity: .55; }
+.ps-palco-botao.on { background: transparent; color: var(--text); border: 1px solid var(--ps-linha2); box-shadow: none; }
+.ps-palco-botao.on i { background: var(--ps-vermelho); opacity: 1; animation: av-pulsa 1.4s ease-in-out infinite; }
+.ps-palco-botao:focus-visible { outline: 2px solid var(--ps-ouro-claro); outline-offset: 2px; }
+.ps-no-palco { display: inline-flex; align-items: center; gap: 4px; height: 42px; padding: 0 12px 0 10px; border: 1px solid var(--ps-linha2); border-radius: 12px; white-space: nowrap; }
+.ps-no-palco small { margin-right: 4px; color: var(--muted); font-size: 11px; }
+.ps-no-palco i { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(145deg, #D6AE5B, #8A6726); color: #14110a; font-size: 11px; font-style: normal; font-weight: 800; box-shadow: 0 0 0 2px var(--ps-card, #0b1220); }
+.ps-no-palco i + i { margin-left: -8px; }
+.ps-no-palco i.falando { box-shadow: 0 0 0 2px var(--ps-ouro-claro); }
+.ps-dono-saiu { display: inline-flex; align-items: center; gap: 12px; height: 42px; padding: 0 6px 0 14px; border: 1px solid color-mix(in srgb, var(--ps-vermelho) 55%, transparent); border-radius: 12px; background: color-mix(in srgb, var(--ps-vermelho) 12%, var(--ps-card, transparent)); white-space: nowrap; }
+.ps-dono-saiu > span { display: grid; line-height: 1.15; }
+.ps-dono-saiu b { color: #ff9a9d; font-size: 13px; }
+.ps-dono-saiu small { color: var(--muted); font-size: 11px; }
+.ps-dono-saiu button { height: 32px; padding: 0 14px; border: 0; border-radius: 9px; background: linear-gradient(180deg, var(--ps-ouro-claro), var(--ps-ouro)); color: #15110a; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .ps-palco-botao.on i { animation: none; } }
+
+/* o "Na sala agora" abre a ficha dos membros (26/11/2026) */
+.ps-agora-abrir { cursor: pointer; transition: background .15s; }
+.ps-agora-abrir:hover { background: rgba(255,255,255,.045); }
+.ps-agora-abrir:focus-visible { outline: 2px solid var(--ps-ouro-claro, #D6AE5B); outline-offset: -2px; }
+.ps-agora-abrir small em { margin-left: 4px; color: var(--ps-ouro-claro, #D6AE5B); font-style: normal; font-weight: 700; }
+
+/* o botão "Modo aluno" do topo (26/11/2026): do mesmo jeito dos outros botões do painel */
+.ps-modo-aluno {
+  display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 14px 0 12px; cursor: pointer;
+  border: 1px solid var(--ps-linha); border-radius: 10px; background: transparent; color: var(--ps-texto2);
+  font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; transition: color .15s, border-color .15s, background .15s;
+}
+.ps-modo-aluno svg { color: var(--ps-ouro-claro, #D6AE5B); }
+.ps-modo-aluno:hover { color: var(--text); border-color: color-mix(in srgb, var(--ps-ouro, #B78D39) 55%, transparent); background: color-mix(in srgb, var(--ps-ouro, #B78D39) 8%, transparent); }
+@media (max-width: 1280px) { .ps-modo-aluno span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } .ps-modo-aluno { padding: 0; width: 38px; justify-content: center; } }
+/* no celular (a Central sem as telas), o mesmo botão na mesa */
+.av-mesa-acao .ps-modo-aluno { color: var(--text); border-color: var(--border); }
+
+/* aprovar a mensagem de um membro para todos (26/11/2026) */
+.av-msg.cv-de-membro { padding-right: 34px; }
+.cv-aprovar {
+  position: absolute; top: -1px; right: -2px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; cursor: pointer;
+  border: 1.5px solid color-mix(in srgb, #2fbf71 55%, transparent); border-radius: 50%; background: transparent; color: #5fd796;
+  transition: background .15s, color .15s, transform .12s;
+}
+.cv-aprovar:hover:not(:disabled) { background: #2fbf71; color: #07130c; transform: scale(1.06); }
+.cv-aprovar:disabled { opacity: .35; cursor: not-allowed; }
+.cv-aprovar:focus-visible { outline: 2px solid #5fd796; outline-offset: 2px; }
+.cv-aprovar.feito { border-color: transparent; background: #2fbf71; color: #07130c; cursor: default; }
+.av-msg.cv-aprovada p { opacity: .82; }
+.cv-tag-aprovada { background: rgba(47,191,113,.16) !important; color: #5fd796 !important; }

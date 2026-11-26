@@ -90,3 +90,14 @@
   .bc-janela-corpo { padding: 8px 16px 16px; }
   .bc-janela-pe { padding: 12px 16px; flex-wrap: wrap; }
 }
+
+/* arrastar para mudar a ordem dos roteiros (26/11/2026) */
+.bc-alca { display: grid; place-items: center; flex: none; width: 18px; height: 34px; margin-left: -4px; border-radius: 6px; color: var(--muted); cursor: grab; opacity: .55; transition: opacity .15s, background .15s; }
+.bc-alca svg { width: 16px; height: 16px; stroke-width: 3; }
+.bc-lista li:hover .bc-alca, .bc-alca:focus-visible { opacity: 1; }
+.bc-alca:hover { background: rgba(255,255,255,.06); }
+.bc-alca:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.bc-lista li[draggable='true'] { cursor: default; }
+.bc-lista li.arrastando { opacity: .55; background: var(--primary-soft); box-shadow: inset 0 0 0 1px var(--primary); }
+.bc-lista li.arrastando .bc-alca { cursor: grabbing; }
+@media (hover: none) { .bc-alca { opacity: .9; } }
