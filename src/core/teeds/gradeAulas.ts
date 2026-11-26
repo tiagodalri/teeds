@@ -27,7 +27,7 @@ import { SUPABASE, autenticacaoConfigurada } from './config'
 import type { SessaoTeeds } from './conta'
 import { aoMudarModulos, modulosEmUso, MODULOS, usarModulosDaGrade, type LinkDaAula, type Material, type Modulo } from './aulas'
 import type { VideoDaAula } from './aulasVideos'
-import { meuParceiro, vitrine } from './parceiro'
+import { guardarParceiroDaConta, meuParceiro, vitrine } from './parceiro'
 import { abrirImagem, canvasParaArquivo } from '../imagem'
 
 /* ---------------------------------------------------------------- tipos */
@@ -126,9 +126,18 @@ export interface CursoGrade {
 
 export interface GradeAulas {
   versao: 1; cursos?: CursoGrade[]; modulos: ModuloGrade[]
-  /** O vídeo do pop-up do primeiro acesso (GlobalFly, 08/11/2026). Vazio = a primeira aula com vídeo. */
-  boasVindas?: { video: string }
+  /**
+   * O vídeo do pop-up do primeiro acesso (GlobalFly, 08/11/2026). Vazio = a primeira aula com vídeo.
+   * 26/11/2026 (Victor: "nos meus links está rodando o vídeo do Naor de cadastro novo"): era um vídeo
+   * só para a marca inteira. `videos` = um vídeo próprio por vitrine de parceiro ('n', 'v'...), por
+   * cima do `video` (o de todos), igual às capas.
+   */
+  boasVindas?: { video: string; videos?: Record<string, string> }
 }
+
+/** O vídeo de boas-vindas que vale numa vitrine: o próprio dela, senão o de todos ('' = nenhum). */
+export const videoDeBoasVindasNaVitrine = (g: Pick<GradeAulas, 'boasVindas'>, v: string): string =>
+  (v && g.boasVindas?.videos?.[v]?.trim()) || g.boasVindas?.video?.trim() || ''
 
 export const NIVEIS = ['Iniciante', 'Intermediário', 'Avançado', 'Todos os níveis'] as const
 export const CORES_DA_MARCA: string[] = FAMILIA_GF
@@ -219,10 +228,12 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
   })
   if (!cursos.length) cursos.push(cursoPadrao())
   const existe = new Set(cursos.map((c) => c.id))
-  const videoDeBoasVindas = txt((g as { boasVindas?: { video?: unknown } }).boasVindas?.video).trim()
+  const bv = (g as { boasVindas?: { video?: unknown; videos?: unknown } }).boasVindas
+  const videoDeBoasVindas = txt(bv?.video).trim()
+  const videosDeBoasVindas = capas(bv?.videos)
   return {
     versao: 1,
-    ...(videoDeBoasVindas ? { boasVindas: { video: videoDeBoasVindas } } : {}),
+    ...(videoDeBoasVindas || videosDeBoasVindas ? { boasVindas: { video: videoDeBoasVindas, ...(videosDeBoasVindas ? { videos: videosDeBoasVindas } : {}) } } : {}),
     cursos,
     modulos: g.modulos.filter(Boolean).map((m) => ({
       id: txt(m.id), curso: existe.has(txt(m.curso)) ? txt(m.curso) : cursos[0].id, titulo: txt(m.titulo), chamada: txt(m.chamada), descricao: txt(m.descricao), cor: txt(m.cor) || CORES_DA_MARCA[0],
@@ -475,8 +486,8 @@ let cache: { chave: string; promessa: Promise<GradeAulas | null> } | null = null
 export function gradePublicadaEmCache(sessao: SessaoTeeds | null | undefined): Promise<GradeAulas | null> {
   const chave = `${MARCA.id}:${sessao?.usuario.id ?? ''}`
   if (!cache || cache.chave !== chave) {
-    parceiroDaConta = null
-    const parceiro = sessao && FAMILIA_GF ? meuParceiro(sessao).then((p) => { parceiroDaConta = p }) : Promise.resolve()
+    parceiroDaConta = null; guardarParceiroDaConta(null)
+    const parceiro = sessao && FAMILIA_GF ? meuParceiro(sessao).then((p) => { parceiroDaConta = p; guardarParceiroDaConta(p) }) : Promise.resolve()
     cache = { chave, promessa: Promise.all([lerGradePublicada(sessao), parceiro]).then(([g]) => g) }
   }
   return cache.promessa

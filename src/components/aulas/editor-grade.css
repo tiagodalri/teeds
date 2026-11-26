@@ -236,7 +236,7 @@
 }
 
 /* 08/11/2026 (GF): o vídeo do pop-up do primeiro acesso */
-.eg-boas-vindas { padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
+.eg-boas-vindas { display: grid; gap: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
 .eg-boas-vindas label { display: grid; gap: 6px; }
 .eg-boas-vindas label > span { font-size: 13px; font-weight: 700; }
 .eg-boas-vindas label > span small { margin-left: 6px; font-weight: 500; color: var(--muted); }

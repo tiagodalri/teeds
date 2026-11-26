@@ -16,7 +16,7 @@ import { MARCA, ehFamiliaGF } from '../../marca'
 import { DEMONSTRACAO_EM_AULA_SEM_VIDEO } from '../../core/teeds/modulosAulas'
 import { IconeFechar } from '../IconeFechar'
 import { CapaDaAula, capaResolvida } from './CapaDaAula'
-import { SeletorDeCapa } from './SeletorDeCapa'
+import { SeletorDeCapa, nomeDaVitrine } from './SeletorDeCapa'
 import { AdicionarAulas, type AulaNova, type Destino } from './AdicionarAulas'
 import { JanelaDaCapa, miniaturaDoYouTube, quadroDeUmVideo, type FonteExtra } from './JanelaDaCapa'
 import './editor-grade.css'
@@ -390,17 +390,33 @@ export function EditorDaGrade({ sessao, marca = MARCA.id }: { sessao: SessaoTeed
       )}
 
       {!curso && ehFamiliaGF(marca) && (() => {
-        const v = grade.boasVindas?.video ?? ''
-        const p = playerDoVideo(v)
-        const ok = !v || p?.tipo === 'mp4' || (p?.tipo === 'youtube' && !!p.id)
+        // 26/11/2026: um vídeo para todos e, se quiser, um próprio para cada parceiro (Naor no /n...)
+        const vitrines = ['', ...(MARCA.parceiros ?? [])]
+        const videoDe = (alvo: string) => (alvo ? grade.boasVindas?.videos?.[alvo] : grade.boasVindas?.video) ?? ''
+        const trocar = (alvo: string, x: string) => mudar((g) => {
+          const video = alvo ? g.boasVindas?.video ?? '' : x
+          const videos = { ...(g.boasVindas?.videos ?? {}) }
+          if (alvo) { if (x.trim()) videos[alvo] = x; else delete videos[alvo] }
+          const temVideos = Object.keys(videos).length > 0
+          if (video.trim() || temVideos) g.boasVindas = { video, ...(temVideos ? { videos } : {}) }
+          else delete g.boasVindas
+        })
         return (
           <section className="eg-boas-vindas">
-            <label>
-              <span>Vídeo de boas-vindas <small>abre sozinho no primeiro acesso, antes do tour</small></span>
-              <input value={v} placeholder="https://youtu.be/…  (vazio = a primeira aula do curso)"
-                onChange={(e) => mudar((g) => { const x = e.target.value; if (x.trim()) g.boasVindas = { video: x }; else delete g.boasVindas })} />
-              <small className={ok ? '' : 'falta'}>{!v ? 'Sem link próprio: o pop-up mostra a primeira aula com vídeo.' : ok ? `${origemDoVideo(v)}. Vale para os alunos depois de publicar.` : 'Esse link não é um vídeo do YouTube nem um MP4.'}</small>
-            </label>
+            {vitrines.map((alvo) => {
+              const v = videoDe(alvo)
+              const p = playerDoVideo(v)
+              const ok = !v || p?.tipo === 'mp4' || (p?.tipo === 'youtube' && !!p.id)
+              const geral = grade.boasVindas?.video ?? ''
+              return (
+                <label key={alvo || 'todos'}>
+                  <span>{alvo ? `Vídeo de boas-vindas de ${nomeDaVitrine(alvo)}` : 'Vídeo de boas-vindas'} <small>{alvo ? `só para quem está no /${alvo}` : vitrines.length > 1 ? 'para todos, menos quem tem vídeo próprio abaixo' : 'abre sozinho no primeiro acesso, antes do tour'}</small></span>
+                  <input value={v} placeholder={alvo ? 'vazio = o mesmo de todos' : 'https://youtu.be/…  (vazio = a primeira aula do curso)'}
+                    onChange={(e) => trocar(alvo, e.target.value)} />
+                  <small className={ok ? '' : 'falta'}>{!v ? (alvo ? (geral ? 'Sem vídeo próprio: mostra o mesmo de todos.' : 'Sem vídeo próprio: mostra a primeira aula com vídeo.') : 'Sem link próprio: o pop-up mostra a primeira aula com vídeo.') : ok ? `${origemDoVideo(v)}. Vale para os alunos depois de publicar.` : 'Esse link não é um vídeo do YouTube nem um MP4.'}</small>
+                </label>
+              )
+            })}
           </section>
         )
       })()}

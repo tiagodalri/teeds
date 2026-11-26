@@ -59,6 +59,26 @@ export function vitrine(): string {
   return vitrineDaAba ?? ultimaVitrine() ?? ''
 }
 
+/**
+ * 26/11/2026 (Victor: "fotos dele nas minhas capas"): o parceiro da conta logada, guardado
+ * quando a grade das aulas é lida (core/teeds/gradeAulas.ts). Só para o CONTEÚDO da vitrine.
+ */
+let parceiroDaContaLogada: string | null = null
+export const guardarParceiroDaConta = (p: string | null): void => { parceiroDaContaLogada = p && codigos().includes(p) ? p : null }
+
+/**
+ * A vitrine do CONTEÚDO (capas das aulas, destaques, vídeo de boas-vindas): o código do
+ * endereço desta aba manda, como em vitrine(). Sem código no endereço (globalflytrade.com,
+ * o app instalado), vale o parceiro da conta logada antes do último endereço usado neste
+ * navegador: o aluno do Victor que um dia clicou num link do /n não passa a ver as capas
+ * do Naor (e vice-versa). Contas sem parceiro seguem a regra de vitrine(). A contagem das
+ * operações e o cadastro continuam com vitrine().
+ */
+export function vitrineDoConteudo(): string {
+  if (!codigos().length) return ''
+  return vitrineDaAba ?? parceiroDaContaLogada ?? ultimaVitrine() ?? ''
+}
+
 /** Este navegador já tem vitrine (pelo endereço desta aba ou por um endereço anterior)? */
 export const temVitrine = (): boolean => !!codigos().length && (vitrineDaAba !== undefined || ultimaVitrine() !== null)
 

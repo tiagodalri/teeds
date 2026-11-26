@@ -2,7 +2,7 @@ import type { ImgHTMLAttributes } from 'react'
 import { MODULOS, type Aula } from '../../core/teeds/aulas'
 import { MARCA } from '../../marca'
 import { capaDaAula, capaDoParceiroNoCodigo, capaEspecial } from '../capasAulas'
-import { vitrine } from '../../core/teeds/parceiro'
+import { vitrineDoConteudo } from '../../core/teeds/parceiro'
 import { ResponsiveImage } from '../ResponsiveImage'
 import './capa-da-aula.css'
 
@@ -23,7 +23,7 @@ export type OrigemDaCapa = 'parceiro' | 'enviada' | 'parceiro-codigo' | 'padrao-
  *  4. a capa padrão do código (Victor fora do /n), a gravada como caminho do site,
  *     a do catálogo pelo id; senão, a capa desenhada.
  */
-export function capaResolvida(aula: Pick<Aula, 'id' | 'capa' | 'capas'>, v: string = vitrine()): { src: string | null; origem: OrigemDaCapa } {
+export function capaResolvida(aula: Pick<Aula, 'id' | 'capa' | 'capas'>, v: string = vitrineDoConteudo()): { src: string | null; origem: OrigemDaCapa } {
   const daVitrine = v ? aula.capas?.[v] : undefined
   if (daVitrine) return { src: daVitrine, origem: 'parceiro' }
   const doParceiro = capaDoParceiroNoCodigo(aula.id, v)

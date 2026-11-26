@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { CursoNaSala } from '../../core/teeds/gradeAulas'
 import { MARCA } from '../../marca'
-import { vitrine } from '../../core/teeds/parceiro'
+import { vitrineDoConteudo } from '../../core/teeds/parceiro'
 import { IconeFechar } from '../IconeFechar'
 import './vitrine-de-cursos.css'
 
@@ -14,7 +14,7 @@ import './vitrine-de-cursos.css'
 */
 
 /** A capa do curso nesta vitrine: a do parceiro (16/11/2026) ou a de todos. */
-export const capaDoCursoNaVitrine = (curso: Pick<CursoNaSala, 'capa' | 'capas'>, v: string = vitrine()) => (v && curso.capas?.[v]) || curso.capa || null
+export const capaDoCursoNaVitrine = (curso: Pick<CursoNaSala, 'capa' | 'capas'>, v: string = vitrineDoConteudo()) => (v && curso.capas?.[v]) || curso.capa || null
 
 export function CapaDoCurso({ curso, grande = false, vitrine: v }: { curso: Pick<CursoNaSala, 'titulo' | 'capa' | 'capas' | 'cor'>; grande?: boolean; vitrine?: string }) {
   const capa = capaDoCursoNaVitrine(curso, v)

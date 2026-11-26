@@ -20,7 +20,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { SessaoTeeds } from '../../core/teeds/conta'
 import { marcarVista, playerDoVideo, type Aula } from '../../core/teeds/aulas'
-import { gradePublicadaEmCache, modulosParaSala, type GradeAulas } from '../../core/teeds/gradeAulas'
+import { gradePublicadaEmCache, modulosParaSala, videoDeBoasVindasNaVitrine, type GradeAulas } from '../../core/teeds/gradeAulas'
+import { vitrineDoConteudo } from '../../core/teeds/parceiro'
 import { registrarAula } from '../../core/teeds/insights'
 import { PlayerAula } from '../PlayerAula'
 import './boas-vindas-video.css'
@@ -53,9 +54,11 @@ export function BoasVindasEmVideo({ sessao, nome, plano, admin, aoFechar, aoSemV
       if (!vivo) return
       if (!g) { setAula(null); return }
       const modulos = modulosParaSala(g, { plano, admin })
-      // um vídeo próprio do pop-up, escolhido no painel (08/11/2026)
-      if (g.boasVindas?.video) {
-        setAula({ id: 'boas-vindas', titulo: 'Vídeo de boas-vindas', descricao: '', video: g.boasVindas.video, duracao: '', cor: modulos[0]?.cor ?? 'var(--primary)', proprio: true })
+      // um vídeo próprio do pop-up, escolhido no painel (08/11/2026); 26/11/2026: o da vitrine
+      // (Naor no /n, Victor no /v e nos diretos), senão o de todos
+      const proprio = videoDeBoasVindasNaVitrine(g, vitrineDoConteudo())
+      if (proprio) {
+        setAula({ id: 'boas-vindas', titulo: 'Vídeo de boas-vindas', descricao: '', video: proprio, duracao: '', cor: modulos[0]?.cor ?? 'var(--primary)', proprio: true })
         return
       }
       for (const m of modulos) {
