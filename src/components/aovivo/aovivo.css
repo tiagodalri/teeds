@@ -1136,3 +1136,21 @@ body.av-teatro-aberto { overflow: hidden; }
 
 /* Central no celular, na live com outros administradores: o que os alunos veem */
 .cv-palco-equipe > .av-palco { aspect-ratio: 16 / 9; }
+
+/* modo aluno da equipe (26/11/2026): a live como o aluno vê, por cima do painel (que segue rodando) */
+.tr-modo-aluno { position: fixed; inset: 0; z-index: 900; display: flex; flex-direction: column; background: var(--bg, #050b14); color: var(--text); }
+.tr-modo-aluno-barra { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--gf-ouro, #B78D39) 12%, var(--surface, #0b1220)); }
+.tr-modo-aluno-barra > span { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 14px; }
+.tr-modo-aluno-barra > span i { width: 9px; height: 9px; border-radius: 50%; background: var(--gf-ouro, #B78D39); box-shadow: 0 0 0 4px rgba(183,141,57,.22); }
+.tr-modo-aluno-barra small { color: var(--muted); font-size: 12.5px; font-weight: 500; }
+.tr-modo-aluno-barra button { height: 38px; padding: 0 16px; border: 0; border-radius: 10px; background: linear-gradient(180deg, #D6AE5B, #B78D39); color: #15110a; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.tr-modo-aluno-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; padding: 14px 16px 16px; }
+.tr-modo-aluno-palco { min-height: 0; height: 100%; }
+.tr-modo-aluno-palco > video.av-tela { position: absolute; inset: 0; }
+.tr-modo-aluno-chat { min-height: 0; display: flex; }
+.tr-modo-aluno-chat > .av-chat { flex: 1; }
+@media (max-width: 900px) {
+  .tr-modo-aluno-barra small { display: none; }
+  .tr-modo-aluno-corpo { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); padding: 10px; }
+  .tr-modo-aluno-palco { height: auto; aspect-ratio: 16 / 9; }
+}

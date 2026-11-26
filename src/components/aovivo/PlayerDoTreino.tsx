@@ -167,9 +167,11 @@ function useMensagens(): MensagemSimulada[] {
 }
 
 /** O chat do ensaio. O membro escreve só para o apresentador; o admin responde como apresentador. */
-export function ChatDoTreino({ titulo = true }: { titulo?: boolean }) {
+export function ChatDoTreino({ titulo = true, comoAluno = false }: { titulo?: boolean; comoAluno?: boolean }) {
   const t = useTreino()
-  const mensagens = useMensagens()
+  const todas = useMensagens()
+  // modo aluno da equipe (26/11/2026): o chat como o aluno vê (sem as mensagens dos membros, que só a equipe recebe)
+  const mensagens = comoAluno ? todas.filter((m) => !m.membro) : todas
   const [texto, setTexto] = useState('')
   const lista = useRef<HTMLDivElement>(null)
   useEffect(() => {

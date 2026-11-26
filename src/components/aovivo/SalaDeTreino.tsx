@@ -15,7 +15,9 @@ import {
   alternarFonte, cantoDoTreino, cantoNoTreino, outroNoAr, definirVitrinesDoTreino, entrarNoTreino, linkDoTeste, voltarATreinar, prepararSalaDoAdmin, sairDoTreino,
   trocarFundoDoTreino, trocarTeste, useTreino, entrarNoPalco, sairDoPalco,
 } from '../../core/live/treino'
-import { PalcoDoTreino } from './PlayerDoTreino'
+import { ChatDoTreino, PalcoDoTreino, VideoDaFaixa } from './PlayerDoTreino'
+import { PalcoLadoALado } from './PalcoLadoALado'
+import { saidaDoEstudio } from '../../core/live/estudio/motor'
 import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
 
 import { PainelDaSala, telaDeAbertura } from './PainelDaSala'
@@ -224,6 +226,21 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
   useEffect(() => { const f = () => setCheia(!!document.fullscreenElement); document.addEventListener('fullscreenchange', f); return () => document.removeEventListener('fullscreenchange', f) }, [])
   const alternarTelaCheia = () => { if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined); else void document.documentElement.requestFullscreen?.().catch(() => undefined) }
   const sairDaSala = () => { void sairDoTreino(); aoSair() }
+  // modo aluno (26/11/2026, pedido do Naor): a equipe vê a live exatamente como o aluno; o painel segue rodando por baixo
+  const [comoAluno, setComoAluno] = useState(false)
+  useEffect(() => {
+    if (!comoAluno) return
+    const esc = (ev: KeyboardEvent) => { if (ev.key === 'Escape') setComoAluno(false) }
+    document.addEventListener('keydown', esc)
+    return () => document.removeEventListener('keydown', esc)
+  }, [comoAluno])
+  const botaoAluno = (
+    <button type="button" className="ps-modo-aluno" aria-pressed={comoAluno} onClick={() => setComoAluno(true)} title="Ver a live exatamente como o aluno vê">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+      Modo aluno
+    </button>
+  )
+  const modoAluno = comoAluno && <ModoAluno sair={() => setComoAluno(false)} publico={sim.ativa ? sim.publicoAgora : 0} />
   // vários administradores (26/11/2026): na live de outro, "Sair" não encerra nada para ninguém
   const encerraAoSair = sim.ativa && !tr.coApresentando
   // o nome no chat: o primeiro nome, como sempre foi (vale para o dono e para quem ajuda)
@@ -487,6 +504,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
     )
     return (
       <div className={`cv-app ps-app ${sim.ativa ? 'no-ar' : ''} ${tr.teste ? 'em-teste' : ''}`} aria-label="Central ao vivo">
+        {modoAluno}
         <header className="cv-app-topo ps-topo">
           <div className="cv-app-marca">
             {FAMILIA_GF && <img src={`${import.meta.env.BASE_URL}globalfly-gf-escuro.png`} alt="" aria-hidden />}
@@ -562,6 +580,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
                 <button type="button" className="ps-cancelar" onClick={() => setConfirmarFim(false)}>Continuar no ar</button>
               </span>
               : <button type="button" className="ps-encerrar" onClick={() => setConfirmarFim('fim')}><i aria-hidden />Encerrar transmissão</button>}
+          {botaoAluno}
           <button type="button" className="ps-ico-topo" aria-label={cheia ? 'Sair da tela cheia' : 'Tela cheia'} title={cheia ? 'Sair da tela cheia' : 'Tela cheia'} onClick={alternarTelaCheia}>
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={cheia ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5'} /></svg>
           </button>
@@ -653,6 +672,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
 
   return (
     <div className="ger av-pagina av-com-palco tr-sala cv">
+      {modoAluno}
       <section className={`av-mesa ${sim.ativa ? 'tr-ativa' : ''}`} aria-label="Central ao vivo">
         <div className="av-mesa-estado">
           <span className="tr-chip">Central ao vivo · sala de treino</span>
@@ -684,6 +704,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
               : tr.donoSumiu ? assumir : <button className="tr-botao-iniciar" onClick={() => comecar()}><i aria-hidden />Começar transmissão</button>}
           {sim.ativa && <>{quemComanda}{botaoPalco}</>}
           {sessao && (tr.fase === 'erro' || tr.fase === 'fora') && <button className="tr-botao-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button>}
+          {botaoAluno}
           {!confirmarFim && <button className="av-link" onClick={() => (encerraAoSair ? setConfirmarFim('sair') : sairDaSala())}>Sair da Central</button>}
         </div>
         {sim.ativa && sessao && tr.fase !== 'conectada' && <p className="av-erro" role="alert">Você está fora da sala: os alunos não estão vendo. {tr.fase === 'reconectando' ? 'Voltando…' : ''}</p>}
@@ -907,5 +928,51 @@ export function HistoricoDasTransmissoes({ sessao, noAr, compacto = false }: { s
         </div>
       )}
     </section>
+  )
+}
+
+/* ------------------------------------------------ modo aluno (26/11/2026) */
+
+/** A imagem que o aluno recebe: o palco lado a lado, a saída das telas (quem comanda) ou a imagem do dono (quem ajuda). */
+function ImagemDoAluno() {
+  const tr = useTreino()
+  const ref = useRef<HTMLVideoElement>(null)
+  const souDono = !tr.coApresentando
+  const saida = souDono ? saidaDoEstudio()?.video ?? null : null
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !saida) return
+    el.srcObject = new MediaStream([saida])
+    void el.play().catch(() => undefined)
+    return () => { el.srcObject = null }
+  }, [saida])
+  if (tr.grade) return <PalcoLadoALado />
+  if (!souDono) {
+    return tr.tela ? <VideoDaFaixa faixa={tr.tela} className="av-tela" /> : tr.camera ? <VideoDaFaixa faixa={tr.camera} className="av-tela av-so-camera" />
+      : <div className="av-espera tr-espera"><b>A transmissão começa em instantes</b></div>
+  }
+  if (saida) return <video ref={ref} className="av-tela" autoPlay playsInline muted />
+  // no celular (sem as telas): a câmera ou a tela que vai para os alunos
+  return <PalcoDoTreino />
+}
+
+function ModoAluno({ sair, publico }: { sair: () => void; publico: number }) {
+  const tr = useTreino()
+  const sim = useSimulacao()
+  return (
+    <div className="tr-modo-aluno" role="dialog" aria-modal="true" aria-label="Modo aluno: a live como o aluno vê">
+      <div className="tr-modo-aluno-barra">
+        <span><i aria-hidden />Modo aluno<small>Você está vendo a live exatamente como os alunos. O painel continua rodando.</small></span>
+        <button type="button" onClick={sair} autoFocus>Voltar ao painel</button>
+      </div>
+      <div className="tr-modo-aluno-corpo av-aluno">
+        <div className="av-palco tr-modo-aluno-palco">
+          <ImagemDoAluno />
+          <span className="tr-selo"><i aria-hidden />GF Streaming{sim.ativa && <> · {fmt(publico)} na sala</>}</span>
+          {!sim.ativa && !tr.grade && <div className="av-espera tr-espera"><b>A transmissão ainda não começou</b><span>Quando começar, os alunos veem aqui o que está no ar.</span></div>}
+        </div>
+        <div className="tr-modo-aluno-chat"><ChatDoTreino comoAluno /></div>
+      </div>
+    </div>
   )
 }
