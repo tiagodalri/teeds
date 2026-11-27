@@ -24,6 +24,8 @@ type Global = {
     ultimoToque: number
     pendente: string | null
     motivo: 'versao' | 'tela' | null
+    /** a pessoa tocou em "Depois": não volta a aparecer ao sair da sala */
+    dispensado?: boolean
     vigia: number | null
     /** Quem recarrega (main.tsx limpa as peças guardadas antes). */
     recarregador: ((versao: string | null, porClique: boolean) => void) | null
@@ -44,8 +46,22 @@ export function definirRecarregador(fn: (versao: string | null, porClique: boole
 
 /** Marca (ou desmarca) algo em andamento: posição manual aberta, I.A. ligada… */
 export function marcarEmUso(chave: string, ativo: boolean): void {
+  const antes = !!estado.emUso[chave]
   if (ativo) estado.emUso[chave] = true
   else delete estado.emUso[chave]
+  // entrou ou saiu da sala de treino: esconde ou mostra o aviso que estava esperando
+  if (chave === 'treino' && antes !== ativo && estado.motivo) sincronizarAviso()
+}
+
+/**
+ * 27/11/2026: uma publicação no meio da live fez o aviso aparecer para quem assistia; a pessoa tocava
+ * em Atualizar e caía da live (12 voltas em 30 min). Na sala de treino o aviso de versão nova não
+ * aparece: ele espera a pessoa sair da sala. (O de "tela", que a própria pessoa pediu, continua.)
+ */
+const naSala = () => !!estado.emUso.treino
+function sincronizarAviso(): void {
+  if (estado.motivo === 'versao' && naSala()) document.getElementById('aviso-versao')?.remove()
+  else if (estado.motivo && !estado.dispensado) mostrarAviso()
 }
 
 /** Há operação, compra ou I.A. em andamento nesta página. */
@@ -67,6 +83,7 @@ function recarregar(versao: string | null, porClique = false): void {
 export const podeRecarregarSozinho = (): boolean => !emOperacao() && parado()
 
 function mostrarAviso(): void {
+  if (estado.motivo === 'versao' && naSala()) return
   if (document.getElementById('aviso-versao')) { atualizarTexto(); return }
   const aviso = document.createElement('div')
   aviso.id = 'aviso-versao'
@@ -74,7 +91,7 @@ function mostrarAviso(): void {
   aviso.innerHTML = '<span data-texto></span>'
     + '<button type="button" data-atualizar>Atualizar</button><button type="button" data-depois>Depois</button>'
   aviso.querySelector('[data-atualizar]')!.addEventListener('click', () => recarregar(estado.pendente, true))
-  aviso.querySelector('[data-depois]')!.addEventListener('click', () => aviso.remove())
+  aviso.querySelector('[data-depois]')!.addEventListener('click', () => { estado.dispensado = true; aviso.remove() })
   document.body.appendChild(aviso)
   atualizarTexto()
 }
