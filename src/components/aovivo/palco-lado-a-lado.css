@@ -89,3 +89,21 @@
   .pl-faixa .pl-nome { padding: 2px 6px; font-size: 10.5px; }
   .pl-faixa .pl-acoes { display: none; }
 }
+
+/* 27/11/2026 (live com público no celular: a tela compartilhada saía numa faixa estreita e o volume cobria os quadros).
+   No celular em pé, com o palco da equipe, a imagem da live fica mais alta: a tela compartilhada usa a largura toda em
+   16:9, o selo e os botões ficam na faixa de cima e os quadros de quem fala embaixo, sem nada por cima. */
+@media (max-width: 1000px) {
+  .av-palco-e-chat:not(.av-teatro) > .av-palco.com-palco:not(.compacto) { aspect-ratio: 8 / 7; max-height: 78vh; }
+  .av-palco.com-palco:not(.compacto) .av-botoes-palco { top: 6px; bottom: auto; right: 8px; }
+  .av-palco.com-palco:not(.compacto) .av-botoes-palco button { width: 34px; height: 34px; }
+  .av-palco.com-palco:not(.compacto) .pl-palco { padding: 46px 6px 6px; gap: 6px; }
+  /* duas câmeras sem tela compartilhada: uma em cima da outra, ocupando a imagem toda */
+  .av-palco.com-palco:not(.compacto) .pl-palco.grade[data-n='2'] { grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr)); align-content: stretch; }
+  .av-palco.com-palco:not(.compacto) .pl-palco.grade[data-n='2'] .pl-quadro { aspect-ratio: auto; height: 100%; max-height: none; }
+}
+/* celular: o volume fica nos botões do aparelho; sobre a imagem, só o liga/desliga do som */
+@media (max-width: 480px) {
+  .av-palco.com-palco:not(.compacto) .tr-volume-palco input[type='range'] { display: none; }
+  .av-palco.com-palco:not(.compacto) .tr-volume-palco { padding-right: 0; }
+}
