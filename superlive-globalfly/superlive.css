@@ -455,3 +455,13 @@ html:has(body.sl) { overflow-x: hidden; }
 .sl-conv-linha b { white-space: nowrap; }
 .sl-iphone .sl-fone-topo b { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .sl-zap-selo { width: 16px; height: 16px; flex: none; }
+
+/* obrigado: o aviso do e-mail com os dados de acesso */
+.sl-email { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; margin: 6px 0 14px; padding: 18px; border-radius: 18px; text-align: left; border: 1px solid rgba(242, 178, 92, .45); background: linear-gradient(180deg, rgba(242, 178, 92, .12), rgba(5, 21, 40, .2)); }
+.sl-email-icone { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: rgba(242, 178, 92, .18); color: var(--quente); }
+.sl-email-icone svg { width: 24px; height: 24px; }
+.sl-email h2 { margin: 0; font-size: 20px; }
+.sl-email p { margin: 6px 0 0; color: #D5DCE4; font-size: 15.5px; line-height: 1.5; }
+.sl-email p b { color: var(--marfim); overflow-wrap: anywhere; }
+.sl-email small { display: block; margin-top: 8px; color: var(--aco); font-size: 13px; }
+.sl-obrigado [hidden] { display: none !important; }

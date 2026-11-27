@@ -290,6 +290,39 @@ function emailDeInscricaoNaLive(marca: Marca, email: string, senhaProvisoria: st
   })
 }
 
+/**
+ * Super Live de domingo, 29/11/2026 (27/11, Tiago): quem se inscreve pela /superlive recebe UM e-mail
+ * com a confirmação da live e os dados de acesso (e-mail + senha provisória; a troca é pedida no
+ * primeiro acesso). Cadastro NOVO entra com as funções bloqueadas até a live (`segura`); quem já era
+ * cliente só recebe a confirmação da vaga, e a conta dele fica como está. Links do parceiro do endereço.
+ */
+export const SUPERLIVE_QUANDO = 'domingo, 29/11, às 20h'
+export function emailDaSuperLive(marca: Marca, email: string, senhaProvisoria: string | undefined, senhaPropria: boolean, parceiro: string | null | undefined, segura: boolean, link?: string) {
+  const comunidade = comunidadeDe(marca, parceiro)
+  const quem = doParceiro(marca, parceiro) === 'n' ? 'Naor Bezerra e Victor Cordeiro' : 'Victor Cordeiro e Naor Bezerra'
+  const jaCliente = !senhaProvisoria && !segura
+  const acesso = senhaProvisoria
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha provisória: ${senhaProvisoria}\n\nNo primeiro acesso, você cria a sua própria senha.`
+    : senhaPropria
+    ? `Seus dados de entrada:\nE-mail: ${email}\nSenha: a que você já criou.\n\nSe não lembrar a senha, toque em “Esqueci a senha” na tela de entrada e crie uma nova.`
+    : `Você já tem uma conta com o e-mail ${email}. Ela continua como está: entre com a sua senha de sempre.`
+  const plataforma = jaCliente
+    ? `Você já tem conta na ${marca.prosa}, e nada muda nela: o seu acesso continua liberado.`
+    : segura
+    ? `Seu cadastro gratuito na ${marca.prosa} também está pronto. Você já pode entrar e conhecer a plataforma; as funções ficam bloqueadas até a live, e o seu acesso é efetivado depois da sua presença na Super Live de domingo.`
+    : `Seu cadastro gratuito na ${marca.prosa} também está pronto.`
+  return montarEmail(marca,'confirmar',link??enderecoDe(marca,parceiro),{
+    assunto:`Sua vaga na Super Live está garantida · ${SUPERLIVE_QUANDO}`,
+    titulo:'Sua vaga na Super Live está garantida',
+    espia:`${SUPERLIVE_QUANDO[0].toUpperCase()+SUPERLIVE_QUANDO.slice(1)}, com ${quem}. Aqui estão os seus dados de acesso.`,
+    corpo:`Sua inscrição na **Super Live** está confirmada: **${SUPERLIVE_QUANDO}** (horário de Brasília), ao vivo com ${quem}.\n\n${plataforma}\n\n${acesso}\n\nO link para assistir é enviado na comunidade do WhatsApp, antes de a live começar.`,
+    botao:`Entrar na ${marca.nomeCurto ?? marca.prosa}`,
+    ...(comunidade?{whatsapp:{url:comunidade,texto:'Entrar na comunidade do WhatsApp'}}:{}),
+    aviso:'Se não foi você que se inscreveu, pode ignorar este e-mail. Não compartilhe seus dados de acesso.',
+    motivo:`Você recebeu este e-mail porque se inscreveu na Super Live da ${marca.prosa}.`,
+  })
+}
+
 export function emailDeCadastro(marca: Marca, email: string, senhaProvisoria?: string, senhaPropria = false, parceiro?: string | null, link?: string) {
   if (noLancamento(marca)) return emailDeInscricaoNaLive(marca,email,senhaProvisoria,senhaPropria,parceiro)
   const acesso=senhaPropria
@@ -362,7 +395,7 @@ export async function enviarCadastros() {
     // 45 s de folga: o cadastro com senha própria cria a conta logo depois do
     // pedido; o carteiro não pode chegar antes e criar a conta com a provisória.
     const folga=new Date(Date.now()-45_000).toISOString()
-    const lista=await banco(`/rest/v1/clientes_pendentes?status=eq.pendente&email_cadastro_em=is.null&ultima_inscricao_em=lt.${encodeURIComponent(folga)}&select=id,marca,email,nome,telefone,user_id,parceiro&order=criado_em.asc&limit=20`)
+    const lista=await banco(`/rest/v1/clientes_pendentes?status=eq.pendente&email_cadastro_em=is.null&ultima_inscricao_em=lt.${encodeURIComponent(folga)}&select=id,marca,email,nome,telefone,user_id,parceiro,superlive,superlive_segura&order=criado_em.asc&limit=20`)
     for (const p of lista ?? []) {
       try {
         const marca=marcaPorId(p.marca)
@@ -387,7 +420,10 @@ export async function enviarCadastros() {
         const senhaPropria=usuario.app_metadata?.senha_propria===true
         const senhaConhecida=!senhaPropria && (criadaAgora || (usuario.app_metadata?.cadastro_lead===p.id && usuario.user_metadata?.trocar_senha===true))
         const podeEntrar=senhaPropria||senhaConhecida
-        const email=emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria,p.parceiro,podeEntrar?await linkDeAcesso(marca,p.email,p.parceiro):undefined)
+        const link=podeEntrar?await linkDeAcesso(marca,p.email,p.parceiro):undefined
+        const email=p.superlive
+          ? emailDaSuperLive(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria,p.parceiro,p.superlive_segura===true,link)
+          : emailDeCadastro(marca,p.email,senhaConhecida?SENHA_PROVISORIA:undefined,senhaPropria,p.parceiro,link)
         await despachar(marca,p.email,email,`cadastro-lead-${p.id}`)
         await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.pendente`,'PATCH',{email_cadastro_em:new Date().toISOString()})
       } catch { console.warn('[cadastro] E-mail de boas-vindas pendente; será tentado novamente.') }
@@ -401,10 +437,15 @@ export async function enviarAprovacoes() {
   if (enviando) return
   enviando=true
   try {
-    const lista=await banco('/rest/v1/clientes_pendentes?status=eq.aprovado&email_enviado_em=is.null&select=id,marca,email,user_id,parceiro,plano_id,decidido_em&order=decidido_em.asc&limit=20')
+    const lista=await banco('/rest/v1/clientes_pendentes?status=eq.aprovado&email_enviado_em=is.null&select=id,marca,email,user_id,parceiro,plano_id,decidido_em,superlive,superlive_segura&order=decidido_em.asc&limit=20')
     for (const p of lista ?? []) {
       try {
         const marca=marcaPorId(p.marca)
+        // Super Live: quem já era cliente e só garantiu a vaga já recebeu a confirmação; "aprovado" de novo confunde
+        if (p.superlive && !p.superlive_segura) {
+          await banco(`/rest/v1/clientes_pendentes?id=eq.${p.id}&status=eq.aprovado`,'PATCH',{email_enviado_em:new Date().toISOString()})
+          continue
+        }
         const u=await banco(`/auth/v1/admin/users/${encodeURIComponent(p.user_id)}`)
         // Ainda com a provisória: repete os dados de entrada, porque este pode
         // ser o único e-mail que a pessoa achar depois. Quem já criou a própria

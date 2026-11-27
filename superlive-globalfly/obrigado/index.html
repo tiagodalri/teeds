@@ -39,8 +39,17 @@
         <h1 data-titulo>Seu lugar está garantido!</h1>
         <!-- 25/11/2026 (Tiago: "na página de obrigado de cada um deles quero o botão para a comunidade do WhatsApp"):
              a comunidade é o primeiro passo, em destaque; o link é o do parceiro do endereço (captura.js, COMUNIDADE) -->
+        <!-- 27/11/2026 (Tiago): a pessoa recebe no e-mail os dados para concluir o cadastro gratuito e os da Super Live -->
+        <section class="sl-email" aria-labelledby="titulo-email">
+          <span class="sl-email-icone" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.500"/><path d="M4 7l8 6 8-6"/></svg></span>
+          <div>
+            <h2 id="titulo-email">Confira o seu e-mail</h2>
+            <p>Enviamos para <b data-email-dele>o seu e-mail</b> as informações para concluir o seu <b>cadastro gratuito na plataforma</b> e os detalhes da <b>Super Live</b>.</p>
+            <small>Chega em até 2 minutos. Não achou? Olhe no Spam ou no Lixo eletrônico.</small>
+          </div>
+        </section>
         <section class="sl-comunidade" aria-labelledby="titulo-comunidade">
-          <span class="sl-com-passo">Último passo · leva 5 segundos</span>
+          <span class="sl-com-passo">Próximo passo · leva 5 segundos</span>
           <h2 id="titulo-comunidade" data-com-titulo>Entre agora na comunidade da GlobalFly no&nbsp;WhatsApp</h2>
           <p data-com-texto>É por lá que a gente avisa quando a Super Live vai começar e manda o link para você entrar ao vivo no&nbsp;domingo.</p>
           <a class="sl-com-botao" id="comunidade" href="https://chat.whatsapp.com/CPBJlfpTpZy7u2N5VF9Drq" target="_blank" rel="noopener">
@@ -61,13 +70,13 @@
         <!-- 02/11/2026: o mesmo indicador de etapas do questionário -->
         <ol class="quiz-etapas obrigado-etapas" aria-label="Seu cadastro">
           <li class="feito"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Cadastro</span></li>
-          <li class="agora" aria-current="step"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></i><span>Primeiro acesso</span></li>
+          <li class="agora" aria-current="step"><i aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></i><span>Confira o e-mail</span></li>
         </ol>
         <!-- 11/11/2026: o obrigado do cadastro com planos (o do lançamento de 09/11 está em
              arquivo/landing-lancamento-09-11/obrigado/). A conta nasce no cadastro e já entra. -->
-        <p class="chamada" data-chamada>E tem mais: a sua conta na GlobalFly já foi criada e está liberada. Até domingo, entre e conheça as I.A., as aulas e as salas ao&nbsp;vivo.</p>
-        <p class="ultimo">Enquanto o domingo não chega</p>
-        <ol class="o-passos">
+        <p class="chamada" data-chamada hidden></p>
+        <p class="ultimo" hidden></p>
+        <ol class="o-passos" hidden>
           <li>
             <span class="o-n">1</span>
             <div><strong>Entre na GlobalFly</strong><span data-acesso-curto>Use o e-mail do cadastro e a senha que você&nbsp;criou.</span></div>
@@ -87,7 +96,7 @@
             <button class="botao o-botao o-claro" type="button" id="avisos">Ativar notificações</button>
           </li>
         </ol>
-        <div class="acesso">
+        <div class="acesso" hidden>
           <strong>Seu acesso</strong>
           <!-- O texto segue o que o servidor fez com a conta (28/10/2026): criada com a senha da pessoa,
                já existente, ou (fallback e cadastros antigos) com a senha provisória por e-mail. -->
@@ -121,6 +130,9 @@
       // textContent: o nome nunca entra como HTML
       if (dados.nome) document.querySelector('[data-titulo]').textContent = dados.nome + ', seu lugar está garantido!'
       GF.pixel('ViewContent', { content_name: 'superlive-obrigado' })
+      if (dados.email) document.querySelector('[data-email-dele]').textContent = dados.email
+      // salvar na agenda também conta (pixel Schedule, e "agenda" na central de rastreio)
+      ;['agenda-google', 'agenda-ics'].forEach(function (id) { var b = document.getElementById(id); if (b) b.addEventListener('click', function () { GF.pixel('Schedule') }) })
       // o plano escolhido no cadastro (Gold): o nome aparece na chamada
       var PLANOS = { gold: 'Gold', black: 'Black', prestige: 'Prestige' }
       if (PLANOS[dados.plano]) document.querySelector('[data-chamada]').innerHTML = 'Bem-vindo a bordo. Seu <b>GF Member ' + PLANOS[dados.plano] + '</b> está pronto: entre com o e-mail e a senha que você criou e conheça as I.A., as aulas e as salas ao&nbsp;vivo.'
