@@ -16,7 +16,6 @@
 .sl-cartaz { position: relative; width: min(1240px, 100%); margin: 0 auto; padding: 0 clamp(16px, 4vw, 48px); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: end; gap: clamp(16px, 3vw, 40px); isolation: isolate; }
 .sl-cartaz-texto { padding-bottom: clamp(28px, 5vw, 72px); }
 .sl-selo { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 11px; border-radius: 999px; border: 1px solid rgba(242, 178, 92, .5); background: rgba(242, 178, 92, .1); font-size: 13.5px; font-weight: 700; letter-spacing: .02em; }
-.sl-selo i { width: 9px; height: 9px; border-radius: 50%; background: var(--ao-vivo); animation: sl-pulso 1.8s infinite; }
 @keyframes sl-pulso { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 66, .6) } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 66, 0) } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 66, 0) } }
 .sl-titulo { margin: 18px 0 0; font: 400 clamp(90px, 12.5vw, 190px)/.82 "Bebas Neue", Arimo, sans-serif; letter-spacing: .01em; text-transform: uppercase; }
 .sl-super { color: var(--marfim); }
@@ -153,7 +152,7 @@
 @media (max-width: 520px) {
   .sl-io-topo, .sl-ingresso-topo { font-size: 15px; letter-spacing: .05em; white-space: nowrap; }
 }
-@media (prefers-reduced-motion: reduce) { .sl-faixa-trilho, .sl-selo i, .sl-enviar::after { animation: none; } .sl-barra { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .sl-faixa-trilho, .sl-rec, .sl-rec::after, .sl-enviar::after { animation: none; } .sl-barra { transition: none; } }
 
 /* ------------------------------------------------ obrigado */
 .sl-obrigado .topo img { width: 170px; }
@@ -455,3 +454,28 @@ html:has(body.sl) { overflow-x: hidden; }
 .sl-conv-linha b { white-space: nowrap; }
 .sl-iphone .sl-fone-topo b { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .sl-zap-selo { width: 16px; height: 16px; flex: none; }
+
+/* obrigado: o aviso do e-mail com os dados de acesso */
+.sl-email { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; margin: 6px 0 14px; padding: 18px; border-radius: 18px; text-align: left; border: 1px solid rgba(242, 178, 92, .45); background: linear-gradient(180deg, rgba(242, 178, 92, .12), rgba(5, 21, 40, .2)); }
+.sl-email-icone { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: rgba(242, 178, 92, .18); color: var(--quente); }
+.sl-email-icone svg { width: 24px; height: 24px; }
+.sl-email h2 { margin: 0; font-size: 20px; }
+.sl-email p { margin: 6px 0 0; color: #D5DCE4; font-size: 15.5px; line-height: 1.5; }
+.sl-email p b { color: var(--marfim); overflow-wrap: anywhere; }
+.sl-email small { display: block; margin-top: 8px; color: var(--aco); font-size: 13px; }
+.sl-obrigado [hidden] { display: none !important; }
+
+/* 27/11/2026 (Tiago: "aquela bolinha vermelha piscando como se fosse live"): luz de transmissão, a mesma em todo lugar */
+.sl-rec { position: relative; flex: none; display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ao-vivo, #FF4D42); box-shadow: 0 0 10px rgba(255, 77, 66, .95), 0 0 2px #fff inset; animation: sl-rec 1.15s ease-in-out infinite; }
+.sl-rec::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--ao-vivo, #FF4D42); animation: sl-rec-onda 1.15s ease-out infinite; }
+@keyframes sl-rec { 0%, 100% { opacity: 1 } 55% { opacity: .3 } }
+@keyframes sl-rec-onda { from { transform: scale(1); opacity: .85 } to { transform: scale(3); opacity: 0 } }
+.sl-aovivo { display: inline-flex; align-items: center; gap: 9px; padding: 7px 13px 6px 11px; border-radius: 999px; border: 1px solid rgba(255, 77, 66, .5); background: rgba(255, 77, 66, .12); color: #fff; font: 400 16px/1 "Bebas Neue", Arimo, sans-serif; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.sl-aovivo .sl-rec { width: 9px; height: 9px; margin-top: -1px; }
+.sl-topo-lado { display: flex; align-items: center; gap: 12px; }
+.sl-agora em { display: inline-flex; align-items: center; gap: 7px; }
+.sl-agora em .sl-rec { width: 7px; height: 7px; background: #fff; box-shadow: 0 0 8px #fff; }
+.sl-agora em .sl-rec::after { border-color: #fff; }
+.sl-barra b { display: flex; align-items: center; gap: 8px; }
+.sl-barra b .sl-rec { width: 8px; height: 8px; margin-top: -2px; }
+.sl-obrigado .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

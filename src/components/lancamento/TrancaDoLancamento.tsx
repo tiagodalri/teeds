@@ -23,7 +23,7 @@ import { MARCA } from '../../marca'
 import { DERIV } from '../../core/deriv/config'
 import { afiliadoDaDeriv, comunidadeDaVitrine } from '../../core/rotas'
 import type { SessaoTeeds } from '../../core/teeds/conta'
-import { INICIO_DA_LIVE, LIVE_POR_FORA, faltaCurto, idDoYoutube, linkDaLive, type EstadoDaLive } from '../../core/teeds/lancamento'
+import { INICIO_DA_LIVE, LIVE_POR_FORA, SUPERLIVE_FIM, SUPERLIVE_INICIO, faltaCurto, idDoYoutube, linkDaLive, naSuperLive, type EstadoDaLive } from '../../core/teeds/lancamento'
 import { ChecklistDaLive } from '../PreAcesso'
 import './lancamento.css'
 
@@ -78,8 +78,13 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
   useEffect(() => { const t = window.setInterval(() => setAgora(Date.now()), 1000); return () => window.clearInterval(t) }, [])
   useEffect(() => { try { sessionStorage.setItem(`${MARCA.id}.tranca.vista`, '1') } catch { /* só nesta tela */ } }, [])
 
-  const inicio = estado?.inicioPrevisto ? Date.parse(estado.inicioPrevisto) : INICIO_DA_LIVE
-  const fase: Fase = estado?.noAr ? 'no-ar' : estado?.terminouEm || agora >= inicio + 3 * 36e5 ? 'depois' : 'antes'
+  // Super Live (27/11/2026): datas próprias; a live de 09/11 já passou e o `estado` ainda é o dela
+  const sl = naSuperLive(agora)
+  const inicio = sl ? SUPERLIVE_INICIO : estado?.inicioPrevisto ? Date.parse(estado.inicioPrevisto) : INICIO_DA_LIVE
+  const fase: Fase = sl
+    ? (agora < SUPERLIVE_INICIO ? 'antes' : agora < SUPERLIVE_FIM ? 'no-ar' : 'depois')
+    : estado?.noAr ? 'no-ar' : estado?.terminouEm || agora >= inicio + 3 * 36e5 ? 'depois' : 'antes'
+  const comunidade = comunidadeDaVitrine()
   const falta = Math.max(0, inicio - agora)
   // 09/11/2026: a transmissão é fora da plataforma; o botão leva ao link (o aviso de tela cheia também)
   const linkFora = LIVE_POR_FORA ? linkDaLive(estado?.youtube) : null
@@ -144,7 +149,48 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
   const abrirLive = () => { setAviso(null); if (linkFora) window.open(linkFora, '_blank', 'noopener'); else if (!LIVE_POR_FORA) aoAssistir() }
 
   let conteudo: ReactNode
-  if (aviso === 'preparo') {
+  if (sl) {
+    // Super Live: o acesso é efetivado depois da presença na live de domingo (a equipe libera na hora)
+    conteudo = fase === 'antes' ? (
+      <>
+        <div className="tl-cadeado" aria-hidden="true"><Cadeado tamanho={26} /></div>
+        <div className="tl-cabeca">
+          <span className="tl-selo"><Cadeado tamanho={14} />Super Live · domingo, 29/11, às 20h</span>
+          <h2>Seu acesso é efetivado na Super Live</h2>
+          <p>{primeiroNome ? `${primeiroNome}, sua conta está pronta. ` : 'Sua conta está pronta. '}O acesso completo à {MARCA.prosa} é efetivado depois da sua presença na Super Live de domingo. O link para assistir chega pela comunidade do WhatsApp.</p>
+        </div>
+        <Relogio falta={falta} />
+        <div className="tl-acoes">
+          {comunidade && <a className="tl-botao" href={comunidade} target="_blank" rel="noopener noreferrer">Entrar na comunidade</a>}
+          <button type="button" className="tl-botao tl-botao-calmo" onClick={() => setAviso(null)}>Entendi</button>
+        </div>
+      </>
+    ) : fase === 'no-ar' ? (
+      <>
+        <div className="tl-cabeca">
+          <span className="tl-selo tl-selo-vivo"><i aria-hidden="true" />Ao vivo agora</span>
+          <h2>{primeiroNome ? `${primeiroNome}, a Super Live começou` : 'A Super Live começou'}</h2>
+          <p>O link para assistir está na comunidade do WhatsApp. O seu acesso é efetivado pela equipe durante a live, e esta tela abre a plataforma sozinha.</p>
+        </div>
+        <div className="tl-acoes">
+          {comunidade && <a className="tl-botao" href={comunidade} target="_blank" rel="noopener noreferrer">Abrir a comunidade</a>}
+          <button type="button" className="tl-botao tl-botao-calmo" onClick={() => setAviso(null)}>Entendi</button>
+        </div>
+      </>
+    ) : (
+      <>
+        <div className="tl-cabeca">
+          <span className="tl-selo"><Cadeado tamanho={14} />Super Live</span>
+          <h2>Efetivando os acessos</h2>
+          <p>A equipe efetiva os acessos de quem participou da Super Live. Esta tela abre a plataforma sozinha assim que o seu for liberado; os avisos saem na comunidade do WhatsApp.</p>
+        </div>
+        <div className="tl-acoes">
+          {comunidade && <a className="tl-botao" href={comunidade} target="_blank" rel="noopener noreferrer">Abrir a comunidade</a>}
+          <button type="button" className="tl-botao tl-botao-calmo" onClick={() => setAviso(null)}>Entendi</button>
+        </div>
+      </>
+    )
+  } else if (aviso === 'preparo') {
     conteudo = (
       <>
         <div className="tl-cabeca">
@@ -220,10 +266,14 @@ export function TrancaDoLancamento({ sessao, nome, estado, aoConferir, previa = 
         <div className={`tl-cartao tl-livre tl-${fase}`} role="status">
           <span className="tl-cartao-ico">{fase === 'no-ar' ? <i className="tl-ponto" aria-hidden="true" /> : <Cadeado />}</span>
           <span className="tl-cartao-texto">
-            <b>{fase === 'no-ar' ? 'A live está no ar' : fase === 'depois' ? 'A live terminou' : 'Liberado na live de 09/11, às 20h'}</b>
-            <small>{fase === 'no-ar' ? 'A liberação acontece durante a live' : fase === 'depois' ? (estado?.liberadoEm && !conferindo ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos…') : <>Faltam <span className="tl-mono">{faltaCurto(falta)}</span></>}</small>
+            <b>{sl ? (fase === 'no-ar' ? 'A Super Live está no ar' : fase === 'depois' ? 'Efetivando os acessos' : 'Acesso efetivado na Super Live')
+              : fase === 'no-ar' ? 'A live está no ar' : fase === 'depois' ? 'A live terminou' : 'Liberado na live de 09/11, às 20h'}</b>
+            <small>{sl ? (fase === 'antes' ? <>Domingo, 20h · faltam <span className="tl-mono">{faltaCurto(falta)}</span></> : fase === 'no-ar' ? 'O link está na comunidade do WhatsApp' : 'Esta tela abre sozinha quando o seu for liberado')
+              : fase === 'no-ar' ? 'A liberação acontece durante a live' : fase === 'depois' ? (estado?.liberadoEm && !conferindo ? 'Seu acesso ainda não foi liberado' : 'Liberando os acessos…') : <>Faltam <span className="tl-mono">{faltaCurto(falta)}</span></>}</small>
           </span>
-          {fase === 'no-ar'
+          {sl
+            ? <button type="button" className="tl-botao tl-botao-calmo" onClick={() => setAviso('aviso')}>Ver mais</button>
+            : fase === 'no-ar'
             ? <button type="button" className="tl-botao" onClick={abrirLive} disabled={!temVideo}>Assistir</button>
             : <button type="button" className="tl-botao tl-botao-calmo" onClick={() => setAviso(fase === 'antes' ? 'preparo' : 'aviso')}>{fase === 'antes' ? 'Como me preparar' : 'Ver mais'}</button>}
         </div>

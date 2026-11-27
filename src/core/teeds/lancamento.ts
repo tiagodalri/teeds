@@ -36,6 +36,18 @@ export function guardarLiberacaoGeral(liberadoEm: string | null) {
   try { if (liberadoEm) localStorage.setItem(CHAVE_LIBERACAO, liberadoEm); else localStorage.removeItem(CHAVE_LIBERACAO) } catch { /* só nesta visita */ }
 }
 
+/**
+ * Super Live (27/11/2026, Tiago): domingo, 29/11/2026, 20h de Brasília. Quem se inscreve pela
+ * /superlive e ainda NÃO era cliente entra no mesmo plano "Aguardando live", com a plataforma
+ * trancada e a contagem, até a equipe liberar na live (botão de Administração › Clientes).
+ * Datas PRÓPRIAS: as de 09/11 acima (INICIO_DA_LIVE) não mudam, porque o aviso de tela cheia,
+ * o Pré-acesso e os e-mails do lançamento ainda leem aquelas.
+ */
+export const SUPERLIVE_INICIO = Date.UTC(2026, 10, 29, 23, 0, 0)
+export const SUPERLIVE_FIM = SUPERLIVE_INICIO + 3 * 36e5
+/** Até duas semanas depois, a tranca fala da Super Live (quem ficou para trás ainda espera a liberação). */
+export const naSuperLive = (agora = Date.now()) => agora < SUPERLIVE_INICIO + 14 * 864e5
+
 /** O plano de quem se inscreveu e ainda não passou pela live. */
 export const PLANO_AGUARDANDO = 'globalfly-aguardando-live'
 

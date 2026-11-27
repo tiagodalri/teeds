@@ -1604,7 +1604,9 @@ export default function App() {
 
   // Aprovado e ainda com a senha provisória: cria a própria antes de entrar.
   // (09/11/2026: liberado no meio da live, cria a senha depois; a troca não tira a pessoa da live)
-  if (teeds.status === 'logado' && teeds.precisaTrocarSenha && !trancado && !assistindoLive && !live?.noAr) {
+  // Super Live (27/11/2026, Tiago: "no primeiro acesso dele você pede para trocar a senha"): o inscrito
+  // que espera a live (plano "Aguardando live") troca a provisória já, antes de ver a plataforma trancada
+  if (teeds.status === 'logado' && teeds.precisaTrocarSenha && (!trancado || (plano === PLANO_AGUARDANDO && !previaInscrito)) && !assistindoLive && !live?.noAr) {
     return (
       <NovaSenha ocupado={teeds.ocupado} erro={teeds.erro} onDefinir={teeds.definirNovaSenha}
         obrigatoria onSair={sairDeTudo} />

@@ -241,6 +241,7 @@ const LabResultadosClientes = lazy(() => import('./components/LabResultadosClien
 const LabCompartilhamento = lazy(() => import('./components/admin/LabCompartilhamento'))
 const LabCabineTopo = lazy(() => import('./components/monitoramento/LabCabineTopo'))
 const LabReplay = lazy(() => import('./components/monitoramento/LabReplay'))
+const TrancaSuperLiveLab = lazy(() => import('./components/lancamento/TrancaDoLancamento').then((m) => ({ default: m.TrancaDoLancamento })))
 const LiberarAcessoGeralLab = lazy(() => import('./components/lancamento/LiberarAcessoGeral').then((m) => ({ default: m.LiberarAcessoGeral })))
 const LabMiniCabine = lazy(() => import('./components/minicabine/LabMiniCabine'))
 const AssistirTreinoReal = lazy(() => import('./components/aovivo/AssistirTreino').then((m) => ({ default: () => <m.AssistirTreino sessao={{ token: 'lab', usuario: { id: 'lab-aluno', nome: 'Aluno de teste', email: 'aluno@lab' } } as never} /> })))
@@ -842,6 +843,8 @@ function Laboratorio() {
       : f(u, i)) as typeof fetch
   }
   if (qual === 'liberar-geral') return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><LiberarAcessoGeralLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never} geral /></div></Suspense>
+  // ?tela=tranca-superlive: a plataforma trancada do inscrito da Super Live (27/11/2026), sem banco
+  if (qual === 'tranca-superlive') return <Suspense fallback={null}><div style={{ minHeight: '100vh', padding: 24 }}><button type="button">Um botão qualquer da plataforma</button><TrancaSuperLiveLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Marina' } } as never} nome="Marina Souza" estado={null} assistindo={false} aoAssistir={() => undefined} aoConferir={async () => false} /></div></Suspense>
   if (qual === 'login') return <LabLogin />
   // ?tela=excluir: o rodapé da ficha do cliente com "Excluir cadastro" e a confirmação aberta
   if (qual === 'excluir') return (
