@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA } from '../marca'
 import { apagarLinkDoParceiro, configurarParceiro, meusLinks, salvarLinkDoParceiro, type LinkDoParceiro, type MeusLinks, type ParceiroComLinks } from '../core/teeds/parceiro'
+import { CAMPANHA_DO_CADASTRO, codigoCurto, FORMATOS_DO_LINK, linksDaSuperLive, REDES_DO_LINK } from '../core/teeds/linkCurto'
 import './divulgacao.css'
 
 /*
@@ -22,15 +23,14 @@ import './divulgacao.css'
   utm_campaign = cadastro-planos e, nos links de um plano, utm_content = plano-<id>. A central de
   rastreio (Administração › Anúncios) e o cadastro gravam essas marcações.
 */
-const REDES = [
-  { id: 'instagram', nome: 'Instagram' }, { id: 'whatsapp', nome: 'WhatsApp' }, { id: 'youtube', nome: 'YouTube' },
-  { id: 'tiktok', nome: 'TikTok' }, { id: 'telegram', nome: 'Telegram' }, { id: '', nome: 'Sem marcação' },
-]
-const FORMATOS = [
-  { id: 'bio', nome: 'Link da bio' }, { id: 'stories', nome: 'Stories' }, { id: 'post', nome: 'Post ou Reels' },
-  { id: 'direct', nome: 'Direct ou conversa' }, { id: 'grupo', nome: 'Grupo ou comunidade' },
-]
-const CAMPANHA = 'cadastro-planos'
+/*
+  27/11/2026 (Victor: "está horrível esse link para mandar no direct, está muito grande"): o link
+  copiado agora é o CURTO (globalflytrade.com/v/id), que abre o mesmo destino com as mesmas
+  marcações utm (src/core/teeds/linkCurto.ts; as páginas curtas saem do build). O longo continua
+  à vista, menor, para quem quiser conferir as marcações.
+*/
+const REDES: { id: string; nome: string }[] = [...REDES_DO_LINK, { id: '', nome: 'Sem marcação' }]
+const FORMATOS = FORMATOS_DO_LINK
 const site = () => new URL(MARCA.redirectUri).origin
 
 function comRede(url: string, rede: string, formato = '', conteudo = ''): string {
@@ -38,12 +38,18 @@ function comRede(url: string, rede: string, formato = '', conteudo = ''): string
   if (!rede) return u.toString()
   u.searchParams.set('utm_source', rede)
   if (formato) u.searchParams.set('utm_medium', formato)
-  u.searchParams.set('utm_campaign', CAMPANHA)
+  u.searchParams.set('utm_campaign', CAMPANHA_DO_CADASTRO)
   if (conteudo) u.searchParams.set('utm_content', conteudo)
   return u.toString()
 }
 
-function LinhaDeLink({ titulo, descricao, url, principal = false, acoes }: { titulo: string; descricao?: string | null; url: string; principal?: boolean; acoes?: React.ReactNode }) {
+/** O link curto da combinação, ou o próprio /v quando não há marcação. */
+function curto(parceiro: string, rede: string, formato: string, plano: string | null = null): string | null {
+  const c = codigoCurto(rede, formato, plano)
+  return c ? `${site()}/${parceiro}/${c}` : null
+}
+
+function LinhaDeLink({ titulo, descricao, url, completo, principal = false, acoes }: { titulo: string; descricao?: string | null; url: string; completo?: string | null; principal?: boolean; acoes?: React.ReactNode }) {
   const [copiado, setCopiado] = useState(false)
   const copiar = () => { void navigator.clipboard?.writeText(url).then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 1600) }) }
   return (
@@ -52,6 +58,7 @@ function LinhaDeLink({ titulo, descricao, url, principal = false, acoes }: { tit
         <b>{titulo}</b>
         {descricao && <small>{descricao}</small>}
         <code title={url}>{url.replace(/^https:\/\//, '')}</code>
+        {completo && completo !== url && <small className="dv-completo" title={completo}>Mesmo rastreio de {completo.replace(/^https:\/\//, '')}</small>}
       </div>
       <div className="dv-link-acoes">
         <button type="button" className={copiado ? 'ok' : 'principal'} onClick={copiar}>{copiado ? 'Copiado' : 'Copiar'}</button>
@@ -82,6 +89,10 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
   if (!p) return <div className="dv"><p className="dv-vazio">Nenhum parceiro configurado.</p></div>
   const cadastro = comRede(`${site()}/${p.codigo}`, rede, formato)
   const doPlano = (id: string) => { const u = new URL(`${site()}/${p.codigo}`); u.searchParams.set('plano', id); return comRede(u.toString(), rede, formato, `plano-${id}`) }
+  const link = (plano: string | null) => {
+    const longo = plano ? doPlano(plano) : cadastro
+    return { url: curto(p.codigo, rede, formato, plano) ?? longo, completo: longo }
+  }
   const situacaoDoApp = !p.derivAppId ? { cls: 'neutro', txt: `Sem app próprio: os clientes conectam pelo app da ${MARCA.prosa}` }
     : p.appLiberado ? { cls: 'ok', txt: 'App próprio em uso: o markup dos clientes cai nele' }
     : { cls: 'espera', txt: 'App cadastrado, aguardando liberação no servidor' }
@@ -113,15 +124,27 @@ export function DivulgacaoPanel({ sessao, inicial }: { sessao: SessaoTeeds; inic
           </div>}
         </div>
         <ul className="dv-lista">
-          <LinhaDeLink principal titulo="Cadastro com os planos" descricao="A página com o Gold, o Black e o Prestige. É o link principal." url={cadastro} />
-          <LinhaDeLink titulo="Direto no Gold" descricao="Abre o formulário já no Gold (sem custo de entrada)." url={doPlano('gold')} />
-          <LinhaDeLink titulo="Direto no Black" descricao="Abre o formulário já no Black; depois do cadastro, vai para o pagamento." url={doPlano('black')} />
-          <LinhaDeLink titulo="Direto no Prestige" descricao="Abre o formulário já no Prestige; depois do cadastro, vai para o pagamento." url={doPlano('prestige')} />
+          <LinhaDeLink principal titulo="Cadastro com os planos" descricao="A página com o Gold, o Black e o Prestige. É o link principal." {...link(null)} />
+          <LinhaDeLink titulo="Direto no Gold" descricao="Abre o formulário já no Gold (sem custo de entrada)." {...link('gold')} />
+          <LinhaDeLink titulo="Direto no Black" descricao="Abre o formulário já no Black; depois do cadastro, vai para o pagamento." {...link('black')} />
+          <LinhaDeLink titulo="Direto no Prestige" descricao="Abre o formulário já no Prestige; depois do cadastro, vai para o pagamento." {...link('prestige')} />
         </ul>
         <p className="dv-dica">{rede
-          ? <>Cada link leva a rede, o lugar do post e a campanha: na central de rastreio dá para ver de onde veio cada visita, cadastro e venda. Continua contando para {dados.geral ? p.nome.split(' ')[0] : 'você'}.</>
+          ? <>O link é curto para mandar no direct, mas leva a rede, o lugar do post e a campanha: na central de rastreio dá para ver de onde veio cada visita, cadastro e venda. Continua contando para {dados.geral ? p.nome.split(' ')[0] : 'você'}.</>
           : <>Sem marcação, o link conta para {dados.geral ? p.nome.split(' ')[0] : 'você'}, mas não dá para saber de qual rede veio. Escolha a rede antes de copiar.</>}</p>
       </section>
+
+      {MARCA.id === 'globalfly' && linksDaSuperLive(p.codigo).length > 0 && (
+        <section className="dv-bloco">
+          <div className="dv-bloco-cab"><h2>Super Live</h2></div>
+          <ul className="dv-lista">
+            {linksDaSuperLive(p.codigo).map((l) => (
+              <LinhaDeLink key={l.curto} titulo={l.nome} url={`${site()}/${p.codigo}/${l.curto}`} completo={`${site()}/${p.codigo}/superlive/?o=${l.o}`} />
+            ))}
+          </ul>
+          <p className="dv-dica">Um link para cada lugar onde divulgar a Super Live. Cada inscrição fica marcada com o link de onde veio, e a contagem aparece no painel da Super Live, em Administração › Leads.</p>
+        </section>
+      )}
 
       <section className="dv-bloco">
         <div className="dv-bloco-cab">

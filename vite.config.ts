@@ -6,6 +6,7 @@ import { dirname, join, relative, resolve } from 'node:path'
 import { MARCAS, marcaPorId, familiaDa } from './src/marca/marcas'
 import { paletaDaMarca, traduzir, type Paleta, type Traducao } from './scripts/paleta-da-marca'
 import { paginaDosTermos } from './scripts/pagina-dos-termos'
+import { linksDaSuperLive, todosOsCodigosCurtos } from './src/core/teeds/linkCurto'
 
 /**
  * Qual marca este build monta.
@@ -554,6 +555,23 @@ export default defineConfig({
           // abrem o "Ao vivo" na sala (?treino=1) guardando a vitrine do parceiro (parceiro_rota: sem contar clique)
           mkdirSync(join(SAIDA, codigo, 'aovivo'), { recursive: true })
           writeFileSync(join(SAIDA, codigo, 'aovivo', 'index.html'), `<!doctype html><meta charset="utf-8"><title>${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var q=location.search?location.search.slice(1):'';location.replace('/?'+['treino=1',q,'parceiro_rota=${codigo}'].filter(Boolean).join('&')+location.hash)})()</script>`)
+          // 27/11/2026 (Victor: "link gigante para mandar no direct"): links curtos da Divulgação.
+          // /v/ib = o mesmo que /v?utm_source=instagram&utm_medium=bio&utm_campaign=cadastro-planos,
+          // com as mesmas marcações (src/core/teeds/linkCurto.ts). Vai direto ao destino final que o
+          // /v abriria (cadastro=1 + parceiro), sem passar pela página do /v; o que vier na barra
+          // (fbclid etc.) segue junto.
+          for (const curto of todosOsCodigosCurtos()) {
+            const params = new URLSearchParams({ ...(curto.plano ? { plano: curto.plano } : {}), ...curto.utm, cadastro: '1', parceiro: codigo })
+            const definir = JSON.stringify(Object.fromEntries(params))
+            mkdirSync(join(SAIDA, codigo, curto.codigo), { recursive: true })
+            writeFileSync(join(SAIDA, codigo, curto.codigo, 'index.html'), `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Cadastro · ${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var q=new URLSearchParams(location.search),d=${definir};for(var k in d)q.set(k,d[k]);location.replace('/?'+q.toString()+location.hash)})()</script><noscript><meta http-equiv="refresh" content="0; url=/?${params.toString().replace(/&/g, '&amp;')}"></noscript><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0f14;color:#8b9bb0;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}</style></head><body><p>Abrindo o cadastro…</p></body></html>`)
+          }
+          // Super Live: /v/sl-direct abre /v/superlive/?o=sl-victor-direct (o código da Central de rastreio
+          // que o painel da Super Live conta). Só onde a página da Super Live existe.
+          if (existsSync(join(SAIDA, codigo, 'superlive'))) for (const sl of linksDaSuperLive(codigo)) {
+            mkdirSync(join(SAIDA, codigo, sl.curto), { recursive: true })
+            writeFileSync(join(SAIDA, codigo, sl.curto, 'index.html'), `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Super Live · ${NOME_CURTO[MARCA.id] ?? MARCA.nome}</title><script>(function(){var q=new URLSearchParams(location.search);q.set('o','${sl.o}');location.replace('/${codigo}/superlive/?'+q.toString()+location.hash)})()</script><noscript><meta http-equiv="refresh" content="0; url=/${codigo}/superlive/?o=${sl.o}"></noscript><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#030A15;color:#8b9bb0;font:15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}</style></head><body><p>Abrindo a Super Live…</p></body></html>`)
+          }
         }
 
         // 09/11/2026, dia da live: globalflytrade.com/live leva ao link da transmissão (que é fora da
