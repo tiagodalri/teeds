@@ -79,8 +79,45 @@ const contatoDo = (id: string, nome: string, telefone: string): ContatoWpp => ({
   naoLidas: 0, responsavel: null, situacao: 'aberta', etiquetas: [], criadoEm: new Date().toISOString(), fixada: false,
 })
 
+/**
+ * Quando a live começou. 27/11/2026: só o admin que transmite sabia; quem acompanhava de outro computador
+ * mandava "desde agora" e o "Nesta live" ficava sempre zerado (o Artur gerou US$ 0,53 e aparecia 0,00).
+ * Agora, sem o início pela sala, vale a transmissão aberta no registro (gravada a cada 30 s por quem transmite).
+ */
+async function inicioRegistrado(): Promise<number> {
+  const s = sessaoGuardada()
+  if (!s) return 0
+  const r = await fetch(`${SUPABASE.url}/rest/v1/transmissoes?marca=eq.${MARCA.id}&encerrada_em=is.null&select=iniciada_em,atualizada_em&order=iniciada_em.desc&limit=1`, {
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${s.token}` },
+  }).catch(() => null)
+  if (!r?.ok) return 0
+  const [l] = (await r.json()) as Array<{ iniciada_em: string; atualizada_em: string | null }>
+  if (!l) return 0
+  // linha esquecida aberta (aba fechada sem gravar o fim) não conta: quem transmite grava a cada 30 s
+  const visto = Date.parse(l.atualizada_em ?? l.iniciada_em)
+  return Date.now() - visto < 3 * 60_000 ? Date.parse(l.iniciada_em) : 0
+}
+function useInicioDaLive(): number {
+  const t = useTreino()
+  const [registrado, setRegistrado] = useState(0)
+  useEffect(() => {
+    if (t.inicioDaLive > 0 || fichasDoLab) return
+    let vivo = true
+    let timer = 0
+    const ler = async () => {
+      const v = await inicioRegistrado()
+      if (!vivo) return
+      setRegistrado(v)
+      timer = window.setTimeout(() => void ler(), 30_000)
+    }
+    void ler()
+    return () => { vivo = false; window.clearTimeout(timer) }
+  }, [t.inicioDaLive])
+  return t.inicioDaLive > 0 ? t.inicioDaLive : registrado
+}
+
 /** A lista que se atualiza sozinha enquanto está aberta. */
-function useFichas(aberta: boolean): { fichas: Map<string, Ficha>; erro: boolean; lendo: boolean } {
+function useFichas(aberta: boolean, inicio: number): { fichas: Map<string, Ficha>; erro: boolean; lendo: boolean } {
   const t = useTreino()
   const [fichas, setFichas] = useState<Map<string, Ficha>>(new Map())
   const [erro, setErro] = useState(false)
@@ -88,7 +125,7 @@ function useFichas(aberta: boolean): { fichas: Map<string, Ficha>; erro: boolean
   const ids = useRef<string[]>([])
   ids.current = t.membrosNaSala.map((m) => m.id)
   const desde = useRef(0)
-  desde.current = t.inicioDaLive
+  desde.current = inicio
   const chave = ids.current.slice().sort().join('|')
   useEffect(() => {
     if (!aberta) return
@@ -96,7 +133,8 @@ function useFichas(aberta: boolean): { fichas: Map<string, Ficha>; erro: boolean
     let timer = 0
     const ler = async () => {
       try {
-        const lista = await lerFichas(ids.current, desde.current)
+        // fora do ar não há "nesta live": a lista mostra só o total
+        const lista = await lerFichas(ids.current, desde.current || Date.now())
         if (!vivo) return
         setFichas(new Map(lista.map((f) => [f.id, f])))
         setErro(false)
@@ -105,7 +143,7 @@ function useFichas(aberta: boolean): { fichas: Map<string, Ficha>; erro: boolean
     }
     void ler()
     return () => { vivo = false; window.clearTimeout(timer) }
-  }, [aberta, chave, t.inicioDaLive])
+  }, [aberta, chave, inicio])
   return { fichas, erro, lendo }
 }
 
@@ -129,17 +167,23 @@ function Cartao({ nome, f, noAr, abrir }: { nome: string; f: Ficha | undefined; 
           <b>{exibido}</b>
           <small>{lugar || 'Na live agora'}{operando && <em className="ml-operando"><i aria-hidden />Operando</em>}</small>
         </span>
-        <span className={`ml-live ${f && f.markupLive > 0 ? 'tem' : ''}`} title="Markup gerado por esta pessoa desde o começo da live">
-          <small>Nesta live</small>
-          <b className="cv-num">{f ? dinheiro(f.markupLive) : '—'}</b>
-          {f && noAr && <span>{f.opsLive} {f.opsLive === 1 ? 'operação' : 'operações'}</span>}
-        </span>
       </div>
-      <dl className="ml-dados">
-        <div><dt>Saldo</dt><dd className="cv-num">{f ? (f.saldo === null ? 'Sem conta real' : dinheiro(f.saldo, f.moeda)) : '…'}</dd></div>
-        <div><dt>Markup total</dt><dd className="cv-num">{f ? dinheiro(f.markupTotal) : '…'}</dd></div>
-        <div title={f ? tempoDeCasa(f.desde) : undefined}><dt>Membro desde</dt><dd>{f ? haQuanto(f.desde) : '…'}</dd></div>
-      </dl>
+      <div className="ml-markups">
+        <div className={`ml-mk-live ${f && f.markupLive > 0 ? 'tem' : ''}`} title="Markup gerado por esta pessoa desde que a live começou">
+          <small>Markup nesta live</small>
+          <b className="cv-num">{!noAr ? '—' : f ? dinheiro(f.markupLive) : '…'}</b>
+          <span>{!noAr ? 'Live fora do ar' : f ? `${f.opsLive} ${f.opsLive === 1 ? 'operação' : 'operações'}` : ''}</span>
+        </div>
+        <div className="ml-mk-total" title="Todo o markup que esta pessoa já gerou, desde que entrou (conta real)">
+          <small>Markup total do cliente</small>
+          <b className="cv-num">{f ? dinheiro(f.markupTotal) : '…'}</b>
+          <span>Desde que entrou</span>
+        </div>
+      </div>
+      <p className="ml-rodape">
+        <span>Saldo <b className="cv-num">{f ? (f.saldo === null ? 'Sem conta real' : dinheiro(f.saldo, f.moeda)) : '…'}</b></span>
+        <span title={f ? tempoDeCasa(f.desde) : undefined}>Membro desde <b>{f ? haQuanto(f.desde) : '…'}</b></span>
+      </p>
     </li>
   )
 }
@@ -147,7 +191,8 @@ function Cartao({ nome, f, noAr, abrir }: { nome: string; f: Ficha | undefined; 
 /** A gaveta com a lista (abre por cima do painel, do lado direito). */
 export function MembrosDaLive({ fechar }: { fechar: () => void }) {
   const t = useTreino()
-  const { fichas, erro, lendo } = useFichas(true)
+  const inicio = useInicioDaLive()
+  const { fichas, erro, lendo } = useFichas(true, inicio)
   const [busca, setBusca] = useState('')
   const [ordem, setOrdem] = useState<'live' | 'saldo' | 'total' | 'nome'>('live')
   // a ficha completa de um membro (clique no cartão)
@@ -159,7 +204,7 @@ export function MembrosDaLive({ fechar }: { fechar: () => void }) {
     document.addEventListener('keydown', esc)
     return () => document.removeEventListener('keydown', esc)
   }, [fechar])
-  const noAr = t.inicioDaLive > 0
+  const noAr = inicio > 0
   const termo = busca.trim().toLowerCase()
   const lista = t.membrosNaSala
     .map((m) => ({ m, f: fichas.get(m.id) }))
@@ -168,9 +213,12 @@ export function MembrosDaLive({ fechar }: { fechar: () => void }) {
       const fa = a.f, fb = b.f
       if (ordem === 'nome') return (fa?.nome ?? a.m.nome).localeCompare(fb?.nome ?? b.m.nome, 'pt-BR')
       const v = (f: Ficha | undefined) => (!f ? -1 : ordem === 'live' ? f.markupLive : ordem === 'saldo' ? (f.saldo ?? -1) : f.markupTotal)
-      return v(fb) - v(fa)
+      // empate (todos zerados no começo da live): quem mais gerou no total vem antes
+      return v(fb) - v(fa) || (fb?.markupTotal ?? -1) - (fa?.markupTotal ?? -1)
     })
   const totalLive = [...fichas.values()].reduce((s, f) => s + f.markupLive, 0)
+  const totalGeral = [...fichas.values()].reduce((s, f) => s + f.markupTotal, 0)
+  const comecou = noAr ? new Date(inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
   const operando = [...fichas.values()].filter((f) => f.ultimaOp && Date.now() - Date.parse(f.ultimaOp) < 3 * 60_000).length
   return (
     <div className="ml-fundo" onPointerDown={(e) => { if (e.target === e.currentTarget) fechar() }}>
@@ -179,7 +227,7 @@ export function MembrosDaLive({ fechar }: { fechar: () => void }) {
         <header className="ml-cabeca">
           <div>
             <h2>Membros na live</h2>
-            <p>Membros reais, sem o público simulado. Atualiza sozinho.</p>
+            <p>Membros reais, sem o público simulado. {noAr ? `Live no ar desde ${comecou}.` : 'Live fora do ar.'} Atualiza sozinho.</p>
           </div>
           <button type="button" className="ml-fechar" onClick={fechar} aria-label="Fechar">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -188,14 +236,17 @@ export function MembrosDaLive({ fechar }: { fechar: () => void }) {
         <div className="ml-resumo" role="group" aria-label="Resumo">
           <div><small>Online agora</small><b className="cv-num">{t.membrosNaSala.length}</b></div>
           <div><small>Operando</small><b className="cv-num">{operando}</b></div>
-          <div className="ouro"><small>Markup nesta live</small><b className="cv-num">{dinheiro(totalLive)}</b></div>
+        </div>
+        <div className="ml-resumo-mk" role="group" aria-label="Markup dos membros na sala">
+          <div className="ouro"><small>Markup nesta live</small><b className="cv-num">{noAr ? dinheiro(totalLive) : '—'}</b><span>{noAr ? `Desde ${comecou}` : 'Live fora do ar'}</span></div>
+          <div><small>Markup total deles</small><b className="cv-num">{dinheiro(totalGeral)}</b><span>Tudo o que já geraram</span></div>
         </div>
         <div className="ml-filtros">
           <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar pelo nome" aria-label="Buscar pelo nome" />
           <select value={ordem} onChange={(e) => setOrdem(e.target.value as typeof ordem)} aria-label="Ordenar">
             <option value="live">Mais markup na live</option>
             <option value="saldo">Maior saldo</option>
-            <option value="total">Mais markup total</option>
+            <option value="total">Mais markup total do cliente</option>
             <option value="nome">Nome (A a Z)</option>
           </select>
         </div>

@@ -12,7 +12,7 @@
 .ml-fechar { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 9px; background: rgba(255,255,255,.06); color: #e8eef5; cursor: pointer; flex: none; }
 .ml-fechar:hover { background: rgba(255,255,255,.12); }
 
-.ml-resumo { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 8px; }
+.ml-resumo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ml-resumo > div { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: #141a24; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 .ml-resumo small { color: #8b95a5; font-size: 11.5px; }
 .ml-resumo b { font-size: 20px; font-weight: 800; line-height: 1; }
@@ -51,7 +51,7 @@
 .ml-dados > div { display: grid; gap: 2px; padding: 7px 9px; border-radius: 9px; background: rgba(255,255,255,.035); min-width: 0; }
 .ml-dados dt { color: #8b95a5; font-size: 11px; }
 .ml-dados dd { margin: 0; font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 480px) { .ml-resumo { grid-template-columns: 1fr 1fr; } .ml-resumo .ouro { grid-column: 1 / -1; } .ml-dados { grid-template-columns: 1fr 1fr; } }
+
 @media (prefers-reduced-motion: reduce) { .ml-gaveta, .ml-cartao.subiu .ml-live b, .ml-operando i { animation: none; } }
 
 /* o "Na sala agora" do painel abre a lista */
@@ -90,3 +90,25 @@ button.ps-agora-membros:focus-visible { outline: 2px solid var(--ps-ouro-claro, 
 .ml-ficha-rolagem { --wz-app: #121822; --wz-linha: rgba(255,255,255,.08); --wz-texto: #e8eef5; --wz-sub: #8b95a5; --wz-busca: #1a2130; --wz-ouro: #B78D39; color: #e8eef5; }
 /* aqui a ficha vem da conta (não de um número de WhatsApp): sem "Copiar número" nem a linha do telefone vazia */
 .ml-ficha-rolagem .fc-tel:empty, .ml-ficha-rolagem .fc-acoes button:first-child { display: none; }
+
+/* 27/11/2026: os dois markups lado a lado (nesta live x total do cliente); saldo e membro desde numa linha embaixo */
+.ml-resumo-mk { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ml-resumo-mk > div { display: grid; gap: 3px; padding: 11px 12px; border-radius: 12px; background: #141a24; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.ml-resumo-mk small { color: #8b95a5; font-size: 11.5px; }
+.ml-resumo-mk b { font-size: 21px; font-weight: 800; line-height: 1.05; }
+.ml-resumo-mk span { color: #8b95a5; font-size: 11px; }
+.ml-resumo-mk .ouro { background: linear-gradient(160deg, rgba(214,174,91,.18), rgba(214,174,91,.04)); box-shadow: inset 0 0 0 1px rgba(214,174,91,.35); }
+.ml-resumo-mk .ouro b { color: #E4C27A; }
+.ml-markups { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ml-markups > div { display: grid; gap: 2px; padding: 9px 11px; border-radius: 10px; background: rgba(255,255,255,.035); min-width: 0; }
+.ml-markups small { color: #8b95a5; font-size: 11px; }
+.ml-markups b { font-size: 17px; font-weight: 800; color: #e8eef5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ml-markups span { color: #8b95a5; font-size: 11px; }
+.ml-mk-live { box-shadow: inset 0 0 0 1px rgba(214,174,91,.22); }
+.ml-mk-live b { color: #c9d2de; }
+.ml-mk-live.tem { background: linear-gradient(160deg, rgba(214,174,91,.16), rgba(214,174,91,.03)); }
+.ml-mk-live.tem b { color: #E4C27A; }
+.ml-cartao.subiu .ml-mk-live b { animation: ml-sobe .9s ease-out; }
+.ml-rodape { margin: 0; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; color: #8b95a5; font-size: 12px; }
+.ml-rodape b { color: #c9d2de; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .ml-cartao.subiu .ml-mk-live b { animation: none; } }
