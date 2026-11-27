@@ -749,10 +749,34 @@ function Laboratorio() {
     window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
       const url = String(u)
       if (url.includes('leads_capturados')) return new Response(JSON.stringify(url.includes('offset=0') ? linhas : []), { status: 200 })
+      if (url.includes('teeds_meu_papel')) return new Response(JSON.stringify({ admin: true, geral: true }), { status: 200 })
+      if (url.includes('teeds_superlive_painel')) {
+        const P = (nome: string, parceiro: string, situacao: string, link: string | null, link_nome: string | null, canal: string, h: number, entrou = false) =>
+          ({ nome, email: nome.split(' ')[0].toLowerCase() + '@exemplo.com', telefone: '+55 11 98888-00' + String(Math.round(h)).padStart(2, '0'), parceiro, situacao, entrou, email_enviado: true, canal, link, link_nome, campanha: 'superlive-29-11', conteudo: null, quando: new Date(agora - h * H).toISOString() })
+        const pessoas = [
+          P('Marina Silva', 'v', 'aguardando', 'sl-victor-stories', 'Super Live · Stories do Victor', 'stories', 0.3, true),
+          P('Rafael Costa', 'n', 'aguardando', 'sl-naor-manychat', 'Super Live · ManyChat do Naor', 'manychat', 0.8),
+          P('Luana Freitas', 'v', 'ja_cliente', 'sl-victor-telegram', 'Super Live · Telegram do Victor', 'telegram', 1.5),
+          P('Pedro Alves', 'v', 'aguardando', 'sl-victor-stories', 'Super Live · Stories do Victor', 'stories', 2.2, true),
+          P('Sofia Ramos', 'n', 'aguardando', 'sl-naor-comunidade', 'Super Live · Comunidade do WhatsApp do Naor', 'whatsapp', 3),
+          P('Tiago Mendes', '', 'aguardando', null, null, 'direto', 5),
+          P('Vera Lúcia', 'n', 'ja_cliente', 'sl-naor-stories', 'Super Live · Stories do Naor', 'stories', 7),
+          P('Caio Martins', 'v', 'aguardando', null, null, 'anuncio-meta', 9),
+        ]
+        const conta = (f: (x: typeof pessoas[number]) => boolean) => pessoas.filter(f).length
+        const grupo = <K extends string>(k: (x: typeof pessoas[number]) => K) => [...new Set(pessoas.map(k))]
+        return new Response(JSON.stringify({
+          inicio: '2026-11-29T23:00:00Z', liberado_em: null, total: pessoas.length, aguardando: conta((x) => x.situacao === 'aguardando'), ja_clientes: conta((x) => x.situacao === 'ja_cliente'), liberados: 0,
+          entraram: conta((x) => x.situacao === 'aguardando' && x.entrou), hoje: pessoas.length,
+          por_parceiro: grupo((x) => x.parceiro).map((pp) => ({ parceiro: pp, inscritos: conta((x) => x.parceiro === pp), aguardando: conta((x) => x.parceiro === pp && x.situacao === 'aguardando'), ja_clientes: conta((x) => x.parceiro === pp && x.situacao === 'ja_cliente') })).sort((a, b) => b.inscritos - a.inscritos),
+          por_origem: grupo((x) => `${x.link}|${x.canal}|${x.parceiro}`).map((g) => { const [l, c, pp] = g.split('|'); const m = pessoas.filter((x) => `${x.link}|${x.canal}|${x.parceiro}` === g); return { link: l === 'null' ? null : l, nome: m[0].link_nome, canal: c, parceiro: pp, inscritos: m.length, aguardando: m.filter((x) => x.situacao === 'aguardando').length } }).sort((a, b) => b.inscritos - a.inscritos),
+          pessoas,
+        }), { status: 200 })
+      }
       if (url.includes('teeds_origem_dos_leads')) return new Response(JSON.stringify([{ lead_id: 'lead-3', canal: 'instagram', link: null, ref: 'l.instagram.com' }, { lead_id: 'lead-7', canal: 'anuncio-meta', link: null, ref: 'instagram.com' }, { lead_id: 'lead-10', canal: 'direto', link: null, ref: null }]), { status: 200 })
       return f(u, i)
     }) as typeof fetch
-    return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminLeadsLab sessao={{ token: 'lab' } as never} marca="globalfly" /></div></Suspense>
+    return <Suspense fallback={null}><div className="admin-page" style={{ padding: 24 }}><AdminLeadsLab sessao={{ token: 'lab', usuario: { id: 'lab' } } as never} marca="globalfly" /></div></Suspense>
   }
   // ?tela=assistente: a aba do Assistente dentro da moldura do app (19/11/2026)
   if (qual === 'assistente') return <LabAssistente />

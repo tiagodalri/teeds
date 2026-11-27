@@ -11,6 +11,8 @@ import { listarLeads, origemCadastro, origemDosLeads, respostaDoQuestionario, ve
 import { diaDeBrasilia, instanteEmBrasilia, somarDias, ddmm } from './admin/PeriodoDaVisaoGeral'
 import './admin-leads.css'
 import { celulaCsv, diaDeHoje, telefoneCsv } from '../core/planilha'
+import { MARCA } from '../marca'
+import { PainelSuperLive } from './lancamento/PainelSuperLive'
 declare global { interface String { replaceAll(busca: string, substituto: string): string } }
 
 type Atalho = 'tudo' | 'hoje' | 'ontem' | '7' | '15' | '30' | 'mes' | 'personalizado'
@@ -90,6 +92,8 @@ export function AdminLeads({ sessao, marca }: { sessao: SessaoTeeds; marca?: str
   }
 
   return <div className="leads-admin">
+    {/* 27/11/2026: os inscritos da Super Live (quem espera a live, quem já era cliente, de onde veio cada um) */}
+    {(marca ?? MARCA.id) === 'globalfly' && <PainelSuperLive sessao={sessao} marca="globalfly" />}
     <div className="lp">
       <div className="lp-linha">
         <span className="lp-rot" id="lp-rot">Período</span>
