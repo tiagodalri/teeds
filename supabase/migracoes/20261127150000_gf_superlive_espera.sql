@@ -31,7 +31,8 @@ begin
   v_recadastro := exists(select 1 from public.clientes c where c.marca=v_marca and lower(trim(c.email))=v_email)
     or exists(select 1 from public.clientes_pendentes p where p.marca=v_marca and p.email=v_email);
   -- Super Live: só segura quem é NOVO de verdade (sem ficha de cliente e sem cadastro já aprovado antes)
-  v_sl := v_marca = 'globalfly' and coalesce(d->>'pagina','') ~* '/superlive';
+  -- só o CAMINHO conta (https://globalflytrade.com/superlive, /v/superlive, /n/superlive), nunca um parâmetro
+  v_sl := v_marca = 'globalfly' and coalesce(d->>'pagina','') ~* '^https?://[^/?#]+(/[a-z]{1,3})?/superlive(/|[?#]|$)';
   v_segura := v_sl
     and exists(select 1 from public.superlive_controle s where s.marca = v_marca and s.liberado_em is null)
     and not exists(select 1 from public.clientes c where c.marca=v_marca and lower(trim(c.email))=v_email)
