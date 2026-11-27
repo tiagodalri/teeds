@@ -78,6 +78,12 @@ export interface ModuloGrade {
   liberarEm?: string | null
   planos?: PlanoEscolhido[]
   assuntos: AssuntoGrade[]
+  /**
+   * 27/11/2026 (Victor: "soltar um vídeo por dia, às 19h"): série de estreias. O módulo sai da
+   * lista comum e vira a faixa em destaque no topo das Aulas, com a contagem até a liberação de
+   * cada aula (liberarEm), e a aula do dia abre o pop-up de estreia para todos os alunos.
+   */
+  serie?: boolean
 }
 
 /**
@@ -174,7 +180,12 @@ export function segundosDoTempo(t: string | undefined): number | null {
   return (m[1] ? +m[1] * 3600 : 0) + +m[2] * 60 + +m[3]
 }
 
-const dataCurta = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })
+const dataCurta = (iso: string) => {
+  const d = new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' })
+  // 27/11/2026: com hora marcada (as estreias são às 19h), a hora vai junto: "28/11 às 19h"
+  const [h, m] = new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }).split(':')
+  return h === '00' && m === '00' ? d : `${d} às ${+h}h${m === '00' ? '' : m}`
+}
 
 /* ------------------------------------------- a primeira grade: do código */
 
@@ -238,6 +249,7 @@ export function normalizarGrade(bruta: unknown): GradeAulas | null {
     modulos: g.modulos.filter(Boolean).map((m) => ({
       id: txt(m.id), curso: existe.has(txt(m.curso)) ? txt(m.curso) : cursos[0].id, titulo: txt(m.titulo), chamada: txt(m.chamada), descricao: txt(m.descricao), cor: txt(m.cor) || CORES_DA_MARCA[0],
       publicado: m.publicado !== false, liberarEm: m.liberarEm || null, planos: Array.isArray(m.planos) ? m.planos : [],
+      ...(m.serie === true ? { serie: true } : {}),
       assuntos: (Array.isArray(m.assuntos) ? m.assuntos : []).filter(Boolean).map((s) => ({
         id: txt(s.id), titulo: txt(s.titulo), descricao: txt(s.descricao),
         aulas: (Array.isArray(s.aulas) ? s.aulas : []).filter(Boolean).map((a) => ({
@@ -354,7 +366,7 @@ export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cur
     const doModulo = doCurso(m.curso) ?? motivo(m.liberarEm, m.planos)
     const assuntos = m.assuntos.map((s) => ({ ...s, aulas: s.aulas.filter((a) => a.publicado && !aulaForaDoParceiro(a.id, ctx)) })).filter((s) => s.aulas.length)
     return {
-      id: m.id, titulo: m.titulo, chamada: m.chamada, descricao: m.descricao, cor: m.cor, daGrade: true,
+      id: m.id, titulo: m.titulo, chamada: m.chamada, descricao: m.descricao, cor: m.cor, daGrade: true, serie: m.serie || undefined,
       assuntos: assuntos.map((s) => ({ id: s.id, titulo: s.titulo, descricao: s.descricao })),
       aulas: assuntos.flatMap((s) => s.aulas.map((a) => ({
         id: a.id, titulo: a.titulo, descricao: a.descricao, video: a.video, duracao: a.duracao,
@@ -362,6 +374,7 @@ export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cur
         topicos: a.topicos.map((t) => ({ titulo: t.titulo, tempo: t.tempo || undefined })),
         assunto: { id: s.id, titulo: s.titulo },
         bloqueio: doModulo ?? motivo(a.liberarEm, a.planos),
+        liberarEm: a.liberarEm || m.liberarEm || null,
       }))),
     }
   }).filter((m) => m.aulas.length)

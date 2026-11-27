@@ -32,3 +32,4 @@ servidor/.mcp-segredo*
 servidor/.lote-*
 servidor/fila-*.txt
 servidor/.repescagem.lock
+.estreias/

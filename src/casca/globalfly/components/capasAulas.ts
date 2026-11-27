@@ -28,6 +28,8 @@ const DO_NAOR = new Set([
   'operando-na-pratica', 'dicas', 'gerenciamento', 'gestao-na-pratica', 'day-trade',
   'erros-de-iniciante', 'meta-diaria', 'consistencia', 'paciencia', 'melhor-momento-day-trade',
   'sair-do-trabalho', 'continuar-mesmo-dando-errado', 'ganhar-e-perder', 'depoimentos',
+  // 27/11/2026: série "I.A. na Prática" (uma aula por dia às 19h): capa do Victor e do Naor
+  'pratica-raptor', 'pratica-falcon', 'pratica-legacy',
 ])
 /**
  * Fora do /n (alunos do Victor e diretos), 09/11/2026: as capas com o Victor, fotos
@@ -60,3 +62,12 @@ export const capaDoParceiroNoCodigo = (id: string, v: string = vitrineDoConteudo
 const DESTAQUES_DO_NAOR = new Set(['ao-vivo', 'comunidade', 'conta', 'deposito', 'apostila'])
 export const destaqueEspecial = (id: string): string | null =>
   DA_GF && vitrineDoConteudo() === 'n' && DESTAQUES_DO_NAOR.has(id) ? `${import.meta.env.BASE_URL}aulas-globalfly/naor/destaque-${id}.webp` : null
+
+/**
+ * 27/11/2026: a arte larga (16:9) do pop-up de estreia da série "I.A. na Prática": o parceiro da
+ * vitrine (Naor no /n, Victor no resto) com a aeronave da I.A. Arquivo estreia-<ia>.webp na pasta
+ * do parceiro. null = o pop-up usa a capa da aula.
+ */
+const BANNERS_DA_ESTREIA: Record<string, string> = { 'pratica-raptor': 'raptor', 'pratica-falcon': 'falcon', 'pratica-legacy': 'legacy' }
+export const bannerDaEstreia = (id: string, v: string = vitrineDoConteudo()): string | null =>
+  DA_GF && BANNERS_DA_ESTREIA[id] ? `${import.meta.env.BASE_URL}aulas-globalfly/${v === 'n' ? 'naor' : 'victor'}/estreia-${BANNERS_DA_ESTREIA[id]}.webp` : null

@@ -1,5 +1,5 @@
 import { useTituloInteiro } from './core/tituloDoTopo'
-import { marcarEmUso } from './core/atualizacaoSegura'
+import { emOperacao, marcarEmUso } from './core/atualizacaoSegura'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, lazy, Suspense } from 'react'
 import { assinarTransmissao, transmissaoNoAr } from './core/teeds/transmissao'
 import { useSimulador } from './hooks/useSimulador'
@@ -113,6 +113,7 @@ import { ehCelular } from './core/celular'
 const AoVivoPage = lazy(() => import('./components/aovivo/AoVivo').then((m) => ({ default: m.AoVivoPage })))
 const MercadoPanel = lazy(() => import('./components/MercadoPanel').then((m) => ({ default: m.MercadoPanel })))
 const BoasVindasEmVideo = lazy(() => import('./components/aulas/BoasVindasEmVideo').then((m) => ({ default: m.BoasVindasEmVideo })))
+const EstreiaDoDia = lazy(() => import('./components/aulas/EstreiaDoDia').then((m) => ({ default: m.EstreiaDoDia })))
 const DivulgacaoPanel = lazy(() => import('./components/DivulgacaoPanel').then((m) => ({ default: m.DivulgacaoPanel })))
 const CarteiraDeriv = lazy(() => import('./components/CarteiraDeriv').then((m) => ({ default: m.CarteiraDeriv })))
 const LaboratorioIA = lazy(() => import('./components/laboratorio/LaboratorioIA').then((m) => ({ default: m.LaboratorioIA })))
@@ -1865,6 +1866,16 @@ export default function App() {
       {mostrarVideoInicio && teeds.sessao && !contaTravada && (
         <Suspense fallback={null}>
           <BoasVindasEmVideo sessao={teeds.sessao} nome={teeds.usuario?.nome || ''} plano={plano} admin={admin} aoFechar={fecharVideoInicio} aoSemVideo={() => setVideoInicioDispensado(true)} />
+        </Suspense>
+      )}
+
+      {/* 27/11/2026: a estreia do dia da série (aulas às 19h), depois do vídeo de boas-vindas e do tour,
+          nunca por cima da live nem com entrada aberta (I.A. ligada ou operação manual) */}
+      {FAMILIA_GF && teeds.sessao && !JANELA && !trancado && !contaTravada && planoLido && admin !== null && !tour
+        && (liberadoAntes || !aulasTravadasParaGfMember(plano, admin, liberadoGeral))
+        && !mostrarVideoInicio && !decidindoVideoInicio && !assistindoLive && !live?.noAr && !iaLigada && !emOperacao() && (
+        <Suspense fallback={null}>
+          <EstreiaDoDia sessao={teeds.sessao} plano={plano} aoAssistir={() => setTela('aulas')} />
         </Suspense>
       )}
 

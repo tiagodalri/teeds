@@ -11,3 +11,6 @@ export const capaDoParceiroNoCodigo = (_id: string, _v?: string): string | null 
 
 /** Arte dos Destaques só para a vitrine de um parceiro (só a GlobalFly usa). Aqui: nenhuma. */
 export const destaqueEspecial = (_id: string): string | null => null
+
+/** Arte larga do pop-up de estreia de uma série (só a GlobalFly tem). Aqui: nenhuma. */
+export const bannerDaEstreia = (_id: string, _v?: string): string | null => null

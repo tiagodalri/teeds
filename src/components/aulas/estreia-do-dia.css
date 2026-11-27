@@ -1,0 +1,73 @@
+/* Pop-up da estreia do dia (27/11/2026): mesma linguagem da faixa da série,
+   painel escuro com a arte grande em cima e o ouro só no botão. */
+.edd-fundo {
+  --edd-ouro: var(--gf-ouro, var(--primary));
+  --edd-marfim: var(--gf-marfim, #F3F0E9);
+  position: fixed; inset: 0; z-index: 1440; display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: rgba(2, 8, 22, .8); backdrop-filter: blur(6px);
+  animation: edd-aparece .25s ease-out;
+}
+@keyframes edd-aparece { from { opacity: 0; } }
+.edd {
+  position: relative; box-sizing: border-box; width: min(560px, 100%); max-height: 100%; overflow: auto;
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  border-radius: 22px; border: 1px solid color-mix(in srgb, var(--edd-ouro) 45%, transparent);
+  background: linear-gradient(170deg, #0A1C36 0%, #051528 60%, #030C18 100%); color: var(--edd-marfim);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, .55);
+  animation: edd-entra .35s cubic-bezier(.2, .8, .2, 1);
+}
+@keyframes edd-entra { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+.edd-x {
+  position: absolute; top: 10px; right: 10px; z-index: 2; display: grid; place-items: center; width: 40px; height: 40px;
+  border: 0; border-radius: 50%; background: rgba(3, 12, 24, .6); color: var(--edd-marfim); font-size: 24px; line-height: 1; cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+.edd-x:hover { background: rgba(3, 12, 24, .85); }
+.edd-arte { position: relative; aspect-ratio: 16 / 9; overflow: hidden; background: #0C1D33; }
+.edd-arte img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* sem a arte larga, a capa 2:3 aparece pela parte de cima */
+.edd-arte .capa-aula, .edd-arte picture img { object-position: 50% 12%; }
+.edd-arte::after { content: ''; position: absolute; inset: auto 0 0; height: 45%; background: linear-gradient(transparent, #051528); }
+.edd-selo {
+  position: absolute; left: 16px; bottom: 14px; z-index: 1; display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 999px; background: var(--edd-ouro); color: #0b1424;
+  font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+}
+.edd-noar .edd-selo { background: #C95F5F; color: #fff; }
+.edd-selo i { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: edd-pisca 1.2s ease-in-out infinite; }
+@keyframes edd-pisca { 50% { opacity: .25; } }
+.edd-corpo { display: grid; gap: 12px; padding: 18px 22px 20px; }
+.edd-rot { display: flex; align-items: center; gap: 8px; color: var(--edd-ouro); font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+.edd-corpo h2 { margin: 0; font-size: clamp(22px, 4vw, 28px); line-height: 1.12; letter-spacing: -.015em; color: var(--edd-marfim); }
+.edd-desc { margin: 0; color: #9DB0C6; font-size: 14px; line-height: 1.5; }
+.edd-relogio { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .08); }
+.edd-relogio small { color: #9DB0C6; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.edd-relogio b { font-family: var(--fonte-dados, monospace); font-variant-numeric: tabular-nums; font-size: clamp(26px, 6vw, 34px); color: var(--edd-ouro); line-height: 1; }
+.edd-pronta { margin: 0; font-size: 14px; line-height: 1.45; color: var(--edd-marfim); }
+.edd-acoes { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.edd-acoes button { min-height: 48px; padding: 0 20px; border-radius: 12px; font: inherit; font-weight: 800; font-size: 15px; cursor: pointer; }
+.edd-principal { flex: 1 1 220px; border: 0; background: var(--edd-ouro); color: #0b1424; }
+.edd-principal:hover { filter: brightness(1.07); }
+.edd-principal:disabled { opacity: .7; cursor: progress; }
+.edd-depois { border: 1px solid rgba(255, 255, 255, .16); background: transparent; color: var(--edd-marfim); }
+.edd-depois:hover { background: rgba(255, 255, 255, .06); }
+.edd-ok { flex: 1 1 220px; font-weight: 700; font-size: 14px; color: #6FD3AE; }
+.edd-dica, .edd-erro { flex-basis: 100%; font-size: 12px; line-height: 1.4; color: #9DB0C6; }
+.edd-erro { color: #F08A8A; }
+.edd-letra { font-size: 10.5px; line-height: 1.4; color: #6F849C; }
+.edd-x:focus-visible, .edd-acoes button:focus-visible { outline: 2px solid var(--edd-marfim); outline-offset: 3px; }
+
+@media (max-width: 640px) {
+  .edd-fundo { padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  .edd { border-radius: 18px; }
+  .edd-corpo { padding: 14px 16px 16px; gap: 10px; }
+  .edd-acoes button { width: 100%; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .edd { width: min(760px, 100%); grid-template-columns: minmax(0, 42%) minmax(0, 1fr); }
+  .edd-arte { aspect-ratio: auto; min-height: 100%; }
+  .edd-corpo { padding: 12px 16px; gap: 8px; }
+  .edd-desc { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .edd, .edd-fundo { animation: none; } .edd-selo i { animation: none; } }

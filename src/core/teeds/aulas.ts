@@ -35,6 +35,8 @@ export interface Aula {
   nivel?: string
   /** Por que a aula ainda não abre ("Disponível em 12/11"); nulo = abre. */
   bloqueio?: string | null
+  /** 27/11/2026: a data de liberação (ISO) da grade, para a contagem das estreias. */
+  liberarEm?: string | null
   /** O vídeo volta ao começo sozinho quando termina (08/11/2026: depoimentos). */
   repetir?: boolean
   /** Vídeo em pé (9:16): o player corta as laterais do YouTube, não o topo. */
@@ -70,6 +72,8 @@ export interface Modulo {
   assuntos?: Array<{ id: string; titulo: string; descricao?: string }>
   /** Veio da grade publicada no painel (e não do código): o painel é a única fonte. */
   daGrade?: boolean
+  /** 27/11/2026: série de estreias (faixa em destaque no topo das Aulas). Ver gradeAulas.ts. */
+  serie?: boolean
 }
 
 /** Placeholder oficial usado somente enquanto os vídeos Teeds não chegaram. */

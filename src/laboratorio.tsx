@@ -193,6 +193,21 @@ function LabBoasVindas() {
     </>
   )
 }
+/** ?tela=estreia&grade=/lab-grade-gf.json[&agora=2026-11-27T18:59:50-03:00]: o pop-up da estreia do dia (27/11/2026). */
+function LabEstreia() {
+  const q = new URLSearchParams(location.search)
+  const [grade, setGrade] = useState<GradeAulas | null>(null)
+  useEffect(() => {
+    void fetch(q.get('grade') || '/lab-grade-gf.json').then((r) => r.json()).then((g) => setGrade(normalizarGrade(g))).catch(() => setGrade(null))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const agora = q.get('agora') ? Date.parse(q.get('agora')!) : undefined
+  return (
+    <>
+      <Suspense fallback={<Carregando />}><LabInicio /></Suspense>
+      {grade && <Suspense fallback={null}><EstreiaLab sessao={null} plano={null} grade={grade} agoraFixo={agora} aoAssistir={() => undefined} /></Suspense>}
+    </>
+  )
+}
 function LabLogin() {
   const q = new URLSearchParams(location.search)
   const t = q.get('tema'); if (t) document.documentElement.dataset.tema = t
@@ -216,6 +231,7 @@ function LabLogin() {
   )
 }
 import { BoasVindasEmVideo as BoasVindasLab } from './components/aulas/BoasVindasEmVideo'
+import { EstreiaDoDia as EstreiaLab } from './components/aulas/EstreiaDoDia'
 const AdminAulasLab = lazy(() => import('./components/AdminAulas').then((m) => ({ default: m.AdminAulas })))
 const LabQuemEstaOnline = lazy(() => import('./components/monitoramento/LabQuemEstaOnline'))
 const LabManualAoVivo = lazy(() => import('./components/monitoramento/LabManualAoVivo'))
@@ -965,6 +981,7 @@ function Laboratorio() {
   )
   if (qual === 'aulas') return <LabAulas />
   if (qual === 'boasvindas') return <LabBoasVindas />
+  if (qual === 'estreia') return <LabEstreia />
   if (qual === 'minicabine') return <Suspense fallback={null}><LabMiniCabine /></Suspense>
   // ?tela=sessao-simulada: a aba das I.A. como o admin da GF vê, com o ícone da sessão simulada e o saldo do topo
   if (qual === 'sessao-simulada') return (

@@ -11,6 +11,8 @@ import { listarVideosDasAulas, tamanhoLegivel, type VideoDaAula } from '../core/
 import type { SessaoTeeds } from '../core/teeds/conta'
 import { MARCA, FAMILIA_GF } from '../marca'
 import { Destaques, bannersDaMarca } from './aulas/Destaques'
+import { SerieDeEstreias } from './aulas/SerieDeEstreias'
+import { aoPedirAula, aulaPedida, proximaLiberacao } from '../core/teeds/estreias'
 import { IconeFechar } from './IconeFechar'
 import { Icone } from './Icone'
 import { PlayerAula } from './PlayerAula'
@@ -204,7 +206,17 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     meusCursosEmCache(sessao).then((m) => { if (vivo) setMeusCursos(m) })
     return () => { vivo = false }
   }, [previa, sessao?.usuario.id]) // eslint-disable-line react-hooks/exhaustive-deps
-  const ctxSala = useMemo(() => ({ plano, admin: previa ? false : admin, meusCursos }), [plano, admin, previa, meusCursos])
+  // 27/11/2026 (estreias às 19h): a sala se recalcula sozinha na hora em que uma aula com data libera
+  const [relogioSala, setRelogioSala] = useState(() => Date.now())
+  useEffect(() => {
+    if (!grade) return
+    const proxima = proximaLiberacao(modulosParaSala(grade, { plano }), relogioSala)
+    if (proxima === null) return
+    // no máximo 6 h por espera (o relógio do aparelho pode dormir): confere de novo depois
+    const t = setTimeout(() => setRelogioSala(Date.now()), Math.min(Math.max(0, proxima - Date.now()) + 800, 6 * 3600_000))
+    return () => clearTimeout(t)
+  }, [grade, plano, relogioSala])
+  const ctxSala = useMemo(() => ({ plano, admin: previa ? false : admin, meusCursos, agora: relogioSala }), [plano, admin, previa, meusCursos, relogioSala])
   const cursos = useMemo(() => (grade ? cursosParaSala(grade, ctxSala) : null), [grade, ctxSala])
   // o curso aberto: com um curso só, é ele; com vários, a vitrine escolhe (e lembra o último)
   const CHAVE_CURSO = `${MARCA.id}.aulas.curso`
@@ -270,6 +282,29 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     if (!previa) void registrarAula(sessao, a.id, { abriu: true })
     window.scrollTo({ top: 0 })
   }
+  // 27/11/2026: o pop-up de estreia pede uma aula ("Assistir agora"): abre assim que ela estiver na sala
+  const [pedida, setPedida] = useState<string | null>(null)
+  const tentouDeNovo = useRef<string | null>(null)
+  useEffect(() => {
+    if (previa !== undefined) return
+    const guardada = aulaPedida()
+    if (guardada) setPedida(guardada)
+    return aoPedirAula(setPedida)
+  }, [previa])
+  useEffect(() => {
+    if (!pedida) return
+    const a = aulas.find((x) => x.id === pedida)
+    if (!a) {
+      // a aula está em outro curso: abre o curso dela primeiro
+      const dono = cursos?.find((c) => c.modulos.some((m) => m.aulas.some((x) => x.id === pedida)))
+      if (dono && dono.id !== cursoAtual?.id) setCursoId(dono.id)
+      return
+    }
+    // o pedido chegou no segundo da liberação, antes de a sala recalcular: recalcula e tenta de novo
+    if (!a.video && a.liberarEm && Date.parse(a.liberarEm) <= Date.now() && tentouDeNovo.current !== pedida) { tentouDeNovo.current = pedida; setRelogioSala(Date.now()); return }
+    setPedida(null)
+    if (a.video) abrir(a); else setDetalheId(a.id)
+  }, [pedida, aulas, cursos]) // eslint-disable-line react-hooks/exhaustive-deps
   // Ao sair da aula (ou da tela), o que ficou acumulado vai para o banco.
   useEffect(() => () => { if (abertaId) despachar(abertaId, 0) }, [abertaId, despachar])
   // Aos 90% a aula conta como assistida; a posição é guardada a cada ~5 s.
@@ -327,13 +362,14 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
     const anterior = aulas.slice(0, idx).reverse().find((a) => a.video) ?? null
     const vista = vistas.has(aberta.id)
     const posicao = posicoesGuardadas()[aberta.id] ?? 0
-    const numModulo = modulos.findIndex((m) => m.id === aberta.modulo.id) + 1
+    // a série de estreias fica fora da numeração dos módulos (27/11/2026)
+    const numModulo = modulos.filter((m) => !m.serie).findIndex((m) => m.id === aberta.modulo.id) + 1
 
     return (
       <div className={`ger aulas cine ${tocando ? 'tocando' : ''}`} style={{ ['--aula' as any]: aberta.modulo.cor }}>
         <div className="cine-topo">
           <button className="aulas-voltar" onClick={() => { setAbertaId(null); setTocando(false) }}>← Todas as aulas</button>
-          <span className="cine-migalha">{variosCursos && cursoAtual ? `${cursoAtual.titulo} · ` : ''}Módulo {String(numModulo).padStart(2, '0')} · {aberta.modulo.titulo} · Aula {aberta.numero} de {aulas.length}</span>
+          <span className="cine-migalha">{variosCursos && cursoAtual ? `${cursoAtual.titulo} · ` : ''}{aberta.modulo.serie ? 'Série' : `Módulo ${String(numModulo).padStart(2, '0')}`} · {aberta.modulo.titulo} · Aula {aberta.numero} de {aulas.length}</span>
         </div>
 
         <div className="cine-palco">
@@ -463,9 +499,9 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
                 return (
                   <section key={m.id} className={`cine-modulo ${abertoAqui ? 'aberto' : ''} ${m.id === aberta.modulo.id ? 'atual' : ''}`} style={{ ['--aula' as any]: m.cor }}>
                     <button className="cine-modulo-cab" onClick={() => setModuloAberto(abertoAqui ? '' : m.id)} aria-expanded={abertoAqui}>
-                      <i>{String(mi + 1).padStart(2, '0')}</i>
+                      <i>{m.serie ? '★' : String(mi + 1).padStart(2, '0')}</i>
                       <span>
-                        <small className="cine-modulo-rot">Módulo {mi + 1}</small>
+                        <small className="cine-modulo-rot">{m.serie ? 'Série' : `Módulo ${mi + 1}`}</small>
                         <b>{m.titulo}</b>
                         <span className="cine-modulo-barra" aria-hidden="true"><u style={{ width: `${doModulo.length ? (feitas / doModulo.length) * 100 : 0}%` }} /></span>
                         <small>{feitas} de {doModulo.length} concluídas</small>
@@ -512,6 +548,10 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
         </section>
       )}
       {/* 03/11/2026 (Tiago): os destaques no topo, de ponta a ponta; embaixo, a minha jornada */}
+      {/* 27/11/2026: a série de estreias em destaque, no topo, antes dos destaques (o módulo sai da lista comum) */}
+      {!travadas && (!cursoAtual || cursoAtual.liberado) && modulos.filter((m) => m.serie).map((m) => (
+        <SerieDeEstreias key={m.id} modulo={m} aulas={aulas.filter((a) => a.modulo.id === m.id)} vistas={vistas} abrir={abrir} detalhar={setDetalheId} />
+      ))}
       {MARCA.inicio && !variosCursos && <Destaques banners={bannersDaMarca({ treino: !!treino, noAr: !!treino?.noAr })} aoIr={aoIr} />}
       {migalhaDoCurso}
       {faixaTrancado}
@@ -572,7 +612,7 @@ function SalaDeAulas({ nome, sessao, aoReverTour, aoIr, treino, travadas = false
 
       {aoReverTour && <CartaoDoTour aoAbrir={aoReverTour} />}
 
-      {modulos.map((m, mi) => {
+      {modulos.filter((m) => !m.serie || travadas).map((m, mi) => {
         const doModulo = aulas.filter((a) => a.modulo.id === m.id)
         const grupos = gruposDoModulo(m, doModulo)
         const cartao = (a: AulaNumerada) => (
