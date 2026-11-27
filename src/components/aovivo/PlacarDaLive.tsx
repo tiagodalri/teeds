@@ -219,7 +219,6 @@ export function PlacarDaLive() {
         <small>Operando</small>
         <span className="pl-linha">
           <span className="pl-visor pequeno"><Roleta valor={p.operando} casas={0} classe="pequena" /></span>
-          <em>{p.operando === 1 ? 'pessoa' : 'pessoas'}</em>
         </span>
       </div>
     </section>
