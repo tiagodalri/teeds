@@ -203,18 +203,24 @@ export function PlacarDaLive() {
       </div>
       <div className="pl-mini pl-mini-entradas" title="Soma do valor das entradas em conta real de quem está na sala, desde o começo da live">
         <small>Entradas</small>
-        <span className="pl-visor pequeno"><span className="pl-moeda">US$</span><Roleta valor={p.entradas} classe="pequena" /></span>
-        <em>{noAr ? `${p.operacoes} ${p.operacoes === 1 ? 'operação' : 'operações'}` : '—'}</em>
+        <span className="pl-linha">
+          <span className="pl-visor pequeno"><span className="pl-moeda">US$</span><Roleta valor={p.entradas} classe="pequena" /></span>
+          {noAr && <em>{p.operacoes} {p.operacoes === 1 ? 'operação' : 'operações'}</em>}
+        </span>
       </div>
       <div className="pl-mini pl-mini-saldo" title="Soma do saldo em conta real de quem está na sala agora">
         <small>Saldo em conta real</small>
-        <span className="pl-visor pequeno"><span className="pl-moeda">US$</span><Roleta valor={p.saldo} classe="pequena" /></span>
-        <em>{noAr ? `${p.comConta} ${p.comConta === 1 ? 'conta com saldo' : 'contas com saldo'}` : '—'}</em>
+        <span className="pl-linha">
+          <span className="pl-visor pequeno"><span className="pl-moeda">US$</span><Roleta valor={p.saldo} classe="pequena" /></span>
+          {noAr && <em>{p.comConta} {p.comConta === 1 ? 'conta' : 'contas'}</em>}
+        </span>
       </div>
       <div className="pl-mini pl-mini-pessoas" title="Pessoas na sala que já operaram em conta real nesta live">
         <small>Operando</small>
-        <span className="pl-visor pequeno"><Roleta valor={p.operando} casas={0} classe="pequena" /></span>
-        <em>{p.operando === 1 ? 'pessoa' : 'pessoas'}</em>
+        <span className="pl-linha">
+          <span className="pl-visor pequeno"><Roleta valor={p.operando} casas={0} classe="pequena" /></span>
+          <em>{p.operando === 1 ? 'pessoa' : 'pessoas'}</em>
+        </span>
       </div>
     </section>
   )
