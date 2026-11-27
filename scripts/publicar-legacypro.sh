@@ -12,6 +12,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Trava: só publica o que está na main e nunca algo mais velho que o site no ar.
+. scripts/trava-publicacao.sh
+trava_conferir_base
+
 # HTTPS, e nao SSH: e assim que este Mac ja guarda a credencial do GitHub.
 REPO="${REPO_LEGACYPRO:-https://github.com/tiagodalri/legacypro.git}"
 DOMINIO="legacyprotrade.com"
@@ -40,6 +44,7 @@ fi
 git -C "$CLONE" fetch --quiet origin || true
 git -C "$CLONE" checkout --quiet -B main
 git -C "$CLONE" reset --quiet --hard "origin/main" 2>/dev/null || true
+trava_conferir_site "$CLONE"
 
 echo "== 3/4 copiando o site =="
 # Apaga o que era e poe o que e — menos o .git, que e a identidade do clone.
@@ -48,6 +53,8 @@ cp -R docs-legacypro/. "$CLONE/"
 
 # O CNAME e o que diz ao GitHub Pages qual dominio serve este repositorio.
 printf '%s\n' "$DOMINIO" > "$CLONE/CNAME"
+# De qual commit da main veio este site (a próxima publicação confere).
+printf '%s\n' "$TRAVA_FONTE" > "$CLONE/.fonte"
 
 echo "== 4/4 publicando =="
 git -C "$CLONE" add -A
@@ -55,7 +62,7 @@ if git -C "$CLONE" diff --cached --quiet; then
   echo "Nada mudou desde a ultima publicacao."
   exit 0
 fi
-git -C "$CLONE" commit --quiet -m "Legacy Pro: $(date '+%Y-%m-%d %H:%M')"
+git -C "$CLONE" commit --quiet -m "Legacy Pro: $(date '+%Y-%m-%d %H:%M') (fonte ${TRAVA_FONTE:0:8})"
 git -C "$CLONE" push --quiet origin main
 echo
 echo "Publicado. Em um minuto o site responde em https://${DOMINIO}"
