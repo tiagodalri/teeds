@@ -1,0 +1,20 @@
+{
+  "id": "ia-na-pratica", "cor": "#B78D39", "curso": "principal", "planos": [], "serie": true,
+  "titulo": "I.A. na Prática",
+  "chamada": "Uma aula nova por dia, sempre às 19h. O Victor opera ao vivo com cada I.A., do começo ao fim.",
+  "descricao": "", "liberarEm": null, "publicado": true,
+  "assuntos": [{ "id": "ia-na-pratica-geral", "titulo": "", "descricao": "", "aulas": [
+    { "id": "pratica-raptor", "capa": "", "links": [], "nivel": "Intermediário", "video": "https://youtu.be/CgbpUhcjrYI", "planos": [],
+      "titulo": "Estratégia para fazer US$ 50 por dia com a Raptor", "arquivo": null, "duracao": "29 min", "topicos": [],
+      "descricao": "O Victor mostra, na prática, como ele monta a sessão da Raptor para buscar US$ 50 no dia: entrada, meta, limite e a hora de parar.",
+      "liberarEm": "2026-11-27T22:00:00.000Z", "materiais": [], "publicado": true, "capaArquivo": null },
+    { "id": "pratica-falcon", "capa": "", "links": [], "nivel": "Intermediário", "video": "https://youtu.be/--RCIHaOWRc", "planos": [],
+      "titulo": "Lucrando de US$ 30 a US$ 100 por dia com a Falcon", "arquivo": null, "duracao": "21 min", "topicos": [],
+      "descricao": "A Falcon na prática: como ajustar a sessão para metas de US$ 30 a US$ 100 por dia, com gerenciamento do começo ao fim.",
+      "liberarEm": "2026-11-28T22:00:00.000Z", "materiais": [], "publicado": true, "capaArquivo": null },
+    { "id": "pratica-legacy", "capa": "", "links": [], "nivel": "Intermediário", "video": "https://youtu.be/QOsQS8XcXek", "planos": [],
+      "titulo": "Fazendo de US$ 10 a US$ 250 por dia com a Legacy", "arquivo": null, "duracao": "19 min", "topicos": [],
+      "descricao": "A Legacy na prática: do dia de US$ 10 ao de US$ 250, como escalar a meta conforme a banca sem perder o controle.",
+      "liberarEm": "2026-11-29T22:00:00.000Z", "materiais": [], "publicado": true, "capaArquivo": null }
+  ]}]
+}
