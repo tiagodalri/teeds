@@ -3,7 +3,7 @@
 
 .pl-placar {
   --pl-ouro: var(--ps-ouro, #c9a24a);
-  --pl-ouro-claro: #f3d58a;
+  --pl-ouro-claro: #FBE6A6;
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
@@ -23,16 +23,16 @@
   height: 46px;
   padding: 0 12px 0 12px;
   border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--pl-ouro) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pl-ouro) 75%, #fff 5%);
   background:
-    radial-gradient(120% 140% at 20% 0%, color-mix(in srgb, var(--pl-ouro) 16%, transparent), transparent 60%),
+    radial-gradient(120% 140% at 20% 0%, color-mix(in srgb, var(--pl-ouro) 26%, transparent), transparent 62%),
     linear-gradient(180deg, #171309, #0c0a06);
-  box-shadow: inset 0 1px 0 rgba(255, 230, 160, .12), 0 0 0 1px rgba(0, 0, 0, .5), 0 6px 22px -10px color-mix(in srgb, var(--pl-ouro) 60%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 230, 160, .12), 0 0 0 1px rgba(0, 0, 0, .5), 0 0 18px -4px color-mix(in srgb, var(--pl-ouro) 55%, transparent);
   overflow: visible;
   isolation: isolate;
   transition: box-shadow .5s, border-color .5s;
 }
-.pl-placar.parado .pl-maquina { filter: saturate(.55); opacity: .82; }
+/* fora do ar fica aceso igual, só sem o reflexo e as estrelinhas (pedido do Tiago 27/11: nada apagado) */
 .pl-placar.brilhando .pl-maquina {
   border-color: var(--pl-ouro-claro);
   box-shadow: inset 0 1px 0 rgba(255, 230, 160, .25), 0 0 0 1px rgba(0, 0, 0, .5), 0 0 26px 2px color-mix(in srgb, var(--pl-ouro) 55%, transparent);
@@ -66,8 +66,8 @@
 @keyframes pl-piscar { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 45% { opacity: 1; transform: scale(1) rotate(45deg); } 60% { opacity: .2; } }
 
 .pl-rotulo { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; position: relative; z-index: 1; }
-.pl-rotulo small { font-size: 11.5px; font-weight: 700; color: var(--pl-ouro-claro); letter-spacing: .01em; }
-.pl-rotulo em { font-style: normal; font-size: 10.5px; color: var(--ps-texto2, #aab1be); }
+.pl-rotulo small { font-size: 12px; font-weight: 800; color: #F2D27A; text-shadow: 0 0 10px rgba(255, 200, 90, .35); letter-spacing: .01em; }
+.pl-rotulo em { font-style: normal; font-size: 10.5px; font-weight: 600; color: #E9EDEF; }
 
 /* ------------------------------------------------ o visor com os rolos */
 .pl-visor {
@@ -78,7 +78,7 @@
   background: linear-gradient(180deg, #050403, #0f0c07 50%, #050403);
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, .9), inset 0 -1px 0 rgba(255, 220, 140, .08), 0 0 0 1px rgba(201, 162, 74, .25);
 }
-.pl-moeda { font-size: 10.5px; font-weight: 700; color: color-mix(in srgb, var(--pl-ouro) 80%, #fff); margin-right: 1px; }
+.pl-moeda { font-size: 11px; font-weight: 800; color: #F0C463; margin-right: 1px; }
 .pl-roleta { display: inline-flex; align-items: center; --pl-h: 26px; font-variant-numeric: tabular-nums; font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace; }
 .pl-roleta.grande { --pl-h: 28px; font-size: 21px; font-weight: 800; }
 .pl-roleta.pequena { --pl-h: 19px; font-size: 14px; font-weight: 700; }
@@ -87,25 +87,25 @@
   position: relative; display: inline-block;
   height: var(--pl-h); width: .78em; margin: 0 1px;
   border-radius: 3px; overflow: hidden;
-  background: linear-gradient(180deg, #1d1810 0%, #2b2316 48%, #1a150d 52%, #120e08 100%);
+  background: linear-gradient(180deg, #2A1F10 0%, #3A2B16 48%, #2A1F10 52%, #151516 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 220, 140, .07), inset 0 1px 0 rgba(255, 255, 255, .06);
 }
 /* a sombra de cilindro: o número some em cima e embaixo, como num rolo de verdade */
 .pl-casa::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, .6), transparent 28%, transparent 72%, rgba(0, 0, 0, .6)),
+  background: linear-gradient(180deg, rgba(0, 0, 0, .42), transparent 26%, transparent 74%, rgba(0, 0, 0, .42)),
               linear-gradient(180deg, transparent 49.5%, rgba(0, 0, 0, .35) 50%, transparent 51%);
 }
 .pl-rolo { display: block; height: 100%; }
 .pl-fita { display: flex; flex-direction: column; transition: transform 1.25s cubic-bezier(.2, .9, .25, 1.12); will-change: transform; }
 .pl-fita.solto { transition: none; }
 .pl-fita span { height: var(--pl-h); line-height: var(--pl-h); text-align: center; display: block; }
-.pl-roleta.grande .pl-fita span { color: #f7d27a; text-shadow: 0 0 8px rgba(243, 190, 80, .8), 0 0 18px rgba(201, 162, 74, .45), 0 1px 0 #7a5a1c; }
-.pl-roleta.pequena .pl-fita span { color: #e9edf4; }
+.pl-roleta.grande .pl-fita span { color: #F0C463; text-shadow: 0 0 6px rgba(255, 190, 50, .95), 0 0 16px rgba(255, 180, 60, .6), 0 1px 0 #7a5a1c; }
+.pl-roleta.pequena .pl-fita span { color: #FFFFFE; text-shadow: 0 0 8px rgba(255, 255, 255, .35); }
 .pl-sep { color: color-mix(in srgb, var(--pl-ouro) 75%, #fff); font-weight: 800; margin: 0 -1px; }
-.pl-roleta.pequena .pl-sep { color: #8f97a6; }
-.pl-casa.apagado { opacity: .38; }
-.pl-sep.apagado { opacity: .3; }
+.pl-roleta.pequena .pl-sep { color: #E4E6EB; }
+.pl-casa.apagado { opacity: .8; }
+.pl-sep.apagado { opacity: .75; }
 .pl-placar.brilhando .pl-roleta.grande .pl-casa:not(.apagado) { box-shadow: inset 0 0 0 1px rgba(255, 220, 140, .35), 0 0 10px rgba(240, 196, 96, .35); }
 
 /* ------------------------------------------------ o estouro de brilhos quando sobe */
@@ -128,7 +128,7 @@
   position: absolute; right: -10px; top: -11px; z-index: 6;
   white-space: nowrap; font-size: 11px; font-weight: 800; color: #1a1205;
   padding: 1px 7px; border-radius: 999px;
-  background: linear-gradient(180deg, #ffe7a6, #d9a943);
+  background: linear-gradient(180deg, #FBE6A6, #D6A042);
   box-shadow: 0 0 14px rgba(240, 196, 96, .7);
   animation: pl-ganho 2s cubic-bezier(.2, .8, .3, 1) forwards;
 }
@@ -144,14 +144,14 @@
 .pl-mini {
   display: flex; flex-direction: column; justify-content: center; gap: 1px;
   height: 46px; padding: 0 10px;
-  border-radius: 12px; border: 1px solid var(--ps-linha, rgba(255, 255, 255, .07));
-  background: linear-gradient(180deg, #11151d, #0b0e14);
+  border-radius: 12px; border: 1px solid rgba(255, 255, 255, .16);
+  background: linear-gradient(180deg, #19202c, #10151e);
   white-space: nowrap; line-height: 1.1;
 }
-.pl-mini small { font-size: 10.5px; font-weight: 600; color: var(--ps-texto2, #aab1be); }
-.pl-mini em { font-style: normal; font-size: 9.5px; color: #7d8594; }
+.pl-mini small { font-size: 11px; font-weight: 700; color: #E9EDEF; }
+.pl-mini em { font-style: normal; font-size: 10px; font-weight: 600; color: #AEBAC1; }
 .pl-mini .pl-visor { padding: 1px 4px; align-self: flex-start; }
-.pl-placar.parado .pl-mini { opacity: .6; }
+
 
 /* sem espaço, os mostradores menores saem primeiro (o markup fica sempre) */
 @container placar (max-width: 760px) { .pl-mini-saldo { display: none; } }
