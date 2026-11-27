@@ -1172,6 +1172,12 @@ function LabCentral() {
           id, nome, foto: null, desde: new Date(Date.now() - (i + 1) * 97 * 864e5).toISOString(), plano: 'treino', cidade, uf, saldo, moeda: 'USD',
           markupTotal: total, markupLive: live, opsLive: ops, ultimaOp: i % 2 ? null : new Date().toISOString(),
         }))))
+        // o placar do topo: o markup sobe aos pulos a cada poucos segundos (27/11/2026)
+        let mk = 12.37, ent = 410, nOps = 31
+        void import('./components/aovivo/PlacarDaLive').then(({ simularPlacar }) => simularPlacar(() => {
+          if (Math.random() < .7) { const g = Math.round((0.05 + Math.random() * 2.4) * 100) / 100; mk += g; ent += g * 18; nOps += 1 + Math.floor(Math.random() * 3) }
+          return { markup: mk, operacoes: nOps, entradas: ent, operando: 3, saldo: 6657.5 + Math.round(Math.random() * 40), comConta: 3 }
+        }))
       } else {
         sim.iniciarSimulacao('Victor Dias')
         tr.simularTreino({ fase: 'conectada', apresentador: true, meuNome: 'Victor Dias', ...palco, palco: (palco.palco ?? []).map((p, i) => ({ ...p, eu: i === 0 })) })

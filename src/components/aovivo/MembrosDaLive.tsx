@@ -97,7 +97,7 @@ async function inicioRegistrado(): Promise<number> {
   const visto = Date.parse(l.atualizada_em ?? l.iniciada_em)
   return Date.now() - visto < 3 * 60_000 ? Date.parse(l.iniciada_em) : 0
 }
-function useInicioDaLive(): number {
+export function useInicioDaLive(): number {
   const t = useTreino()
   const [registrado, setRegistrado] = useState(0)
   useEffect(() => {

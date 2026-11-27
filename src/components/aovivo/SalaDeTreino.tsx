@@ -20,6 +20,7 @@ import {
 import { PalcoDoTreino, VisaoDoTreinoProvider, type VisaoDeAluno } from './PlayerDoTreino'
 import { AssistirTreino } from './AssistirTreino'
 import { MembrosDaLive } from './MembrosDaLive'
+import { PlacarDaLive } from './PlacarDaLive'
 import { saidaDoEstudio } from '../../core/live/estudio/motor'
 import { listarTransmissoes, plataformasDaMarca, type Transmissao } from '../../core/live/historico'
 
@@ -573,7 +574,7 @@ export function SalaDeTreino({ apresentador, aoSair, sessao = null }: { apresent
               </div>
             )}
           </div>
-          <span className="cv-app-espaco" />
+          <PlacarDaLive />
           {foraDaSala && sessao && <button type="button" className="ps-voltar" onClick={() => void voltarATreinar()}>Voltar à sala</button>}
           {equipeNoPalco.length > 0 && !tr.coApresentando && (
             <span className="ps-no-palco" title={`No palco com você: ${equipeNoPalco.map((p) => p.nome).join(', ')}`}>

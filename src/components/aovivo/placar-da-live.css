@@ -1,0 +1,165 @@
+/* O placar da live no topo do painel (27/11/2026). Prefixo pl-.
+   Rolos de caixa registradora: cada dígito é uma fita que gira para cima. */
+
+.pl-placar {
+  --pl-ouro: var(--ps-ouro, #c9a24a);
+  --pl-ouro-claro: #f3d58a;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  container-type: inline-size;
+  container-name: placar;
+}
+
+/* ------------------------------------------------ a máquina (markup) */
+.pl-maquina {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 12px 0 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--pl-ouro) 45%, transparent);
+  background:
+    radial-gradient(120% 140% at 20% 0%, color-mix(in srgb, var(--pl-ouro) 16%, transparent), transparent 60%),
+    linear-gradient(180deg, #171309, #0c0a06);
+  box-shadow: inset 0 1px 0 rgba(255, 230, 160, .12), 0 0 0 1px rgba(0, 0, 0, .5), 0 6px 22px -10px color-mix(in srgb, var(--pl-ouro) 60%, transparent);
+  overflow: visible;
+  isolation: isolate;
+  transition: box-shadow .5s, border-color .5s;
+}
+.pl-placar.parado .pl-maquina { filter: saturate(.55); opacity: .82; }
+.pl-placar.brilhando .pl-maquina {
+  border-color: var(--pl-ouro-claro);
+  box-shadow: inset 0 1px 0 rgba(255, 230, 160, .25), 0 0 0 1px rgba(0, 0, 0, .5), 0 0 26px 2px color-mix(in srgb, var(--pl-ouro) 55%, transparent);
+  animation: pl-pulso 1.1s ease-out;
+}
+@keyframes pl-pulso { 0% { transform: scale(1); } 18% { transform: scale(1.045); } 45% { transform: scale(.99); } 100% { transform: scale(1); } }
+
+/* um reflexo que passa de tempos em tempos (só no ar) */
+.pl-reflexo { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 2; }
+.pl-reflexo::after {
+  content: ''; position: absolute; top: -20%; bottom: -20%; width: 38%; left: -50%;
+  background: linear-gradient(100deg, transparent, rgba(255, 236, 180, .16), transparent);
+  transform: skewX(-18deg);
+}
+.pl-placar.no-ar .pl-reflexo::after { animation: pl-reflexo 5.5s ease-in-out infinite; }
+.pl-placar.brilhando .pl-reflexo::after { animation: pl-reflexo .9s ease-out; }
+@keyframes pl-reflexo { 0%, 70% { left: -50%; } 100% { left: 130%; } }
+
+/* estrelinhas que piscam paradas nos cantos */
+.pl-estrelas { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.pl-estrelas i {
+  position: absolute; width: 7px; height: 7px; opacity: 0;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  background: var(--pl-ouro-claro);
+  filter: drop-shadow(0 0 3px var(--pl-ouro-claro));
+}
+.pl-placar.no-ar .pl-estrelas i { animation: pl-piscar 3.2s ease-in-out infinite; }
+.pl-estrelas i:nth-child(1) { top: -3px; left: 18%; }
+.pl-estrelas i:nth-child(2) { bottom: -3px; right: 22%; width: 9px; height: 9px; animation-delay: 1.1s !important; }
+.pl-estrelas i:nth-child(3) { top: 30%; right: -4px; width: 6px; height: 6px; animation-delay: 2.2s !important; }
+@keyframes pl-piscar { 0%, 100% { opacity: 0; transform: scale(.3) rotate(0); } 45% { opacity: 1; transform: scale(1) rotate(45deg); } 60% { opacity: .2; } }
+
+.pl-rotulo { display: flex; flex-direction: column; line-height: 1.15; white-space: nowrap; position: relative; z-index: 1; }
+.pl-rotulo small { font-size: 11.5px; font-weight: 700; color: var(--pl-ouro-claro); letter-spacing: .01em; }
+.pl-rotulo em { font-style: normal; font-size: 10.5px; color: var(--ps-texto2, #aab1be); }
+
+/* ------------------------------------------------ o visor com os rolos */
+.pl-visor {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #050403, #0f0c07 50%, #050403);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .9), inset 0 -1px 0 rgba(255, 220, 140, .08), 0 0 0 1px rgba(201, 162, 74, .25);
+}
+.pl-moeda { font-size: 10.5px; font-weight: 700; color: color-mix(in srgb, var(--pl-ouro) 80%, #fff); margin-right: 1px; }
+.pl-roleta { display: inline-flex; align-items: center; --pl-h: 26px; font-variant-numeric: tabular-nums; font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace; }
+.pl-roleta.grande { --pl-h: 28px; font-size: 21px; font-weight: 800; }
+.pl-roleta.pequena { --pl-h: 19px; font-size: 14px; font-weight: 700; }
+
+.pl-casa {
+  position: relative; display: inline-block;
+  height: var(--pl-h); width: .78em; margin: 0 1px;
+  border-radius: 3px; overflow: hidden;
+  background: linear-gradient(180deg, #1d1810 0%, #2b2316 48%, #1a150d 52%, #120e08 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 140, .07), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+/* a sombra de cilindro: o número some em cima e embaixo, como num rolo de verdade */
+.pl-casa::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .6), transparent 28%, transparent 72%, rgba(0, 0, 0, .6)),
+              linear-gradient(180deg, transparent 49.5%, rgba(0, 0, 0, .35) 50%, transparent 51%);
+}
+.pl-rolo { display: block; height: 100%; }
+.pl-fita { display: flex; flex-direction: column; transition: transform 1.25s cubic-bezier(.2, .9, .25, 1.12); will-change: transform; }
+.pl-fita.solto { transition: none; }
+.pl-fita span { height: var(--pl-h); line-height: var(--pl-h); text-align: center; display: block; }
+.pl-roleta.grande .pl-fita span { color: #f7d27a; text-shadow: 0 0 8px rgba(243, 190, 80, .8), 0 0 18px rgba(201, 162, 74, .45), 0 1px 0 #7a5a1c; }
+.pl-roleta.pequena .pl-fita span { color: #e9edf4; }
+.pl-sep { color: color-mix(in srgb, var(--pl-ouro) 75%, #fff); font-weight: 800; margin: 0 -1px; }
+.pl-roleta.pequena .pl-sep { color: #8f97a6; }
+.pl-casa.apagado { opacity: .38; }
+.pl-sep.apagado { opacity: .3; }
+.pl-placar.brilhando .pl-roleta.grande .pl-casa:not(.apagado) { box-shadow: inset 0 0 0 1px rgba(255, 220, 140, .35), 0 0 10px rgba(240, 196, 96, .35); }
+
+/* ------------------------------------------------ o estouro de brilhos quando sobe */
+.pl-estouro { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; z-index: 5; }
+.pl-estouro i {
+  position: absolute; left: 0; top: 0;
+  width: var(--s); height: var(--s); border-radius: 50%;
+  background: radial-gradient(circle, #fff, var(--pl-ouro-claro) 45%, transparent 70%);
+  box-shadow: 0 0 6px 1px var(--pl-ouro-claro);
+  opacity: 0;
+  animation: pl-faisca var(--t) cubic-bezier(.15, .7, .3, 1) var(--d) forwards;
+}
+.pl-estouro i:nth-child(3n) { border-radius: 1px; transform: rotate(45deg); }
+@keyframes pl-faisca {
+  0% { opacity: 1; transform: translate(0, 0) scale(1.4); }
+  70% { opacity: .9; }
+  100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.2); }
+}
+.pl-ganho {
+  position: absolute; right: -10px; top: -11px; z-index: 6;
+  white-space: nowrap; font-size: 11px; font-weight: 800; color: #1a1205;
+  padding: 1px 7px; border-radius: 999px;
+  background: linear-gradient(180deg, #ffe7a6, #d9a943);
+  box-shadow: 0 0 14px rgba(240, 196, 96, .7);
+  animation: pl-ganho 2s cubic-bezier(.2, .8, .3, 1) forwards;
+}
+@keyframes pl-ganho {
+  0% { opacity: 0; transform: translateY(8px) scale(.5); }
+  14% { opacity: 1; transform: translateY(0) scale(1.15); }
+  24% { transform: translateY(0) scale(1); }
+  80% { opacity: 1; transform: translateY(-2px); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ------------------------------------------------ os mostradores menores */
+.pl-mini {
+  display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  height: 46px; padding: 0 10px;
+  border-radius: 12px; border: 1px solid var(--ps-linha, rgba(255, 255, 255, .07));
+  background: linear-gradient(180deg, #11151d, #0b0e14);
+  white-space: nowrap; line-height: 1.1;
+}
+.pl-mini small { font-size: 10.5px; font-weight: 600; color: var(--ps-texto2, #aab1be); }
+.pl-mini em { font-style: normal; font-size: 9.5px; color: #7d8594; }
+.pl-mini .pl-visor { padding: 1px 4px; align-self: flex-start; }
+.pl-placar.parado .pl-mini { opacity: .6; }
+
+/* sem espaço, os mostradores menores saem primeiro (o markup fica sempre) */
+@container placar (max-width: 760px) { .pl-mini-saldo { display: none; } }
+@container placar (max-width: 590px) { .pl-mini-entradas { display: none; } }
+@container placar (max-width: 420px) { .pl-mini-pessoas { display: none; } }
+@container placar (max-width: 300px) { .pl-rotulo { display: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pl-fita { transition: none; }
+  .pl-placar .pl-reflexo::after, .pl-placar .pl-estrelas i, .pl-placar.brilhando .pl-maquina { animation: none !important; }
+}
