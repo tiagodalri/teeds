@@ -183,14 +183,14 @@ Deno.serve(async (req) => {
   const mostrar = (texto: string) => texto.replace(/\bA(\d{3,4})\b/g, (tudo) => String(alunoDe.get(tudo)?.nome ?? tudo))
 
   // ------------------------------------------------------------ os dados que vão para a I.A.
-  const alunos = lista.slice(0, 320).map((a) => ({
+  const alunos = lista.slice(0, comBanco ? 140 : 320).map((a) => ({
     aluno: codigoDe.get(a.user_id), perfil: a.perfil, parceiro: a.parceiro ?? 'direto', plano: a.categoria, cadastro_ha_dias: diasAtras(a.criado_em), visto_ha_dias: diasAtras(a.visto_em),
     aulas_concluidas: a.concl, aulas_abertas: a.abertas, fez_aula_de_gerenciamento: a.viu_ger, depositos: a.dep_n, depositado: r2(a.dep_total), saques: a.saq_n, sacado: r2(a.saq_total),
     saldo_hoje: r2(a.saldo), operacoes_reais: a.ops, dias_operando: a.dias, resultado: r2(a.resultado), markup: r2(a.markup), ultimo_dia_resultado: a.ult_dia_res == null ? null : r2(a.ult_dia_res),
     sessoes_ia: a.sess, limites_de_perda: a.stops, metas_batidas: a.metas, continuou_depois_da_meta: a.passou_meta, zerou_saldo: a.zerou, perdas: a.perdas, religou_em_2min: a.revanches,
     manual_apos_perda: a.man_apos_perda, manual_aumentou_entrada: a.man_dobras, operacoes_de_madrugada: a.madrugada, vezes_no_treino: a.demo_n,
   }))
-  const historias = ((painel.historias ?? []) as any[]).slice(0, 80).map((h) => ({ tipo: h.tipo, aluno: codigoDe.get(h.user_id) ?? null, quando: h.quando, ...h.d }))
+  const historias = ((painel.historias ?? []) as any[]).slice(0, 48).map((h) => ({ tipo: h.tipo, aluno: codigoDe.get(h.user_id) ?? null, quando: h.quando, ...h.d }))
   const semNomes = (o: any): any => Array.isArray(o) ? o.map(semNomes) : o && typeof o === 'object'
     ? Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'foto_url' && k !== 'email').map(([k, v]) => k === 'nome' ? ['aluno', codigoDe.get(o.user_id) ?? 'aluno'] : k === 'user_id' ? ['', undefined] : [k, semNomes(v)]).filter(([k]) => k))
     : o
@@ -218,27 +218,34 @@ Deno.serve(async (req) => {
       parameters: { type: 'OBJECT', properties: { codigo: { type: 'STRING', description: 'O código do aluno, como A012' } }, required: ['codigo'] } },
       ...(comBanco ? [{ name: 'consultar_banco', description: 'Roda uma consulta SELECT de leitura no banco de dados da plataforma e devolve as linhas em JSON.',
         parameters: { type: 'OBJECT', properties: { sql: { type: 'STRING', description: 'Uma consulta SELECT do PostgreSQL, sem ponto e vírgula' } }, required: ['sql'] } }] : [])] }],
-    generationConfig: { maxOutputTokens: 4096, temperature: 0.4 },
+    generationConfig: { maxOutputTokens: 4096, temperature: 0.4, thinkingConfig: { thinkingLevel: 'low' } },
   }
 
   const limite = Date.now() + 140_000
   const falhas: string[] = []
+  let semPensar = false // modelo que não aceita o raciocínio curto: tira e segue
   for (const modelo of MODELOS) {
     if (Date.now() > limite - 15_000) break
     try {
       const conversa = [...contents]
       let consultas = 0
       for (let ida = 0; ida < 8; ida++) {
+        const falta = limite - Date.now()
+        // com pouco tempo (ou muitas idas), a I.A. responde com o que já tem, sem pedir mais nada
+        const semFerramenta = falta < 40_000 || ida >= 6
         const r = await fetch(`${GEMINI}/models/${modelo}:generateContent`, {
-          method: 'POST', signal: AbortSignal.timeout(Math.max(10_000, Math.min(75_000, limite - Date.now()))),
-          headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...corpoBase, contents: conversa }),
+          method: 'POST', signal: AbortSignal.timeout(Math.max(10_000, Math.min(50_000, falta))),
+          headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...corpoBase, ...(semPensar ? { generationConfig: { maxOutputTokens: 4096, temperature: 0.4 } } : {}),
+            ...(semFerramenta ? { toolConfig: { functionCallingConfig: { mode: 'NONE' } } } : {}), contents: conversa }),
         })
         const g = await r.json().catch(() => ({} as any))
+        if (!r.ok && r.status === 400 && !semPensar && /thinking/i.test(String(g?.error?.message ?? ''))) { semPensar = true; ida--; continue }
         if (!r.ok) throw Object.assign(new Error(`${modelo} ${r.status}: ${String(g?.error?.message ?? '').slice(0, 140)}`), { status: r.status })
         const conteudo = g.candidates?.[0]?.content
         const partes = (conteudo?.parts ?? []) as any[]
         const chamadas = partes.filter((p) => p.functionCall)
-        if (chamadas.length && ida < 7) {
+        if (chamadas.length && !semFerramenta) {
           conversa.push(conteudo)
           const respostas = await Promise.all(chamadas.slice(0, 4).map(async (p) => {
             if (p.functionCall.name === 'consultar_banco') { consultas++; return { functionResponse: { name: 'consultar_banco', response: await consultarBanco(String(p.functionCall.args?.sql ?? '')) } } }
