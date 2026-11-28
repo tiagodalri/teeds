@@ -47,14 +47,43 @@ function Duelo({ a, b }: NonNullable<Sacada['duelo']>) {
   )
 }
 
+/** O número que sobe até o valor (uma vez, ao aparecer). Quem pede menos movimento vê o valor direto. */
+function Conta({ v, formato = inteiro }: { v: number; formato?: (n: number) => string }) {
+  const [n, setN] = useState(() => (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches ? v : 0))
+  useEffect(() => {
+    if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) { setN(v); return }
+    let quadro = 0
+    const t0 = performance.now(), dur = 900
+    const passo = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur)
+      setN(v * (1 - Math.pow(1 - p, 3)))
+      if (p < 1) quadro = requestAnimationFrame(passo)
+    }
+    quadro = requestAnimationFrame(passo)
+    return () => cancelAnimationFrame(quadro)
+  }, [v])
+  return <>{formato(Math.round(n))}</>
+}
+
+/** O anel da porcentagem. */
+function Anel({ pct: p }: { pct: number }) {
+  const r = 30, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, p))
+  return (
+    <svg className="psi-anel" viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r={r} className="trilho" />
+      <circle cx="36" cy="36" r={r} className="arco" strokeDasharray={`${(v / 100) * c} ${c}`} transform="rotate(-90 36 36)" />
+    </svg>
+  )
+}
+
 function CartaoDaSacada({ s, grande }: { s: Sacada; grande?: boolean }) {
   const [aberta, setAberta] = useState(false)
+  const porcento = /^(\d+)%$/.exec(s.numero)
   return (
     <article className={`psi-sacada ${s.tom}${grande ? ' grande' : ''}`}>
       <span className="psi-rot">{TEMAS.find((t) => t.id === s.tema)?.nome}</span>
       <h4>{s.titulo}</h4>
-      <strong>{s.numero}</strong>
-      <small className="psi-leg">{s.legenda}</small>
+      <div className="psi-sacada-num"><span><strong>{s.numero}</strong><small className="psi-leg">{s.legenda}</small></span>{porcento && <Anel pct={Number(porcento[1])} />}</div>
       {s.duelo && <Duelo {...s.duelo} />}
       <p>{s.texto}</p>
       {(grande || aberta) && <p className="psi-fazer"><b>O que fazer</b>{s.acao}</p>}
@@ -398,7 +427,7 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const destaques = useMemo(() => {
     // as mais fortes, sem repetir tema mais de duas vezes
     const conta = new Map<Tema, number>(), l: Sacada[] = []
-    for (const s of sacadas) { const n = conta.get(s.tema) ?? 0; if (n < 2 && l.length < 6) { l.push(s); conta.set(s.tema, n + 1) } }
+    for (const s of sacadas) { const n = conta.get(s.tema) ?? 0; if (n < 2 && l.length < 5) { l.push(s); conta.set(s.tema, n + 1) } }
     return l
   }, [sacadas])
   const doTema = sacadas.filter((s) => s.tema === tema)
@@ -410,15 +439,34 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const b = dados.base
   const perfis = dados.perfis ?? []
   const totalPerfis = perfis.reduce((t, x) => t + x.pessoas, 0)
+  const jornada = [{ r: 'Alunos', n: b.alunos }, { r: 'Abriram aula', n: b.com_aula }, { r: 'Depositaram', n: b.depositaram }, { r: 'Operaram em conta real', n: b.operaram }]
   if (b.alunos === 0) return <section className="psi"><p className="psi-vazio">Ainda não há alunos ativos neste filtro.</p></section>
 
   return (
     <section className="psi">
       {erro && <p className="psi-erro" role="alert">{erro}</p>}
-      <div className="psi-topo">
-        <p className="psi-frase">Li o comportamento de <b>{inteiro(b.alunos)} alunos</b>: {inteiro(b.com_aula)} abriram aula, <b>{inteiro(b.depositaram)} depositaram</b> ({usd(b.dep_total)}) e {inteiro(b.operaram)} operaram em conta real, gerando <b>{usd(b.markup)}</b> de markup. Abaixo, o que eles fazem antes e depois de cada passo.</p>
+      <header className="psi-hero">
+        <span className="psi-rot">Comportamento · desde o começo da plataforma</span>
+        <h2>O que <em><Conta v={b.alunos} /> alunos</em> fazem antes e depois de cada passo.</h2>
+        <p className="psi-hero-sub">Aulas, depósitos, perdas, ganhos, lives e avisos de cada aluno, cruzados no tempo e lidos como comportamento.</p>
+        <ol className="psi-jornada" aria-label="A jornada dos alunos">
+          {jornada.map((x, i) => (
+            <li key={x.r}>
+              <small>{x.r}</small>
+              <strong><Conta v={x.n} /></strong>
+              <i><u style={{ width: `${Math.max(2, pct(x.n, b.alunos))}%` }} /></i>
+              <span>{i === 0 ? 'Todos os alunos ativos' : <><b>{pc(x.n, jornada[i - 1].n)}</b> do passo anterior</>}</span>
+            </li>
+          ))}
+        </ol>
+        <div className="psi-hero-nums">
+          <span><small>Depositado</small><b><Conta v={b.dep_total} formato={(n) => usd(n)} /></b></span>
+          <span><small>Sacado</small><b><Conta v={b.saq_total} formato={(n) => usd(n)} /></b></span>
+          <span><small>Markup gerado</small><b><Conta v={b.markup} formato={(n) => usd(n)} /></b></span>
+          <span><small>No positivo</small><b>{inteiro(b.lucrando)} de {inteiro(b.operaram)}</b></span>
+        </div>
         <p className="psi-aviso"><Icone nome="inteligencia" />Tudo aqui mostra o que acontece junto (quem fez uma coisa também fez a outra), não prova que uma causa a outra. Cada cartão traz o tamanho da amostra. A equipe fica fora da conta. Lido às {fmtHora.format(new Date(dados.lido_em))}.</p>
-      </div>
+      </header>
 
       <nav className="psi-atalhos" aria-label="Ir para">
         {[['psi-sacadas', 'Sacadas'], ['psi-perfis', 'Perfis'], ['psi-temas', 'Temas'], ['psi-historias', 'Histórias'], ['psi-alunos', 'Alunos']].map(([id, nome]) => <button type="button" key={id} onClick={() => irPara(id)}>{nome}</button>)}
@@ -432,6 +480,12 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
 
       <section className="psi-secao" id="psi-perfis">
         <header><span className="psi-rot">Cada aluno cai em um</span><h3>Perfis de comportamento</h3><p>Toque num perfil para ver quem são os alunos.</p></header>
+        <div className="psi-mapa" role="img" aria-label="A fatia de cada perfil entre os alunos">
+          {ORDEM_DOS_PERFIS.map((id) => {
+            const x = perfis.find((q) => q.perfil === id)
+            return x && x.pessoas > 0 ? <u key={id} className={PERFIS[id].tom} style={{ flexGrow: x.pessoas }} title={`${PERFIS[id].nome}: ${inteiro(x.pessoas)}`} /> : null
+          })}
+        </div>
         <div className="psi-perfis">
           {ORDEM_DOS_PERFIS.map((id) => {
             const x = perfis.find((q) => q.perfil === id)
