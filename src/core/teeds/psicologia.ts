@@ -129,8 +129,16 @@ export interface Investigacao {
   cortes: { deposito_alto: number; top_markup: number }
   grupos: Record<'redeposito' | 'deposito_alto' | 'top_markup', GrupoDaInvestigacao> | null
 }
-export const lerInvestigacao = (sessao: SessaoTeeds, marca: string, parceiro: string) =>
-  rpc<Investigacao>(sessao, 'teeds_psicologia_investigacao', { p_marca: marca, p_parceiro: parceiro || null })
+/** Duas partes da tela pedem a mesma leitura ao mesmo tempo: a segunda aproveita a primeira (vale 20 segundos). */
+const investigacoes = new Map<string, { em: number; pedido: Promise<Investigacao> }>()
+export function lerInvestigacao(sessao: SessaoTeeds, marca: string, parceiro: string): Promise<Investigacao> {
+  const chave = `${marca}:${parceiro}`, guardada = investigacoes.get(chave)
+  if (guardada && Date.now() - guardada.em < 20_000) return guardada.pedido
+  const pedido = rpc<Investigacao>(sessao, 'teeds_psicologia_investigacao', { p_marca: marca, p_parceiro: parceiro || null })
+  investigacoes.set(chave, { em: Date.now(), pedido })
+  pedido.catch(() => investigacoes.delete(chave))
+  return pedido
+}
 
 /* ------------------------------------------------------------------ o consultor (chat com a I.A.) */
 export interface AnexoDoConsultor { mime: string; dados: string; nome?: string }

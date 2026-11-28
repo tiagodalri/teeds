@@ -7,14 +7,15 @@
  * e um gráfico), as histórias reais (um aluno, um fato) e a lista de alunos com a linha do tempo de cada um.
  * Tabelas ficam em gavetas fechadas. Tudo é correlação: a tela diz isso. Prefixo psi-.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { SessaoTeeds } from '../../../core/teeds/conta'
-import { lerAlunosDaPsicologia, lerPsicologia, type AlunoDaPsicologia, type FimDaSessao, type Historia, type PerfilDoAluno, type Psicologia } from '../../../core/teeds/psicologia'
+import { lerAlunosDaPsicologia, lerInvestigacao, lerPsicologia, type Investigacao as DadosDaInvestigacao, type AlunoDaPsicologia, type FimDaSessao, type Historia, type PerfilDoAluno, type Psicologia } from '../../../core/teeds/psicologia'
 import { SeloDoParceiro } from '../../parceiros/SeloDoParceiro'
 import { Icone } from '../../Icone'
 import { LinhaDoTempo } from './LinhaDoTempo'
 import { Consultor } from './Consultor'
 import { Investigacao } from './Investigacao'
+import { Termometros } from './Termometros'
 import { PERFIS, TEMAS, inteiro, montarSacadas, pc, pct, plural, tempoCurto, usd, type Sacada, type Tema } from './sacadas'
 import './psicologia.css'
 
@@ -415,6 +416,9 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const [perfil, setPerfil] = useState<PerfilDoAluno | ''>('')
   const [aberto, setAberto] = useState<string | null>(null)
   const [todas, setTodas] = useState(false)
+  const [inv, setInv] = useState<DadosDaInvestigacao | null>(null)
+  const raiz = useRef<HTMLElement>(null)
+  const inclinado = useRef<HTMLElement | null>(null)
   const [modo, setModo] = useState<'painel' | 'consultor'>(() => { try { return localStorage.getItem('psi.modo') === 'consultor' ? 'consultor' : 'painel' } catch { return 'painel' } })
   const trocarModo = (m: 'painel' | 'consultor') => { setModo(m); try { localStorage.setItem('psi.modo', m) } catch { /* só não lembra */ } }
   const irPara = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -424,6 +428,7 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
     setErro('')
     lerPsicologia(sessaoRef.current, marca, par).then((d) => { if (!vivo) return; if (d) setDados(d); else setErro('Não foi possível ler o comportamento dos alunos agora. Toque em Atualizar para tentar de novo.') }).catch(() => { if (vivo) setErro('Não foi possível ler o comportamento dos alunos agora. Toque em Atualizar para tentar de novo.') })
     lerAlunosDaPsicologia(sessaoRef.current, marca, par).then((l) => { if (vivo) setAlunos(l) }).catch(() => { if (vivo) setAlunos([]) })
+    lerInvestigacao(sessaoRef.current, marca, par).then((x) => { if (vivo) setInv(x) }).catch(() => undefined)
     return () => { vivo = false }
   }, [marca, par, pedido])
 
@@ -437,6 +442,18 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const doTema = sacadas.filter((s) => s.tema === tema)
   const verPerfil = (p: PerfilDoAluno) => { setPerfil(p); requestAnimationFrame(() => document.getElementById('psi-alunos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }
 
+  // 3D: o cartão sob o ponteiro inclina e ganha um brilho (só mouse; no toque fica parado)
+  const inclinar = (e: ReactPointerEvent<HTMLElement>) => {
+    if (e.pointerType !== 'mouse') return
+    const alvo = (e.target as HTMLElement).closest<HTMLElement>('.psi-sacada, .psi-tiles article, .psi-perfil, .psi-jornada li, .psi-historia')
+    if (inclinado.current && inclinado.current !== alvo) { inclinado.current.style.removeProperty('--rx'); inclinado.current.style.removeProperty('--ry') }
+    inclinado.current = alvo
+    if (!alvo) return
+    const r = alvo.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5
+    alvo.style.setProperty('--ry', `${(x * 7).toFixed(2)}deg`); alvo.style.setProperty('--rx', `${(-y * 7).toFixed(2)}deg`)
+    alvo.style.setProperty('--bx', `${((x + 0.5) * 100).toFixed(1)}%`); alvo.style.setProperty('--by', `${((y + 0.5) * 100).toFixed(1)}%`)
+  }
+  const soltar = () => { if (inclinado.current) { inclinado.current.style.removeProperty('--rx'); inclinado.current.style.removeProperty('--ry'); inclinado.current = null } }
   const seletor = (
     <div className="psi-modos" role="tablist" aria-label="Modo">
       <button type="button" role="tab" aria-selected={modo === 'painel'} onClick={() => trocarModo('painel')}>Painel</button>
@@ -460,10 +477,11 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   if (b.alunos === 0) return <section className="psi"><p className="psi-vazio">Ainda não há alunos ativos neste filtro.</p></section>
 
   return (
-    <section className="psi">
+    <section className="psi" ref={raiz} onPointerMove={inclinar} onPointerLeave={soltar}>
       {seletor}
       {erro && <p className="psi-erro" role="alert">{erro}</p>}
       <header className="psi-hero">
+        <span className="psi-hero-luz" aria-hidden="true" /><span className="psi-hero-luz b" aria-hidden="true" />
         <span className="psi-rot">Comportamento · desde o começo da plataforma</span>
         <h2>O que <em><Conta v={b.alunos} /> alunos</em> fazem antes e depois de cada passo.</h2>
         <p className="psi-hero-sub">Aulas, depósitos, perdas, ganhos, lives e avisos de cada aluno, cruzados no tempo e lidos como comportamento.</p>
@@ -487,8 +505,10 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
       </header>
 
       <nav className="psi-atalhos" aria-label="Ir para">
-        {[['psi-sacadas', 'Sacadas'], ['psi-investigacao', 'Dinheiro'], ['psi-perfis', 'Perfis'], ['psi-temas', 'Temas'], ['psi-historias', 'Histórias'], ['psi-alunos', 'Alunos']].map(([id, nome]) => <button type="button" key={id} onClick={() => irPara(id)}>{nome}</button>)}
+        {[['psi-termometros', 'Termômetros'], ['psi-sacadas', 'Sacadas'], ['psi-investigacao', 'Dinheiro'], ['psi-perfis', 'Perfis'], ['psi-temas', 'Temas'], ['psi-historias', 'Histórias'], ['psi-alunos', 'Alunos']].map(([id, nome]) => <button type="button" key={id} onClick={() => irPara(id)}>{nome}</button>)}
       </nav>
+
+      <Termometros p={dados} inv={inv} />
 
       <section className="psi-secao" id="psi-sacadas">
         <header><span className="psi-rot">O que mais chama atenção hoje</span><h3>As sacadas mais fortes</h3></header>

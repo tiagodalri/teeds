@@ -663,3 +663,98 @@
   .psi-c-topo { flex-direction: column; align-items: flex-start; }
   .psi-c-abre h2 { font-size: 26px; }
 }
+
+/* ================================================================================================
+   Terceira camada (28/11/2026, Tiago: "efeitos 3D, imersão, termômetros"): profundidade, termômetros,
+   índice, radar e simulador. O 3D segue o ponteiro (--rx/--ry postos pelo código); no toque fica parado.
+   ================================================================================================ */
+.psi-sacada, .psi-tiles article, .psi-perfil, .psi-jornada li, .psi-historia, .psi-3d { position: relative; transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transform-style: preserve-3d; will-change: transform; }
+.psi-sacada, .psi-tiles article, .psi .psi-perfil, .psi-jornada li, .psi .psi-historia, .psi-3d { transition: transform .25s var(--psi-mola), box-shadow .35s var(--psi-mola), border-color .2s; }
+.psi-sacada:hover, .psi-tiles article:hover, .psi .psi-perfil:hover, .psi .psi-historia:hover, .psi-3d:hover { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(14px); box-shadow: var(--psi-sombra), 0 30px 60px -30px color-mix(in srgb, var(--psi-ouro) 40%, transparent); }
+.psi-sacada::after, .psi-tiles article::after, .psi-3d::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s; background: radial-gradient(420px circle at var(--bx, 50%) var(--by, 0%), color-mix(in srgb, var(--text) 10%, transparent), transparent 60%); }
+.psi-sacada:hover::after, .psi-tiles article:hover::after, .psi-3d:hover::after { opacity: 1; }
+.psi-sacada-num, .psi-tiles strong, .psi-indice-anel, .psi-termo svg { transform: translateZ(26px); }
+.psi-sacada h4, .psi-tiles small { transform: translateZ(12px); }
+
+/* o herói ganha luz em movimento */
+.psi-hero > :not(.psi-hero-luz) { position: relative; z-index: 1; }
+.psi-hero-luz { position: absolute; top: -30%; right: -8%; width: 46%; aspect-ratio: 1; border-radius: 50%; pointer-events: none; filter: blur(60px); opacity: .55; background: radial-gradient(circle, color-mix(in srgb, var(--psi-ouro) 60%, transparent), transparent 70%); animation: psi-flutua 14s ease-in-out infinite; }
+.psi-hero-luz.b { top: auto; bottom: -40%; right: auto; left: 18%; width: 34%; opacity: .3; animation-duration: 19s; animation-direction: reverse; }
+@keyframes psi-flutua { 50% { transform: translate3d(-8%, 10%, 0) scale(1.15); } }
+.psi-jornada li:hover { transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateZ(18px); }
+
+/* ---------- o índice e o radar */
+.psi-indice-linha { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.psi-indice { --tom: var(--psi-ouro); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; padding: 32px; border: 1px solid var(--psi-fio); border-radius: 28px;
+  background: radial-gradient(70% 90% at 0% 50%, color-mix(in srgb, var(--tom) 16%, transparent), transparent 70%), var(--psi-carta); }
+.psi-indice.frio, .psi-termo.frio { --tom: var(--down); } .psi-indice.quente, .psi-termo.quente { --tom: var(--up); }
+.psi-indice-anel { position: relative; display: grid; place-items: center; width: clamp(150px, 16vw, 200px); aspect-ratio: 1; }
+.psi-indice-anel svg { position: absolute; inset: 0; width: 100%; height: 100%; filter: drop-shadow(0 0 18px color-mix(in srgb, var(--tom) 45%, transparent)); }
+.psi-indice-anel circle { fill: none; stroke-width: 12; stroke-linecap: round; }
+.psi-indice-anel .trilho, .psi-termo .trilho { stroke: var(--psi-trilho); }
+.psi-indice-anel .arco { stroke: var(--tom); transition: stroke-dasharray 1.2s var(--psi-mola); }
+.psi-indice-anel strong { position: relative; font-size: clamp(54px, 6vw, 76px); line-height: 1; font-weight: 700; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+.psi-indice-orbita { position: absolute; inset: -9%; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--tom) 35%, transparent); transform: rotateX(70deg) rotateZ(0deg); animation: psi-orbita 9s linear infinite; }
+.psi-indice-orbita::after { content: ''; position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--tom); box-shadow: 0 0 12px var(--tom); }
+.psi-indice-orbita.b { inset: -18%; opacity: .6; transform: rotateX(70deg) rotateY(24deg); animation-duration: 15s; animation-direction: reverse; }
+@keyframes psi-orbita { to { transform: rotateX(70deg) rotateZ(360deg); } }
+.psi-indice-texto { display: grid; gap: 8px; min-width: 0; }
+.psi-indice-texto small { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--tom); }
+.psi-indice-texto > b { font-size: clamp(22px, 2.4vw, 30px); line-height: 1.1; font-weight: 700; letter-spacing: -.03em; }
+.psi-indice-texto p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--muted); } .psi-indice-texto p b { color: var(--text); font-weight: 700; }
+.psi-radar { display: grid; align-content: start; gap: 2px; padding: 24px 28px; border: 1px solid var(--psi-fio); border-radius: 28px; background: var(--psi-carta); }
+.psi-radar h4 { margin: 0 0 8px; font-size: 18px; font-weight: 700; letter-spacing: -.02em; } .psi-radar h4 small { margin-left: 6px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.psi-alerta { --tom: var(--psi-ouro); display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--psi-fio); }
+.psi-alerta.alto { --tom: var(--down); } .psi-alerta.bom { --tom: var(--up); }
+.psi-alerta i { width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--tom); box-shadow: 0 0 0 4px color-mix(in srgb, var(--tom) 18%, transparent); }
+.psi-alerta.alto i { animation: psi-pulsa 2s ease-in-out infinite; }
+@keyframes psi-pulsa { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--tom) 0%, transparent); } }
+.psi-alerta span { display: grid; gap: 2px; min-width: 0; } .psi-alerta b { font-size: 14.5px; font-weight: 600; letter-spacing: -.012em; } .psi-alerta small { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+
+/* ---------- os termômetros */
+.psi-termos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.psi-termo { --tom: var(--psi-ouro); display: grid; gap: 6px; align-content: start; padding: 20px 20px 22px; border: 1px solid var(--psi-fio); border-radius: 24px; background: radial-gradient(90% 60% at 50% 0%, color-mix(in srgb, var(--tom) 10%, transparent), transparent 70%), var(--psi-carta); }
+.psi-termo > small { font-size: 13px; font-weight: 600; color: var(--muted); }
+.psi-termo svg { width: 100%; max-width: 220px; justify-self: center; overflow: visible; }
+.psi-termo path.trilho, .psi-termo path.arco { fill: none; stroke-width: 14; stroke-linecap: round; }
+.psi-termo path.arco { stroke: var(--tom); filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tom) 55%, transparent)); transition: stroke-dasharray 1.1s var(--psi-mola); animation: psi-anel 1.1s var(--psi-mola) both; }
+.psi-termo .agulha { transform-origin: 100px 106px; transition: transform 1.2s var(--psi-mola); animation: psi-agulha 1.3s var(--psi-mola) both; }
+@keyframes psi-agulha { from { transform: rotate(-90deg); } }
+.psi-termo .agulha path { stroke: var(--text); stroke-width: 3.5; stroke-linecap: round; } .psi-termo .agulha circle { fill: var(--text); }
+.psi-termo .marca { stroke: color-mix(in srgb, var(--text) 45%, transparent); stroke-width: 2; }
+.psi-termo > strong { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-top: -6px; font-size: 34px; font-weight: 700; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.psi-termo > strong em { padding: 4px 10px; border-radius: 999px; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: 0; color: var(--tom); background: color-mix(in srgb, var(--tom) 14%, transparent); }
+.psi-termo > p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; text-align: center; text-wrap: pretty; }
+.psi-termo > span { font-size: 12px; text-align: center; color: var(--muted); }
+
+/* ---------- o simulador */
+.psi-sim-corpo { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr); gap: 20px; align-items: stretch; }
+.psi-sim-linhas { display: grid; gap: 4px; }
+.psi-sim-linha { display: grid; grid-template-columns: minmax(0, 1fr) 88px 110px; gap: 6px 16px; align-items: center; padding: 14px 0; border-top: 1px solid var(--psi-fio); }
+.psi-sim-linha:first-child { border-top: 0; }
+.psi-sim-linha > span { display: grid; gap: 2px; grid-column: 1 / 4; } .psi-sim-linha b { font-size: 15.5px; font-weight: 600; letter-spacing: -.012em; } .psi-sim-linha small { font-size: 12.5px; line-height: 1.45; color: var(--muted); }
+.psi .psi-sim-linha input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; min-height: 0; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; }
+.psi-sim-linha input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--psi-ouro) var(--p, 0%), var(--psi-trilho) var(--p, 0%)); }
+.psi-sim-linha input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: linear-gradient(to right, var(--psi-ouro) var(--p, 0%), var(--psi-trilho) var(--p, 0%)); }
+.psi-sim-linha input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -9px; border-radius: 50%; border: 0; background: var(--bg); box-shadow: 0 0 0 2px var(--psi-ouro), 0 4px 12px color-mix(in srgb, var(--text) 30%, transparent); }
+.psi-sim-linha input[type="range"]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; border: 0; background: var(--bg); box-shadow: 0 0 0 2px var(--psi-ouro), 0 4px 12px color-mix(in srgb, var(--text) 30%, transparent); }
+.psi-sim-linha > em { font-style: normal; font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.psi-sim-linha > strong { font-size: 17px; font-weight: 700; letter-spacing: -.02em; text-align: right; font-variant-numeric: tabular-nums; color: var(--up); }
+.psi-sim-total { display: grid; gap: 8px; align-content: center; padding: 28px; border-radius: 24px; text-align: center; border: 1px solid color-mix(in srgb, var(--up) 35%, var(--psi-fio)); background: radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--up) 16%, transparent), transparent 75%), var(--psi-carta-2); }
+.psi-sim-total small { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--up); }
+.psi-sim-total strong { font-size: clamp(34px, 4vw, 52px); line-height: 1; font-weight: 700; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.psi-sim-total span { font-size: 13.5px; line-height: 1.5; color: var(--muted); } .psi-sim-total span b { color: var(--text); }
+
+@media (max-width: 1180px) { .psi-termos { grid-template-columns: repeat(2, minmax(0, 1fr)); } .psi-indice-linha, .psi-sim-corpo { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .psi-atalhos { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; } .psi .psi-atalhos button { font-size: 11.5px; }
+  .psi-indice { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 20px; padding: 28px 20px; text-align: center; border-radius: 24px; }
+  .psi-indice-anel { width: 168px; }
+  .psi-radar { padding: 20px 16px; border-radius: 24px; }
+  .psi-termos { gap: 8px; } .psi-termo { padding: 16px 12px 18px; border-radius: 20px; } .psi-termo > strong { font-size: 26px; flex-direction: column; align-items: center; gap: 6px; } .psi-termo > p { font-size: 12.5px; }
+  .psi-sim-linha { grid-template-columns: minmax(0, 1fr) 72px; } .psi-sim-linha > span { grid-column: 1 / 3; } .psi-sim-linha > strong { grid-column: 1 / 3; text-align: left; }
+  .psi .psi-sim-linha input[type="range"] { height: 40px; }
+  .psi-sim-total { padding: 22px 16px; }
+  .psi-hero-luz { filter: blur(40px); }
+}
+@media (hover: none) { .psi-sacada:hover, .psi-tiles article:hover, .psi .psi-perfil:hover, .psi .psi-historia:hover, .psi-3d:hover, .psi-jornada li:hover { transform: none; box-shadow: none; } }
