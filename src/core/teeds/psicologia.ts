@@ -134,7 +134,7 @@ export const lerInvestigacao = (sessao: SessaoTeeds, marca: string, parceiro: st
 
 /* ------------------------------------------------------------------ o consultor (chat com a I.A.) */
 export interface AnexoDoConsultor { mime: string; dados: string; nome?: string }
-export interface RespostaDoConsultor { resposta: string; modelo?: string; alunos_citados?: string[] }
+export interface RespostaDoConsultor { resposta: string; modelo?: string; alunos_citados?: string[]; consultas?: number }
 /** Erro com a frase já pronta para a tela (vem da função psicologia-consultor). */
 export class ErroDoConsultor extends Error {}
 
