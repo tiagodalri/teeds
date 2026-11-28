@@ -350,6 +350,16 @@ function aulaForaDoParceiro(id: string, ctx: ContextoDaSala): boolean {
   return [vitrine(), parceiroDaConta].some((p) => !!p && (AULAS_FORA_DO_PARCEIRO[p] ?? []).includes(id))
 }
 
+/**
+ * A aula aparece para um aluno deste parceiro? (27/11/2026, central de dados das aulas:
+ * quem não vê a aula não conta como "não assistiu"). Mesma regra da sala, pelo parceiro da conta.
+ */
+export function aulaVisivelParaOParceiro(id: string, parceiro: string | null | undefined): boolean {
+  const so = AULAS_SO_DO_PARCEIRO[id]
+  if (so) return parceiro === so
+  return !(parceiro && (AULAS_FORA_DO_PARCEIRO[parceiro] ?? []).includes(id))
+}
+
 export function modulosParaSala(grade: GradeAulas, ctx: ContextoDaSala = {}, cursoId?: string): Modulo[] {
   const agora = ctx.agora ?? Date.now()
   // o curso vale por cima do módulo e da aula: curso oculto some; curso sem acesso tranca tudo

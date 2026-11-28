@@ -12,6 +12,7 @@
  * Só desenvolvimento: o Vite monta apenas o `index.html` na publicação, então
  * este arquivo nunca chega ao site. Não há rede nem conta envolvida.
  */
+import { MODULOS as MODULOS_DAS_AULAS, todasAsAulas } from './core/teeds/aulas'
 import { UltimasEntradas } from './components/operar/UltimasEntradas'
 import { VisorDaApostila } from './components/apostila/VisorDaApostila'
 import { createPortal } from 'react-dom'
@@ -907,6 +908,37 @@ function Laboratorio() {
   }
   if (qual === 'preacesso') return <PreAcesso sessao={{ token: 'lab' } as never} nome="Ana Souza" aoConferir={async () => false} aoSair={nada} />
   if (qual === 'analise') return <CadastroEmAnalise email="miqueias.sena@outlook.com" nome="Miqueias Sena" aoConferir={async () => { await new Promise((r) => setTimeout(r, 700)); return false }} aoSair={nada} />
+  if (qual === 'aulas-dados') {
+    // ?tela=aulas-dados: a central de dados das aulas com 420 alunos de mentira (27/11/2026)
+    try { localStorage.setItem('adm-aulas-parte', 'dados') } catch { /* nada */ }
+    const f = window.fetch
+    let semente = 7
+    const sorte = () => ((semente = (semente * 16807) % 2147483647) / 2147483647)
+    const nomes = ['Marina Costa', 'Paulo Reis', 'Ana Souza', 'Carlos Lima', 'Juliana Alves', 'Rafael Gomes', 'Beatriz Rocha', 'Lucas Martins', 'Fernanda Dias', 'Bruno Teixeira', 'Camila Ribeiro', 'Diego Nunes']
+    const alunos = Array.from({ length: 420 }, (_, i) => ({
+      user_id: `u${i}`, nome: `${nomes[i % nomes.length]} ${i}`, email: `aluno${i}@exemplo.com`, plano_id: i % 9 === 0 ? 'black' : 'treino', plano: i % 9 === 0 ? 'Black' : 'GF Member',
+      parceiro: i % 3 === 0 ? 'n' : i % 3 === 1 ? 'v' : null, foto_url: null, criado_em: new Date(Date.now() - sorte() * 864e5 * 60).toISOString(), visto_em: new Date(Date.now() - sorte() * 864e5 * 3).toISOString(), cursos: [],
+    }))
+    const ids = ['boas-vindas', ...todasAsAulas({}, MODULOS_DAS_AULAS).map((a) => a.id)]
+    const controle: unknown[] = []
+    for (const a of alunos) {
+      const fome = sorte()
+      ids.forEach((id, k) => {
+        if (sorte() > (k === 0 ? 0.95 : fome * (1 - k / (ids.length * 1.4)))) return
+        const dur = 300 + Math.round(sorte() * 900), chegou = Math.min(1, sorte() < 0.6 ? 1 : sorte()), seg = Math.round(dur * chegou * (0.7 + sorte() * 0.3))
+        controle.push({ aula_id: id, user_id: a.user_id, nome: a.nome, email: a.email, plano: a.plano, aberturas: 1 + Math.floor(sorte() * 4), segundos: seg, duracao_seg: dur, posicao_max: chegou, concluida: chegou >= 0.95, primeira_vez: new Date(Date.now() - sorte() * 864e5 * 20).toISOString(), ultima_vez: new Date(Date.now() - sorte() * 864e5 * 5).toISOString() })
+      })
+    }
+    window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
+      const url = String(u), ok = (d: unknown) => new Response(JSON.stringify(d), { status: 200, headers: { 'content-type': 'application/json' } })
+      if (url.includes('teeds_aulas_alunos')) return ok(alunos)
+      if (url.includes('teeds_aulas_controle')) return ok(controle)
+      if (url.includes('teeds_aulas_grade')) return ok(null)
+      if (url.includes('parceiro')) return ok([{ codigo: 'n', nome: 'Naor Bezerra' }, { codigo: 'v', nome: 'Victor Cordeiro' }])
+      return f(u, i)
+    }) as typeof fetch
+    return <Suspense fallback={null}><div className="app workspace-app"><main className="admin-page" style={{ padding: 24 }}><AdminAulasLab sessao={{ token: 'lab', refresh: 'lab', expiraEm: Date.now() + 864e5, usuario: { id: 'lab', email: 'lab@exemplo.com', nome: 'Lab' } } as never} marca={MARCA.id} /></main></div></Suspense>
+  }
   if (qual === 'aulas-admin') {
     // ?tela=aulas-admin: o editor da grade das aulas, com o banco de mentira (o rascunho fica só na memória)
     const f = window.fetch

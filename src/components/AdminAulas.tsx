@@ -5,6 +5,7 @@ import { controleDasAulas, duracaoLegivel, fracaoAssistida, type AssistiuAula } 
 import { useModulosEmUso } from '../core/teeds/gradeAulas'
 import { MARCA } from '../marca'
 import { EditorDaGrade } from './aulas/EditorDaGrade'
+import { CentralDasAulas } from './aulas/CentralDasAulas'
 
 /**
  * A aba "Aulas" do painel (04/11/2026): o editor da grade inteira
@@ -12,10 +13,22 @@ import { EditorDaGrade } from './aulas/EditorDaGrade'
  * `marca`: a plataforma em foco no painel (o seletor do master), não a do site aberto.
  */
 export function AdminAulas({ sessao, marca = MARCA.id }: { sessao: SessaoTeeds; marca?: string }) {
+  // 27/11/2026: duas partes — montar a grade e a central de dados (quem assistiu o quê). O aparelho lembra a última.
+  const [parte, setParte] = useState<'grade' | 'dados'>(() => { try { return localStorage.getItem('adm-aulas-parte') === 'dados' ? 'dados' : 'grade' } catch { return 'grade' } })
+  const trocar = (p: 'grade' | 'dados') => { setParte(p); try { localStorage.setItem('adm-aulas-parte', p) } catch { /* sem armazenamento */ } }
   return (
     <div className="admin-aulas">
-      <EditorDaGrade sessao={sessao} marca={marca} />
-      <BuscaDeAluno sessao={sessao} marca={marca} />
+      <div className="adm-aulas-partes" role="tablist" aria-label="Aulas">
+        <button type="button" role="tab" aria-selected={parte === 'grade'} onClick={() => trocar('grade')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM4 9h16M9 9v10" /></svg>Montar as aulas
+        </button>
+        <button type="button" role="tab" aria-selected={parte === 'dados'} onClick={() => trocar('dados')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7" /></svg>Central de dados
+        </button>
+      </div>
+      {parte === 'dados'
+        ? <CentralDasAulas sessao={sessao} marca={marca} />
+        : <><EditorDaGrade sessao={sessao} marca={marca} /><BuscaDeAluno sessao={sessao} marca={marca} /></>}
     </div>
   )
 }
