@@ -483,6 +483,54 @@
 @media (max-width: 420px) { .psi-colunas { gap: 6px; } }
 @media (prefers-reduced-motion: reduce) { .psi-esqueleto { animation: none; } .psi, .psi *, .psi-ficha, .psi-ficha * { transition: none !important; animation: none !important; } }
 
+/* ---------- central investigativa */
+.psi-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.psi-tiles article { display: grid; gap: 8px; align-content: start; padding: 24px; border: 1px solid var(--psi-fio); border-radius: 20px; background: var(--psi-carta); }
+.psi-tiles small { font-size: 13px; font-weight: 600; color: var(--muted); }
+.psi-tiles strong { font-size: clamp(28px, 2.8vw, 40px); line-height: 1; font-weight: 700; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.psi-tiles article:nth-child(-n+4) strong { color: var(--psi-ouro); }
+.psi-tiles span { font-size: 13px; line-height: 1.45; color: var(--muted); }
+.psi-dupla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.psi-sobrev { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 12px; }
+.psi-sobrev > div { display: grid; grid-template-rows: auto 130px auto auto; gap: 6px; justify-items: center; text-align: center; }
+.psi-sobrev b { font-size: 22px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.psi-sobrev i { display: flex; align-items: flex-end; width: min(56px, 100%); height: 100%; border-radius: 10px; background: var(--psi-trilho); }
+.psi-sobrev u { display: block; width: 100%; border-radius: 10px; background: var(--psi-ouro); }
+.psi-sobrev span { font-size: 13px; font-weight: 600; } .psi-sobrev small { font-size: 12px; color: var(--muted); }
+.psi-mini { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.psi-mini span { display: grid; gap: 4px; padding: 14px 16px; border-radius: 16px; background: var(--psi-carta-2); }
+.psi-mini small { font-size: 12px; color: var(--muted); } .psi-mini b { font-size: 17px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.psi-estrategias { display: grid; }
+.psi-estrategias > div { display: grid; grid-template-columns: minmax(180px, 30%) minmax(0, 1fr) 120px; gap: 4px 16px; align-items: center; padding: 16px 0; border-top: 1px solid var(--psi-fio); }
+.psi-estrategias > div:first-child { border-top: 0; padding-top: 0; }
+.psi-estrategias span { display: grid; gap: 2px; min-width: 0; } .psi-estrategias span b { font-size: 16px; font-weight: 700; letter-spacing: -.015em; } .psi-estrategias span small, .psi-estrategias em { font-size: 12.5px; color: var(--muted); font-style: normal; }
+.psi-estrategias i { display: block; height: 10px; border-radius: 5px; background: var(--psi-trilho); } .psi-estrategias u { display: block; height: 100%; border-radius: 5px; background: var(--psi-ouro); }
+.psi-estrategias strong { text-align: right; font-size: 18px; font-weight: 700; letter-spacing: -.025em; font-variant-numeric: tabular-nums; } .psi-estrategias strong small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.psi-estrategias em { grid-column: 2 / 4; } .psi-estrategias em b { font-weight: 700; }
+.psi-versus { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.psi-versus article { display: grid; gap: 6px; align-content: start; padding: 20px; border-radius: 20px; background: var(--psi-carta-2); }
+.psi-versus article.g { background: color-mix(in srgb, var(--psi-ouro) 12%, var(--psi-carta)); }
+.psi-versus small { font-size: 12.5px; font-weight: 600; color: var(--muted); } .psi-versus article.g small { color: var(--psi-ouro); }
+.psi-versus strong { font-size: 26px; font-weight: 700; letter-spacing: -.03em; } .psi-versus span { font-size: 14px; } .psi-versus em { font-style: normal; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.psi-fatores { display: grid; }
+.psi-fator { display: grid; grid-template-columns: minmax(200px, 34%) minmax(0, 1fr) 96px 92px; gap: 4px 16px; align-items: center; padding: 14px 0; border-top: 1px solid var(--psi-fio); }
+.psi-fator > span { display: grid; gap: 2px; min-width: 0; } .psi-fator > span b { font-size: 15px; font-weight: 600; letter-spacing: -.012em; } .psi-fator > span small { font-size: 12px; color: var(--muted); }
+.psi-fator-barras { display: grid; gap: 4px; } .psi-fator-barras i { display: block; height: 8px; border-radius: 4px; background: var(--psi-trilho); }
+.psi-fator-barras u { display: block; height: 100%; border-radius: 4px; } .psi-fator-barras .g u { background: var(--psi-ouro); } .psi-fator-barras .r u { background: color-mix(in srgb, var(--text) 30%, transparent); }
+.psi-fator > strong { text-align: right; font-size: 20px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; } .psi-fator > strong small { display: block; font-size: 11.5px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+.psi-fator > em { justify-self: end; padding: 5px 10px; border-radius: 999px; font-style: normal; font-size: 12px; font-weight: 700; white-space: nowrap; color: var(--up); background: color-mix(in srgb, var(--up) 12%, transparent); }
+.psi-fator.menos > em { color: var(--down); background: color-mix(in srgb, var(--down) 12%, transparent); }
+.psi-dossie .psi-mais { border-radius: 14px; border: 0; background: var(--psi-carta-2); margin-top: 8px; }
+@media (max-width: 1180px) { .psi-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } .psi-dupla { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 760px) {
+  .psi-tiles { gap: 8px; } .psi-tiles article { padding: 16px; border-radius: 18px; } .psi-tiles strong { font-size: 26px; }
+  .psi-atalhos { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .psi-sobrev { gap: 6px; } .psi-sobrev > div { grid-template-rows: auto 100px auto auto; } .psi-sobrev b { font-size: 17px; }
+  .psi-mini, .psi-versus { grid-template-columns: minmax(0, 1fr); }
+  .psi-estrategias > div { grid-template-columns: minmax(0, 1fr) auto; } .psi-estrategias i { grid-column: 1 / 3; grid-row: 2; } .psi-estrategias em { grid-column: 1 / 3; }
+  .psi-fator { grid-template-columns: minmax(0, 1fr) auto; } .psi-fator-barras { grid-column: 1 / 3; grid-row: 2; } .psi-fator > em { grid-column: 1 / 3; justify-self: start; }
+}
+
 /* ================================================================================================
    O Consultor (chat com a I.A.), 28/11/2026. Prefixo psi-c-. Ver Consultor.tsx.
    ================================================================================================ */

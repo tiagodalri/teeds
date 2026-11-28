@@ -20,7 +20,7 @@ const SUGESTOES = [
   'Qual aula mais antecede o primeiro depósito, e por quê?',
   'Compare os alunos do Naor com os do Victor.',
   'Quem são os alunos que mais geram markup e como eles se comportam?',
-  'Em que horário vale mais a pena fazer live?',
+  'Quanto de markup fizemos por dia nos últimos 7 dias, e de onde veio?',
 ]
 const chave = (marca: string) => `${marca}.psicologia.consultor`
 const id = () => Math.random().toString(36).slice(2, 10)
@@ -114,19 +114,20 @@ export function Consultor({ sessao, marca, parceiro, aoAbrirAluno }: { sessao: S
   const vazio = !mensagens.length
 
   return (
-    <section className={`psi-c${vazio ? ' vazio' : ''}`} aria-label="Consultor">
+    <section className={`psi-c${vazio ? ' vazio' : ''}`} aria-label="GF Brain">
       {vazio ? (
         <div className="psi-c-abre">
           <span className="psi-c-orbe" aria-hidden="true" />
+          <span className="psi-rot">GF Brain</span>
           <h2>Pergunte qualquer coisa sobre o seu negócio.</h2>
-          <p>Eu leio os dados de cada aluno (aulas, depósitos, saques, I.A., manual, lives) e respondo como um consultor. Pode escrever, falar ou mandar um arquivo.</p>
+          <p>Eu leio os dados da plataforma (alunos, aulas, depósitos, saques, operações, markup, acessos, lives) e consulto o banco quando preciso. Pode escrever, falar ou mandar um arquivo.</p>
           <div className="psi-c-sugestoes">
             {SUGESTOES.map((s) => <button type="button" key={s} onClick={() => void enviar(s)}>{s}</button>)}
           </div>
         </div>
       ) : (
         <div className="psi-c-conversa" role="log" aria-live="polite">
-          <div className="psi-c-topo"><span>Consultor · responde com os dados de hoje</span><button type="button" onClick={limpar}>Nova conversa</button></div>
+          <div className="psi-c-topo"><span>GF Brain · responde com os dados de agora</span><button type="button" onClick={limpar}>Nova conversa</button></div>
           {mensagens.map((m) => (
             <article key={m.id} className={`psi-c-msg ${m.de}${m.erro ? ' erro' : ''}`}>
               {m.de === 'ia' && <span className="psi-c-orbe p" aria-hidden="true" />}
@@ -139,7 +140,7 @@ export function Consultor({ sessao, marca, parceiro, aoAbrirAluno }: { sessao: S
               </div>
             </article>
           ))}
-          {pensando && <article className="psi-c-msg ia"><span className="psi-c-orbe p vivo" aria-hidden="true" /><div className="psi-c-balao pensando"><i /><i /><i /><span>Lendo os dados…</span></div></article>}
+          {pensando && <article className="psi-c-msg ia"><span className="psi-c-orbe p vivo" aria-hidden="true" /><div className="psi-c-balao pensando"><i /><i /><i /><span>Consultando os dados…</span></div></article>}
           <div ref={fim} />
         </div>
       )}

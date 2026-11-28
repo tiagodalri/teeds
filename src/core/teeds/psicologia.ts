@@ -111,6 +111,27 @@ export const lerAlunosDaPsicologia = (sessao: SessaoTeeds, marca: string, parcei
 export const lerLinhaDoTempo = (sessao: SessaoTeeds, marca: string, user: string) =>
   rpc<LinhaDoTempoDoAluno>(sessao, 'teeds_psicologia_aluno', { p_marca: marca, p_user: user })
 
+/* ------------------------------------------------------------------ a central investigativa */
+export interface LadoDoGrupo { n: number; aulas: number | null; dep1: number | null; dias_ate_dep: number | null; dias_operando: number | null; markup: number | null
+  depositado: number | null; markup_total: number; dep_total: number }
+export interface GrupoDaInvestigacao { fatores: Array<{ fator: string; g_sim: number; g_n: number; r_sim: number; r_n: number }> | null; dentro: LadoDoGrupo | null; fora: LadoDoGrupo | null }
+export interface Investigacao {
+  lido_em: string
+  numeros: { depositantes: number; depositos: number; depositado: number; deposito_medio: number; por_depositante_medio: number; por_depositante_mediano: number
+    depositos_por_pessoa: number; redepositaram: number; sacado: number; saldo_parado: number; operaram: number; volume: number; markup: number; resultado: number
+    giro: number; markup_por_depositante: number; markup_sobre_deposito: number; markup_sobre_volume: number; markup_por_dia_ativo: number
+    vida_mediana_dias: number | null; dias_operando_mediana: number | null; ativos_7d: number; pararam: number; vida_de_quem_parou: number | null; markup_de_quem_parou: number } | null
+  redeposito: { h_entre_depositos: number | null; segundo_maior: number; segundo_menor: number; segundo_igual: number; valor_1: number | null; valor_2: number | null
+    valor_3mais: number | null; em_1h: number; em_24h: number; total: number }
+  sobrevivencia: Array<{ dias: number; base: number; seguem: number }> | null
+  concentracao: { geradores: number; top10: number; top20pct: number }
+  estrategias: Array<{ nome: string; operacoes: number; alunos: number; markup: number | null; volume: number; resultado: number; ganhas: number }> | null
+  cortes: { deposito_alto: number; top_markup: number }
+  grupos: Record<'redeposito' | 'deposito_alto' | 'top_markup', GrupoDaInvestigacao> | null
+}
+export const lerInvestigacao = (sessao: SessaoTeeds, marca: string, parceiro: string) =>
+  rpc<Investigacao>(sessao, 'teeds_psicologia_investigacao', { p_marca: marca, p_parceiro: parceiro || null })
+
 /* ------------------------------------------------------------------ o consultor (chat com a I.A.) */
 export interface AnexoDoConsultor { mime: string; dados: string; nome?: string }
 export interface RespostaDoConsultor { resposta: string; modelo?: string; alunos_citados?: string[] }

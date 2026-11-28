@@ -14,6 +14,7 @@ import { SeloDoParceiro } from '../../parceiros/SeloDoParceiro'
 import { Icone } from '../../Icone'
 import { LinhaDoTempo } from './LinhaDoTempo'
 import { Consultor } from './Consultor'
+import { Investigacao } from './Investigacao'
 import { PERFIS, TEMAS, inteiro, montarSacadas, pc, pct, plural, tempoCurto, usd, type Sacada, type Tema } from './sacadas'
 import './psicologia.css'
 
@@ -439,7 +440,7 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const seletor = (
     <div className="psi-modos" role="tablist" aria-label="Modo">
       <button type="button" role="tab" aria-selected={modo === 'painel'} onClick={() => trocarModo('painel')}>Painel</button>
-      <button type="button" role="tab" aria-selected={modo === 'consultor'} onClick={() => trocarModo('consultor')}>Consultor<small>I.A.</small></button>
+      <button type="button" role="tab" aria-selected={modo === 'consultor'} onClick={() => trocarModo('consultor')}>GF Brain<small>I.A.</small></button>
     </div>
   )
   if (modo === 'consultor') return (
@@ -486,7 +487,7 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
       </header>
 
       <nav className="psi-atalhos" aria-label="Ir para">
-        {[['psi-sacadas', 'Sacadas'], ['psi-perfis', 'Perfis'], ['psi-temas', 'Temas'], ['psi-historias', 'Histórias'], ['psi-alunos', 'Alunos']].map(([id, nome]) => <button type="button" key={id} onClick={() => irPara(id)}>{nome}</button>)}
+        {[['psi-sacadas', 'Sacadas'], ['psi-investigacao', 'Dinheiro'], ['psi-perfis', 'Perfis'], ['psi-temas', 'Temas'], ['psi-historias', 'Histórias'], ['psi-alunos', 'Alunos']].map(([id, nome]) => <button type="button" key={id} onClick={() => irPara(id)}>{nome}</button>)}
       </nav>
 
       <section className="psi-secao" id="psi-sacadas">
@@ -494,6 +495,8 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
         <div className={`psi-destaques${todas ? ' todas' : ''}`}>{destaques.map((s) => <CartaoDaSacada s={s} grande key={s.id} />)}</div>
         {!todas && destaques.length > 3 && <button type="button" className="psi-mais psi-so-celular" onClick={() => setTodas(true)}>Ver mais {destaques.length - 3} sacadas</button>}
       </section>
+
+      <Investigacao sessao={sessao} marca={marca} parceiro={par} pedido={pedido} />
 
       <section className="psi-secao" id="psi-perfis">
         <header><span className="psi-rot">Cada aluno cai em um</span><h3>Perfis de comportamento</h3><p>Toque num perfil para ver quem são os alunos.</p></header>

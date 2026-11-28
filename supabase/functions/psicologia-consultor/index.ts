@@ -1,4 +1,4 @@
-// Consultor da Psicologia (28/11/2026, Tiago: "um chat dentro dessa aba... uma inteligência conectada com TODOS
+// GF Brain, o consultor da Psicologia (28/11/2026, Tiago: "um chat dentro dessa aba... uma inteligência conectada com TODOS
 // os dados do negócio, tipo um consultor"). Administração › Números › Psicologia › Consultor (só GlobalFly).
 //
 // Cada pergunta: confere quem pede (admin pleno; admin de parceiro só vê o parceiro dele), lê os dados com o
@@ -6,7 +6,9 @@
 // e conversa com o Gemini (chave de config_servicos). Aceita texto, áudio, imagem, vídeo e arquivo.
 //
 // Nome de aluno NÃO vai para o Google: na ida cada aluno vira um código (A001…), na volta o código vira o nome.
-// A I.A. pode pedir a linha do tempo de um aluno (ferramenta ver_aluno), sempre pelo código.
+// A I.A. pode pedir a linha do tempo de um aluno (ferramenta ver_aluno), sempre pelo código, e, quando quem pergunta
+// é o admin geral, consultar o banco (ferramenta consultar_banco → teeds_brain_sql: só leitura, com a permissão de
+// quem pergunta, 300 linhas). O que volta do banco passa por um filtro: contato, documento e endereço não seguem.
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICO = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const GEMINI = 'https://generativelanguage.googleapis.com/v1beta'
@@ -37,7 +39,36 @@ const PERFIS: Record<string, string> = {
   estuda_nao_deposita: 'Concluiu 3 aulas ou mais e não depositou', so_no_treino: 'Só opera no treino', curioso: 'Abriu uma ou duas aulas e parou', parado_no_cadastro: 'Criou a conta e não abriu aula',
 }
 
-const INSTRUCOES = (hoje: string, quem: string, recorte: string) => `Você é o consultor de negócio da GlobalFly Trade, uma plataforma de ensino e operação no mercado financeiro com estratégias automáticas chamadas "I.A." (Raptor, Falcon, Legacy, Gulf, Phenom) e operação manual, ligada à corretora Deriv. Quem conversa com você é ${quem}, da administração. Hoje é ${hoje} (hora de Brasília).
+const BANCO = `
+Você também pode consultar o banco de dados (PostgreSQL) com a ferramenta consultar_banco, sempre que a resposta não estiver nos dados já fornecidos. Uma consulta por chamada: só SELECT (ou WITH ... SELECT), sem ponto e vírgula, no máximo 300 linhas, 8 segundos. Prefira agregar (count, sum, avg, group by) a trazer linhas soltas. Se a consulta der erro, leia o erro, corrija e tente de novo. Pode fazer várias consultas antes de responder.
+Regras do banco:
+- Quase toda tabela tem a coluna marca: filtre sempre marca = 'globalfly'. Colunas demo (boolean): conta real = not demo.
+- Datas em UTC (timestamptz). Para dia e hora de Brasília use (coluna at time zone 'America/Sao_Paulo').
+- A equipe não conta como aluno: exclua com user_id not in (select user_id from administradores).
+- Para filtrar por um aluno, escreva user_id = 'A012' (o código entre aspas): o sistema troca pelo identificador real. Nas respostas do banco, o aluno volta como "aluno": "A012".
+- Nome, e-mail, telefone, CPF e endereço não voltam das consultas. Não peça essas colunas.
+Tabelas principais (colunas mais úteis):
+- clientes(user_id, marca, criado_em, visto_em, plano_id, status_acesso, categoria [gold|black|prestige], parceiro [n = Naor, v = Victor, d = Douglas, nulo = direto], total_acessos, tempo_total_segundos, cidade, regiao, pais, data_nascimento)
+- clientes_pendentes(marca, status, criado_em, decidido_em, parceiro, plano_id, superlive): cadastros e aprovação.
+- contas_deriv(user_id, conta_id, tipo [real|demo], moeda, saldo, conectada_em, vista_em, marca)
+- movimentacoes_deriv(user_id, conta_id, marca, tipo [deposit|withdrawal], valor, saldo_depois, ocorrida_em, demo): depósitos e saques.
+- operacoes_robos(contract_id, user_id, conta_id, robo_id, robo_nome, ativo, tipo_contrato, demo, entrada, pagamento, resultado, markup, ganhou, executada_em, sessao_id, marca, parceiro): cada operação das I.A. Tabela grande: sempre filtre por data ou por aluno.
+- sessoes_robos(id, user_id, conta_id, demo, robo_id, robo_nome, ativo, entrada_inicial, stop_loss, take_profit, situacao [rodando|encerrada], operacoes, ganhas, perdidas, resultado, movimentado, motivo_da_parada, criada_em, encerrada_em, marca, parceiro): cada sessão de I.A.
+- operacoes_manuais(user_id, contract_id, marca, conta_id, demo, ativo, tipo_contrato, entrada, pagamento, resultado, markup, comprada_em, encerrada_em, situacao [aberta|ganhou|perdeu|vendida], parceiro)
+- comissoes_diarias(user_id, conta_id, dia, operacoes, entradas, pagamentos, resultado, comissao, demo, marca): resumo por dia e conta. markup_oficial_diario(dia, ...): markup oficial da Deriv por dia.
+- aulas_progresso(marca, user_id, aula_id, aberturas, segundos, posicao_max, concluida, primeira_vez, ultima_vez, duracao_seg). aulas_grade(marca, publicada jsonb): a grade com os títulos.
+- eventos_cliente(marca, user_id, dia, pagina, alvo, vezes, segundos, primeira_em, ultima_em): tempo por tela (alvo = '') e cliques por botão (alvo = texto do botão), por dia.
+- acessos_diarios(marca, user_id, dia, acessos, segundos, dispositivo). visitas(marca, visitante, criado_em, origem, meio, campanha, dispositivo, caminho): visitas ao site, anônimas.
+- leads_capturados(marca, campanha, origem, meio, pagina, temperatura, pontuacao, convertido_em, parceiro, atualizado_em). rastreio_eventos(marca, parceiro, visitante, evento, pagina, canal, criado_em). funil_passos(marca, parceiro, visitante, passo, criado_em).
+- lives_historico(marca, inicio, fim, origem). transmissoes(marca, iniciada_em, encerrada_em, pico, pessoas, tempo_medio_s, mensagens, teste).
+- push_disparos(id, marca, criado_em, titulo, corpo, publico, enviados, falhas, teste). push_eventos(disparo, tipo [recebeu|clicou], em).
+- suporte_conversas(marca, user_id, status, assunto, origem, criada_em, primeira_resposta_em, resolvida_em, avaliacao). suporte_mensagens(conversa_id, autor, texto, criada_em).
+- sessoes_robos_ao_vivo, pulsos_robos_ao_vivo: o estado atual de cada sessão no monitoramento.
+- administradores(user_id, marca, parceiro): a equipe. planos_da_marca(marca, plano_id, nome). email_eventos_resend(marca, tipo, ocorrido_em). envios_campanha(marca, campanha, enviado_em).
+Funções prontas (use em select * from ...): teeds_markup_operacoes(array['globalfly'], null, inicio, fim) devolve (origem [ia|manual], contract_id, user_id, quando, markup, entrada, resultado) e é a contagem oficial do markup (só conta real, sem a equipe).
+Se uma tabela negar acesso ou não existir, diga que esse dado não está ao alcance e siga com o que tem.`
+
+const INSTRUCOES = (hoje: string, quem: string, recorte: string, comBanco: boolean) => `Você é o GF Brain, o consultor de negócio da GlobalFly Trade, uma plataforma de ensino e operação no mercado financeiro com estratégias automáticas chamadas "I.A." (Raptor, Falcon, Legacy, Gulf, Phenom) e operação manual, ligada à corretora Deriv. Quem conversa com você é ${quem}, da administração. Hoje é ${hoje} (hora de Brasília).
 
 Você recebe abaixo os DADOS REAIS do negócio (${recorte}). Responda como um consultor sênior que conhece esses números de cor: direto, com o número na frente, a leitura depois e, quando couber, o que fazer.
 
@@ -62,7 +93,8 @@ Dicionário dos campos (leia com atenção, os nomes são curtos):
 - tempo.horas: hora de Brasília (0 a 23). tempo.semana: d = 0 domingo … 6 sábado.
 - lives: horas_live / horas_fora = horas com e sem live no ar; dep_live = depósitos durante a live (e até 30 min depois).
 - alunos_mais_ativos: religou_em_2min = perdas seguidas de nova sessão em até 2 minutos; perdas = sessões de I.A. terminadas no negativo; visto_ha_dias = dias desde o último acesso.
-- Valores em dólar. "resultado" é o resultado DO ALUNO (negativo = ele perdeu); "markup" é a receita da plataforma.`
+- Valores em dólar. "resultado" é o resultado DO ALUNO (negativo = ele perdeu); "markup" é a receita da plataforma.
+${comBanco ? BANCO : ''}`
 
 type Anexo = { mime: string; dados: string; nome?: string }
 type Aluno = Record<string, any>
@@ -90,18 +122,20 @@ Deno.serve(async (req) => {
 
   // tudo com o token de quem pede: se não for da administração, o banco recusa aqui
   const agora = new Date()
-  const [rPainel, rLista, rNegocio, rUsuario, chave] = await Promise.all([
+  const [rPainel, rLista, rNegocio, rUsuario, chave, rGeral] = await Promise.all([
     rpc('teeds_psicologia', { p_marca: marca, p_parceiro: pedido || null }),
     rpc('teeds_psicologia_lista', { p_marca: marca, p_parceiro: pedido || null }),
     rpc('teeds_painel_negocio', { p_marca: marca, p_de: new Date(agora.getTime() - 30 * 86_400_000).toISOString(), p_ate: agora.toISOString(), p_parceiro: pedido || null }),
     fetch(`${SUPABASE_URL}/auth/v1/user`, { headers: cab }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
     chaveDoGemini(),
+    rpc('teeds_sou_admin_geral', {}),
   ])
   if (!rPainel.ok || !rLista.ok) return json({ erro: 'Só a administração usa o consultor.' }, 403)
   if (!chave) return json({ erro: 'Falta a chave do Gemini. Cole a chave em Visão geral › Inteligência do negócio.' }, 503)
   const painel = await rPainel.json() as Record<string, any>
   const lista = await rLista.json() as Aluno[]
   const negocio = rNegocio.ok ? await rNegocio.json() as Record<string, any> : null
+  const comBanco = rGeral.ok && (await rGeral.json().catch(() => false)) === true && !pedido
   const meta = rUsuario?.user_metadata ?? {}
   const quem = String(meta.nome || meta.full_name || meta.name || String(rUsuario?.email ?? '').split('@')[0].split('+')[0] || 'um administrador').slice(0, 60)
 
@@ -130,6 +164,21 @@ Deno.serve(async (req) => {
       for (const m of achados.reverse()) t = t.slice(0, m.index!) + codigo + t.slice(m.index! + m[0].length)
     }
     return t
+  }
+  // o que volta do banco: contato e documento não seguem; o aluno vira código
+  const SENSIVEL = /^(e_?mail.*|telefone.*|cpf|end_.*|ip|user_agent|token.*|senha.*|p256dh|auth|endpoint|credencial|chave_publica|foto_url|observacoes|nome|autor_nome|responsavel_nome|iniciada_por_nome|encerrada_por_nome|autor_id|responsavel|criado_por|decidido_por)$/i
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const limpar = (o: any): any => Array.isArray(o) ? o.map(limpar) : o && typeof o === 'object'
+    ? Object.fromEntries(Object.entries(o).flatMap(([k, v]) => SENSIVEL.test(k) ? [] : (typeof v === 'string' && UUID.test(v) && /user_id$|^pessoa$|^aluno$/i.test(k)) ? [['aluno', codigoDe.get(v) ?? 'fora da lista']] : [[k, limpar(v)]]))
+    : o
+  async function consultarBanco(sql: string): Promise<Record<string, unknown>> {
+    if (!comBanco) return { erro: 'A consulta ao banco é só do admin geral, sem filtro de parceiro.' }
+    const pronto = String(sql ?? '').trim().replace(/;+\s*$/, '').replace(/'(A\d{3,4})'/g, (tudo, c) => { const a = alunoDe.get(c); return a ? `'${a.user_id}'` : tudo })
+    const r = await rpc('teeds_brain_sql', { p_sql: pronto })
+    const corpo = await r.json().catch(() => null)
+    if (!r.ok) return { erro: String(corpo?.message ?? 'A consulta falhou.').slice(0, 400) }
+    const texto = esconder(JSON.stringify(limpar(corpo)))
+    return texto.length > 60_000 ? { aviso: 'Resultado grande demais: veio cortado. Agregue mais ou filtre.', linhas: texto.slice(0, 60_000) } : { linhas: JSON.parse(texto) }
   }
   const mostrar = (texto: string) => texto.replace(/\bA(\d{3,4})\b/g, (tudo) => String(alunoDe.get(tudo)?.nome ?? tudo))
 
@@ -164,19 +213,22 @@ Deno.serve(async (req) => {
     { role: 'user', parts: [...anexos.map((a) => ({ inlineData: { mimeType: a.mime.split(';')[0], data: a.dados } })), { text: pergunta ? esconder(pergunta) : 'Responda ao que eu disse ou mandei no anexo.' }] },
   ]
   const corpoBase = {
-    systemInstruction: { parts: [{ text: INSTRUCOES(hoje, quem, recorte) }] },
+    systemInstruction: { parts: [{ text: INSTRUCOES(hoje, quem, recorte, comBanco) }] },
     tools: [{ functionDeclarations: [{ name: 'ver_aluno', description: 'A linha do tempo completa de um aluno: cada aula, depósito, saque, bloco de operação (I.A. e manual), acesso e conversa com o suporte, com data e hora.',
-      parameters: { type: 'OBJECT', properties: { codigo: { type: 'STRING', description: 'O código do aluno, como A012' } }, required: ['codigo'] } }] }],
+      parameters: { type: 'OBJECT', properties: { codigo: { type: 'STRING', description: 'O código do aluno, como A012' } }, required: ['codigo'] } },
+      ...(comBanco ? [{ name: 'consultar_banco', description: 'Roda uma consulta SELECT de leitura no banco de dados da plataforma e devolve as linhas em JSON.',
+        parameters: { type: 'OBJECT', properties: { sql: { type: 'STRING', description: 'Uma consulta SELECT do PostgreSQL, sem ponto e vírgula' } }, required: ['sql'] } }] : [])] }],
     generationConfig: { maxOutputTokens: 4096, temperature: 0.4 },
   }
 
-  const limite = Date.now() + 135_000
+  const limite = Date.now() + 140_000
   const falhas: string[] = []
   for (const modelo of MODELOS) {
     if (Date.now() > limite - 15_000) break
     try {
       const conversa = [...contents]
-      for (let ida = 0; ida < 4; ida++) {
+      let consultas = 0
+      for (let ida = 0; ida < 8; ida++) {
         const r = await fetch(`${GEMINI}/models/${modelo}:generateContent`, {
           method: 'POST', signal: AbortSignal.timeout(Math.max(10_000, Math.min(75_000, limite - Date.now()))),
           headers: { 'x-goog-api-key': chave, 'Content-Type': 'application/json' }, body: JSON.stringify({ ...corpoBase, contents: conversa }),
@@ -186,9 +238,10 @@ Deno.serve(async (req) => {
         const conteudo = g.candidates?.[0]?.content
         const partes = (conteudo?.parts ?? []) as any[]
         const chamadas = partes.filter((p) => p.functionCall)
-        if (chamadas.length && ida < 3) {
+        if (chamadas.length && ida < 7) {
           conversa.push(conteudo)
           const respostas = await Promise.all(chamadas.slice(0, 4).map(async (p) => {
+            if (p.functionCall.name === 'consultar_banco') { consultas++; return { functionResponse: { name: 'consultar_banco', response: await consultarBanco(String(p.functionCall.args?.sql ?? '')) } } }
             const codigo = String(p.functionCall.args?.codigo ?? '').toUpperCase().trim(), a = alunoDe.get(codigo)
             if (!a) return { functionResponse: { name: 'ver_aluno', response: { erro: 'Código desconhecido.' } } }
             const lt = await rpc('teeds_psicologia_aluno', { p_marca: marca, p_user: a.user_id })
@@ -200,7 +253,7 @@ Deno.serve(async (req) => {
         }
         const texto = partes.filter((p) => typeof p.text === 'string' && !p.thought).map((p) => p.text).join('').trim()
         if (!texto) throw new Error(`${modelo}: resposta vazia`)
-        return json({ resposta: mostrar(texto), modelo, alunos_citados: [...new Set([...texto.matchAll(/\bA(\d{3,4})\b/g)].map((m) => alunoDe.get(m[0])?.user_id).filter(Boolean))].slice(0, 12) })
+        return json({ resposta: mostrar(texto), modelo, consultas, alunos_citados: [...new Set([...texto.matchAll(/\bA(\d{3,4})\b/g)].map((m) => alunoDe.get(m[0])?.user_id).filter(Boolean))].slice(0, 12) })
       }
     } catch (e) {
       const st = (e as { status?: number }).status

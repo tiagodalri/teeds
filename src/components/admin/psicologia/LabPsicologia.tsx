@@ -83,6 +83,26 @@ function painel(vazio: boolean) {
   }
 }
 
+const lado = (n: number, aulas: number, dep1: number, dias: number, op: number, mk: number, dt: number) => ({ n, aulas, dep1, dias_ate_dep: dias, dias_operando: op, markup: mk / n, depositado: dt / n, markup_total: mk, dep_total: dt })
+const fatores = (base: number) => [['Operou em 5 dias ou mais', 71, 39], ['Continua depois de bater a meta', 58, 22], ['2º depósito em até 48 h', 33, 19], ['Concluiu 10 aulas ou mais', 49, 35], ['Opera com I.A. e na manual', 62, 41],
+  ['Já sacou', 38, 15], ['Colocou foto no perfil', 44, 24], ['Falou com o suporte', 31, 18], ['Opera só com I.A.', 12, 34], ['Fechou o treino no positivo', 24, 28], ['Veio pelo Victor', 52, 47]]
+  .map(([fator, a, b]) => ({ fator, g_sim: Math.round(Number(a) * base / 100), g_n: base, r_sim: Math.round(Number(b) * (220 - base) / 100), r_n: 220 - base }))
+const investigacao = () => ({
+  lido_em: ha(0),
+  numeros: { depositantes: 244, depositos: 501, depositado: 31961.71, deposito_medio: 63.8, por_depositante_medio: 130.99, por_depositante_mediano: 53.19, depositos_por_pessoa: 2.05, redepositaram: 97, sacado: 7693.59,
+    saldo_parado: 7611.29, operaram: 221, volume: 131152.71, markup: 6564.36, resultado: -13117.73, giro: 4.1, markup_por_depositante: 26.9, markup_sobre_deposito: 20.5, markup_sobre_volume: 5.01, markup_por_dia_ativo: 5.39,
+    vida_mediana_dias: 7.5, dias_operando_mediana: 4, ativos_7d: 116, pararam: 105, vida_de_quem_parou: 2, markup_de_quem_parou: 20.59 },
+  redeposito: { h_entre_depositos: 20.4, segundo_maior: 38, segundo_menor: 40, segundo_igual: 19, valor_1: 26.9, valor_2: 20.6, valor_3mais: 22.1, em_1h: 57, em_24h: 141, total: 257 },
+  sobrevivencia: [{ dias: 1, base: 220, seguem: 181 }, { dias: 3, base: 214, seguem: 145 }, { dias: 7, base: 211, seguem: 117 }, { dias: 14, base: 181, seguem: 59 }],
+  concentracao: { geradores: 221, top10: 37.6, top20pct: 69.5 },
+  estrategias: [['GF Raptor', 52000, 190, 2100, 61000, -2990, 37000], ['Manual', 10000, 184, 2400, 34000, -8100, 5200], ['GF Legacy', 31000, 166, 1200, 21000, -1520, 22000], ['GF Falcon', 24000, 154, 860, 15000, -1396, 18500]]
+    .map(([nome, operacoes, alunos, markup, volume, resultado, ganhas]) => ({ nome, operacoes, alunos, markup, volume, resultado, ganhas })),
+  cortes: { deposito_alto: 157.62, top_markup: 33.45 },
+  grupos: { redeposito: { fatores: fatores(97), dentro: lado(97, 7, 20.13, 3.6, 4, 4216, 21660), fora: lado(147, 6, 35.81, 5.9, 3, 2348, 10301) },
+    deposito_alto: { fatores: fatores(49), dentro: lado(49, 9, 110, 4.1, 6, 3900, 22100), fora: lado(195, 6, 22, 5.2, 3, 2664, 9861) },
+    top_markup: { fatores: fatores(45), dentro: lado(45, 9, 48, 3.9, 8, 4560, 16900), fora: lado(176, 6, 25, 5.1, 3, 2004, 14200) } },
+})
+
 const alunos = () => NOMES.flatMap((nome, i) => [0, 1].map((k) => {
   const perfil = PERFIS[(i + k * 5) % PERFIS.length], opera = ['revanche', 'sumiu_na_perda', 'disciplinado', 'lucrando', 'operando'].includes(perfil)
   return { user_id: `a${i}${k ? 'b' : ''}`, nome: k ? `${nome.split(' ')[0]} ${NOMES[(i + 3) % NOMES.length].split(' ').slice(-1)[0]}` : nome, foto_url: null, parceiro: i % 3 === 0 ? 'v' : i % 3 === 1 ? 'n' : null, categoria: 'gold',
@@ -121,6 +141,7 @@ export default function LabPsicologia() {
         await new Promise((r) => setTimeout(r, 1600))
         return ok({ resposta: 'O ponto mais forte hoje é o estudo: **89 de 106** alunos que concluíram 10 aulas ou mais depositaram (84%).\n\nTrês coisas para esta semana:\n- Chamar os **38 alunos** que estudam e ainda não depositaram.\n- Falar com os **74** que sumiram depois de perder: eles ainda têm **US$ 860,73** parados.\n- Deixar a aula «Depositou? Transfira seu saldo para operar» em destaque: metade deposita em até 30 minutos.\n\nIsso mostra o que acontece junto, não prova de causa.', modelo: 'lab', alunos_citados: ['a0'] })
       }
+      if (url.includes('/rpc/teeds_psicologia_investigacao')) return ok(q.has('vazio') ? { numeros: null } : investigacao())
       if (url.includes('/rpc/teeds_psicologia_lista')) return ok(q.has('vazio') ? [] : alunos())
       if (url.includes('/rpc/teeds_psicologia_aluno')) return ok(linhaDoTempo(JSON.parse(String(i?.body ?? '{}')).p_user))
       if (url.includes('/rpc/teeds_psicologia')) return q.has('erro') ? new Response('{}', { status: 500 }) : ok(painel(q.has('vazio')))
