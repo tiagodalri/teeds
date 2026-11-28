@@ -145,6 +145,7 @@ const MEDIDAS: Array<{ id: MedidaDaHora; nome: string }> = [{ id: 'deps', nome: 
 
 function RelogioDoAluno({ p }: { p: Psicologia }) {
   const [medida, setMedida] = useState<MedidaDaHora>('deps')
+  const [tocada, setTocada] = useState<number | null>(null)
   const horas = useMemo(() => Array.from({ length: 24 }, (_, h) => (p.tempo.horas ?? []).find((x) => x.hora === h) ?? { hora: h, ops: 0, pessoas: 0, resultado: 0, deps: 0, dep_valor: 0, saques: 0, aulas: 0 }), [p])
   const max = Math.max(1, ...horas.map((h) => Math.abs(h[medida])))
   const topo = [...horas].sort((a, b) => (medida === 'resultado' ? a.resultado - b.resultado : b[medida] - a[medida]))[0]
@@ -159,14 +160,14 @@ function RelogioDoAluno({ p }: { p: Psicologia }) {
         {horas.map((h) => {
           const v = h[medida], alt = (Math.abs(v) / max) * 100
           return (
-            <div key={h.hora} className={`psi-hora${h.hora === topo.hora ? ' topo' : ''}${v < 0 ? ' psi-neg' : ''}`} title={`${h.hora}h: ${texto(h)}`}>
+            <button type="button" key={h.hora} className={`psi-hora${h.hora === topo.hora ? ' topo' : ''}${v < 0 ? ' psi-neg' : ''}${tocada === h.hora ? ' tocada' : ''}`} title={`${h.hora}h: ${texto(h)}`} aria-label={`${h.hora}h: ${texto(h)}`} aria-pressed={tocada === h.hora} onClick={() => setTocada((t) => (t === h.hora ? null : h.hora))}>
               <i><u style={{ height: `${Math.max(v === 0 ? 0 : 3, alt)}%` }} /></i>
               <span>{h.hora % 3 === 0 ? `${h.hora}h` : ''}</span>
-            </div>
+            </button>
           )
         })}
       </div>
-      <p className="psi-pe"><b>{topo.hora}h</b> é {medida === 'resultado' ? 'a hora com o pior resultado' : 'o pico'}: {texto(topo)}.</p>
+      <p className="psi-pe psi-hora-lida" aria-live="polite">{tocada != null ? <><b>{tocada}h</b>: {texto(horas[tocada])}.</> : <><b>{topo.hora}h</b> é {medida === 'resultado' ? 'a hora com o pior resultado' : 'o pico'}: {texto(topo)}. Toque numa barra para ver a hora.</>}</p>
     </div>
   )
 }
@@ -289,7 +290,7 @@ function Historias({ lista, abrir }: { lista: Historia[]; abrir: (id: string) =>
   const escolhidas = tipo ? (tipos.get(tipo) ?? []).slice(0, 12) : [...tipos.values()].flatMap((l) => l.slice(0, 2))
   if (!lista.length) return null
   return (
-    <section className="psi-secao">
+    <section className="psi-secao" id="psi-historias">
       <header><span className="psi-rot">Um aluno, um fato</span><h3>Histórias reais</h3><p>Os microcomportamentos um a um, com nome, hora e valor. Toque para abrir a linha do tempo do aluno.</p></header>
       <div className="psi-chips" role="group" aria-label="Tipo de história">
         <button type="button" aria-pressed={tipo === ''} onClick={() => setTipo('')}>Todas</button>
@@ -382,6 +383,8 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const [tema, setTema] = useState<Tema>('aulas')
   const [perfil, setPerfil] = useState<PerfilDoAluno | ''>('')
   const [aberto, setAberto] = useState<string | null>(null)
+  const [todas, setTodas] = useState(false)
+  const irPara = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   useEffect(() => {
     let vivo = true
@@ -417,12 +420,17 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
         <p className="psi-aviso"><Icone nome="inteligencia" />Tudo aqui mostra o que acontece junto (quem fez uma coisa também fez a outra), não prova que uma causa a outra. Cada cartão traz o tamanho da amostra. A equipe fica fora da conta. Lido às {fmtHora.format(new Date(dados.lido_em))}.</p>
       </div>
 
-      <section className="psi-secao">
+      <nav className="psi-atalhos" aria-label="Ir para">
+        {[['psi-sacadas', 'Sacadas'], ['psi-perfis', 'Perfis'], ['psi-temas', 'Temas'], ['psi-historias', 'Histórias'], ['psi-alunos', 'Alunos']].map(([id, nome]) => <button type="button" key={id} onClick={() => irPara(id)}>{nome}</button>)}
+      </nav>
+
+      <section className="psi-secao" id="psi-sacadas">
         <header><span className="psi-rot">O que mais chama atenção hoje</span><h3>As sacadas mais fortes</h3></header>
-        <div className="psi-destaques">{destaques.map((s) => <CartaoDaSacada s={s} grande key={s.id} />)}</div>
+        <div className={`psi-destaques${todas ? ' todas' : ''}`}>{destaques.map((s) => <CartaoDaSacada s={s} grande key={s.id} />)}</div>
+        {!todas && destaques.length > 3 && <button type="button" className="psi-mais psi-so-celular" onClick={() => setTodas(true)}>Ver mais {destaques.length - 3} sacadas</button>}
       </section>
 
-      <section className="psi-secao">
+      <section className="psi-secao" id="psi-perfis">
         <header><span className="psi-rot">Cada aluno cai em um</span><h3>Perfis de comportamento</h3><p>Toque num perfil para ver quem são os alunos.</p></header>
         <div className="psi-perfis">
           {ORDEM_DOS_PERFIS.map((id) => {
@@ -442,7 +450,7 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
         </div>
       </section>
 
-      <section className="psi-secao">
+      <section className="psi-secao" id="psi-temas">
         <header><span className="psi-rot">Tema por tema</span><h3>Todas as sacadas</h3></header>
         <div className="psi-temas" role="tablist" aria-label="Temas">
           {TEMAS.map((t) => <button type="button" role="tab" key={t.id} aria-selected={tema === t.id} onClick={() => setTema(t.id)}>{t.nome}<small>{sacadas.filter((s) => s.tema === t.id).length}</small></button>)}

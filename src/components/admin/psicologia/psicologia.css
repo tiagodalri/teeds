@@ -13,6 +13,12 @@
 .psi-esqueleto.baixo { height: 90px; }
 @keyframes psi-brilho { to { background-position: -200% 0; } }
 
+/* atalhos de seção */
+.psi-atalhos { display: flex; flex-wrap: wrap; gap: 6px; }
+.psi .psi-atalhos button { min-height: 36px; padding: 0 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.psi .psi-atalhos button:hover { border-color: var(--psi-ouro); color: var(--psi-ouro); }
+.psi-so-celular { display: none; }
+
 /* topo: a frase e o aviso */
 .psi-topo { display: grid; gap: 12px; }
 .psi-frase { margin: 0; max-width: 92ch; font-size: clamp(16px, 1.5vw, 19px); line-height: 1.65; color: var(--text); text-wrap: pretty; }
@@ -109,6 +115,8 @@
 .psi-aula-x { grid-column: 2 / 4; }
 
 .psi-horas { display: grid; grid-template-columns: repeat(24, minmax(0, 1fr)); gap: 3px; height: 170px; }
+.psi .psi-hora { padding: 0; border: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.psi-hora.tocada i { box-shadow: 0 0 0 2px var(--psi-ouro); }
 .psi-hora { display: grid; grid-template-rows: minmax(0, 1fr) 16px; gap: 4px; min-width: 0; }
 .psi-hora i { display: flex; align-items: flex-end; height: 100%; border-radius: 4px; background: var(--psi-trilho); }
 .psi-hora u { display: block; width: 100%; border-radius: 4px; background: color-mix(in srgb, var(--psi-ouro) 55%, var(--surface)); transition: height .5s cubic-bezier(.2, .8, .2, 1); }
@@ -216,8 +224,36 @@
 }
 @media (max-width: 760px) {
   .psi { gap: 22px; }
+  /* atalhos: cinco botões iguais numa linha, alvo de toque de 44 px */
+  .psi-atalhos { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  .psi .psi-atalhos button { min-height: 44px; padding: 0 2px; font-size: 12px; }
+  .psi .psi-temas button, .psi .psi-chips button, .psi .psi-sacada > footer button { min-height: 44px; }
+  .psi-secao { scroll-margin-top: 72px; }
+  /* destaques: três primeiro, o resto num toque */
+  .psi-destaques:not(.todas) > :nth-child(n+4) { display: none; }
+  .psi .psi-so-celular { display: block; width: 100%; min-height: 48px; }
+  .psi-sacada { padding: 16px; }
+  /* perfis: uma linha por perfil, só o essencial */
+  .psi-perfis { grid-template-columns: minmax(0, 1fr) !important; gap: 8px; }
+  .psi .psi-perfil { padding: 12px 14px; gap: 6px; }
+  .psi-perfil > em, .psi-perfil > .psi-fazer-curto { display: none; }
+  /* tabelas: a primeira coluna fica parada enquanto os números rolam */
+  .psi-tabela > div > span:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); box-shadow: 8px 0 8px -8px color-mix(in srgb, var(--text) 25%, transparent); }
+  .psi-gaveta-corpo { padding: 4px 12px 14px; }
+  .psi-bloco { padding: 16px 14px; }
+  .psi .psi-aluno { min-height: 64px; }
+  /* a ficha do aluno ocupa a tela inteira, com o topo parado */
+  .psi-fundo { display: block !important; padding: 0 !important; background: var(--surface) !important; backdrop-filter: none; overscroll-behavior: contain; }
+  .psi-ficha { width: 100%; min-height: 100dvh; margin: 0; border: 0; border-radius: 0; padding: 0 14px calc(28px + env(safe-area-inset-bottom)); align-content: start; }
+  .psi-ficha > header { position: sticky; top: 0; z-index: 3; margin: 0 -14px; padding: calc(10px + env(safe-area-inset-top)) 10px 10px 14px; grid-template-columns: 44px minmax(0, 1fr) 48px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .psi-ficha > header .psi-av.grande { width: 44px; height: 44px; font-size: 14px; }
+  .psi-ficha > header h3 { font-size: 16px; }
+  .psi-ficha .psi-fechar { width: 48px; height: 48px; background: var(--psi-trilho); color: var(--text); }
+  .psi-ficha-barra button { min-height: 44px; }
+  .psi-dia li { grid-template-columns: 40px 14px minmax(0, 1fr); padding: 9px 0; }
+  .psi-dia li > span { font-size: 14px; }
+  .psi-ponte { font-size: 12px; padding: 4px 10px; }
   .psi-destaques, .psi-grade, .psi-historias { grid-template-columns: minmax(0, 1fr); }
-  .psi-perfis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .psi-temas, .psi .psi-chips { flex-wrap: wrap; }
   .psi-fim, .psi-aula { grid-template-columns: minmax(0, 1fr); }
   .psi-fim-pe, .psi-aula-x { grid-column: 1; }
@@ -228,11 +264,9 @@
   .psi .psi-aluno .psi-tag { grid-column: 2 / 4; grid-row: 2; }
   .psi-aluno-n { display: none; } .psi-aluno-n:nth-of-type(6) { display: grid; grid-column: 3; grid-row: 1; }
   .psi-busca { max-width: none; flex-basis: 100%; }
-  .psi-fundo { padding: 8px; }
-  .psi-ficha { padding: 16px 14px 20px; }
   .psi-ficha-nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .psi-ficha-barra { flex-wrap: wrap; }
   .psi-duelo > div { grid-template-columns: minmax(84px, 40%) minmax(0, 1fr) 40px; }
 }
-@media (max-width: 420px) { .psi-perfis { grid-template-columns: minmax(0, 1fr); } .psi-colunas { gap: 6px; } }
+@media (max-width: 420px) { .psi-colunas { gap: 6px; } }
 @media (prefers-reduced-motion: reduce) { .psi-esqueleto { animation: none; } .psi *, .psi-ficha * { transition: none !important; } }
