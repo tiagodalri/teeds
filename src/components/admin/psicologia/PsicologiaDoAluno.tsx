@@ -13,6 +13,7 @@ import { lerAlunosDaPsicologia, lerPsicologia, type AlunoDaPsicologia, type FimD
 import { SeloDoParceiro } from '../../parceiros/SeloDoParceiro'
 import { Icone } from '../../Icone'
 import { LinhaDoTempo } from './LinhaDoTempo'
+import { Consultor } from './Consultor'
 import { PERFIS, TEMAS, inteiro, montarSacadas, pc, pct, plural, tempoCurto, usd, type Sacada, type Tema } from './sacadas'
 import './psicologia.css'
 
@@ -413,6 +414,8 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const [perfil, setPerfil] = useState<PerfilDoAluno | ''>('')
   const [aberto, setAberto] = useState<string | null>(null)
   const [todas, setTodas] = useState(false)
+  const [modo, setModo] = useState<'painel' | 'consultor'>(() => { try { return localStorage.getItem('psi.modo') === 'consultor' ? 'consultor' : 'painel' } catch { return 'painel' } })
+  const trocarModo = (m: 'painel' | 'consultor') => { setModo(m); try { localStorage.setItem('psi.modo', m) } catch { /* só não lembra */ } }
   const irPara = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 
   useEffect(() => {
@@ -433,8 +436,21 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
   const doTema = sacadas.filter((s) => s.tema === tema)
   const verPerfil = (p: PerfilDoAluno) => { setPerfil(p); requestAnimationFrame(() => document.getElementById('psi-alunos')?.scrollIntoView({ behavior: 'smooth', block: 'start' })) }
 
-  if (erro && !dados) return <section className="psi"><p className="psi-erro" role="alert">{erro}</p></section>
-  if (!dados) return <section className="psi" aria-busy="true"><div className="psi-esqueleto" /><div className="psi-esqueleto baixo" /><p className="psi-vazio">Cruzando aulas, depósitos, sessões e acessos de cada aluno…</p></section>
+  const seletor = (
+    <div className="psi-modos" role="tablist" aria-label="Modo">
+      <button type="button" role="tab" aria-selected={modo === 'painel'} onClick={() => trocarModo('painel')}>Painel</button>
+      <button type="button" role="tab" aria-selected={modo === 'consultor'} onClick={() => trocarModo('consultor')}>Consultor<small>I.A.</small></button>
+    </div>
+  )
+  if (modo === 'consultor') return (
+    <section className="psi psi-no-consultor">
+      {seletor}
+      <Consultor sessao={sessao} marca={marca} parceiro={par} aoAbrirAluno={setAberto} />
+      {aberto && <LinhaDoTempo sessao={sessao} marca={marca} userId={aberto} resumo={alunos?.find((a) => a.user_id === aberto) ?? null} fechar={() => setAberto(null)} />}
+    </section>
+  )
+  if (erro && !dados) return <section className="psi">{seletor}<p className="psi-erro" role="alert">{erro}</p></section>
+  if (!dados) return <section className="psi" aria-busy="true">{seletor}<div className="psi-esqueleto" /><div className="psi-esqueleto baixo" /><p className="psi-vazio">Cruzando aulas, depósitos, sessões e acessos de cada aluno…</p></section>
 
   const b = dados.base
   const perfis = dados.perfis ?? []
@@ -444,6 +460,7 @@ export function PsicologiaDoAluno({ sessao, marca, parceiro, pedido = 0 }: { ses
 
   return (
     <section className="psi">
+      {seletor}
       {erro && <p className="psi-erro" role="alert">{erro}</p>}
       <header className="psi-hero">
         <span className="psi-rot">Comportamento · desde o começo da plataforma</span>

@@ -117,6 +117,10 @@ export default function LabPsicologia() {
     const f = window.fetch
     window.fetch = (async (u: RequestInfo | URL, i?: RequestInit) => {
       const url = String(u), ok = (v: unknown) => new Response(JSON.stringify(v), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      if (url.includes('/functions/v1/psicologia-consultor')) {
+        await new Promise((r) => setTimeout(r, 1600))
+        return ok({ resposta: 'O ponto mais forte hoje é o estudo: **89 de 106** alunos que concluíram 10 aulas ou mais depositaram (84%).\n\nTrês coisas para esta semana:\n- Chamar os **38 alunos** que estudam e ainda não depositaram.\n- Falar com os **74** que sumiram depois de perder: eles ainda têm **US$ 860,73** parados.\n- Deixar a aula «Depositou? Transfira seu saldo para operar» em destaque: metade deposita em até 30 minutos.\n\nIsso mostra o que acontece junto, não prova de causa.', modelo: 'lab', alunos_citados: ['a0'] })
+      }
       if (url.includes('/rpc/teeds_psicologia_lista')) return ok(q.has('vazio') ? [] : alunos())
       if (url.includes('/rpc/teeds_psicologia_aluno')) return ok(linhaDoTempo(JSON.parse(String(i?.body ?? '{}')).p_user))
       if (url.includes('/rpc/teeds_psicologia')) return q.has('erro') ? new Response('{}', { status: 500 }) : ok(painel(q.has('vazio')))

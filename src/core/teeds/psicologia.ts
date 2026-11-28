@@ -110,3 +110,21 @@ export const lerAlunosDaPsicologia = (sessao: SessaoTeeds, marca: string, parcei
   rpc<AlunoDaPsicologia[]>(sessao, 'teeds_psicologia_lista', { p_marca: marca, p_parceiro: parceiro || null })
 export const lerLinhaDoTempo = (sessao: SessaoTeeds, marca: string, user: string) =>
   rpc<LinhaDoTempoDoAluno>(sessao, 'teeds_psicologia_aluno', { p_marca: marca, p_user: user })
+
+/* ------------------------------------------------------------------ o consultor (chat com a I.A.) */
+export interface AnexoDoConsultor { mime: string; dados: string; nome?: string }
+export interface RespostaDoConsultor { resposta: string; modelo?: string; alunos_citados?: string[] }
+/** Erro com a frase já pronta para a tela (vem da função psicologia-consultor). */
+export class ErroDoConsultor extends Error {}
+
+export async function perguntarAoConsultor(sessao: SessaoTeeds, marca: string, parceiro: string, pergunta: string,
+  historico: Array<{ de: 'eu' | 'ia'; texto: string }>, anexos: AnexoDoConsultor[]): Promise<RespostaDoConsultor> {
+  const r = await fetch(`${SUPABASE.url}/functions/v1/psicologia-consultor`, {
+    method: 'POST', signal: AbortSignal.timeout(150_000),
+    headers: { apikey: SUPABASE.anonKey, Authorization: `Bearer ${sessao.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ marca, parceiro: parceiro && parceiro !== 'todos' ? parceiro : '', pergunta, historico, anexos }),
+  })
+  const d = await r.json().catch(() => null) as (RespostaDoConsultor & { erro?: string }) | null
+  if (!r.ok || !d?.resposta) throw new ErroDoConsultor(d?.erro || 'A I.A. não respondeu agora. Tente de novo em instantes.')
+  return d
+}
