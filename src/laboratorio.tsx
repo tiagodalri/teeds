@@ -237,6 +237,7 @@ const LabQuemEstaOnline = lazy(() => import('./components/monitoramento/LabQuemE
 const LabManualAoVivo = lazy(() => import('./components/monitoramento/LabManualAoVivo'))
 const LabEncerradas = lazy(() => import('./components/monitoramento/LabEncerradas'))
 const LabVisaoGeral = lazy(() => import('./components/admin/LabVisaoGeral'))
+const LabPsicologia = lazy(() => import('./components/admin/psicologia/LabPsicologia'))
 const LabResultadosClientes = lazy(() => import('./components/LabResultadosClientes'))
 const LabCompartilhamento = lazy(() => import('./components/admin/LabCompartilhamento'))
 const LabCabineTopo = lazy(() => import('./components/monitoramento/LabCabineTopo'))
@@ -852,6 +853,8 @@ function Laboratorio() {
   if (qual === 'encerradas') return <Suspense fallback={null}><LabEncerradas /></Suspense>
   // ?tela=visao-geral(&cenario=real|vazio): a Visão geral da Administração com números de exemplo
   if (qual === 'visao-geral') return <Suspense fallback={null}><LabVisaoGeral /></Suspense>
+  // ?tela=psicologia(&vazio)(&erro): Administração › Psicologia do aluno com números de exemplo (27/11/2026)
+  if (qual === 'psicologia') return <Suspense fallback={null}><LabPsicologia /></Suspense>
   // ?tela=resultados-clientes: Resultados por cliente com clientes de exemplo, para ordenar pelos títulos (12/11/2026)
   if (qual === 'resultados-clientes') return <Suspense fallback={null}><LabResultadosClientes /></Suspense>
   // ?tela=compartilhamento(&parceiro=1)(&vazio): o Compartilhamento de receita com clientes de exemplo; gerar e dar baixa em memória
