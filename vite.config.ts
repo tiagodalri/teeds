@@ -670,6 +670,10 @@ export default defineConfig({
         const assinatura = createHash('sha256')
           .update(essenciais.map((f) => readFileSync(join(SAIDA, f.slice(2)))).join(''))
           .digest('hex').slice(0, 12)
+        // 28/11/2026, Tiago: "force uma atualização em todos os PWAs instalados". Só quando a montagem é feita com
+        // FORCAR_ATUALIZACAO=1 (e só na GlobalFly): ao trocar de versão, o service worker recarrega as janelas abertas,
+        // mesmo com operação em andamento. Sem a variável, vale a regra de sempre (aviso + recarga só parado).
+        const forcarAtualizacao = process.env.FORCAR_ATUALIZACAO === '1' && MARCA.id === 'globalfly'
         const preCache = ['./', './index.html', './manifest.webmanifest', `./${pwaDir}/icon-192.png`, `./${pwaDir}/icon-512.png`, ...essenciais]
         // O service worker. As referências a assets ganham "?v=" em scripts/versao.mjs,
         // igual ao index.html: a chave do cache muda a cada publicação e o app instalado
@@ -697,7 +701,7 @@ export default defineConfig({
           // aberta continua abrindo as telas dela com as peças dela (sem misturar versões e
           // sem recarregar no meio de uma operação); a de duas versões atrás sai.
           `const META='${MARCA.id}-meta';const ler=(c,k)=>c.match(k).then(x=>x?x.text():'');`,
-          `self.addEventListener('activate',e=>e.waitUntil(caches.open(META).then(m=>Promise.all([ler(m,'./__versao/atual'),ler(m,'./__versao/anterior')]).then(([atual,anterior])=>{const prev=atual&&atual!==CACHE?atual:anterior;return caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!==META&&(prev?k!==prev:false)&&!(!atual&&!anterior)).map(k=>caches.delete(k)))).then(()=>Promise.all([m.put('./__versao/atual',new Response(CACHE)),m.put('./__versao/anterior',new Response(prev||''))]))})).catch(()=>{}).then(()=>self.registration.navigationPreload&&self.registration.navigationPreload.enable().catch(()=>{})).then(()=>self.clients.claim())));`,
+          `self.addEventListener('activate',e=>e.waitUntil(caches.open(META).then(m=>Promise.all([ler(m,'./__versao/atual'),ler(m,'./__versao/anterior')]).then(([atual,anterior])=>{const prev=atual&&atual!==CACHE?atual:anterior;self.__troca=!!(atual&&atual!==CACHE);return caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE&&k!==META&&(prev?k!==prev:false)&&!(!atual&&!anterior)).map(k=>caches.delete(k)))).then(()=>Promise.all([m.put('./__versao/atual',new Response(CACHE)),m.put('./__versao/anterior',new Response(prev||''))]))})).catch(()=>{}).then(()=>self.registration.navigationPreload&&self.registration.navigationPreload.enable().catch(()=>{})).then(()=>self.clients.claim())${forcarAtualizacao ? `.then(()=>self.__troca?self.clients.matchAll({type:'window'}).then(cs=>Promise.all(cs.map(c=>c.navigate(c.url).catch(()=>{})))):null).catch(()=>{})` : ''}));`,
           `self.addEventListener('fetch',e=>{const r=e.request;const u=new URL(r.url);if(r.method!=='GET'||u.origin!==self.location.origin||r.cache==='no-store'||u.searchParams.has('vivo')||r.destination==='video'||r.destination==='audio'||r.headers.has('range'))return;`,
           // Só a RAIZ vira o app guardado para uso sem rede (09/10/2026). Antes
           // qualquer navegação era gravada como './index.html': abrir /cadastro
